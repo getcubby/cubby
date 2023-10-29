@@ -44,6 +44,24 @@
       <Button label="Close" icon="pi pi-times" class="p-button-text" @click="aboutDialog.visible = false"/>
     </template>
   </Dialog>
+
+  <!-- Office Dialog -->
+  <Dialog header="Office Integration" v-model:visible="officeDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '620px'}" :modal="true">
+    <div>
+      Cubby can open office documents acting as a WOPI host. This is tested with Collabora at the moment.<br/>
+      To enable support add the following to the <code>config.json</code> and restart the app:
+      <pre>
+{
+  "collabora": {
+    "host": "https://collabora.domain.com"
+  }
+}
+</pre>
+    </div>
+    <template #footer>
+      <Button label="Close" icon="pi pi-times" class="p-button-text" @click="officeDialog.visible = false"/>
+    </template>
+  </Dialog>
 </template>
 
 <script>
@@ -104,6 +122,9 @@ export default {
         aboutDialog: {
           visible: false
         },
+        officeDialog: {
+          visible: false
+        },
         breadCrumbModel: {
           home: { icon: 'pi pi-home' },
           items: []
@@ -113,13 +134,21 @@ export default {
           icon: 'pi pi-globe',
           command: this.onWebDavSettings
         }, {
-          label: 'About',
-          icon: 'pi pi-info-circle',
-          command: () => this.aboutDialog.visible = true
+          label: 'Office Integration',
+          icon: 'pi pi-building',
+          command: () => this.officeDialog.visible = true
+        }, {
+          separator:true
         }, {
           label: 'Logout',
           icon: 'pi pi-sign-out',
           command: this.onLogout
+        }, {
+          separator:true
+        }, {
+          label: 'About',
+          icon: 'pi pi-info-circle',
+          command: () => this.aboutDialog.visible = true
         }],
         newMenu: [{
           label: 'New File',
@@ -193,6 +222,12 @@ export default {
 
 .profile-actions {
   margin-left: 50px;
+}
+
+pre {
+  background-color: lightgray;
+  border-radius: 2px;
+  padding: 10px;
 }
 
 </style>

@@ -778,7 +778,7 @@ export default {
           if (entry.share) {
             this.breadCrumbs.unshift({
               label: entry.share.filePath.slice(1), // remove slash at the beginning
-              route: '#shares/' + resource.shareId + '/'
+              route: '#files/shares/' + resource.shareId + '/'
             });
           }
         } else {

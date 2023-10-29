@@ -110,13 +110,13 @@ async function getShareLink(req, res, next) {
 async function createShare(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const filePath = req.body.path;
+    if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
+
+    const filePath = req.body.path.replace(/\/+/g, '/');
     const receiverUsername = req.body.receiverUsername || null;
     const receiverEmail = req.body.receiverEmail || null;
     const readonly = boolLike(req.body.readonly);
     const expiresAt = req.body.expiresAt ? parseInt(req.body.expiresAt) : 0;
-
-    if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
     debug(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || 'link'}`);
 

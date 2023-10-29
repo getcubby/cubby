@@ -138,17 +138,15 @@ export default {
           icon: 'pi pi-building',
           command: () => this.officeDialog.visible = true
         }, {
+          label: 'About',
+          icon: 'pi pi-info-circle',
+          command: () => this.aboutDialog.visible = true
+        }, {
           separator:true
         }, {
           label: 'Logout',
           icon: 'pi pi-sign-out',
           command: this.onLogout
-        }, {
-          separator:true
-        }, {
-          label: 'About',
-          icon: 'pi pi-info-circle',
-          command: () => this.aboutDialog.visible = true
         }],
         newMenu: [{
           label: 'New File',

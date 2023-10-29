@@ -57,6 +57,7 @@ export function createDirectoryModel(origin) {
       entry.resource = parseResourcePath(entry.resourcePath);
       entry.fullFileUrl = `${origin}/api/v1/files?path=${entry.resourcePath}&type=raw`;
       entry.downloadFileUrl = `${origin}/api/v1/files?path=${entry.resourcePath}&type=download`;
+      entry.isSharedWith = !!entry.sharedWith.length;
 
       // this prepares the entries to be compatible with all components
       entry.files.forEach(child => {
@@ -70,6 +71,7 @@ export function createDirectoryModel(origin) {
         child.resource = parseResourcePath(child.resourcePath);
         child.fullFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=raw`;
         child.downloadFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=download`;
+        child.isSharedWith = !!child.sharedWith.length;
       });
 
       return entry;

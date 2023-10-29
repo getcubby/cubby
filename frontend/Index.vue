@@ -52,7 +52,7 @@
             :show-owner="false"
             :show-size="true"
             :show-modified="true"
-            :show-share="true"
+            :show-share="'isSharedWith'"
             :editable="!isReadonly()"
             :multi-download="true"
             @selection-changed="onSelectionChanged"

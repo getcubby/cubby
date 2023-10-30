@@ -70,6 +70,7 @@ async function attachReceiver(req, res, next) {
 
     next();
 }
+
 async function getShareLink(req, res, next) {
     assert.strictEqual(typeof req.share, 'object');
 

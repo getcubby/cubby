@@ -142,9 +142,9 @@ function init(callback) {
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);
 
     router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
-    router.get ('/api/v1/office/wopi/files/:shareId', users.tokenAuth, office.checkFileInfo);
-    router.get ('/api/v1/office/wopi/files/:shareId/contents', users.tokenAuth, office.getFile);
-    router.post('/api/v1/office/wopi/files/:shareId/contents', users.tokenAuth, bodyParser.raw(), office.putFile);
+    router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);
+    router.get ('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, office.getFile);
+    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, bodyParser.raw(), office.putFile);
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
     app.use('/api', bodyParser.json());

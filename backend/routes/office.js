@@ -8,17 +8,19 @@ exports = module.exports = {
 };
 
 var assert = require('assert'),
+    crypto = require('crypto'),
     debug = require('debug')('cubby:routes:office'),
     superagent = require('superagent'),
     MainError = require('../mainerror.js'),
     files = require('../files.js'),
-    shares = require('../shares.js'),
     config = require('../config.js'),
     tokens = require('../tokens.js'),
     Dom = require('xmldom').DOMParser,
     xpath = require('xpath'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;
+
+const HANDLES = {};
 
 async function getHandle(req, res, next) {
     var filePath = decodeURIComponent(req.query.path);
@@ -43,22 +45,17 @@ async function getHandle(req, res, next) {
     var nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
     if (!nodes || nodes.length !== 1) return next(new HttpError(500, 'The requested mime type is not handled'));
 
-    let shareId;
-    try {
-        shareId = await shares.create({
-            user: req.user,
-            filePath: req.query.filePath,
-            receiverUsername: req.user.username
-        });
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
+    HANDLES[handleId] = {
+        username: req.user.username,
+        filePath: req.query.filePath
+    };
 
     const token = await tokens.add(req.user.username);
     const onlineUrl = nodes[0].getAttribute('urlsrc');
 
     res.json({
-        shareId: shareId,
+        handleId,
         url: onlineUrl,
         token: token
     });
@@ -76,24 +73,19 @@ async function getHandle(req, res, next) {
 async function checkFileInfo(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const shareId = req.params.shareId;
-    if (!shareId) return next(new HttpError(400, 'missing or invalid shareId'));
+    const handleId = req.params.handleId;
+    if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`checkFileInfo: ${shareId}`);
+    debug(`checkFileInfo: ${handleId}`);
+
+    const handle = HANDLES[handleId];
+    if (!handle)  return next(new HttpError(404, 'not found'));
+
+    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
 
     let result;
     try {
-        result = await shares.get(shareId);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
-
-    // TODO check if shared with others
-    if (result.receiverUsername !== req.user.username) return next(new HttpError(404, 'not found'));
-
-    try {
-        result = await files.get(req.user.username, result.filePath);
+        result = await files.get(req.user.username, handle.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -120,24 +112,19 @@ async function checkFileInfo(req, res, next) {
 async function getFile(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const shareId = req.params.shareId;
-    if (!shareId) return next(new HttpError(400, 'missing or invalid shareId'));
+    const handleId = req.params.handleId;
+    if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`getFile: ${shareId}`);
+    debug(`getFile: ${handleId}`);
+
+    const handle = HANDLES[handleId];
+    if (!handle)  return next(new HttpError(404, 'not found'));
+
+    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
 
     let result;
     try {
-        result = await shares.get(shareId);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
-
-    // TODO check if shared with others
-    if (result.receiverUsername !== req.user.username) return next(new HttpError(404, 'not found'));
-
-    try {
-        result = await files.get(req.user.username, result.filePath);
+        result = await files.get(req.user.username, handle.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -156,26 +143,20 @@ async function getFile(req, res, next) {
  *  https://HOSTNAME/wopi/files/<document_id>/contents
  */
 async function putFile(req, res, next) {
-    // we log to the console so that is possible
-    // to check that saving has triggered this wopi endpoint
-    console.log('wopi PutFile endpoint');
     if (!req.body) return next(new HttpError(500, 'no body provided'));
 
-    const shareId = req.params.shareId;
-    if (!shareId) return next(new HttpError(400, 'missing or invalid shareId'));
+    const handleId = req.params.handleId;
+    if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`putFile: ${shareId} ${req.body.length}`);
+    debug(`putFile: ${handleId} ${req.body.length}`);
 
-    let result;
-    try {
-        result = await shares.get(shareId);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
+    const handle = HANDLES[handleId];
+    if (!handle)  return next(new HttpError(404, 'not found'));
+
+    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
 
     try {
-        await files.addOrOverwriteFileContents(result.owner, result.filePath, req.body, null, true);
+        await files.addOrOverwriteFileContents(req.user.username, handle.filePath, req.body, null, true);
     } catch (error) {
         return next(new HttpError(500, error));
     }

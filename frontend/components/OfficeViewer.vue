@@ -70,7 +70,7 @@ export default {
 
       const handle = await this.$root.mainModel.getOfficeHandle(entry.filePath);
 
-      const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.shareId}`;
+      const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
       this.wopiUrl = `${handle.url}WOPISrc=${wopiSrc}`;
       this.wopiToken = handle.token;
 

@@ -126,3 +126,8 @@
 * Rework most of the UI
 * Remove local user support and use OpenID
 
+[2.0.1]
+* Fix share link creation
+* Fix file paths in some situations
+* Move office handle storage from shares to in-memory store
+

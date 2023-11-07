@@ -131,3 +131,6 @@
 * Fix file paths in some situations
 * Move office handle storage from shares to in-memory store
 
+[2.0.2]
+* Ensure we escape filenames for postgres regexp usage
+

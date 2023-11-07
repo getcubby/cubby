@@ -16,6 +16,17 @@ var assert = require('assert'),
     crypto = require('crypto'),
     MainError = require('./mainerror.js');
 
+// in some queries we use postgres regexp so if input contains regexp chars we have to escape them
+function escapeForSqlRegexp(text) {
+    const specials = [
+      '/', '.', '*', '+', '?', '|',
+      '(', ')', '[', ']', '{', '}', '\\'
+    ];
+    const reg = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
+
+    return text.replace(reg, '\\$1');
+}
+
 function postProcess(data) {
     data.filePath = data.file_path;
     delete data.file_path;
@@ -91,7 +102,7 @@ async function getByOwnerAndFilepath(username, filepath) {
 
     debug(`getByOwnerAndFilepath: username:${username} filepath:${filepath}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE owner = $1 AND file_path ~ $2', [ username, `(^)${filepath}(.*$)` ]);
+    const result = await database.query('SELECT * FROM shares WHERE owner = $1 AND file_path ~ $2', [ username, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 
@@ -110,7 +121,7 @@ async function getByReceiverAndFilepath(receiver, filepath, exactMatch = false) 
     let result;
 
     if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND file_path = $2', [ receiver, filepath ]);
-    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND file_path ~ $2', [ receiver, `(^)${filepath}(.*$)` ]);
+    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND file_path ~ $2', [ receiver, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 

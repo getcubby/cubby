@@ -38,10 +38,10 @@ async function newShare(emailAddress, shareId) {
 
     const emailSubject = `${share.owner} shared a file with you`;
 
-    const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'new-share-email.html'), 'utf8'));
-    const emailTemplateText = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'new-share-email.text'), 'utf8'));
+    const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.html'), 'utf8'));
+    const emailTemplateText = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.text'), 'utf8'));
 
-    const emailTemplateData = { sharedWith: 'foobar', sharedBy: share.owner, sharedPath: share.filePath, appDomain: process.env.CLOUDRON_APP_DOMAIN, actionLink: `${process.env.CLOUDRON_APP_ORIGIN}#files/shares/${shareId}/` };
+    const emailTemplateData = { sharedWith: share.receiverUsername, sharedBy: share.owner, sharedPath: share.filePath.slice(1) /* remove slash */, appDomain: process.env.CLOUDRON_APP_DOMAIN, actionLink: `${process.env.CLOUDRON_APP_ORIGIN}#files/shares/${shareId}/` };
 
     const emailBodyText = emailTemplateText(emailTemplateData);
     const emailBodyHtml = emailTemplateHtml(emailTemplateData);

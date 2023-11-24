@@ -36,15 +36,21 @@ async function newShare(emailAddress, shareId) {
 
     console.log('sharing', share)
 
-    const emailTemplate = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'new-share-email.template'), 'utf8'));
     const emailSubject = `${share.owner} shared a file with you`;
-    const emailBody = emailTemplate({ sharedBy: share.owner, sharedPath: share.filePath, actionLink: `${process.env.CLOUDRON_APP_ORIGIN}#files/shares/${shareId}/` });
+
+    const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'new-share-email.html'), 'utf8'));
+    const emailTemplateText = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'new-share-email.text'), 'utf8'));
+
+    const emailTemplateData = { sharedWith: 'foobar', sharedBy: share.owner, sharedPath: share.filePath, appDomain: process.env.CLOUDRON_APP_DOMAIN, actionLink: `${process.env.CLOUDRON_APP_ORIGIN}#files/shares/${shareId}/` };
+
+    const emailBodyText = emailTemplateText(emailTemplateData);
+    const emailBodyHtml = emailTemplateHtml(emailTemplateData);
 
     if (!CAN_SEND_EMAIL) {
         console.log(`Would send email to ${emailAddress}:`);
         console.log('-----------------------------');
         console.log(`Subject: ${emailSubject}`);
-        console.log(emailBody);
+        console.log(emailBodyText);
         console.log('-----------------------------');
     }
 
@@ -61,7 +67,8 @@ async function newShare(emailAddress, shareId) {
         from: `Cubby <${process.env.CLOUDRON_MAIL_FROM}>`,
         to: emailAddress,
         subject: emailSubject,
-        text: emailBody
+        text: emailBodyText,
+        html: emailBodyHtml
     };
 
     await transport.sendMail(mail);

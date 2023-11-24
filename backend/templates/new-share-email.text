@@ -1,3 +1,7 @@
-{{ sharedBy }} shared {{ sharedPath }} with you on Cubby.
+Hi {{ sharedTo }},
+
+{{ sharedBy }} shared »{{ sharedPath }}« with you on {{ appDomain }}.
 
 {{ actionLink }}
+
+Cubby powered by https://cloudron.io

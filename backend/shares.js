@@ -14,7 +14,9 @@ var assert = require('assert'),
     files = require('./files.js'),
     database = require('./database.js'),
     crypto = require('crypto'),
-    MainError = require('./mainerror.js');
+    mailer = require('./mailer.js'),
+    MainError = require('./mainerror.js'),
+    users = require('./users.js');
 
 // in some queries we use postgres regexp so if input contains regexp chars we have to escape them
 function escapeForSqlRegexp(text) {
@@ -80,6 +82,9 @@ async function create({ user, filePath, receiverUsername, receiverEmail, readonl
     await database.query('INSERT INTO shares (id, owner, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
         shareId, user.username, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAt || null
     ]);
+
+    const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
+    if (notifyEmail) await mailer.newShare(notifyEmail, shareId);
 
     return shareId;
 }

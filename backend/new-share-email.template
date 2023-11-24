@@ -1,0 +1,3 @@
+{{ sharedBy }} shared {{ sharedPath }} with you on Cubby.
+
+{{ actionLink }}

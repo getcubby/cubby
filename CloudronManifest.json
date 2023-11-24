@@ -20,6 +20,7 @@
   "addons": {
     "localstorage": {},
     "postgresql": {},
+    "sendmail": {},
     "oidc": {
       "loginRedirectUri": "/api/v1/callback"
     }

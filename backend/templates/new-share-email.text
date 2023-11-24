@@ -1,6 +1,6 @@
 Hi {{ sharedWith }},
 
-{{ sharedBy }} shared »{{ sharedPath }}« with you on {{ appDomain }}.
+{{ sharedBy }} shared »{{ sharedPath }}« with you on {{ appDomain }}
 
 {{ actionLink }}
 

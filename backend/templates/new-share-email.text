@@ -1,4 +1,4 @@
-Hi {{ sharedTo }},
+Hi {{ sharedWith }},
 
 {{ sharedBy }} shared »{{ sharedPath }}« with you on {{ appDomain }}.
 

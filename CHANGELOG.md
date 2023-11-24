@@ -134,3 +134,7 @@
 [2.0.2]
 * Ensure we escape filenames for postgres regexp usage
 
+[2.0.3]
+* Notify users about newly shared items via email
+* Update dependencies
+

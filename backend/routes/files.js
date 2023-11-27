@@ -53,7 +53,7 @@ async function translateResourcePath(user, filePath) {
 
 async function add(req, res, next) {
     // only allowed for authenticated users until we check for !read-only shares
-    if (!req.user) return next(new HttpError(403, 'not allowed'));
+    if (!req.user) return next(new HttpError(401, 'not allowed'));
 
     const directory = boolLike(req.query.directory);
     const overwrite = boolLike(req.query.overwrite);
@@ -169,8 +169,8 @@ async function get(req, res, next) {
             const share = await shares.get(shareId);
             if (!share) return next(new HttpError(404, 'no such share'));
 
-            // check if this share is a public link or only for a specific user
-            if (req.user && share.receiverUsername && share.receiverUsername !== req.user.username) return next(new HttpError(403, 'not allowed'));
+            // receiverUsername is set, so this is not a public share
+            if (share.receiverUsername && !req.user) return next(new HttpError(401, 'not allowed'));
 
             // actual path is without shares/<shareId>/
             const shareFilePath = filePath.split('/').slice(2).join('/');
@@ -203,7 +203,7 @@ async function get(req, res, next) {
             debug('listShares');
 
             // only allowed for authenticated users
-            if (!req.user) return next(new HttpError(403, 'not allowed'));
+            if (!req.user) return next(new HttpError(401, 'not allowed'));
 
             let result = [];
 

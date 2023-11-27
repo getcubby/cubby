@@ -34,8 +34,6 @@ async function newShare(emailAddress, shareId) {
     const share = await shares.get(shareId);
     assert.ok(share, `Failed to get share ${shareId}`);
 
-    console.log('sharing', share)
-
     const emailSubject = `${share.owner} shared a file with you`;
 
     const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.html'), 'utf8'));
@@ -52,6 +50,7 @@ async function newShare(emailAddress, shareId) {
         console.log(`Subject: ${emailSubject}`);
         console.log(emailBodyText);
         console.log('-----------------------------');
+        return;
     }
 
     const transport = nodemailer.createTransport(smtpTransport({

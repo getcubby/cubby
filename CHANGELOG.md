@@ -138,3 +138,6 @@
 * Notify users about newly shared items via email
 * Update dependencies
 
+[2.0.4]
+* Fix various share related issues
+

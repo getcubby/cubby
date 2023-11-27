@@ -170,7 +170,10 @@ async function get(req, res, next) {
             if (!share) return next(new HttpError(404, 'no such share'));
 
             // receiverUsername is set, so this is not a public share
-            if (share.receiverUsername && !req.user) return next(new HttpError(401, 'not allowed'));
+            if (share.receiverUsername && !req.user) return next(new HttpError(403, 'not allowed'));
+
+            // if not a public share the login session has to match
+            if (share.receiverUsername && req.user && req.user.username !== share.receiverUsername)  return next(new HttpError(403, 'not allowed'));
 
             // actual path is without shares/<shareId>/
             const shareFilePath = filePath.split('/').slice(2).join('/');

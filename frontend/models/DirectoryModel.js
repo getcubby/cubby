@@ -52,6 +52,7 @@ export function createDirectoryModel(origin) {
       entry.previewUrl = `${origin}${entry.previewUrl}`;
       entry.modified = new Date(entry.mtime);
       entry.type = entry.isDirectory ? 'directory' : 'file',
+      entry.isBinary = !!entry.isBinary;
       entry.icon = entry.previewUrl;
       entry.resourcePath = resource.resourcePath;
       entry.resource = parseResourcePath(entry.resourcePath);
@@ -66,6 +67,7 @@ export function createDirectoryModel(origin) {
         child.previewUrl = `${origin}${child.previewUrl}`;
         child.modified = new Date(child.mtime);
         child.type = child.isDirectory ? 'directory' : 'file',
+        entry.isBinary = !!entry.isBinary;
         child.icon = child.previewUrl;
         child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
         child.resource = parseResourcePath(child.resourcePath);

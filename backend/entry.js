@@ -4,6 +4,7 @@ const assert = require('assert'),
     fs = require('fs'),
     crypto = require('crypto'),
     constants = require('./constants.js'),
+    isBinaryFileSync = require('isbinaryfile').isBinaryFileSync,
     preview = require('./preview.js');
 
 exports = module.exports = Entry;
@@ -32,6 +33,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.mtime = mtime;
     this.isDirectory = isDirectory;
     this.isFile = isFile;
+    this.isBinary = isFile ? isBinaryFileSync(fullFilePath) : false;
     this.mimeType = mimeType;
     this.files = files;
     this.sharedWith = sharedWith;
@@ -85,6 +87,7 @@ Entry.prototype.withoutPrivate = function () {
         isDirectory: this.isDirectory,
         isFile: this.isFile,
         isShare: this.isShare,
+        isBinary: this.isBinary,
         mimeType: this.mimeType,
         files: this.files.map(function (f) { return f.withoutPrivate(); }),
         share: this.share,

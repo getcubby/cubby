@@ -889,25 +889,13 @@ export default {
       try {
         this.profile = await this.mainModel.getProfile();
       } catch (e) {
-        if (e.cause && e.cause.status === 401) {
-          this.ready = true;
-          this.onLogout();
-        } else {
-          console.error('Failed to get profile.', e);
-        }
-        return;
+        if (e.cause && e.cause.status !== 401) return console.error('Failed to get profile.', e);
       }
 
       try {
         this.config = await this.mainModel.getConfig();
       } catch (e) {
-        if (e.cause && e.cause.status === 401) {
-          this.ready = true;
-          this.onLogout();
-        } else {
-          console.error('Failed to get config.', e);
-        }
-        return;
+        if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
       }
 
       this.directoryModel = createDirectoryModel(API_ORIGIN);

@@ -9,7 +9,10 @@ var assert = require('assert'),
     archiver = require('archiver'),
     debug = require('debug')('cubby:routes:preview'),
     files = require('../files.js'),
+    MainError = require('../mainerror.js'),
+    path = require('path'),
     preview = require('../preview.js'),
+    shares = require('../shares.js'),
     HttpError = require('connect-lastmile').HttpError;
 
 async function getPreview(req, res, next) {
@@ -78,9 +81,32 @@ async function download(req, res, next) {
     for (const entry of entries) {
         try {
             const resource = entry.resourcePath.split('/')[1];
-            let filePath = entry.resourcePath.slice(resource.length+1);
+            if (!resource) return next(new HttpError(400, 'invalid resource'));
+            const filePath = entry.resourcePath.slice(resource.length+1);
 
-            const file = await files.get(req.user.username /* FIXME should be resource */, filePath);
+            let file = null;
+
+            if (resource === 'home') {
+                file = await files.get(req.user.username /* FIXME should be resource */, filePath);
+            } else if (resource === 'shares') {
+                const shareId = filePath.split('/')[1];
+                if (!shareId)  return next(new HttpError(404, 'missing share id'));
+
+                const share = await shares.get(shareId);
+                if (!share) return next(new HttpError(404, 'no such share'));
+
+                // actual path is without shares/<shareId>/
+                const shareFilePath = filePath.split('/').slice(2).join('/');
+
+                try {
+                    file = await files.get(share.owner, path.join(share.filePath, shareFilePath));
+                } catch (error) {
+                    if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
+                    return next(new HttpError(500, error));
+                }
+            } else {
+                return next(new HttpError(404, `resource ${resource} not supported for download`));
+            }
 
             debug(`download: add ${entry.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
 

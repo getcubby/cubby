@@ -71,7 +71,7 @@ export function createDirectoryModel(origin) {
         child.icon = child.previewUrl;
 
         // shares need to add the share id if we are on meta toplevel
-        if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}${child.isDirectory ? child.fileName : ''}`);
+        if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}`);
         else child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
 
         child.resource = parseResourcePath(child.resourcePath);
@@ -173,9 +173,9 @@ export function createDirectoryModel(origin) {
         params.append('skipPath', folderPath);
 
         params.append('entries', JSON.stringify(files.map(function (entry) {
-            return {
-                resourcePath: entry.resourcePath
-            };
+          return {
+            resourcePath: entry.resourcePath
+          };
         })));
 
         window.location.href = `${origin}/api/v1/download?${params.toString()}`;

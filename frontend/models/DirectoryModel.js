@@ -69,7 +69,11 @@ export function createDirectoryModel(origin) {
         child.type = child.isDirectory ? 'directory' : 'file',
         entry.isBinary = !!entry.isBinary;
         child.icon = child.previewUrl;
-        child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
+
+        // shares need to add the share id if we are on meta toplevel
+        if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}${child.isDirectory ? child.fileName : ''}`);
+        else child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
+
         child.resource = parseResourcePath(child.resourcePath);
         child.fullFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=raw`;
         child.downloadFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=download`;
@@ -158,7 +162,7 @@ export function createDirectoryModel(origin) {
     },
     async download(resource, files) {
       if (files.length === 1 && !files[0].isDirectory) {
-        window.location.href = `${origin}/api/v1/files?type=download&path=${files[0].resourcePath}`;
+        window.location.href = files[0].downloadFileUrl;
       } else {
         const params = new URLSearchParams();
 

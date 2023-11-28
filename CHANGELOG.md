@@ -141,3 +141,7 @@
 [2.0.4]
 * Fix various share related issues
 
+[2.0.5]
+* Fix downloading of directly shared files
+* Fix downloading archive of shared files and folders
+

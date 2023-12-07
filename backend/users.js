@@ -36,7 +36,7 @@ async function webdavLogin(username, password) {
 
     if (username === '' || password === '') return null;
 
-    debug('webdavLogin: ', username, password);
+    debug('webdavLogin: ', username);
 
     const user = await get(username);
     if (!user) return null;

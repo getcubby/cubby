@@ -275,7 +275,7 @@ import MainToolbar from './components/MainToolbar.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
 const BASE_URL = import.meta.env.BASE_URL || '/';
 
 const beforeUnloadListener = (event) => {

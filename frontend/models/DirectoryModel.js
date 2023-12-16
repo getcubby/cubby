@@ -56,8 +56,8 @@ export function createDirectoryModel(origin) {
       entry.icon = entry.previewUrl;
       entry.resourcePath = resource.resourcePath;
       entry.resource = parseResourcePath(entry.resourcePath);
-      entry.fullFileUrl = `${origin}/api/v1/files?path=${entry.resourcePath}&type=raw`;
-      entry.downloadFileUrl = `${origin}/api/v1/files?path=${entry.resourcePath}&type=download`;
+      entry.fullFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=raw`;
+      entry.downloadFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=download`;
       entry.isSharedWith = !!entry.sharedWith.length;
 
       // this prepares the entries to be compatible with all components

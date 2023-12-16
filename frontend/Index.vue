@@ -43,12 +43,7 @@
       <div class="container" style="overflow: hidden;">
         <div class="main-container-content">
           <Button class="p-button-rounded p-button-text side-bar-toggle" :icon="'pi ' + (previewPanelVisible ? 'pi-chevron-right' : 'pi-chevron-left')" @click="onTogglePreviewPanel" v-tooltip="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"/>
-          <div v-show="!entries.length" class="no-entries-placeholder">
-            <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
-            <p v-show="activeResourceType === 'recent'">No recent files</p>
-            <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet.</p>
-          </div>
-          <DirectoryView v-show="entries.length"
+          <DirectoryView
             :show-owner="false"
             :show-size="true"
             :show-modified="true"
@@ -73,7 +68,15 @@
             :clipboard="clipboard"
             :fallback-icon="`${BASE_URL}mime-types/none.svg`"
             style="position: absolute;"
-          />
+          >
+            <template #empty>
+              <div v-show="!entries.length" class="no-entries-placeholder">
+                <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
+                <p v-show="activeResourceType === 'recent'">No recent files</p>
+                <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet.</p>
+              </div>
+            </template>
+          </DirectoryView>
         </div>
         <PreviewPanel :parentEntry="entry" :selectedEntries="selectedEntries" :visible="previewPanelVisible"/>
       </div>

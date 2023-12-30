@@ -88,6 +88,8 @@ async function addOrOverwriteFile(username, filePath, sourceFilePath, mtime, ove
         throw new MainError(MainError.FS_ERROR, error);
     }
 
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullFilePath));
+
     if (!mtime) return;
 
     try {
@@ -125,6 +127,8 @@ async function addOrOverwriteFileContents(username, filePath, content, mtime, ov
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }
+
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullFilePath));
 
     if (!mtime) return;
 
@@ -313,6 +317,10 @@ async function move(username, filePath, newUsername, newFilePath) {
         if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, error);
     }
+
+    // TODO maybe be smart to check if folders are within the same parent folder
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullFilePath));
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullNewFilePath));
 }
 
 async function copy(username, filePath, newUsername, newFilePath) {
@@ -336,6 +344,8 @@ async function copy(username, filePath, newUsername, newFilePath) {
         if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, error);
     }
+
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullNewFilePath));
 }
 
 async function remove(username, filePath) {
@@ -352,6 +362,8 @@ async function remove(username, filePath) {
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }
+
+    await diskusage.calculateByUsernameAndDirectory(username, path.dirname(fullFilePath));
 }
 
 async function recent(username, daysAgo = 3, maxFiles = 100) {

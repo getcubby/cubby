@@ -145,3 +145,8 @@
 * Fix downloading of directly shared files
 * Fix downloading archive of shared files and folders
 
+[2.0.6]
+* Fix context menu on empty folders
+* Fix a few keyboard copy/cut/paste shortcuts - still requires the directory view to have focus
+* Fix usage of files starting with a # (hash)
+

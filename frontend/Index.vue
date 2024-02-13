@@ -45,6 +45,7 @@
           <Button class="p-button-rounded p-button-text side-bar-toggle" :icon="'pi ' + (previewPanelVisible ? 'pi-chevron-right' : 'pi-chevron-left')" @click="onTogglePreviewPanel" v-tooltip="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"/>
           <DirectoryView
             :show-owner="false"
+            :show-extract="false"
             :show-size="true"
             :show-modified="true"
             :show-share="'isSharedWith'"

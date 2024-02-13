@@ -210,7 +210,6 @@ export function createDirectoryModel(origin) {
     async paste(resource, action, files) {
       // this will not overwrite but tries to find a new unique name to past to
       for (let f in files) {
-        console.log('pasting', files[f])
         let done = false;
         let targetPath = pathJoin(resource.resourcePath, files[f].name);
         const extension = files[f].extension;

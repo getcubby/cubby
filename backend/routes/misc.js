@@ -7,7 +7,7 @@ exports = module.exports = {
 
 var assert = require('assert'),
     archiver = require('archiver'),
-    debug = require('debug')('cubby:routes:preview'),
+    debug = require('debug')('cubby:routes:misc'),
     files = require('../files.js'),
     MainError = require('../mainerror.js'),
     path = require('path'),
@@ -80,9 +80,9 @@ async function download(req, res, next) {
     // collect and attach all requested files
     for (const entry of entries) {
         try {
-            const resource = entry.resourcePath.split('/')[1];
+            const resource = decodeURIComponent(entry.resourcePath).split('/')[1];
             if (!resource) return next(new HttpError(400, 'invalid resource'));
-            const filePath = entry.resourcePath.slice(resource.length+1);
+            const filePath = decodeURIComponent(entry.resourcePath).slice(resource.length+1);
 
             let file = null;
 

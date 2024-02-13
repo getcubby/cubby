@@ -545,9 +545,12 @@ export default {
 
         if (typeof done === 'function') done();
       },
+      // if entries is provided download those, otherwise selected entries, otherwise all entries
       async downloadHandler(entries) {
+        // in case we got a single entry
+        if (entries && !Array.isArray(entries)) entries = [ entries ];
         if (!entries) entries = this.selectedEntries;
-        if (!Array.isArray(entries)) entries = [ entries ];
+        if (entries.length === 0) entries = this.entries;
 
         const resource = parseResourcePath(this.currentResourcePath);
         await this.directoryModel.download(resource, entries);

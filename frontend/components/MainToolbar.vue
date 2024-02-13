@@ -15,7 +15,7 @@
 
     <template #end>
       <div class="file-actions">
-        <Button v-show="selectedEntries.length" icon="pi pi-download" class="p-button-outlined" @click="onDownload(selectedEntries)"/>
+        <Button icon="pi pi-download" class="p-button-outlined" @click="onDownload(selectedEntries || null)"/>
         <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" class="p-button-outlined p-button-danger" @click="onDelete(selectedEntries)"/>
       </div>
 

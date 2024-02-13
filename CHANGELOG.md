@@ -150,3 +150,8 @@
 * Fix a few keyboard copy/cut/paste shortcuts - still requires the directory view to have focus
 * Fix usage of files starting with a # (hash)
 
+[2.0.7]
+* Fix breadcrumb display
+* Fix various download related encoding issues
+* Update dependencies
+

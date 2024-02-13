@@ -154,4 +154,5 @@
 * Fix breadcrumb display
 * Fix various download related encoding issues
 * Update dependencies
+* Use nodejs from base image
 

@@ -14,11 +14,6 @@ RUN mkdir -p /app/code \
 
 WORKDIR /app/code
 
-ARG NODE_VERSION=16.14.2
-RUN mkdir -p /usr/local/node-$NODE_VERSION && \
-    curl -L https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz | tar zxf - --strip-components 1 -C /usr/local/node-$NODE_VERSION
-ENV PATH /usr/local/node-$NODE_VERSION/bin:$PATH
-
 COPY . /app/code
 
 RUN npm install

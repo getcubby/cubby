@@ -75,8 +75,8 @@ export function createDirectoryModel(origin) {
         else child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
 
         child.resource = parseResourcePath(child.resourcePath);
-        child.fullFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=raw`;
-        child.downloadFileUrl = `${origin}/api/v1/files?path=${child.resourcePath}&type=download`;
+        child.fullFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=raw`;
+        child.downloadFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=download`;
         child.isSharedWith = !!child.sharedWith.length;
       });
 

@@ -752,7 +752,7 @@ export default {
         if (resource.type === 'home') {
           this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
             return {
-              label: e,
+              label: decodeURIComponent(e),
               route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
             };
           });
@@ -769,7 +769,7 @@ export default {
         } else if (resource.type === 'shares') {
           this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
             return {
-              label: e,
+              label: decodeURIComponent(e),
               route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
             };
           });

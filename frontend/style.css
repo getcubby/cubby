@@ -8,7 +8,7 @@ html, body {
   --primary-color: #2196F3;
   --primary-color-text: #ffffff;
   --hover-background-color: #e9ecef;
-  --font-family: Roboto;
+  --font-family: 'Noto Sans';
   margin: 0;
   padding: 0;
   width: 100%;

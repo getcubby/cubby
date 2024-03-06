@@ -156,3 +156,8 @@
 * Update dependencies
 * Use nodejs from base image
 
+[2.0.8]
+* Fix share download content types
+* Fix item double activation
+* Update dependencies
+

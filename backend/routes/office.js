@@ -13,6 +13,7 @@ var assert = require('assert'),
     superagent = require('superagent'),
     MainError = require('../mainerror.js'),
     files = require('../files.js'),
+    translateResourcePath = require('./files.js').translateResourcePath,
     config = require('../config.js'),
     tokens = require('../tokens.js'),
     Dom = require('xmldom').DOMParser,
@@ -23,9 +24,8 @@ var assert = require('assert'),
 const HANDLES = {};
 
 async function getHandle(req, res, next) {
-    var filePath = decodeURIComponent(req.query.path);
-
-    if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
+    const resourcePath = decodeURIComponent(req.query.resourcePath);
+    if (!resourcePath) return next(new HttpError(400, 'resourcePath must be a non-empty string'));
 
     const collaboraHost = config.get('collabora.host', '');
     if (!collaboraHost) return next(new HttpError(412, 'collabora office not configured'));
@@ -45,10 +45,16 @@ async function getHandle(req, res, next) {
     var nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
     if (!nodes || nodes.length !== 1) return next(new HttpError(500, 'The requested mime type is not handled'));
 
+    const subject = await translateResourcePath(req.user, resourcePath);
+    if (!subject) return next(new HttpError(403, 'not allowed'));
+
+    debug(`getHandle: ${subject.resource} ${subject.filePath}`);
+
     const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
     HANDLES[handleId] = {
-        username: req.user.username,
-        filePath: req.query.filePath
+        username: subject.username,
+        resourcePath: resourcePath,
+        filePath: subject.filePath
     };
 
     const token = await tokens.add(req.user.username);
@@ -81,11 +87,9 @@ async function checkFileInfo(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
-
     let result;
     try {
-        result = await files.get(req.user.username, handle.filePath);
+        result = await files.get(handle.username, handle.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -120,11 +124,9 @@ async function getFile(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
-
     let result;
     try {
-        result = await files.get(req.user.username, handle.filePath);
+        result = await files.get(handle.username, handle.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -153,10 +155,8 @@ async function putFile(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    if (handle.username !== req.user.username) return next(new HttpError(404, 'not found'));
-
     try {
-        await files.addOrOverwriteFileContents(req.user.username, handle.filePath, req.body, null, true);
+        await files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true);
     } catch (error) {
         return next(new HttpError(500, error));
     }

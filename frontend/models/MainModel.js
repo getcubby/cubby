@@ -62,10 +62,10 @@ export function createMainModel(origin) {
 
       if (error || result.statusCode !== 200) throw new Error('Failed to set password', { cause: error || result })
     },
-    async getOfficeHandle(filePath) {
+    async getOfficeHandle(entry) {
       let error, result;
       try {
-        result = await superagent.get(`${origin}/api/v1/office/handle`).query({ filePath }).withCredentials();
+        result = await superagent.get(`${origin}/api/v1/office/handle`).query({ resourcePath: entry.resourcePath }).withCredentials();
       } catch (e) {
         error = e;
       }

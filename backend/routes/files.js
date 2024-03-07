@@ -1,6 +1,8 @@
 'use strict';
 
 exports = module.exports = {
+    translateResourcePath,
+
     add,
     head,
     get,

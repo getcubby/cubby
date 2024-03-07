@@ -68,7 +68,7 @@ export default {
 
       this.entry = entry;
 
-      const handle = await this.$root.mainModel.getOfficeHandle(entry.filePath);
+      const handle = await this.$root.mainModel.getOfficeHandle(entry);
 
       const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
       this.wopiUrl = `${handle.url}WOPISrc=${wopiSrc}`;

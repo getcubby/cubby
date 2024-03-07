@@ -161,3 +161,6 @@
 * Fix item double activation
 * Update dependencies
 
+[2.0.9]
+* Fix office suite usage on shared documents
+

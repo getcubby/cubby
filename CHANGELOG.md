@@ -164,3 +164,7 @@
 [2.0.9]
 * Fix office suite usage on shared documents
 
+[2.0.10]
+* Fix login session expiration
+* Some UI fixes
+

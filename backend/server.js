@@ -157,7 +157,7 @@ function init(callback) {
             baseURL: process.env.CLOUDRON_APP_ORIGIN,
             clientID: process.env.CLOUDRON_OIDC_CLIENT_ID,
             clientSecret: process.env.CLOUDRON_OIDC_CLIENT_SECRET,
-            secret: 'FIXME this secret',
+            secret: 'Cubby secret should be unique I guess',
             authorizationParams: {
                 response_type: 'code',
                 scope: 'openid profile email'
@@ -167,7 +167,12 @@ function init(callback) {
                 callback: '/api/v1/callback',
                 login: false,
                 logout: '/api/v1/logout'
-            }
+            },
+            session: {
+                name: 'CubbySession',
+                rolling: true,
+                rollingDuration: 24 * 60 * 60 * 4 // max 4 days idling
+            },
         }));
     } else {
         // mock oidc

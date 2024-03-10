@@ -9,7 +9,7 @@
     <div class="navigation-panel">
       <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="pi pi-folder-open"></i> All Files</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="pi pi-folder-open"></i> My Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="pi pi-clock"></i> Recent Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="pi pi-share-alt"></i> Shared With You</a>
 

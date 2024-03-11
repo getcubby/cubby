@@ -19,7 +19,7 @@
         <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" class="p-button-outlined p-button-danger" @click="onDelete(selectedEntries)"/>
       </div>
 
-      <Button icon="pi pi-plus" label="New" @click="onToggleMenuNew" :disabled="readonly"/>
+      <Button icon="pi pi-plus" label="Add new" @click="onToggleMenuNew" :disabled="readonly"/>
 
       <div class="profile-actions">
         <Button v-show="displayName" icon="pi pi-user" class="p-button-secondary" @click="onToggleMenuMain" :label="displayName"/>

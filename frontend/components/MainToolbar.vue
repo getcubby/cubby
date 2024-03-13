@@ -19,12 +19,14 @@
         <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" class="p-button-outlined p-button-danger" @click="onDelete(selectedEntries)"/>
       </div>
 
-      <Button icon="pi pi-plus" label="Add new" @click="onToggleMenuNew" :disabled="readonly"/>
+      <Button icon="pi pi-upload" label="Upload" @click="onToggleMenuUpload" :disabled="readonly"/>
+      <Button icon="pi pi-plus" label="New" @click="onToggleMenuNew" :disabled="readonly"/>
 
       <div class="profile-actions">
         <Button v-show="displayName" icon="pi pi-user" class="p-button-secondary" @click="onToggleMenuMain" :label="displayName"/>
         <Button v-show="!displayName" icon="pi pi-sign-in" class="p-button-secondary" @click="onLogin" label="Login"/>
 
+        <Menu ref="menuUpload" :model="uploadMenu" :popup="true"/>
         <Menu ref="menuNew" :model="newMenu" :popup="true"/>
         <Menu ref="menuMain" :model="mainMenu" :popup="true"/>
       </div>
@@ -147,33 +149,31 @@ export default {
           command: this.onLogout
         }],
         newMenu: [{
-          label: 'Upload',
-          items: [{
-            label: 'Files',
-            icon: 'pi pi-file',
-            command: () => this.onUploadFile()
-          }, {
-            label: 'Folder',
-            icon: 'pi pi-folder',
-            command: () => this.onUploadFolder()
-          }
-        ]}, {
-          label: 'Create',
-          items: [{
-            label: 'File',
-            icon: 'pi pi-file',
-            command: () => this.onNewFile()
-          }, {
-            label: 'Folder',
-            icon: 'pi pi-folder',
-            command: () => this.onNewFolder()
-          }]
+          label: 'New File',
+          icon: 'pi pi-file',
+          command: () => this.onNewFile()
+        }, {
+          label: 'New Folder',
+          icon: 'pi pi-folder',
+          command: () => this.onNewFolder()
         }],
+        uploadMenu: [{
+          label: 'Upload File',
+          icon: 'pi pi-file',
+          command: () => this.onUploadFile()
+        }, {
+          label: 'Upload Folder',
+          icon: 'pi pi-folder',
+          command: () => this.onUploadFolder()
+        }]
       };
     },
     methods: {
       onLogin() {
         this.$emit('login');
+      },
+      onToggleMenuUpload(event) {
+        this.$refs.menuUpload.toggle(event);
       },
       onToggleMenuNew(event) {
         this.$refs.menuNew.toggle(event);

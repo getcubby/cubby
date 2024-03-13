@@ -29,10 +29,10 @@ var assert = require('assert'),
     MainError = require('./mainerror.js');
 
 function getValidFullPath(username, filePath) {
-    fs.mkdirSync(path.join(constants.DATA_ROOT, username), { recursive: true });
+    fs.mkdirSync(path.join(constants.USER_DATA_ROOT, username), { recursive: true });
 
-    const fullFilePath = path.resolve(path.join(constants.DATA_ROOT, username, filePath));
-    if (fullFilePath.indexOf(path.join(constants.DATA_ROOT, username)) !== 0) return null;
+    const fullFilePath = path.resolve(path.join(constants.USER_DATA_ROOT, username, filePath));
+    if (fullFilePath.indexOf(path.join(constants.USER_DATA_ROOT, username)) !== 0) return null;
 
     return fullFilePath;
 }
@@ -384,7 +384,7 @@ async function recent(username, daysAgo = 3, maxFiles = 100) {
 
     let result = [];
 
-    const localResolvedPrefix = path.join(constants.DATA_ROOT, username);
+    const localResolvedPrefix = path.join(constants.USER_DATA_ROOT, username);
 
     // we limit files to maxFiles
     for (let filePath of filePaths.slice(0, maxFiles)) {

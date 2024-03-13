@@ -18,7 +18,7 @@ database.init();
 config.init(process.env.CLOUDRON ? '/app/data/config.json' : 'config.json');
 
 // ensure data directory or crash
-fs.mkdirSync(constants.DATA_ROOT, { recursive: true });
+fs.mkdirSync(constants.USER_DATA_ROOT, { recursive: true });
 
 // we shall crash if this fails
 diskusage.calculate();
@@ -29,6 +29,6 @@ setInterval(diskusage.calculate, 1000 * 60 * 60);
 server.init(function (error) {
     if (error) exit(error);
 
-    console.log(`Using data folder at: ${constants.DATA_ROOT}`);
+    console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
     console.log('Cubby is up and running.');
 });

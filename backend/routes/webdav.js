@@ -68,7 +68,7 @@ function express() {
         httpAuthentication: new webdav.HTTPBasicAuthentication(new WebdavUserManager(), 'Cubby')
     });
 
-    webdavServer.setFileSystem('/', new webdav.PhysicalFileSystem(constants.DATA_ROOT), function (success) {
+    webdavServer.setFileSystem('/', new webdav.PhysicalFileSystem(constants.USER_DATA_ROOT), function (success) {
         if (!success) console.error('Failed to setup webdav server!');
     });
 

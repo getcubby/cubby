@@ -26,7 +26,7 @@ async function getByUsername(username) {
     if (!gCache[username]) await calculateByUsername(username);
 
     // TODO use the quota if any set
-    const result = await df.file(constants.DATA_ROOT);
+    const result = await df.file(constants.USER_DATA_ROOT);
 
     return {
         used: gCache[username].used,
@@ -62,7 +62,7 @@ async function calculateByUsernameAndDirectory(username, directoryPath) {
 
             // we treat the empty folder size as 0 for display purpose
             const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
-            const filepath = parts[1].slice(path.join(constants.DATA_ROOT, username).length);
+            const filepath = parts[1].slice(path.join(constants.USER_DATA_ROOT, username).length);
 
             if (filepath === '') gCache[username].used = size;
             else gCache[username].directories[filepath] = size;
@@ -83,14 +83,14 @@ async function calculateByUsername(username) {
     };
 
     try {
-        const out = execSync(`du -b ${path.join(constants.DATA_ROOT, username)}`, { encoding: 'utf8' });
+        const out = execSync(`du -b ${path.join(constants.USER_DATA_ROOT, username)}`, { encoding: 'utf8' });
         out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
             const parts = l.split('\t');
             if (parts.length !== 2) return;
 
             // we treat the empty folder size as 0 for display purpose
             const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
-            const filepath = parts[1].slice(path.join(constants.DATA_ROOT, username).length);
+            const filepath = parts[1].slice(path.join(constants.USER_DATA_ROOT, username).length);
 
             if (filepath === '') gCache[username].used = size;
             else gCache[username].directories[filepath] = size;

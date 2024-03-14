@@ -27,10 +27,10 @@ done
 # create the same postgres server version to test with
 CONTAINER_NAME="postgres-server-cubby"
 
-export CLOUDRON_POSTGRESQL_USERNAME="postgres"
-export CLOUDRON_POSTGRESQL_PASSWORD="password"
-export CLOUDRON_POSTGRESQL_DATABASE="cubby"
-export CLOUDRON_POSTGRESQL_PORT=5432
+export POSTGRESQL_USERNAME="postgres"
+export POSTGRESQL_PASSWORD="password"
+export POSTGRESQL_DATABASE="cubby"
+export POSTGRESQL_PORT=5432
 
 if [[ "${fresh}" == "true" ]]; then
     echo "=> Removing postgres container ${CONTAINER_NAME} if exists..."
@@ -40,27 +40,26 @@ fi
 OUT=`docker inspect ${CONTAINER_NAME}` || true
 if [[ "${OUT}" = "[]" ]]; then
     echo "=> Starting ${CONTAINER_NAME}..."
-    docker run --name ${CONTAINER_NAME} -e POSTGRES_PASSWORD=${CLOUDRON_POSTGRESQL_PASSWORD} -d postgres:12
+    docker run --name ${CONTAINER_NAME} -e POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD} -d postgres:12
 else
     echo "=> ${CONTAINER_NAME} already created, just restarting. If you want to start fresh, run 'docker rm --force ${CONTAINER_NAME}'"
     docker restart ${CONTAINER_NAME}
 fi
 
-export CLOUDRON_POSTGRESQL_HOST=`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME}`
+export POSTGRESQL_HOST=`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME}`
 
-export PGPASSWORD="${CLOUDRON_POSTGRESQL_PASSWORD}"
+export PGPASSWORD="${POSTGRESQL_PASSWORD}"
 echo "=> Waiting for postgres server to be ready..."
-while ! psql -h "${CLOUDRON_POSTGRESQL_HOST}" -U ${CLOUDRON_POSTGRESQL_USERNAME} -c "SELECT 1"; do
+while ! psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -c "SELECT 1"; do
     sleep 1
 done
 
 echo "=> Ensure database"
-psql -h "${CLOUDRON_POSTGRESQL_HOST}" -U ${CLOUDRON_POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${CLOUDRON_POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${CLOUDRON_POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE cubby" || true
+psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
 
 export DEBUG="cubby*"
 
-echo "=> Run database migrations"
-DATABASE_URL="postgres://${CLOUDRON_POSTGRESQL_USERNAME}:${CLOUDRON_POSTGRESQL_PASSWORD}@${CLOUDRON_POSTGRESQL_HOST}/${CLOUDRON_POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
+VITE_API_ORIGIN=http://localhost:3000 npm run build
 
 echo "========================================================"
 echo "If running the vite dev server as below in a second terminal on the side for live-reload"
@@ -70,4 +69,4 @@ echo "========================================================"
 export VITE_DEV_PORT=5555
 
 echo "=> Start cubby"
-./app.js
+npm start

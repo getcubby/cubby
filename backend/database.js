@@ -13,16 +13,17 @@ var assert = require('assert'),
 var gConnectionPool = null;
 
 const gDatabase = {
-    hostname: process.env.CLOUDRON_POSTGRESQL_HOST || '127.0.0.1',
-    username: process.env.CLOUDRON_POSTGRESQL_USERNAME || 'root',
-    password: process.env.CLOUDRON_POSTGRESQL_PASSWORD || 'password',
-    port: process.env.CLOUDRON_POSTGRESQL_PORT || 3306,
-    name: process.env.CLOUDRON_POSTGRESQL_DATABASE || 'cubby'
+    hostname: process.env.POSTGRESQL_HOST || '127.0.0.1',
+    username: process.env.POSTGRESQL_USERNAME || 'root',
+    password: process.env.POSTGRESQL_PASSWORD || 'password',
+    port: process.env.POSTGRESQL_PORT || 3306,
+    name: process.env.POSTGRESQL_DATABASE || 'cubby'
 };
 
 function init() {
-
     if (gConnectionPool !== null) return;
+
+    debug(`init: connecting to database ${gDatabase.name} on ${gDatabase.hostname}:${gDatabase.port}`);
 
     gConnectionPool = new pg.Pool({
         host: gDatabase.hostname,

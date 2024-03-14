@@ -8,4 +8,10 @@ COPY . /app/code
 RUN npm install
 RUN npm run build
 
+ENV CONFIG_FILE_PATH="/app/data/config.json"
+ENV USER_DATA_PATH="/app/data/data/"
+ENV GROUPS_DATA_PATH="/app/data/groups/"
+ENV THUMBNAIL_PATH="/app/data/groups/"
+ENV SESSION_PATH="/app/data/sessions/"
+
 CMD [ "/app/code/start.sh" ]

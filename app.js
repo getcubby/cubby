@@ -15,10 +15,13 @@ function exit(error) {
 }
 
 database.init();
-config.init(process.env.CLOUDRON ? '/app/data/config.json' : 'config.json');
+config.init(process.env.CONFIG_FILE_PATH || 'config.json');
 
-// ensure data directory or crash
+// ensure data directories or crash
 fs.mkdirSync(constants.USER_DATA_ROOT, { recursive: true });
+fs.mkdirSync(constants.GROUPS_DATA_ROOT, { recursive: true });
+fs.mkdirSync(constants.THUMBNAIL_ROOT, { recursive: true });
+fs.mkdirSync(constants.SESSION_PATH, { recursive: true });
 
 // we shall crash if this fails
 diskusage.calculate();

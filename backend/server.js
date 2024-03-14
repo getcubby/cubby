@@ -8,6 +8,7 @@ var express = require('express'),
     Dom = require('xmldom').DOMParser,
     xpath = require('xpath'),
     config = require('./config.js'),
+    constants = require('./constants.js'),
     cors = require('./cors.js'),
     users = require('./routes/users.js'),
     files = require('./routes/files.js'),
@@ -27,7 +28,7 @@ exports = module.exports = {
 };
 
 const PORT = process.env.PORT || 3000;
-const APP_ORIGIN = process.env.CLOUDRON_APP_ORIGIN || `http://localhost:${PORT}`;
+const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 
 function init(callback) {
     var app = express();
@@ -39,7 +40,7 @@ function init(callback) {
     const FileStore = require('session-file-store')(session);
 
     const sessionOptions = {
-        store: new FileStore({ path: process.env.CLOUDRON ? '/app/data/sessions' : path.resolve('./.sessions') }),
+        store: new FileStore({ path: constants.SESSION_PATH }),
         secret: 'cubby goes lightly',
         resave: false,
         saveUninitialized: false,
@@ -48,7 +49,8 @@ function init(callback) {
         }
     };
 
-    if (process.env.CLOUDRON) {
+    // assume APP_ORIGIN is set if deployed
+    if (process.env.APP_ORIGIN) {
         app.enable('trust proxy');
         sessionOptions.cookie.secure = true;
     }
@@ -151,12 +153,12 @@ function init(callback) {
     app.use('/api', bodyParser.urlencoded({ extended: false, limit: '100mb' }));
     app.use(webdav.express());
 
-    if (process.env.CLOUDRON_OIDC_ISSUER) {
+    if (process.env.OIDC_ISSUER_BASE_URL) {
         app.use(oidc.auth({
-            issuerBaseURL: process.env.CLOUDRON_OIDC_ISSUER,
-            baseURL: process.env.CLOUDRON_APP_ORIGIN,
-            clientID: process.env.CLOUDRON_OIDC_CLIENT_ID,
-            clientSecret: process.env.CLOUDRON_OIDC_CLIENT_SECRET,
+            issuerBaseURL: process.env.OIDC_ISSUER_BASE_URL,
+            baseURL: process.env.APP_ORIGIN,
+            clientID: process.env.OIDC_CLIENT_ID,
+            clientSecret: process.env.OIDC_CLIENT_SECRET,
             secret: 'Cubby secret should be unique I guess',
             authorizationParams: {
                 response_type: 'code',
@@ -195,10 +197,10 @@ function init(callback) {
             if (req.session.username) {
                 req.oidc.user = {
                     sub: req.session.username,
-                    family_name: 'Cloudron',
+                    family_name: 'Cubby',
                     given_name: req.session.username.toUpperCase(),
                     locale: 'en-US',
-                    name: 'Cloudron ' + req.session.username.toUpperCase(),
+                    name: req.session.username.toUpperCase() + ' Cubby',
                     preferred_username: req.session.username,
                     email: req.session.username + '@cloudron.local',
                     email_verified: true

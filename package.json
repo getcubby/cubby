@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "start": "npm run db-migrate && ./app.js",
     "dev": "vite --port 5555 --force",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
   },
   "dependencies": {
     "@fontsource/noto-sans": "^5.0.20",

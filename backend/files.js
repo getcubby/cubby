@@ -28,11 +28,19 @@ var assert = require('assert'),
     diskusage = require('./diskusage.js'),
     MainError = require('./mainerror.js');
 
-function getValidFullPath(username, filePath) {
-    fs.mkdirSync(path.join(constants.USER_DATA_ROOT, username), { recursive: true });
+function isGroup(usernameOrGroup) {
+    assert.strictEqual(typeof usernameOrGroup, 'string');
 
-    const fullFilePath = path.resolve(path.join(constants.USER_DATA_ROOT, username, filePath));
-    if (fullFilePath.indexOf(path.join(constants.USER_DATA_ROOT, username)) !== 0) return null;
+    return usernameOrGroup.indexOf('group-') === 0;
+}
+
+function getValidFullPath(usernameOrGroup, filePath) {
+    const dataRoot = isGroup(usernameOrGroup) ? constants.GROUPS_DATA_ROOT : constants.USER_DATA_ROOT;
+
+    fs.mkdirSync(path.join(dataRoot, usernameOrGroup), { recursive: true });
+
+    const fullFilePath = path.resolve(path.join(dataRoot, usernameOrGroup, filePath));
+    if (fullFilePath.indexOf(path.join(dataRoot, usernameOrGroup)) !== 0) return null;
 
     return fullFilePath;
 }
@@ -146,6 +154,8 @@ async function getDirectory(username, fullFilePath, filePath, stats) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof stats, 'object');
 
+    debug(`getDirectory: from ${username} at ${fullFilePath} filePath:${filePath}`);
+
     let files;
 
     try {
@@ -246,20 +256,20 @@ async function getFile(username, fullFilePath, filePath, stats) {
     });
 }
 
-async function get(username, filePath) {
-    assert.strictEqual(typeof username, 'string');
+async function get(usernameOrGroup, filePath) {
+    assert.strictEqual(typeof usernameOrGroup, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`get ${username} ${filePath}`);
+    debug(`get: ${usernameOrGroup} ${filePath}`);
 
-    const fullFilePath = getValidFullPath(username, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     let result;
     try {
         const stat = await fs.stat(fullFilePath);
-        if (stat.isDirectory()) result = await getDirectory(username, fullFilePath, filePath, stat);
-        if (stat.isFile()) result = await getFile(username, fullFilePath, filePath, stat);
+        if (stat.isDirectory()) result = await getDirectory(usernameOrGroup, fullFilePath, filePath, stat);
+        if (stat.isFile()) result = await getFile(usernameOrGroup, fullFilePath, filePath, stat);
     } catch (error) {
         if (error.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
         throw new MainError(MainError.FS_ERROR, error);
@@ -272,7 +282,7 @@ async function head(username, filePath) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`head ${username} ${filePath}`);
+    debug(`head: ${username} ${filePath}`);
 
     const fullFilePath = getValidFullPath(username, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);

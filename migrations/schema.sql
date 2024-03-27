@@ -46,3 +46,15 @@ CREATE TABLE IF NOT EXISTS shares(
     FOREIGN KEY(receiver_username) REFERENCES users(username),
     FOREIGN KEY(owner) REFERENCES users(username),
     PRIMARY KEY(id));
+
+CREATE TABLE IF NOT EXISTS groups(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    name VARCHAR(256) NOT NULL,
+
+    PRIMARY KEY(id));
+
+CREATE TABLE group_members(
+    group_id VARCHAR(128) REFERENCES groups(id).
+    username VARCHAR(128) REFERENCES users(username),
+
+    UNIQUE (group_id, username));

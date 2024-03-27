@@ -17,6 +17,7 @@ var assert = require('assert'),
     util = require('util'),
     path = require('path'),
     shares = require('../shares.js'),
+    groups = require('../groups.js'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;
@@ -48,6 +49,18 @@ async function translateResourcePath(user, filePath) {
 
         // actual path is without shares/<shareId>/
         return { resource, username: share.owner, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+    }
+    if (resource === 'groups') {
+        const groupId = filePath.split('/')[1];
+        if (!groupId) return null;
+
+        const group = await groups.get(groupId);
+
+        // check if the user is part of the group
+        if (!group.isPartOf(group, user)) return null;
+
+        // actual path is without groups/<groupId>/
+        return { resource, username: user.username, filePath: path.join(group.filePath, filePath.split('/').slice(2).join('/')) };
     }
 
     return null;
@@ -246,6 +259,91 @@ async function get(req, res, next) {
                 owner: req.user.username,
                 mimeType: 'inode/share',
                 files: sharedFiles
+            });
+
+            next(new HttpSuccess(200, entry.withoutPrivate()));
+        }
+    } else if (resource === 'groups') {
+        const groupId = filePath.split('/')[1];
+        if (groupId) {
+            const group = await groups.get(groupId);
+            if (!group) return next(new HttpError(404, 'no such group'));
+
+            if (groups.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
+
+            // actual path is without groups/<groupId>/
+            const groupFilePath = filePath.split('/').slice(2).join('/') || '/';
+
+            let file;
+            try {
+                file = await files.get(`group-${group.id}`, groupFilePath);
+            } catch (error) {
+                if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
+                return next(new HttpError(500, error));
+            }
+
+            if (type === 'raw') {
+                if (file.isDirectory) return res.redirect(`/#files/groups/${groupId}/`);
+                return res.sendFile(file._fullFilePath);
+            } else if (type === 'download') {
+                if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
+                return res.download(file._fullFilePath);
+            }
+
+            // for now we only allow raw or download on publicly shared links
+            // if (!req.user) return next(new HttpError(403, 'not allowed'));
+
+            // those files are always part of this share
+            file.files.forEach(function (f) { f.group = group; });
+            file.group = group;
+
+            next(new HttpSuccess(200, file.asGroup().withoutPrivate()));
+        } else {
+            debug('listGroups');
+
+            // only allowed for authenticated users
+            if (!req.user) return next(new HttpError(401, 'not allowed'));
+
+            let result = [];
+
+            try {
+                result = await groups.list(req.user.username);
+            } catch (error) {
+                return next(new HttpError(500, error));
+            }
+
+            // Collect all file entries from groups
+            let memberOfGroups = [];
+            try {
+                for (let group of result) {
+                    console.log('000', group)
+                    let file = await files.get(`group-${group.id}`, '/');
+
+                    file.fileName = group.name;
+                    file.isShare = false;
+                    file.isGroup = true;
+                    file.group = group;
+                    file = file.asGroup('/');
+                    file.id = group.id;
+
+                    memberOfGroups.push(file);
+                }
+            } catch (error) {
+                return next(new HttpError(500, error));
+            }
+
+            const entry = new Entry({
+                id: 'groups',
+                fullFilePath: '/groups',
+                fileName: 'Groups',
+                filePath: '/',
+                isDirectory: true,
+                isFile: false,
+                isShare: false,
+                isGroup: true,
+                owner: req.user.username,
+                mimeType: 'inode/share',
+                files: memberOfGroups
             });
 
             next(new HttpSuccess(200, entry.withoutPrivate()));

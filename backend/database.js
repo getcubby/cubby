@@ -2,7 +2,8 @@
 
 exports = module.exports = {
     init,
-    query
+    query,
+    transaction
 };
 
 var assert = require('assert'),
@@ -49,6 +50,23 @@ async function query(sql, args) {
     try {
         return await gConnectionPool.query(sql, args);
     } catch (error) {
+        throw new MainError(MainError.DATABASE_ERROR, error);
+    }
+}
+
+async function transaction(queries) {
+    assert(Array.isArray(queries));
+
+    if (!gConnectionPool) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
+
+    try {
+        await gConnectionPool.query('BEGIN');
+        for (let query of queries) {
+            await gConnectionPool.query(query.query, query.args);
+        }
+        await gConnectionPool.query('COMMIT');
+    } catch (error) {
+        await gConnectionPool.query('ROLLBACK');
         throw new MainError(MainError.DATABASE_ERROR, error);
     }
 }

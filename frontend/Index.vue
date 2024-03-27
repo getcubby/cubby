@@ -12,6 +12,7 @@
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="pi pi-folder-open"></i> My Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="pi pi-clock"></i> Recent Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="pi pi-share-alt"></i> Shared With You</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="pi pi-building"></i> Groups</a>
 
       <div style="flex-grow: 1">&nbsp;</div>
 
@@ -788,6 +789,25 @@ export default {
               route: '#files/shares/' + resource.shareId + '/'
             });
           }
+        } else if (resource.type === 'groups') {
+          this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
+            return {
+              label: decodeURIComponent(e),
+              route: '#files/groups/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
+            };
+          });
+          this.breadCrumbHome = {
+            icon: 'pi pi-building',
+            route: '#files/groups/'
+          };
+
+          // if we are not toplevel, add the share information
+          if (entry.share) {
+            this.breadCrumbs.unshift({
+              label: entry.share.filePath.slice(1), // remove slash at the beginning
+              route: '#files/groups/' + resource.groupId + '/'
+            });
+          }
         } else {
           console.error('FIXME breadcrumbs for resource type', resource.type);
         }
@@ -853,6 +873,7 @@ export default {
       },
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
+        else if (entry.group && entry.group.id) window.location.hash = `files/groups/${entry.group.id}${entry.filePath}`;
         else window.location.hash = `files/home${entry.filePath}`;
       },
       onViewerClose() {
@@ -886,6 +907,7 @@ export default {
         if (hash.indexOf('files/home/') === 0) this.loadPath(hash.slice('files'.length));
         else if (hash.indexOf('files/recent/') === 0) this.loadPath(hash.slice('files'.length));
         else if (hash.indexOf('files/shares/') === 0) this.loadPath(hash.slice('files'.length));
+        else if (hash.indexOf('files/groups/') === 0) this.loadPath(hash.slice('files'.length));
         else if (hash.indexOf('settings/') === 0) return;
         else window.location.hash = 'files/home/';
       }, false);
@@ -914,6 +936,7 @@ export default {
       if (hash.indexOf('files/home/') === 0) await this.loadPath(hash.slice('files'.length));
       else if (hash.indexOf('files/recent/') === 0) await this.loadPath(hash.slice('files'.length));
       else if (hash.indexOf('files/shares/') === 0) await this.loadPath(hash.slice('files'.length));
+      else if (hash.indexOf('files/groups/') === 0) await this.loadPath(hash.slice('files'.length));
       else await this.loadPath('/home/');
 
       this.ready = true;

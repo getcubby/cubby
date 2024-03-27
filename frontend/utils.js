@@ -9,6 +9,9 @@ function getDirectLink(entry) {
     if (entry.share) {
         let link = window.location.origin + '/api/v1/shares/' + entry.share.id + '?type=raw&path=' + encodeURIComponent(entry.filePath);
         return link;
+    } else if (entry.group) {
+        let link = window.location.origin + '/api/v1/group/' + entry.group.id + '?type=raw&path=' + encodeURIComponent(entry.filePath);
+        return link;
     } else {
         return window.location.origin + '/api/v1/files?type=raw&path=' + encodeURIComponent(entry.filePath);
     }
@@ -50,6 +53,7 @@ function parseResourcePath(resourcePath) {
         path: '',
         parentResourcePath: '',
         shareId: '',
+        groupId: '',
         id: '',
         resourcePath: ''
     };
@@ -80,6 +84,20 @@ function parseResourcePath(resourcePath) {
         result.id = 'shares';
         // without shareId we show the root (share listing)
         result.resourcePath = `/${result.type}/` + (result.shareId ? (result.shareId + result.path) : '');
+    } else if (resourcePath.indexOf('/groups/') === 0) {
+        result.type = 'groups';
+        result.groupId = resourcePath.split('/')[2];
+        result.path = resourcePath.slice(('/' + result.type + '/' + result.groupId).length) || '/';
+        // parent could be parten folder inside share or  the virutal groups folder
+        if (!result.groupId || result.path === '/') {
+            result.parentResourcePath = '/groups/';
+        } else {
+            const oneFolderUp = result.path.slice(0, result.path.lastIndexOf('/'));
+            result.parentResourcePath = `/groups/${result.groupId}${oneFolderUp}/`;
+        }
+        result.id = 'groups';
+        // without groupId we show the root (share listing)
+        result.resourcePath = `/${result.type}/` + (result.groupId ? (result.groupId + result.path) : '');
     } else {
         console.error('Unknown resource path', resourcePath);
     }
@@ -88,7 +106,9 @@ function parseResourcePath(resourcePath) {
 }
 
 function getEntryIdentifier(entry) {
-    return (entry.share ? (entry.share.id + '/') : '') + entry.filePath;
+    if (entry.share) return `${entry.share.id}/${entry.filePath}`;
+    else if (entry.group) return `${entry.group.id}/${entry.filePath}`;
+    else return entry.filePath;
 }
 
 function entryListSort(list, prop, desc) {

@@ -29,9 +29,17 @@ diskusage.calculate();
 // currently just update this every hour to put less strain on the disk
 setInterval(diskusage.calculate, 1000 * 60 * 60);
 
-server.init(function (error) {
+server.init(async function (error) {
     if (error) exit(error);
 
     console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
     console.log('Cubby is up and running.');
+
+    // create test group
+    const groups = require('./backend/groups.js');
+    try {
+        await groups.add('family', 'Family', [ 'admin', 'helena' ]);
+    } catch (e) {
+        console.error('---', e);
+    }
 });

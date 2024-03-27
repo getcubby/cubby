@@ -9,7 +9,7 @@ const assert = require('assert'),
 
 exports = module.exports = Entry;
 
-function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), isDirectory, isFile, isShare = false, mimeType, files = [], sharedWith = [], share = null }) {
+function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null }) {
     assert(fullFilePath && typeof fullFilePath === 'string');
     assert(filePath && typeof filePath === 'string');
     assert(owner && typeof owner === 'string');
@@ -19,9 +19,11 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     assert.strictEqual(typeof isFile, 'boolean');
     assert.strictEqual(typeof isDirectory, 'boolean');
     assert.strictEqual(typeof isShare, 'boolean');
+    assert.strictEqual(typeof isGroup, 'boolean');
     assert(mimeType && typeof mimeType === 'string');
     assert(Array.isArray(sharedWith));
     assert.strictEqual(typeof share, 'object');
+    assert.strictEqual(typeof group, 'object');
 
     // TODO check that files is an array of Entries
 
@@ -39,6 +41,8 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.sharedWith = sharedWith;
     this.isShare = isShare;     // true if virtual toplevel share item or the actual shared file/folder
     this.share = share;         // contains the share info of the share this item belongs to if any
+    this.isGroup = isGroup;     // true if virtual toplevel group item or the actual group file/folder
+    this.group = group;         // contains the group info of the group this item belongs to if any
 }
 
 Entry.prototype.asShare = function (shareFilePath) {
@@ -49,6 +53,15 @@ Entry.prototype.asShare = function (shareFilePath) {
 
     // don't leak info
     result.sharedWith = [];
+
+    return result;
+};
+
+Entry.prototype.asGroup = function () {
+    var result = this;
+
+    // result.files = result.files.map(function (f) { return f.asGroup(groupFilePath); });
+    // result.filePath = result.filePath.slice(groupFilePath.length) || '/';
 
     return result;
 };
@@ -87,10 +100,12 @@ Entry.prototype.withoutPrivate = function () {
         isDirectory: this.isDirectory,
         isFile: this.isFile,
         isShare: this.isShare,
+        isGroup: this.isGroup,
         isBinary: this.isBinary,
         mimeType: this.mimeType,
         files: this.files.map(function (f) { return f.withoutPrivate(); }),
         share: this.share,
+        group: this.group,
         sharedWith: this.sharedWith || [],
         previewUrl: this.getPreviewUrl()
     };

@@ -57,15 +57,15 @@ done
 echo "=> Ensure database"
 psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
 
-export DEBUG="cubby*"
-
-VITE_API_ORIGIN=http://localhost:3000 npm run build
-
-echo "========================================================"
+echo "========================================================================================="
+echo ""
 echo "If running the vite dev server as below in a second terminal on the side for live-reload"
+echo ""
 echo "VITE_API_ORIGIN=http://localhost:3000 npm run dev"
-echo "========================================================"
+echo ""
+echo "========================================================================================="
 
+export DEBUG="cubby*"
 export VITE_DEV_PORT=5555
 
 echo "=> Start cubby"

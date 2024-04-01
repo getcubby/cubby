@@ -65,6 +65,9 @@ echo "VITE_API_ORIGIN=http://localhost:3000 npm run dev"
 echo ""
 echo "========================================================================================="
 
+# for up/down testing
+# DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate down
+
 export DEBUG="cubby*"
 export VITE_DEV_PORT=5555
 

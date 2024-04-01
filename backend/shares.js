@@ -33,6 +33,9 @@ function postProcess(data) {
     data.owner = data.owner_username;
     delete data.owner_username;
 
+    data.ownerGroup = data.owner_group;
+    delete data.owner_Group;
+
     data.filePath = data.file_path;
     delete data.file_path;
 

@@ -56,8 +56,10 @@ async function add(id, name, users = []) {
 async function get(id) {
     assert.strictEqual(typeof id, 'string');
 
+    debug(`get: group ${id}`);
+
     let result = await database.query('SELECT * FROM groups WHERE id = $1', [ id ]);
-    if (result.rows.length === 0) throw new MainError(MainError.NOT_FOUND, 'group not found');
+    if (result.rows.length === 0) return null;
 
     const group = result.rows[0];
 

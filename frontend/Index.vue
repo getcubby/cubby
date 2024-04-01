@@ -12,7 +12,7 @@
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="pi pi-folder-open"></i> My Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="pi pi-clock"></i> Recent Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="pi pi-share-alt"></i> Shared With You</a>
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="pi pi-building"></i> Groups</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="pi pi-building"></i> Group Files</a>
 
       <div style="flex-grow: 1">&nbsp;</div>
 

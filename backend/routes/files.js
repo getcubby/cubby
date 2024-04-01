@@ -272,7 +272,7 @@ async function get(req, res, next) {
             if (!groups.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
             // actual path is without groups/<groupId>/
-            const groupFilePath = filePath.split('/').slice(2).join('/') || '/';
+            const groupFilePath = '/' + filePath.split('/').slice(2).join('/');
 
             let file;
             try {

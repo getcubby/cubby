@@ -63,7 +63,7 @@ async function get(id) {
 
 // maybe use 'SELECT ' + GROUPS_FIELDS + ',GROUP_CONCAT(groupMembers.userId) AS userIds ' +
     result = await database.query('SELECT * FROM group_members WHERE group_id = $1', [ id ]);
-    group.members = result.rows.forEach(postProcess);
+    group.members = result.rows.map((m) => m.username);
 
     return group;
 }
@@ -113,6 +113,5 @@ function isPartOf(group, username) {
     assert.strictEqual(typeof group, 'object');
     assert.strictEqual(typeof username, 'string');
 
-    console.log('-=--', group, username)
-    return false;
+    return !!group.members.find((u) => u === username);
 }

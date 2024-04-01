@@ -37,8 +37,9 @@ async function translateResourcePath(user, filePath) {
     // only shares may have optional auth
     if (resource !== 'shares' && !user) return null;
 
-    if (resource === 'home') return { resource, username: user.username, filePath };
-    if (resource === 'shares') {
+    if (resource === 'home') {
+        return { resource, usernameOrGroup: user.username, filePath };
+    } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
         if (!shareId) return null;
 
@@ -48,22 +49,21 @@ async function translateResourcePath(user, filePath) {
         if (user && share.receiverUsername && share.receiverUsername !== user.username) return null;
 
         // actual path is without shares/<shareId>/
-        return { resource, username: share.owner, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
-    }
-    if (resource === 'groups') {
+        return { resource, usernameOrGroup: share.owner, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+    } else if (resource === 'groups') {
         const groupId = filePath.split('/')[1];
         if (!groupId) return null;
 
         const group = await groups.get(groupId);
 
         // check if the user is part of the group
-        if (!group.isPartOf(group, user)) return null;
+        if (!groups.isPartOf(group, user.username)) return null;
 
         // actual path is without groups/<groupId>/
-        return { resource, username: user.username, filePath: path.join(group.filePath, filePath.split('/').slice(2).join('/')) };
+        return { resource, usernameOrGroup: `group-${group.id}`, filePath: filePath.split('/').slice(2).join('/') };
+    } else {
+        return null;
     }
-
-    return null;
 }
 
 async function add(req, res, next) {
@@ -86,8 +86,8 @@ async function add(req, res, next) {
     debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
     try {
-        if (directory) await files.addDirectory(subject.username, subject.filePath);
-        else await files.addOrOverwriteFile(subject.username, subject.filePath, req.files.file.path, mtime, overwrite);
+        if (directory) await files.addDirectory(subject.usernameOrGroup, subject.filePath);
+        else await files.addOrOverwriteFile(subject.usernameOrGroup, subject.filePath, req.files.file.path, mtime, overwrite);
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
         return next(new HttpError(500, error));
@@ -107,7 +107,7 @@ async function head(req, res, next) {
 
     let result;
     try {
-        result = await files.head(subject.username, subject.filePath);
+        result = await files.head(subject.usernameOrGroup, subject.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -269,7 +269,7 @@ async function get(req, res, next) {
             const group = await groups.get(groupId);
             if (!group) return next(new HttpError(404, 'no such group'));
 
-            if (groups.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!groups.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
             // actual path is without groups/<groupId>/
             const groupFilePath = filePath.split('/').slice(2).join('/') || '/';
@@ -370,12 +370,12 @@ async function update(req, res, next) {
     const newSubject =  await translateResourcePath(req.user, newFilePath);
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`update: [${action}] ${subject.resource} ${subject.username} ${subject.filePath} -> ${newSubject.resource} ${newSubject.username} ${newSubject.filePath}`);
+    debug(`update: [${action}] ${subject.resource} ${subject.usernameOrGroup} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroup} ${newSubject.filePath}`);
 
     // TODO support shares
     try {
-        if (action === 'move') await files.move(subject.username, subject.filePath, newSubject.username, newSubject.filePath);
-        else if (action === 'copy') await files.copy(subject.username, subject.filePath, newSubject.username, newSubject.filePath);
+        if (action === 'move') await files.move(subject.usernameOrGroup, subject.filePath, newSubject.usernameOrGroup, newSubject.filePath);
+        else if (action === 'copy') await files.copy(subject.usernameOrGroup, subject.filePath, newSubject.usernameOrGroup, newSubject.filePath);
         else return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
@@ -393,10 +393,10 @@ async function remove(req, res, next) {
     const subject = await translateResourcePath(req.user, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`remove: ${subject.resource} ${subject.username} ${subject.filePath}`);
+    debug(`remove: ${subject.resource} ${subject.usernameOrGroup} ${subject.filePath}`);
 
     try {
-        await files.remove(subject.username, subject.filePath);
+        await files.remove(subject.usernameOrGroup, subject.filePath);
     } catch (error) {
         return next(new HttpError(500, error));
     }

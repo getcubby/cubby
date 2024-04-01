@@ -73,8 +73,16 @@ Entry.prototype.getPreviewUrl = function () {
 
     const previewHash = preview.getHash(this.mimeType, this._fullFilePath);
     if (previewHash) {
-        const type = this.share ? 'shares' : 'files';
-        const ownerId = this.share ? this.share.id : this.owner;
+        let type;
+        if (this.share) type = 'shares';
+        else if (this.group) type = 'groups';
+        else type = 'files';
+
+        let ownerId;
+        if (this.share) ownerId = this.share.id;
+        else if (this.group) ownerId = this.group.id;
+        else ownerId = this.owner;
+
         return `/api/v1/preview/${type}/${ownerId}/${previewHash}`;
     }
 

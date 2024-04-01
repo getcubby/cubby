@@ -39,6 +39,13 @@ async function getPreview(req, res, next) {
         if (localPreviewPath) return res.sendFile(localPreviewPath);
 
         return next(new HttpError(412, 'try again later'));
+    } else if (type === 'groups') {
+        // TODO check permissions if user has access to this group
+
+        const localPreviewPath = preview.getLocalPath(hash);
+        if (localPreviewPath) return res.sendFile(localPreviewPath);
+
+        return next(new HttpError(412, 'try again later'));
     }
 
     next(new HttpError(404, 'not found'));

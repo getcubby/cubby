@@ -30,6 +30,9 @@ function escapeForSqlRegexp(text) {
 }
 
 function postProcess(data) {
+    data.owner = data.owner_username;
+    delete data.owner_username;
+
     data.filePath = data.file_path;
     delete data.file_path;
 
@@ -79,7 +82,7 @@ async function create({ user, filePath, receiverUsername, receiverEmail, readonl
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
-    await database.query('INSERT INTO shares (id, owner, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+    await database.query('INSERT INTO shares (id, owner_username, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
         shareId, user.username, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAt || null
     ]);
 
@@ -107,7 +110,7 @@ async function getByOwnerAndFilepath(username, filepath) {
 
     debug(`getByOwnerAndFilepath: username:${username} filepath:${filepath}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE owner = $1 AND file_path ~ $2', [ username, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    const result = await database.query('SELECT * FROM shares WHERE owner_username = $1 AND file_path ~ $2', [ username, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 

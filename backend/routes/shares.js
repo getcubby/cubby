@@ -83,7 +83,7 @@ async function getShareLink(req, res, next) {
 
     let file;
     try {
-        file = await files.get(req.share.owner, path.join(req.share.filePath, filePath));
+        file = await files.get(req.share.ownerUsername ? req.share.ownerUsername : `group-${req.share.ownerGroup}`, path.join(req.share.filePath, filePath));
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
         return next(new HttpError(500, error));
@@ -115,6 +115,8 @@ async function createShare(req, res, next) {
 
     if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
 
+    const ownerUsername = req.body.ownerUsername || null;
+    const ownerGroup = req.body.ownerGroup || null;
     const filePath = req.body.path.replace(/\/+/g, '/');
     const receiverUsername = req.body.receiverUsername || null;
     const receiverEmail = req.body.receiverEmail || null;
@@ -127,7 +129,7 @@ async function createShare(req, res, next) {
 
     if (receiverEmail || receiverUsername) {
         try {
-            existingShares = await shares.getByReceiverAndFilepath(receiverUsername || receiverEmail, filePath, true /* exact match */);
+            existingShares = await shares.getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroup, receiverUsername || receiverEmail, filePath, true /* exact match */);
         } catch (error) {
             return next(new HttpError(500, error));
         }
@@ -140,7 +142,7 @@ async function createShare(req, res, next) {
 
     let shareId;
     try {
-        shareId = await shares.create({ user: req.user, filePath, receiverUsername, receiverEmail, readonly, expiresAt });
+        shareId = await shares.create({ ownerUsername, ownerGroup, filePath, receiverUsername, receiverEmail, readonly, expiresAt });
     } catch (error) {
         return next(new HttpError(500, error));
     }
@@ -165,7 +167,7 @@ async function listShares(req, res, next) {
     let sharedFiles = [];
     try {
         for (let share of result) {
-            let file = await files.get(share.owner, share.filePath);
+            let file = await files.get(share.ownerUsername ? share.ownerUsername : `group-${share.ownerGroup}`, share.filePath);
 
             file.isShare = true;
             file.share = share;

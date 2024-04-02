@@ -49,7 +49,7 @@ async function translateResourcePath(user, filePath) {
         if (user && share.receiverUsername && share.receiverUsername !== user.username) return null;
 
         // actual path is without shares/<shareId>/
-        return { resource, usernameOrGroup: share.owner, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+        return { resource, usernameOrGroup: share.ownerUsername || share.ownerGroup, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
     } else if (resource === 'groups') {
         const groupId = filePath.split('/')[1];
         if (!groupId) return null;
@@ -195,7 +195,7 @@ async function get(req, res, next) {
 
             let file;
             try {
-                file = await files.get(share.owner, path.join(share.filePath, shareFilePath));
+                file = await files.get(share.ownerUsername || `group-${share.ownerGroup}`, path.join(share.filePath, shareFilePath));
             } catch (error) {
                 if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
                 return next(new HttpError(500, error));
@@ -233,9 +233,11 @@ async function get(req, res, next) {
 
             // Collect all file entries from shares
             let sharedFiles = [];
-            try {
-                for (let share of result) {
-                    let file = await files.get(share.owner, share.filePath);
+            for (let share of result) {
+                const owner = share.ownerGroup ? `group-${share.ownerGroup}` : share.ownerUsername;
+
+                try {
+                    let file = await files.get(owner, share.filePath);
 
                     file.isShare = true;
                     file.share = share;
@@ -243,9 +245,10 @@ async function get(req, res, next) {
                     file.id = share.id;
 
                     sharedFiles.push(file);
+                } catch (error) {
+                    // TODO maybe delete share from db if file/folder is gone
+                    console.error('Failed to list share files.', error);
                 }
-            } catch (error) {
-                return next(new HttpError(500, error));
             }
 
             const entry = new Entry({

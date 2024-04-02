@@ -18,6 +18,7 @@ var assert = require('assert'),
 // { username: { used: int, directories: { filepath: size }}
 const gCache = {};
 
+// TODO make it work with username AND groups
 async function getByUsername(username) {
     assert.strictEqual(typeof username, 'string');
 

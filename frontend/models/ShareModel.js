@@ -9,6 +9,8 @@ export function createShareModel(origin) {
         readonly: data.readonly
       };
 
+      if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
+      if (data.ownerGroup) tmp.ownerGroup = data.ownerGroup;
       if (data.expiresAt) tmp.expiresAt = data.expiresAt;
       if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
 

@@ -187,9 +187,11 @@ async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
     }
 
     // attach shares
-    const sharedWith = await shares.getByOwnerAndFilepath(usernameOrGroup, filePath);
+    const ownerUsername = isGroup(usernameOrGroup) ? null : usernameOrGroup;
+    const ownerGroup = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : null;
+    const sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, filePath);
     for (let file of files) {
-        file.sharedWith = await shares.getByOwnerAndFilepath(usernameOrGroup, file.filePath);
+        file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, file.filePath);
     }
 
     // attach diskusage
@@ -223,9 +225,12 @@ async function getFile(usernameOrGroup, fullFilePath, filePath, stats) {
 
     debug(`getFile: ${usernameOrGroup} ${fullFilePath}`);
 
+    const ownerUsername = isGroup(usernameOrGroup) ? null : usernameOrGroup;
+    const ownerGroup = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : null;
+
     let result;
     try {
-        result = await shares.getByOwnerAndFilepath(usernameOrGroup, filePath);
+        result = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, filePath);
     } catch (error) {
         // TODO not sure what to do here
         console.error(error);

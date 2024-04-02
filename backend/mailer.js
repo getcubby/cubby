@@ -38,12 +38,12 @@ async function newShare(emailAddress, shareId) {
     const share = await shares.get(shareId);
     assert.ok(share, `Failed to get share ${shareId}`);
 
-    const emailSubject = `${share.owner} shared a file with you`;
+    const emailSubject = `${share.ownerUsernane || share.ownerGroup} shared a file with you`;
 
     const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.html'), 'utf8'));
     const emailTemplateText = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.text'), 'utf8'));
 
-    const emailTemplateData = { sharedWith: share.receiverUsername, sharedBy: share.owner, sharedPath: share.filePath.slice(1) /* remove slash */, appDomain: new URL(APP_ORIGIN).hostname, actionLink: `${APP_ORIGIN}#files/shares/${shareId}/` };
+    const emailTemplateData = { sharedWith: share.receiverUsername, sharedBy: share.ownerUsernane || share.ownerGroup, sharedPath: share.filePath.slice(1) /* remove slash */, appDomain: new URL(APP_ORIGIN).hostname, actionLink: `${APP_ORIGIN}#files/shares/${shareId}/` };
 
     const emailBodyText = emailTemplateText(emailTemplateData);
     const emailBodyHtml = emailTemplateHtml(emailTemplateData);

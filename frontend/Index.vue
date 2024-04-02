@@ -698,8 +698,10 @@ export default {
         const path = this.shareDialog.entry.filePath;
         const readonly = true; // always readonly for now
         const expiresAt = this.shareDialog.shareLink.expires ? this.shareDialog.shareLink.expiresAt : 0;
+        const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
+        const ownerGroup = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
 
-        const shareId = await this.shareModel.create({ path, readonly, expiresAt });
+        const shareId = await this.shareModel.create({ ownerUsername, ownerGroup, path, readonly, expiresAt });
 
         this.copyShareIdLinkToClipboard(shareId);
 
@@ -709,8 +711,10 @@ export default {
         const path = this.shareDialog.entry.filePath;
         const readonly = this.shareDialog.readonly;
         const receiverUsername = this.shareDialog.receiverUsername;
+        const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
+        const ownerGroup = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
 
-        await this.shareModel.create({ path, readonly, receiverUsername });
+        await this.shareModel.create({ ownerUsername, ownerGroup, path, readonly, receiverUsername });
 
         // reset the form
         this.shareDialog.error = '';

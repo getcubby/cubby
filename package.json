@@ -10,7 +10,7 @@
     "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
   },
   "dependencies": {
-    "@fontsource/noto-sans": "^5.0.20",
+    "@fontsource/noto-sans": "^5.0.21",
     "archiver": "^6.0.1",
     "body-parser": "^1.20.2",
     "connect-lastmile": "^2.2.0",
@@ -18,7 +18,7 @@
     "db-migrate": "^0.11.14",
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.3.4",
-    "express": "^4.18.3",
+    "express": "^4.19.2",
     "express-openid-connect": "^2.17.1",
     "express-session": "^1.18.0",
     "fs-extra": "^11.2.0",
@@ -26,12 +26,12 @@
     "isbinaryfile": "^5.0.2",
     "morgan": "^1.10.0",
     "multiparty": "^4.2.3",
-    "nodemailer": "^6.9.12",
+    "nodemailer": "^6.9.13",
     "nodemailer-smtp-transport": "^2.7.4",
     "once": "^1.4.0",
-    "pankow": "^1.2.2",
+    "pankow": "^1.3.2",
     "primeicons": "^6.0.1",
-    "primevue": "^3.49.1",
+    "primevue": "^3.51.0",
     "safetydance": "^2.4.0",
     "session-file-store": "^1.5.0",
     "superagent": "^8.1.2",
@@ -42,13 +42,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "chromedriver": "^122.0.5",
-    "eslint": "^8.57.0",
-    "eslint-plugin-vue": "^9.23.0",
+    "chromedriver": "^123.0.1",
     "expect.js": "^0.3.1",
-    "mocha": "^10.3.0",
-    "selenium-webdriver": "^4.18.1",
-    "vite": "^5.1.6"
+    "mocha": "^10.4.0",
+    "selenium-webdriver": "^4.19.0",
+    "vite": "^5.2.8"
   },
   "eslintConfig": {
     "root": true,

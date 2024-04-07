@@ -168,8 +168,8 @@ export function createDirectoryModel(origin) {
 
         // be a bit smart about the archive name and folder tree
         const folderPath = files[0].filePath.slice(0, -files[0].fileName.length);
-        const archiveName = name || folderPath.slice(folderPath.slice(0, -1).lastIndexOf('/')+1).slice(0, -1);
-        params.append('name', archiveName);
+        const name = files.length === 1 ? files[0].fileName : folderPath.slice(folderPath.slice(0, -1).lastIndexOf('/')+1).slice(0, -1);
+        params.append('name', name);
         params.append('skipPath', folderPath);
 
         params.append('entries', JSON.stringify(files.map(function (entry) {

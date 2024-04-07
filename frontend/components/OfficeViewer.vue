@@ -8,8 +8,8 @@
           <div class="file-name">{{ entry ? entry.fileName : '' }}</div>
         </template>
         <template #right>
-          <Button icon="pi pi-download" severity="success" @click="onDownload" style="margin-right: 5px;"/>
-          <Button icon="pi pi-times" :label="tr('main.dialog.close')" @click="onClose"/>
+          <Button icon="fa-solid fa-download" success @click="onDownload" style="margin-right: 5px;"/>
+          <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
         </template>
       </TopBar>
     </template>
@@ -28,9 +28,7 @@
 
 <script>
 
-import Button from 'primevue/button';
-
-import { MainLayout, TopBar, utils } from 'pankow';
+import { MainLayout, TopBar, Button, utils } from 'pankow';
 
 export default {
   name: 'OfficeViewer',

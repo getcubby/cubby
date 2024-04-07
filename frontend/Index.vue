@@ -43,7 +43,7 @@
       />
       <div class="container" style="overflow: hidden;">
         <div class="main-container-content">
-          <Button class="p-button-rounded p-button-text side-bar-toggle" :icon="'pi ' + (previewPanelVisible ? 'pi-chevron-right' : 'pi-chevron-left')" @click="onTogglePreviewPanel" v-tooltip="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"/>
+          <div class="side-bar-toggle" @click="onTogglePreviewPanel" v-tooltip="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
           <DirectoryView
             :show-owner="false"
             :show-extract="false"
@@ -103,8 +103,8 @@
       </div>
     </form>
     <template #footer>
-      <Button label="Cancel" icon="pi pi-times" class="p-button-text" @click="webDavPasswordDialog.visible = false"/>
-      <Button label="Save" icon="pi pi-check" class="p-button-text p-button-success" @click="onSaveWebDavDialog" :disabled="!webDavPasswordDialog.password"/>
+      <Button icon="fa-solid fa-xmark" @click="webDavPasswordDialog.visible = false">Cancel</Button>
+      <Button icon="fa-solid fa-check" success @click="onSaveWebDavDialog" :disabled="!webDavPasswordDialog.password">Save</Button>
     </template>
   </Dialog>
 
@@ -119,8 +119,8 @@
       </div>
     </form>
     <template #footer>
-      <Button label="Cancel" icon="pi pi-times" class="p-button-text" @click="newFileDialog.visible = false"/>
-      <Button label="Create" icon="pi pi-check" class="p-button-text p-button-success" @click="onSaveNewFileDialog" :disabled="!newFileDialog.fileName"/>
+      <Button icon="fa-solid fa-xmark" @click="newFileDialog.visible = false">Cancel</Button>
+      <Button icon="fa-solid fa-check" success @click="onSaveNewFileDialog" :disabled="!newFileDialog.fileName">Create</Button>
     </template>
   </Dialog>
 
@@ -135,8 +135,8 @@
       </div>
     </form>
     <template #footer>
-      <Button label="Cancel" icon="pi pi-times" class="p-button-text" @click="newFolderDialog.visible = false"/>
-      <Button label="Create" icon="pi pi-check" class="p-button-text p-button-success" @click="onSaveNewFolderDialog" :disabled="!newFolderDialog.folderName"/>
+      <Button icon="fa-solid fa-xmark" @click="newFolderDialog.visible = false">Cancel</Button>
+      <Button icon="fa-solid fa-check" success @click="onSaveNewFolderDialog" :disabled="!newFolderDialog.folderName">Create</Button>
     </template>
   </Dialog>
 
@@ -155,7 +155,7 @@
           <Checkbox id="binary" v-model="shareDialog.readonly" :binary="true" />
           <label for="binary">Share read-only</label>
         </div> -->
-        <Button label="Create share" icon="pi pi-check" class="p-button p-button-success" @click="onCreateShare" :disabled="!shareDialog.receiverUsername"/>
+        <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
       </div>
     </form>
 
@@ -176,7 +176,7 @@
       </Column> -->
       <Column header="" :style="{ textAlign: 'right' }">
         <template #body="slotProps">
-          <Button class="p-button-rounded p-button-danger p-button-text" icon="pi pi-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
+          <Button danger outline icon="fa-solid fa-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
         </template>
       </Column>
     </DataTable>
@@ -192,7 +192,7 @@
       <div class="p-field">
         <Calendar v-model="shareDialog.shareLink.expiresAt" :minDate="new Date()" :disabled="!shareDialog.shareLink.expire"/>
       </div>
-      <Button label="Create and Copy Link" icon="pi pi-link" class="p-button p-button-success" @click="onCreateShareLink"/>
+      <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
     </div>
 
     <h3>Shared Links</h3>
@@ -202,7 +202,7 @@
       </template>
       <Column header="Link">
         <template #body="slotProps">
-          <Button class="p-button p-button-sm p-button-text" @click="copyShareIdLinkToClipboard(slotProps.data.id)">Copy Link to Clipboard</Button>
+          <Button small outline @click="copyShareIdLinkToClipboard(slotProps.data.id)">Copy Link to Clipboard</Button>
         </template>
       </Column>
       <!-- <Column header="Readonly" headerClass="share-readonly-column" :style="{ textAlign: 'center' }">
@@ -212,13 +212,13 @@
       </Column> -->
       <Column header="" :style="{ textAlign: 'right' }">
         <template #body="slotProps">
-          <Button class="p-button-rounded p-button-danger p-button-text" icon="pi pi-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
+          <Button danger outline icon="fa-solid fa-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
         </template>
       </Column>
     </DataTable>
 
     <template #footer>
-      <Button label="Close" icon="pi pi-times" class="p-button-text" @click="shareDialog.visible = false"/>
+      <Button icon="fa-solid fa-xmark" @click="shareDialog.visible = false">Close</Button>
     </template>
   </Dialog>
 
@@ -253,7 +253,6 @@
 
 'use strict';
 
-import Button from 'primevue/button';
 import Calendar from 'primevue/calendar';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
@@ -269,7 +268,7 @@ import Toast from 'primevue/toast';
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, DirectoryView, FileUploader, PdfViewer, GenericViewer } from 'pankow';
+import { TextEditor, ImageViewer, DirectoryView, FileUploader, PdfViewer, GenericViewer, Button } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -1036,6 +1035,8 @@ label {
     float: right;
     z-index: 30;
     top: 3px;
+    padding: 10px 15px;
+    cursor: pointer;
 }
 
 @media only screen and (max-width: 767px) {

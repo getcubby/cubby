@@ -1,7 +1,7 @@
 <template>
   <Toolbar>
     <template #start>
-      <Button icon="pi pi-chevron-left" class="p-button-text" :disabled="breadCrumbs.length === 0" @click="onUp"/>
+      <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" outline></Button>
 
       <Breadcrumb :home="breadCrumbHome" :model="breadCrumbs">
         <template #item="{ label, item, props }">
@@ -15,16 +15,16 @@
 
     <template #end>
       <div class="file-actions">
-        <Button icon="pi pi-download" class="p-button-outlined" @click="onDownload(selectedEntries || null)"/>
-        <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" class="p-button-outlined p-button-danger" @click="onDelete(selectedEntries)"/>
+        <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" outline danger @click="onDelete(selectedEntries)"/>
+        <Button icon="fa-solid fa-download" outline @click="onDownload(selectedEntries || null)"/>
       </div>
 
-      <Button icon="pi pi-upload" label="Upload" @click="onToggleMenuUpload" :disabled="readonly"/>
-      <Button icon="pi pi-plus" label="New" @click="onToggleMenuNew" :disabled="readonly"/>
+      <Button icon="fa-solid fa-arrow-up-from-bracket" @click="onToggleMenuUpload" :disabled="readonly">Upload</Button>
+      <Button icon="fa-solid fa-plus" label="New" @click="onToggleMenuNew" :disabled="readonly">New</Button>
 
       <div class="profile-actions">
-        <Button v-show="displayName" icon="pi pi-user" class="p-button-secondary" @click="onToggleMenuMain" :label="displayName"/>
-        <Button v-show="!displayName" icon="pi pi-sign-in" class="p-button-secondary" @click="onLogin" label="Login"/>
+        <Button v-show="displayName" icon="fa-regular fa-user" secondary @click="onToggleMenuMain">{{ displayName }}</Button>
+        <Button v-show="!displayName" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
 
         <Menu ref="menuUpload" :model="uploadMenu" :popup="true"/>
         <Menu ref="menuNew" :model="newMenu" :popup="true"/>
@@ -41,7 +41,7 @@
       <br/>
     </div>
     <template #footer>
-      <Button label="Close" icon="pi pi-times" class="p-button-text" @click="aboutDialog.visible = false"/>
+      <Button @click="aboutDialog.visible = false">Close</Button>
     </template>
   </Dialog>
 
@@ -59,7 +59,7 @@
 </pre>
     </div>
     <template #footer>
-      <Button label="Close" icon="pi pi-times" class="p-button-text" @click="officeDialog.visible = false"/>
+      <Button @click="officeDialog.visible = false">Close</Button>
     </template>
   </Dialog>
 </template>
@@ -67,10 +67,11 @@
 <script>
 
 import Breadcrumb from 'primevue/breadcrumb';
-import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import Menu from 'primevue/menu';
 import Toolbar from 'primevue/toolbar';
+
+import { Button } from 'pankow';
 
 export default {
     name: 'MainToolbar',
@@ -210,7 +211,7 @@ export default {
   padding: 0.5rem;
 }
 
-.p-toolbar-group-right button {
+.p-toolbar .pankow-button {
   margin: 0 2px;
 }
 

@@ -8,7 +8,7 @@
     </div>
     <div class="right">
       <h1>Login to Cubby</h1>
-      <a :href="apiOrigin + '/api/v1/oidc/login'"><Button label="Login" id="loginButton"/></a>
+      <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login</Button>
     </div>
   </div>
 </template>
@@ -17,7 +17,7 @@
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
 
-import Button from 'primevue/button';
+import { Button } from 'pankow';
 
 export default {
     name: 'LoginView',
@@ -42,7 +42,7 @@ export default {
 }
 
 .left {
-  background: linear-gradient(90deg, rgb(168, 85, 247) 0%,rgb(33, 150, 243) 100%);
+  background: linear-gradient(90deg, rgb(168, 85, 247) 0%, #0071e3 100%);
   flex-grow: 1;
   display: none;
   max-width: 40%;
@@ -59,14 +59,13 @@ export default {
 }
 
 .right {
+  display: flex;
   background-color: white;
   align-self: stretch;
-  flex-grow: 1;
-  display: flex;
   flex-direction: column;
   padding: 40px;
-  margin: auto;
   white-space: nowrap;
+  justify-content: center;
 }
 
 .footer {

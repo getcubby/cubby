@@ -1,7 +1,7 @@
 <template>
   <Toolbar>
     <template #start>
-      <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" outline></Button>
+      <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
 
       <Breadcrumb :home="breadCrumbHome" :model="breadCrumbs">
         <template #item="{ label, item, props }">

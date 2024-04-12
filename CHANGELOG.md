@@ -168,3 +168,8 @@
 * Fix login session expiration
 * Some UI fixes
 
+[2.0.11]
+* Prepare for group folder
+* Better download archive names
+* Use more Pankow UI element components
+

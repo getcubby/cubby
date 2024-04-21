@@ -10,7 +10,7 @@
     "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
   },
   "dependencies": {
-    "@fontsource/noto-sans": "^5.0.21",
+    "@fontsource/noto-sans": "^5.0.22",
     "archiver": "^7.0.1",
     "body-parser": "^1.20.2",
     "connect-lastmile": "^2.2.0",
@@ -29,7 +29,7 @@
     "nodemailer": "^6.9.13",
     "nodemailer-smtp-transport": "^2.7.4",
     "once": "^1.4.0",
-    "pankow": "^1.3.4",
+    "pankow": "^1.3.5",
     "primeicons": "^7.0.0",
     "primevue": "^3.51.0",
     "safetydance": "^2.4.0",
@@ -46,7 +46,7 @@
     "expect.js": "^0.3.1",
     "mocha": "^10.4.0",
     "selenium-webdriver": "^4.19.0",
-    "vite": "^5.2.9"
+    "vite": "^5.2.10"
   },
   "eslintConfig": {
     "root": true,

@@ -34,19 +34,16 @@
   </Toolbar>
 
   <!-- About Dialog -->
-  <Dialog header="About Cubby" v-model:visible="aboutDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '450px'}" :modal="true">
+  <Dialog title="About Cubby" ref="aboutDialog" confirmLabel="Close">
     <div>
       Cubby the painless file sharing solution!<br/>
       Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>.
       <br/>
     </div>
-    <template #footer>
-      <Button @click="aboutDialog.visible = false">Close</Button>
-    </template>
   </Dialog>
 
   <!-- Office Dialog -->
-  <Dialog header="Office Integration" v-model:visible="officeDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '620px'}" :modal="true">
+  <Dialog title="Office Integration" ref="officeDialog" confirmLabel="Close">
     <div>
       Cubby can open office documents acting as a WOPI host. This is tested with Collabora at the moment.<br/>
       To enable support add the following to the <code>config.json</code> and restart the app:
@@ -58,20 +55,16 @@
 }
 </pre>
     </div>
-    <template #footer>
-      <Button @click="officeDialog.visible = false">Close</Button>
-    </template>
   </Dialog>
 </template>
 
 <script>
 
 import Breadcrumb from 'primevue/breadcrumb';
-import Dialog from 'primevue/dialog';
 import Menu from 'primevue/menu';
 import Toolbar from 'primevue/toolbar';
 
-import { Button } from 'pankow';
+import { Button, Dialog } from 'pankow';
 
 export default {
     name: 'MainToolbar',
@@ -120,12 +113,6 @@ export default {
     data() {
       return {
         search: '',
-        aboutDialog: {
-          visible: false
-        },
-        officeDialog: {
-          visible: false
-        },
         breadCrumbModel: {
           home: { icon: 'pi pi-home' },
           items: []
@@ -137,11 +124,11 @@ export default {
         }, {
           label: 'Office Integration',
           icon: 'pi pi-building',
-          command: () => this.officeDialog.visible = true
+          command: () => this.$refs.officeDialog.open()
         }, {
           label: 'About',
           icon: 'pi pi-info-circle',
-          command: () => this.aboutDialog.visible = true
+          command: () => this.$refs.aboutDialog.open()
         }, {
           separator:true
         }, {

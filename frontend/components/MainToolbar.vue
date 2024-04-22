@@ -1,19 +1,11 @@
 <template>
-  <Toolbar>
-    <template #start>
+  <TopBar :gap="false">
+    <template #left>
       <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
-
-      <Breadcrumb :home="breadCrumbHome" :model="breadCrumbs">
-        <template #item="{ label, item, props }">
-          <a :href="item.route" :target="item.target" v-bind="props.action">
-            <span v-if="item.icon" v-bind="props.icon" />
-            <span v-bind="props.label">{{ label }}</span>
-          </a>
-        </template>
-      </Breadcrumb>
+      <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
     </template>
 
-    <template #end>
+    <template #right>
       <div class="file-actions">
         <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" outline danger @click="onDelete(selectedEntries)"/>
         <Button icon="fa-solid fa-download" outline @click="onDownload(selectedEntries || null)"/>
@@ -31,7 +23,7 @@
         <Menu ref="menuMain" :model="mainMenu" :popup="true"/>
       </div>
     </template>
-  </Toolbar>
+  </TopBar>
 
   <!-- About Dialog -->
   <Dialog title="About Cubby" ref="aboutDialog" confirmLabel="Close">
@@ -60,11 +52,9 @@
 
 <script>
 
-import Breadcrumb from 'primevue/breadcrumb';
 import Menu from 'primevue/menu';
-import Toolbar from 'primevue/toolbar';
 
-import { Button, Dialog } from 'pankow';
+import { Button, Breadcrumb, Dialog, TopBar } from 'pankow';
 
 export default {
     name: 'MainToolbar',
@@ -73,7 +63,7 @@ export default {
       Button,
       Dialog,
       Menu,
-      Toolbar
+      TopBar
     },
     emits: [ 'login', 'logout', 'upload-file', 'upload-folder', 'new-file', 'new-folder', 'directory-up' ],
     props: {

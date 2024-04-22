@@ -11,16 +11,12 @@
         <Button icon="fa-solid fa-download" outline @click="onDownload(selectedEntries || null)"/>
       </div>
 
-      <Button icon="fa-solid fa-arrow-up-from-bracket" @click="onToggleMenuUpload" :disabled="readonly">Upload</Button>
-      <Button icon="fa-solid fa-plus" label="New" @click="onToggleMenuNew" :disabled="readonly">New</Button>
+      <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="readonly">Upload</Button>
+      <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="readonly">New</Button>
 
       <div class="profile-actions">
-        <Button v-show="displayName" icon="fa-regular fa-user" secondary @click="onToggleMenuMain">{{ displayName }}</Button>
+        <Button v-show="displayName" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ displayName }}</Button>
         <Button v-show="!displayName" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
-
-        <Menu ref="menuUpload" :model="uploadMenu" :popup="true"/>
-        <Menu ref="menuNew" :model="newMenu" :popup="true"/>
-        <Menu ref="menuMain" :model="mainMenu" :popup="true"/>
       </div>
     </template>
   </TopBar>
@@ -52,9 +48,7 @@
 
 <script>
 
-import Menu from 'primevue/menu';
-
-import { Button, Breadcrumb, Dialog, TopBar } from 'pankow';
+import { Button, Breadcrumb, Dialog, Menu, TopBar } from 'pankow';
 
 export default {
     name: 'MainToolbar',
@@ -110,54 +104,45 @@ export default {
         mainMenu: [{
           label: 'WebDAV',
           icon: 'pi pi-globe',
-          command: this.onWebDavSettings
+          action: this.onWebDavSettings
         }, {
           label: 'Office Integration',
           icon: 'pi pi-building',
-          command: () => this.$refs.officeDialog.open()
+          action: () => this.$refs.officeDialog.open()
         }, {
           label: 'About',
           icon: 'pi pi-info-circle',
-          command: () => this.$refs.aboutDialog.open()
+          action: () => this.$refs.aboutDialog.open()
         }, {
           separator:true
         }, {
           label: 'Logout',
           icon: 'pi pi-sign-out',
-          command: this.onLogout
+          action: this.onLogout
         }],
         newMenu: [{
           label: 'New File',
           icon: 'pi pi-file',
-          command: () => this.onNewFile()
+          action: () => this.onNewFile()
         }, {
           label: 'New Folder',
           icon: 'pi pi-folder',
-          command: () => this.onNewFolder()
+          action: () => this.onNewFolder()
         }],
         uploadMenu: [{
           label: 'Upload File',
           icon: 'pi pi-file',
-          command: () => this.onUploadFile()
+          action: () => this.onUploadFile()
         }, {
           label: 'Upload Folder',
           icon: 'pi pi-folder',
-          command: () => this.onUploadFolder()
+          action: () => this.onUploadFolder()
         }]
       };
     },
     methods: {
       onLogin() {
         this.$emit('login');
-      },
-      onToggleMenuUpload(event) {
-        this.$refs.menuUpload.toggle(event);
-      },
-      onToggleMenuNew(event) {
-        this.$refs.menuNew.toggle(event);
-      },
-      onToggleMenuMain(event) {
-        this.$refs.menuMain.toggle(event);
       },
       onLogout() {
         this.$emit('logout');

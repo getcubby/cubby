@@ -52,7 +52,7 @@ async function getHandle(req, res, next) {
 
     const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
     HANDLES[handleId] = {
-        username: subject.username,
+        username: subject.usernameOrGroup,
         resourcePath: resourcePath,
         filePath: subject.filePath
     };

@@ -173,3 +173,7 @@
 * Better download archive names
 * Use more Pankow UI element components
 
+[2.0.12]
+* Use more pankow components
+* Improve collabora integration
+

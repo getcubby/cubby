@@ -2,7 +2,6 @@
 
 var express = require('express'),
     path = require('path'),
-    superagent = require('superagent'),
     bodyParser = require('body-parser'),
     lastMile = require('connect-lastmile'),
     Dom = require('xmldom').DOMParser,
@@ -97,11 +96,10 @@ function init(callback) {
 
         const collaboraHost = config.get('collabora.host', '');
         if (collaboraHost) {
-            let result;
             try {
-                result = await superagent.get(`${collaboraHost}/hosting/discovery`);
+                const res = await fetch(`${collaboraHost}/hosting/discovery`);
 
-                const doc = new Dom().parseFromString(result.text);
+                const doc = new Dom().parseFromString(await res.text());
                 if (doc) {
                     const nodes = xpath.select('/wopi-discovery/net-zone/app/action', doc);
                     if (nodes) {

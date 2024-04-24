@@ -10,7 +10,6 @@ exports = module.exports = {
 var assert = require('assert'),
     crypto = require('crypto'),
     debug = require('debug')('cubby:routes:office'),
-    superagent = require('superagent'),
     MainError = require('../mainerror.js'),
     files = require('../files.js'),
     translateResourcePath = require('./files.js').translateResourcePath,
@@ -30,14 +29,14 @@ async function getHandle(req, res, next) {
     const collaboraHost = config.get('collabora.host', '');
     if (!collaboraHost) return next(new HttpError(412, 'collabora office not configured'));
 
-    let result;
+    let doc;
     try {
-        result = await superagent.get(`${collaboraHost}/hosting/discovery`);
+        const res = await fetch(`${collaboraHost}/hosting/discovery`);
+        doc = new Dom().parseFromString(await res.text());
     } catch (error) {
         return next(new HttpError(500, error));
     }
 
-    var doc = new Dom().parseFromString(result.text);
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
     // currently for collabora urlsrc for all mimeTypes is the same
@@ -101,7 +100,9 @@ async function checkFileInfo(req, res, next) {
         BaseFileName: result.fileName,
         Size: result.size,
         LastModifiedTime: result.mtime.toISOString(),
+        // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,
+        UserFriendlyName: req.user.displayName || req.user.username,
         UserCanWrite: true
     }));
 }

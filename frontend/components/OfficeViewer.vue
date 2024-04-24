@@ -16,6 +16,8 @@
     <template #body>
       <div style="display: none">
         <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
+          <input name="ui_defaults" value="SavedUIState=false;TextSidebar=false" type="hidden"/>
+          <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
           <input name="access_token" :value="wopiToken" type="hidden" id="access-token"/>
           <input type="submit" value="" />
         </form>

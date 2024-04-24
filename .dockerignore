@@ -5,6 +5,8 @@ dist/
 .git/
 .data/
 .thumbnails/
+.groups/
+.sessions/
 screenshots/
 cli/
 favicon.png

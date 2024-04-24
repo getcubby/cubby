@@ -23,7 +23,7 @@
         </form>
       </div>
 
-      <iframe ref="officeViewer" name="document-viewer" class="viewer"></iframe>
+      <iframe ref="officeViewer" name="document-viewer" class="viewer" allow="clipboard-read *; clipboard-write *"></iframe>
     </template>
   </MainLayout>
 </template>

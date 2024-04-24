@@ -97,7 +97,7 @@
     <form @submit="onSaveWebDavDialog" @submit.prevent>
       <div class="p-fluid">
         <div class="p-field">
-          <Password v-model="webDavPasswordDialog.password" autofocus required :class="{ 'p-invalid': webDavPasswordDialog.error }"/>
+          <PasswordInput v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
           <small class="p-invalid" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
         </div>
       </div>
@@ -261,14 +261,13 @@ import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
 import ProgressBar from 'primevue/progressbar';
 import Toast from 'primevue/toast';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, DirectoryView, FileUploader, PdfViewer, GenericViewer, Button } from 'pankow';
+import { TextEditor, ImageViewer, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -306,7 +305,7 @@ export default {
       MainToolbar,
       OfficeViewer,
       TextEditor,
-      Password,
+      PasswordInput,
       PdfViewer,
       PreviewPanel,
       ProgressBar,

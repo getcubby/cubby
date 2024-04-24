@@ -95,12 +95,8 @@
     <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
     <p>Set a WebDAV password:</p>
     <form @submit="onSaveWebDavDialog" @submit.prevent>
-      <div class="p-fluid">
-        <div class="p-field">
-          <PasswordInput v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
-          <small class="p-invalid" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
-        </div>
-      </div>
+      <PasswordInput v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
+      <small class="has-error" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
     </form>
     <template #footer>
       <Button icon="fa-solid fa-xmark" @click="webDavPasswordDialog.visible = false">Cancel</Button>
@@ -111,12 +107,8 @@
   <!-- New File Dialog -->
   <Dialog header="New Filename" v-model:visible="newFileDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '350px'}" :modal="true">
     <form @submit="onSaveNewFileDialog" @submit.prevent>
-      <div class="p-fluid">
-        <div class="p-field">
-          <InputText type="text" v-model="newFileDialog.fileName" autofocus required :class="{ 'p-invalid': newFileDialog.error }"/>
-          <small class="p-invalid" v-show="newFileDialog.error">{{ newFileDialog.error }}</small>
-        </div>
-      </div>
+      <TextInput v-model="newFileDialog.fileName" autofocus required :class="{ 'has-error': newFileDialog.error }" style="display: block; width: 100%;"/>
+      <small class="has-error" v-show="newFileDialog.error">{{ newFileDialog.error }}</small>
     </form>
     <template #footer>
       <Button icon="fa-solid fa-xmark" @click="newFileDialog.visible = false">Cancel</Button>
@@ -127,12 +119,8 @@
   <!-- New Folder Dialog -->
   <Dialog header="New Foldername" v-model:visible="newFolderDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '350px'}" :modal="true">
     <form @submit="onSaveNewFolderDialog" @submit.prevent>
-      <div class="p-fluid">
-        <div class="p-field">
-          <InputText type="text" v-model="newFolderDialog.folderName" autofocus required :class="{ 'p-invalid': newFolderDialog.error }"/>
-          <small class="p-invalid" v-show="newFolderDialog.error">{{ newFolderDialog.error }}</small>
-        </div>
-      </div>
+      <TextInput v-model="newFolderDialog.folderName" autofocus required :class="{ 'has-error': newFolderDialog.error }" style="display: block; width: 100%;"/>
+      <small class="has-error" v-show="newFolderDialog.error">{{ newFolderDialog.error }}</small>
     </form>
     <template #footer>
       <Button icon="fa-solid fa-xmark" @click="newFolderDialog.visible = false">Cancel</Button>
@@ -260,14 +248,13 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
-import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
 import Toast from 'primevue/toast';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button } from 'pankow';
+import { TextEditor, ImageViewer, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -300,11 +287,11 @@ export default {
       Dropdown,
       GenericViewer,
       ImageViewer,
-      InputText,
       LoginView,
       MainToolbar,
       OfficeViewer,
       TextEditor,
+      TextInput,
       PasswordInput,
       PdfViewer,
       PreviewPanel,

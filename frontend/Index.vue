@@ -172,14 +172,15 @@
     <br/>
 
     <h3 style="margin-top: 0;">Create Share Link</h3>
-    <div class="p-formgroup-inline">
-      <div class="p-field-checkbox">
-        <Checkbox id="expireShareLinkAt" v-model="shareDialog.shareLink.expire" :binary="true" />
-        <label for="expireShareLinkAt">Expire At</label>
+    <div>
+      <div>
+        <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
       </div>
-      <div class="p-field">
+      <br/>
+      <div>
         <Calendar v-model="shareDialog.shareLink.expiresAt" :minDate="new Date()" :disabled="!shareDialog.shareLink.expire"/>
       </div>
+      <br/>
       <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
     </div>
 
@@ -242,7 +243,6 @@
 'use strict';
 
 import Calendar from 'primevue/calendar';
-import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
@@ -254,7 +254,7 @@ import Toast from 'primevue/toast';
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';

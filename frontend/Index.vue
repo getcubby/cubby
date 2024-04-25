@@ -9,9 +9,9 @@
     <div class="navigation-panel">
       <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="pi pi-folder-open"></i> My Files</a>
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="pi pi-clock"></i> Recent Files</a>
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="pi pi-share-alt"></i> Shared With You</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="fa-regular fa-folder-open"></i> My Files</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="fa-regular fa-clock"></i> Recent Files</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
       <!-- <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="pi pi-building"></i> Group Files</a> -->
 
       <div style="flex-grow: 1">&nbsp;</div>
@@ -756,7 +756,7 @@ export default {
         } else if (resource.type === 'recent') {
           this.breadCrumbs = [];
           this.breadCrumbHome = {
-            icon: 'pi pi-clock',
+            icon: 'fa-regular fa-clock',
             route: '#files/recent/'
           };
         } else if (resource.type === 'shares') {
@@ -767,7 +767,7 @@ export default {
             };
           });
           this.breadCrumbHome = {
-            icon: 'pi pi-share-alt',
+            icon: 'fa-solid fa-share-nodes',
             route: '#files/shares/'
           };
 

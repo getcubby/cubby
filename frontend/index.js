@@ -1,7 +1,6 @@
 import { createApp } from 'vue';
 
 import PrimeVue from 'primevue/config';
-import Tooltip from 'primevue/tooltip';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 import BadgeDirective from 'primevue/badgedirective';
@@ -22,7 +21,6 @@ app.use(PrimeVue);
 app.use(ConfirmationService);
 app.use(ToastService);
 
-app.directive('tooltip', Tooltip);
 app.directive('badge', BadgeDirective);
 
 app.mount('#app');

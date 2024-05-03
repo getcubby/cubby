@@ -78,11 +78,6 @@ a:hover {
     flex-grow: 1;
 }
 
-/* show them correctly in dialogs */
-.p-tooltip, .p-confirm-popup {
-    z-index: 1000;
-}
-
 .p-dialog .p-dialog-content {
     padding: 5px 1.5rem 1.5rem 1.5rem;
 }

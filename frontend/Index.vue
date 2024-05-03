@@ -16,7 +16,7 @@
 
       <div style="flex-grow: 1">&nbsp;</div>
 
-      <div class="p-fluid" v-show="profile.diskusage" v-tooltip.top="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available)) : ''">
+      <div class="p-fluid" v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available)) : ''">
         <span>
           <b>{{ profile.diskusage ? parseInt(profile.diskusage.used / profile.diskusage.available * 100) : 0 }}%</b> of storage used
         </span>
@@ -43,7 +43,7 @@
       />
       <div class="container" style="overflow: hidden;">
         <div class="main-container-content">
-          <div class="side-bar-toggle" @click="onTogglePreviewPanel" v-tooltip="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+          <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
           <DirectoryView
             :show-owner="false"
             :show-extract="false"
@@ -164,7 +164,7 @@
       </Column> -->
       <Column header="" :style="{ textAlign: 'right' }">
         <template #body="slotProps">
-          <Button danger outline icon="fa-solid fa-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
+          <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
         </template>
       </Column>
     </DataTable>
@@ -201,7 +201,7 @@
       </Column> -->
       <Column header="" :style="{ textAlign: 'right' }">
         <template #body="slotProps">
-          <Button danger outline icon="fa-solid fa-trash" v-tooltip.top="'Delete'" @click="onDeleteShare(slotProps.data)"/>
+          <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
         </template>
       </Column>
     </DataTable>

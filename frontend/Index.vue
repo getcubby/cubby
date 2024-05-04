@@ -317,9 +317,6 @@ export default {
         },
         currentHash: '',
         error: '',
-        // TODO show busy state for those
-        pasteInProgress: false,
-        deleteInProgress: false,
         entry: {},
         entries: [],
         selectedEntries: [],
@@ -575,14 +572,12 @@ export default {
           if (!files.length) return;
 
           window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-          this.pasteInProgress = true;
 
           // check ctrl for cut/copy
           await this.directoryModel.paste(parseResourcePath(fullTargetFolder), 'cut', files);
           await this.refresh();
 
           window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-          this.pasteInProgress = false;
         }
       },
       async deleteHandler(entries) {
@@ -605,7 +600,6 @@ export default {
         if (!confirmed) return;
 
         window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-        this.deleteInProgress = true;
 
         for (let i in entries) {
           try {
@@ -619,7 +613,6 @@ export default {
         await this.refresh();
 
         window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-        this.deleteInProgress = false;
       },
       async renameHandler(file, newName) {
         const fromResource = file.resource;

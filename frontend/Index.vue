@@ -664,7 +664,6 @@ export default {
         this.shareDialog.visible = true;
       },
       copyShareIdLinkToClipboard(shareId) {
-        console.log('----', shareId)
         copyToClipboard(this.shareModel.getLink(shareId));
         window.pankow.notify('Share link copied to clipboard');
       },

@@ -7,7 +7,7 @@
 
     <template #right>
       <div class="file-actions">
-        <Button v-show="displayName && selectedEntries.length" icon="pi pi-trash" outline danger @click="onDelete(selectedEntries)"/>
+        <Button v-show="displayName && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
         <Button icon="fa-solid fa-download" outline @click="onDownload(selectedEntries || null)"/>
       </div>
 
@@ -67,7 +67,7 @@ export default {
       },
       breadCrumbHome: {
         type: Object,
-        default: () => { return { icon: 'pi pi-home' }; }
+        default: () => { return { icon: 'fa-solid fa-house' }; }
       },
       displayName: {
         type: String,
@@ -98,44 +98,44 @@ export default {
       return {
         search: '',
         breadCrumbModel: {
-          home: { icon: 'pi pi-home' },
+          home: { icon: 'fa-solid fa-house' },
           items: []
         },
         mainMenu: [{
           label: 'WebDAV',
-          icon: 'pi pi-globe',
+          icon: 'fa-solid fa-globe',
           action: this.onWebDavSettings
         }, {
           label: 'Office Integration',
-          icon: 'pi pi-building',
+          icon: 'fa-solid fa-briefcase',
           action: () => this.$refs.officeDialog.open()
         }, {
           label: 'About',
-          icon: 'pi pi-info-circle',
+          icon: 'fa-solid fa-circle-info',
           action: () => this.$refs.aboutDialog.open()
         }, {
           separator:true
         }, {
           label: 'Logout',
-          icon: 'pi pi-sign-out',
+          icon: 'fa-solid fa-right-from-bracket',
           action: this.onLogout
         }],
         newMenu: [{
           label: 'New File',
-          icon: 'pi pi-file',
+          icon: 'fa-solid fa-file-circle-plus',
           action: () => this.onNewFile()
         }, {
           label: 'New Folder',
-          icon: 'pi pi-folder',
+          icon: 'fa-solid fa-folder-plus',
           action: () => this.onNewFolder()
         }],
         uploadMenu: [{
           label: 'Upload File',
-          icon: 'pi pi-file',
+          icon: 'fa-solid fa-file-arrow-up',
           action: () => this.onUploadFile()
         }, {
           label: 'Upload Folder',
-          icon: 'pi pi-folder',
+          icon: 'fa-regular fa-folder-open',
           action: () => this.onUploadFolder()
         }]
       };

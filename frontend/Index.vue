@@ -8,10 +8,10 @@
     <div class="navigation-panel">
       <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="fa-regular fa-folder-open"></i> My Files</a>
+      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="fa-solid fa-house"></i> My Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="fa-regular fa-clock"></i> Recent Files</a>
       <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-      <!-- <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="pi pi-building"></i> Group Files</a> -->
+      <!-- <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="fa-solid fa-user-group"></i> Group Files</a> -->
 
       <div style="flex-grow: 1">&nbsp;</div>
 
@@ -331,7 +331,7 @@ export default {
         previewPanelVisible: localStorage.previewPanelVisible === 'true',
         breadCrumbs: [],
         breadCrumbHome: {
-          icon: 'pi pi-home',
+          icon: 'fa-solid fa-house',
           route: '#files'
         },
         webDavPasswordDialog: {
@@ -749,7 +749,7 @@ export default {
             };
           });
           this.breadCrumbHome = {
-            icon: 'pi pi-home',
+            icon: 'fa-solid fa-house',
             route: '#files/home/'
           };
         } else if (resource.type === 'recent') {
@@ -785,7 +785,7 @@ export default {
             };
           });
           this.breadCrumbHome = {
-            icon: 'pi pi-building',
+            icon: 'fa-solid fa-user-group',
             route: '#files/groups/'
           };
 

@@ -2,7 +2,6 @@ import { createApp } from 'vue';
 
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
-import ToastService from 'primevue/toastservice';
 import BadgeDirective from 'primevue/badgedirective';
 
 import 'primevue/resources/themes/saga-blue/theme.css';
@@ -19,7 +18,6 @@ const app = createApp(Index);
 
 app.use(PrimeVue);
 app.use(ConfirmationService);
-app.use(ToastService);
 
 app.directive('badge', BadgeDirective);
 

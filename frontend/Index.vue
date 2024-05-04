@@ -1,8 +1,7 @@
 <template>
   <!-- This is re-used and thus global -->
   <ConfirmDialog></ConfirmDialog>
-  <Toast position="top-center" />
-
+  <Notification/>
   <LoginView v-show="ready && showLogin"/>
 
   <div class="container" v-show="ready && !showLogin">
@@ -249,12 +248,11 @@ import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 import ProgressBar from 'primevue/progressbar';
-import Toast from 'primevue/toast';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, Notification, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -289,6 +287,7 @@ export default {
       ImageViewer,
       LoginView,
       MainToolbar,
+      Notification,
       OfficeViewer,
       TextEditor,
       TextInput,
@@ -296,8 +295,7 @@ export default {
       PdfViewer,
       PreviewPanel,
       ProgressBar,
-      FileUploader,
-      Toast
+      FileUploader
     },
     data() {
       return {
@@ -676,8 +674,9 @@ export default {
         this.shareDialog.visible = true;
       },
       copyShareIdLinkToClipboard(shareId) {
+        console.log('----', shareId)
         copyToClipboard(this.shareModel.getLink(shareId));
-        this.$toast.add({ severity:'success', summary: 'Share link copied to clipboard', life: 2000 });
+        window.pankow.notify('Share link copied to clipboard');
       },
       async onCreateShareLink() {
         const path = this.shareDialog.entry.filePath;
@@ -1006,10 +1005,6 @@ label {
     width: 100%;
     padding: 10px;
     flex-direction: column;
-}
-
-.p-toast {
-    z-index: 2000 !important;
 }
 
 .main-container-content {

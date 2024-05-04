@@ -1,6 +1,6 @@
 <template>
   <!-- This is re-used and thus global -->
-  <ConfirmDialog></ConfirmDialog>
+  <InputDialog ref="confirmDialog" />
   <Notification/>
   <LoginView v-show="ready && showLogin"/>
 
@@ -243,7 +243,6 @@
 
 import Calendar from 'primevue/calendar';
 import Column from 'primevue/column';
-import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
@@ -252,7 +251,7 @@ import ProgressBar from 'primevue/progressbar';
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, Notification, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -278,13 +277,13 @@ export default {
       Calendar,
       Checkbox,
       Column,
-      ConfirmDialog,
       DataTable,
       Dialog,
       DirectoryView,
       Dropdown,
       GenericViewer,
       ImageViewer,
+      InputDialog,
       LoginView,
       MainToolbar,
       Notification,
@@ -597,32 +596,31 @@ export default {
           return str;
         }
 
-        this.$confirm.require({
-          header: 'Really delete files?',
-          message: start_and_end(entries.map((f) => f.name).join(', ')),
-          icon: '',
-          acceptClass: 'p-button-danger',
-          accept: async () => {
-            this.$confirm.close();
-
-            window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-            this.deleteInProgress = true;
-
-            for (let i in entries) {
-              try {
-                const resource = parseResourcePath(sanitize(this.currentResourcePath + '/' + entries[i].fileName));
-                await this.directoryModel.remove(resource);
-              } catch (e) {
-                console.error(`Failed to remove file ${entries[i].name}:`, e);
-              }
-            }
-
-            await this.refresh();
-
-            window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-            this.deleteInProgress = false;
-          }
+        const confirmed = await this.$refs.confirmDialog.confirm({
+          message: 'Really delete files?',
+          confirmStyle: 'danger',
+          confirmLabel: 'Yes',
+          rejectLabel: 'Cancel'
         });
+
+        if (!confirmed) return;
+
+        window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+        this.deleteInProgress = true;
+
+        for (let i in entries) {
+          try {
+            const resource = parseResourcePath(sanitize(this.currentResourcePath + '/' + entries[i].fileName));
+            await this.directoryModel.remove(resource);
+          } catch (e) {
+            console.error(`Failed to remove file ${entries[i].name}:`, e);
+          }
+        }
+
+        await this.refresh();
+
+        window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+        this.deleteInProgress = false;
       },
       async renameHandler(file, newName) {
         const fromResource = file.resource;

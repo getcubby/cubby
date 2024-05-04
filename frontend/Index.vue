@@ -19,7 +19,7 @@
         <span>
           <b>{{ profile.diskusage ? parseInt(profile.diskusage.used / profile.diskusage.available * 100) : 0 }}%</b> of storage used
         </span>
-        <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0" :showValue="false"/>
+        <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
       </div>
     </div>
     <div class="content">
@@ -246,12 +246,11 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
-import ProgressBar from 'primevue/progressbar';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -1027,20 +1026,6 @@ label {
 </style>
 
 <style>
-
-.upload .p-progressbar-label {
-    line-height: 11px;
-    font-size: 11px;
-}
-
-.diskusage.p-progressbar {
-    height: 10px;
-    margin-top: 5px;
-}
-
-.diskusage.p-progressbar .p-progressbar-value {
-    background: #fecb3e !important;
-}
 
 .share-readonly-column .p-column-title {
     text-align: center;

@@ -141,7 +141,7 @@
         </div>
         <br/>
         <div>
-          <Calendar v-model="shareDialog.shareLink.expiresAt" :minDate="new Date()" :disabled="!shareDialog.shareLink.expire"/>
+          <input type="date" v-model="shareDialog.shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareDialog.shareLink.expire"/>
         </div>
         <br/>
         <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
@@ -197,7 +197,6 @@
 
 'use strict';
 
-import Calendar from 'primevue/calendar';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dropdown from 'primevue/dropdown';
@@ -227,7 +226,6 @@ export default {
     name: 'IndexView',
     components: {
       Button,
-      Calendar,
       Checkbox,
       Column,
       DataTable,

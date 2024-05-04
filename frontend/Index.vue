@@ -1,6 +1,6 @@
 <template>
   <!-- This is re-used and thus global -->
-  <InputDialog ref="confirmDialog" />
+  <InputDialog ref="inputDialog" />
   <Notification/>
   <LoginView v-show="ready && showLogin"/>
 
@@ -90,124 +90,80 @@
   </div>
 
   <!-- WebDAV Password Dialog -->
-  <Dialog header="WebDAV Password" v-model:visible="webDavPasswordDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '640px'}" :modal="true">
+  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" confirmLabel="Save" @confirm="onWebDavSettingsSubmit">
     <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
-    <p>Set a WebDAV password:</p>
-    <form @submit="onSaveWebDavDialog" @submit.prevent>
+    <p>Set a WebDAV password (will overwrite old one):</p>
+    <form @submit="onWebDavSettingsSubmit" @submit.prevent>
       <PasswordInput v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
       <small class="has-error" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
     </form>
-    <template #footer>
-      <Button icon="fa-solid fa-xmark" @click="webDavPasswordDialog.visible = false">Cancel</Button>
-      <Button icon="fa-solid fa-check" success @click="onSaveWebDavDialog" :disabled="!webDavPasswordDialog.password">Save</Button>
-    </template>
-  </Dialog>
-
-  <!-- New File Dialog -->
-  <Dialog header="New Filename" v-model:visible="newFileDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '350px'}" :modal="true">
-    <form @submit="onSaveNewFileDialog" @submit.prevent>
-      <TextInput v-model="newFileDialog.fileName" autofocus required :class="{ 'has-error': newFileDialog.error }" style="display: block; width: 100%;"/>
-      <small class="has-error" v-show="newFileDialog.error">{{ newFileDialog.error }}</small>
-    </form>
-    <template #footer>
-      <Button icon="fa-solid fa-xmark" @click="newFileDialog.visible = false">Cancel</Button>
-      <Button icon="fa-solid fa-check" success @click="onSaveNewFileDialog" :disabled="!newFileDialog.fileName">Create</Button>
-    </template>
-  </Dialog>
-
-  <!-- New Folder Dialog -->
-  <Dialog header="New Foldername" v-model:visible="newFolderDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '350px'}" :modal="true">
-    <form @submit="onSaveNewFolderDialog" @submit.prevent>
-      <TextInput v-model="newFolderDialog.folderName" autofocus required :class="{ 'has-error': newFolderDialog.error }" style="display: block; width: 100%;"/>
-      <small class="has-error" v-show="newFolderDialog.error">{{ newFolderDialog.error }}</small>
-    </form>
-    <template #footer>
-      <Button icon="fa-solid fa-xmark" @click="newFolderDialog.visible = false">Cancel</Button>
-      <Button icon="fa-solid fa-check" success @click="onSaveNewFolderDialog" :disabled="!newFolderDialog.folderName">Create</Button>
-    </template>
   </Dialog>
 
   <!-- Share Dialog -->
-  <Dialog :header="shareDialog.entry.fileName" v-model:visible="shareDialog.visible" :dismissableMask="true" :closable="true" :style="{width: '720px'}" :modal="true">
-    <h3>Create Share</h3>
-    <form @submit="onCreateShare" @submit.prevent>
-      <div class="p-fluid">
-        <div class="p-field">
-          <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionDisabled="alreadyUsed" optionValue="username" optionLabel="userAndDisplayName" placeholder="Select a user" />
-          <small class="p-invalid" v-show="shareDialog.error">{{ shareDialog.error }}</small>
+  <Dialog :title="shareDialog.entry.fileName" ref="shareDialog">
+    <div style="width: 720px;">
+      <h3>Create Share</h3>
+      <form @submit="onCreateShare" @submit.prevent>
+        <div class="p-fluid">
+          <div class="p-field">
+            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionDisabled="alreadyUsed" optionValue="username" optionLabel="userAndDisplayName" placeholder="Select a user" />
+            <small class="p-invalid" v-show="shareDialog.error">{{ shareDialog.error }}</small>
+          </div>
         </div>
-      </div>
-      <div>
-        <!-- <div class="p-field-checkbox">
-          <Checkbox id="binary" v-model="shareDialog.readonly" :binary="true" />
-          <label for="binary">Share read-only</label>
-        </div> -->
-        <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
-      </div>
-    </form>
+        <div>
+          <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
+        </div>
+      </form>
 
-    <h3>Shared with</h3>
-    <DataTable :value="shareDialog.sharedWith" class="p-datatable-sm" responsiveLayout="scroll">
-      <template #empty>
-        Not shared with anyone yet
-      </template>
-      <Column header="User">
-        <template #body="slotProps">
-          {{ slotProps.data.receiverUsername || slotProps.data.receiverEmail }}
+      <h3>Shared with</h3>
+      <DataTable :value="shareDialog.sharedWith" class="p-datatable-sm" responsiveLayout="scroll">
+        <template #empty>
+          Not shared with anyone yet
         </template>
-      </Column>
-      <!-- <Column header="Readonly" headerClass="share-readonly-column" :style="{ textAlign: 'center' }">
-        <template #body="slotProps">
-          <Checkbox v-model="slotProps.data.readonly" :binary="true" readonly/>
-        </template>
-      </Column> -->
-      <Column header="" :style="{ textAlign: 'right' }">
-        <template #body="slotProps">
-          <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
-        </template>
-      </Column>
-    </DataTable>
+        <Column header="User">
+          <template #body="slotProps">
+            {{ slotProps.data.receiverUsername || slotProps.data.receiverEmail }}
+          </template>
+        </Column>
+        <Column header="" :style="{ textAlign: 'right' }">
+          <template #body="slotProps">
+            <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
+          </template>
+        </Column>
+      </DataTable>
 
-    <br/>
-
-    <h3 style="margin-top: 0;">Create Share Link</h3>
-    <div>
-      <div>
-        <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
-      </div>
       <br/>
+
+      <h3 style="margin-top: 0;">Create Share Link</h3>
       <div>
-        <Calendar v-model="shareDialog.shareLink.expiresAt" :minDate="new Date()" :disabled="!shareDialog.shareLink.expire"/>
+        <div>
+          <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
+        </div>
+        <br/>
+        <div>
+          <Calendar v-model="shareDialog.shareLink.expiresAt" :minDate="new Date()" :disabled="!shareDialog.shareLink.expire"/>
+        </div>
+        <br/>
+        <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
       </div>
-      <br/>
-      <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
+
+      <h3>Shared Links</h3>
+      <DataTable :value="shareDialog.sharedLinks" class="p-datatable-sm" responsiveLayout="scroll">
+        <template #empty>
+          No shared links yet
+        </template>
+        <Column header="Link">
+          <template #body="slotProps">
+            <Button small outline @click="copyShareIdLinkToClipboard(slotProps.data.id)">Copy Link to Clipboard</Button>
+          </template>
+        </Column>
+        <Column header="" :style="{ textAlign: 'right' }">
+          <template #body="slotProps">
+            <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
+          </template>
+        </Column>
+      </DataTable>
     </div>
-
-    <h3>Shared Links</h3>
-    <DataTable :value="shareDialog.sharedLinks" class="p-datatable-sm" responsiveLayout="scroll">
-      <template #empty>
-        No shared links yet
-      </template>
-      <Column header="Link">
-        <template #body="slotProps">
-          <Button small outline @click="copyShareIdLinkToClipboard(slotProps.data.id)">Copy Link to Clipboard</Button>
-        </template>
-      </Column>
-      <!-- <Column header="Readonly" headerClass="share-readonly-column" :style="{ textAlign: 'center' }">
-        <template #body="slotProps">
-          <Checkbox v-model="slotProps.data.readonly" :binary="true" readonly/>
-        </template>
-      </Column> -->
-      <Column header="" :style="{ textAlign: 'right' }">
-        <template #body="slotProps">
-          <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
-        </template>
-      </Column>
-    </DataTable>
-
-    <template #footer>
-      <Button icon="fa-solid fa-xmark" @click="shareDialog.visible = false">Close</Button>
-    </template>
   </Dialog>
 
   <Transition name="pop">
@@ -244,18 +200,16 @@
 import Calendar from 'primevue/calendar';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
-import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, Dialog, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
 
-// import OfficeViewer from './components/OfficeViewer.vue';
 import LoginView from './components/LoginView.vue';
 import MainToolbar from './components/MainToolbar.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
@@ -330,19 +284,8 @@ export default {
           route: '#files'
         },
         webDavPasswordDialog: {
-          visible: false,
           error: '',
           password: ''
-        },
-        newFileDialog: {
-          visible: false,
-          error: '',
-          fileName: ''
-        },
-        newFolderDialog: {
-          visible: false,
-          error: '',
-          folderName: ''
         },
         shareDialog: {
           visible: false,
@@ -364,11 +307,6 @@ export default {
       prettyFileSize,
       showAllFiles() {
         window.location.hash = 'files/home/';
-      },
-      async onWebDavSettings() {
-        this.webDavPasswordDialog.error = '';
-        this.webDavPasswordDialog.password = '';
-        this.webDavPasswordDialog.visible = true;
       },
       async uploadHandler(targetDir, file, progressHandler) {
         const resource = parseResourcePath(targetDir);
@@ -410,15 +348,55 @@ export default {
         const resource = parseResourcePath(this.currentResourcePath || 'files/');
         this.$refs.fileUploader.onUploadFolder(resource.resourcePath);
       },
-      onNewFile() {
-        this.newFileDialog.error = '';
-        this.newFileDialog.fileName = '';
-        this.newFileDialog.visible = true;
+      async onNewFile() {
+        const newFileName = await this.$refs.inputDialog.prompt({
+          message: 'New Filename',
+          value: 'newfile.txt',
+          confirmStyle: 'success',
+          confirmLabel: 'Save',
+          rejectLabel: 'Close'
+        });
+
+        if (!newFileName) return;
+
+        const resource = parseResourcePath(this.currentResourcePath || 'files/');
+
+        try {
+          await this.directoryModel.newFile(resource, newFileName);
+        } catch (error) {
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('File name not allowed');
+          else if (error.reason === DirectoryModelError.CONFLICT) console.error('File already exists');
+          else console.error('Failed to add file, unknown error:', error)
+          return;
+        }
+
+        this.refresh();
       },
-      onNewFolder() {
-        this.newFolderDialog.error = '';
-        this.newFolderDialog.folderName = '';
-        this.newFolderDialog.visible = true;
+      async onNewFolder() {
+        const newFolderName = await this.$refs.inputDialog.prompt({
+          message: 'New Foldername',
+          value: 'newfolder',
+          confirmStyle: 'success',
+          confirmLabel: 'Save',
+          rejectLabel: 'Close'
+        });
+
+        if (!newFolderName) return;
+
+        const resource = parseResourcePath(this.currentResourcePath || 'files/');
+
+        try {
+          await this.directoryModel.newFolder(resource, newFolderName);
+        } catch (error) {
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('Folder name not allowed');
+          else if (error.reason === DirectoryModelError.CONFLICT) console.error('Folder already exists');
+          else console.error('Failed to add folder, unknown error:', error)
+          return;
+        }
+
+        this.refresh();
       },
       async copyHandler(files) {
         if (!files) return;
@@ -450,27 +428,12 @@ export default {
         window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
         this.pasteInProgress = false;
       },
-      async onSaveNewFileDialog() {
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-
-        try {
-          await this.directoryModel.newFile(resource, this.newFileDialog.fileName);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
-          else if (error.reason === DirectoryModelError.NOT_ALLOWED) this.newFileDialog.error = 'File name not allowed';
-          else if (error.reason === DirectoryModelError.CONFLICT) this.newFileDialog.error = 'File already exists';
-          else {
-            this.newFolderDialog.error = 'Unkown error, check logs';
-            console.error('Failed to add file, unknown error:', error)
-          }
-
-          return;
-        }
-
-        this.refresh();
-        this.newFileDialog.visible = false;
+      async onWebDavSettings() {
+        this.webDavPasswordDialog.error = '';
+        this.webDavPasswordDialog.password = '';
+        this.$refs.webDavPasswordDialog.open();
       },
-      async onSaveWebDavDialog() {
+      async onWebDavSettingsSubmit() {
         try {
           await this.mainModel.setWebDavPassword(this.webDavPasswordDialog.password);
         } catch (error) {
@@ -484,26 +447,6 @@ export default {
         }
 
         this.webDavPasswordDialog.visible = false;
-      },
-      async onSaveNewFolderDialog() {
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-
-        try {
-          await this.directoryModel.newFolder(resource, this.newFolderDialog.folderName);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
-          else if (error.reason === DirectoryModelError.NOT_ALLOWED) this.newFolderDialog.error = 'Folder name not allowed';
-          else if (error.reason === DirectoryModelError.CONFLICT) this.newFolderDialog.error = 'Folder already exists';
-          else {
-            this.newFolderDialog.error = 'Unkown error, check logs';
-            console.error('Failed to add folder, unknown error:', error)
-          }
-
-          return;
-        }
-
-        this.refresh();
-        this.newFolderDialog.visible = false;
       },
       clearSelection() {
         this.selectedEntries = [];
@@ -590,7 +533,7 @@ export default {
           return str;
         }
 
-        const confirmed = await this.$refs.confirmDialog.confirm({
+        const confirmed = await this.$refs.inputDialog.confirm({
           message: 'Really delete files?',
           confirmStyle: 'danger',
           confirmLabel: 'Yes',
@@ -661,7 +604,7 @@ export default {
 
         this.refreshShareDialogEntry(entry);
 
-        this.shareDialog.visible = true;
+        this.$refs.shareDialog.open();
       },
       copyShareIdLinkToClipboard(shareId) {
         copyToClipboard(this.shareModel.getLink(shareId));

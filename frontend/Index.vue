@@ -116,21 +116,15 @@
       </form>
 
       <h3>Shared with</h3>
-      <DataTable :value="shareDialog.sharedWith" class="p-datatable-sm" responsiveLayout="scroll">
-        <template #empty>
+      <div>
+        <div v-for="link in shareDialog.sharedWith" class="shared-link">
+          <div>{{ link.receiverUsername || link.receiverEmail }}</div>
+          <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+        </div>
+        <div v-show="shareDialog.sharedWith.length === 0">
           Not shared with anyone yet
-        </template>
-        <Column header="User">
-          <template #body="slotProps">
-            {{ slotProps.data.receiverUsername || slotProps.data.receiverEmail }}
-          </template>
-        </Column>
-        <Column header="" :style="{ textAlign: 'right' }">
-          <template #body="slotProps">
-            <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
-          </template>
-        </Column>
-      </DataTable>
+        </div>
+      </div>
 
       <br/>
 
@@ -148,21 +142,16 @@
       </div>
 
       <h3>Shared Links</h3>
-      <DataTable :value="shareDialog.sharedLinks" class="p-datatable-sm" responsiveLayout="scroll">
-        <template #empty>
+      <div>
+        <div v-for="link in shareDialog.sharedLinks" class="shared-link">
+          <Button small outline @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
+          <div>Created: {{ prettyLongDate(link.createdAt) }}</div>
+          <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+        </div>
+        <div v-show="shareDialog.sharedLinks.length === 0">
           No shared links yet
-        </template>
-        <Column header="Link">
-          <template #body="slotProps">
-            <Button small outline @click="copyShareIdLinkToClipboard(slotProps.data.id)">Copy Link to Clipboard</Button>
-          </template>
-        </Column>
-        <Column header="" :style="{ textAlign: 'right' }">
-          <template #body="slotProps">
-            <Button danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(slotProps.data)"/>
-          </template>
-        </Column>
-      </DataTable>
+        </div>
+      </div>
     </div>
   </Dialog>
 
@@ -197,12 +186,10 @@
 
 'use strict';
 
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
 import Dropdown from 'primevue/dropdown';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
-import { prettyFileSize } from 'pankow/utils';
+import { prettyFileSize, prettyLongDate } from 'pankow/utils';
 
 import { TextEditor, ImageViewer, Checkbox, Dialog, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
@@ -227,8 +214,6 @@ export default {
     components: {
       Button,
       Checkbox,
-      Column,
-      DataTable,
       Dialog,
       DirectoryView,
       Dropdown,
@@ -292,7 +277,7 @@ export default {
           readonly: false,
           users: [],
           sharedWith: [],
-          shareLinks: [],
+          sharedLinks: [],
           entry: {},
           shareLink: {
             expire: false,
@@ -303,6 +288,7 @@ export default {
     },
     methods: {
       prettyFileSize,
+      prettyLongDate,
       showAllFiles() {
         window.location.hash = 'files/home/';
       },
@@ -948,6 +934,11 @@ label {
     top: 3px;
     padding: 10px 15px;
     cursor: pointer;
+}
+
+.shared-link {
+  display: flex;
+  justify-content: space-between;
 }
 
 @media only screen and (max-width: 767px) {

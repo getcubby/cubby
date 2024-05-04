@@ -106,7 +106,8 @@
       <form @submit="onCreateShare" @submit.prevent>
         <div class="p-fluid">
           <div class="p-field">
-            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionDisabled="alreadyUsed" optionValue="username" optionLabel="userAndDisplayName" placeholder="Select a user" />
+            <!-- TODO optionDisabled="alreadyUsed"  -->
+            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionKey="username" optionLabel="userAndDisplayName" placeholder="Select a user"/>
             <small class="p-invalid" v-show="shareDialog.error">{{ shareDialog.error }}</small>
           </div>
         </div>
@@ -186,12 +187,10 @@
 
 'use strict';
 
-import Dropdown from 'primevue/dropdown';
-
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize, prettyLongDate } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, Dialog, DirectoryView, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
+import { TextEditor, ImageViewer, Checkbox, Dialog, DirectoryView, Dropdown, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';

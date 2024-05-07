@@ -7,8 +7,8 @@
       </div>
     </div>
     <div class="right">
-      <h1>Login to Cubby</h1>
-      <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login</Button>
+      <h1>Cubby</h1>
+      <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
     </div>
   </div>
 </template>

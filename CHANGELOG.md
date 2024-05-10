@@ -176,4 +176,5 @@
 [2.0.12]
 * Use more pankow components
 * Improve collabora integration
+* Use browser native PDF viewer
 

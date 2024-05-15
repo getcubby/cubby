@@ -178,3 +178,8 @@
 * Improve collabora integration
 * Use browser native PDF viewer
 
+[2.0.13]
+* Fix email notification text for shared items
+* Make sidebar work on mobile
+* Various cleanups of unused primevue class definitions
+

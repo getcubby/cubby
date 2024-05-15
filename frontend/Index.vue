@@ -5,23 +5,20 @@
   <LoginView v-show="ready && showLogin"/>
 
   <div class="container" v-show="ready && !showLogin">
-    <div class="navigation-panel">
+   <SideBar class="side-bar" ref="sideBar">
       <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/home/"><i class="fa-solid fa-house"></i> My Files</a>
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/recent/"><i class="fa-regular fa-clock"></i> Recent Files</a>
-      <a class="navigation-panel-entry" v-show="profile.username" href="#files/shares/"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-      <!-- <a class="navigation-panel-entry" v-show="profile.username" href="#files/groups/"><i class="fa-solid fa-user-group"></i> Group Files</a> -->
+      <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
+      <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
+      <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
+      <!-- <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a> -->
 
       <div style="flex-grow: 1">&nbsp;</div>
 
-      <div class="p-fluid" v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available)) : ''">
-        <span>
-          <b>{{ profile.diskusage ? parseInt(profile.diskusage.used / profile.diskusage.available * 100) : 0 }}%</b> of storage used
-        </span>
+      <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available))  + ' used' : ''">
         <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
       </div>
-    </div>
+    </SideBar>
     <div class="content">
       <MainToolbar
         :breadCrumbs="breadCrumbs"
@@ -104,16 +101,10 @@
     <div style="width: 720px;">
       <h3>Create Share</h3>
       <form @submit="onCreateShare" @submit.prevent>
-        <div class="p-fluid">
-          <div class="p-field">
-            <!-- TODO optionDisabled="alreadyUsed"  -->
-            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionKey="username" optionLabel="userAndDisplayName" placeholder="Select a user"/>
-            <small class="p-invalid" v-show="shareDialog.error">{{ shareDialog.error }}</small>
-          </div>
-        </div>
-        <div>
-          <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
-        </div>
+        <!-- TODO optionDisabled="alreadyUsed"  -->
+        <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
+        <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionKey="username" optionLabel="userAndDisplayName" placeholder="Select a user"/>
+        <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
       </form>
 
       <h3>Shared with</h3>
@@ -190,7 +181,25 @@
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize, prettyLongDate } from 'pankow/utils';
 
-import { TextEditor, ImageViewer, Checkbox, Dialog, DirectoryView, Dropdown, FileUploader, InputDialog, Notification, PasswordInput, PdfViewer, ProgressBar, GenericViewer, Button, TextInput } from 'pankow';
+import {
+  TextEditor,
+  ImageViewer,
+  Checkbox,
+  Dialog,
+  DirectoryView,
+  Dropdown,
+  FileUploader,
+  InputDialog,
+  Notification,
+  PasswordInput,
+  PdfViewer,
+  ProgressBar,
+  GenericViewer,
+  Button,
+  SideBar,
+  TextInput
+} from 'pankow';
+
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
@@ -229,6 +238,7 @@ export default {
       PdfViewer,
       PreviewPanel,
       ProgressBar,
+      SideBar,
       FileUploader
     },
     data() {
@@ -297,6 +307,9 @@ export default {
         await this.directoryModel.upload(resource, file, progressHandler);
 
         this.refresh();
+      },
+      onCloseSidebar() {
+        this.$refs.sideBar.close();
       },
       async onLogout(clearReturnTo = false) {
         // stash for use later after re-login
@@ -881,17 +894,17 @@ label {
   left: 0;
 }
 
-.navigation-panel {
+.side-bar {
     display: flex;
     height: 100%;
-    width: 250px;
+    min-width: 250px;
     background: linear-gradient(90deg, rgb(168, 85, 247) 0%,rgb(33, 150, 243) 100%);
     color: white;
     padding: 10px;
     flex-direction: column;
 }
 
-.navigation-panel-entry {
+.side-bar-entry {
   cursor: pointer;
   color: white;
   padding: 10px;
@@ -899,11 +912,11 @@ label {
   border-radius: 3px;
 }
 
-.navigation-panel-entry:hover {
+.side-bar-entry:hover {
   background-color: rgba(255,255,255,0.2);
 }
 
-.navigation-panel-entry > i {
+.side-bar-entry > i {
   padding-right: 10px;
 }
 
@@ -944,15 +957,6 @@ label {
   .side-bar-toggle {
     display: none;
   }
-}
-
-</style>
-
-<style>
-
-.share-readonly-column .p-column-title {
-    text-align: center;
-    width: 100%;
 }
 
 </style>

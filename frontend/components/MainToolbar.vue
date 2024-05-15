@@ -24,8 +24,10 @@
   <!-- About Dialog -->
   <Dialog title="About Cubby" ref="aboutDialog" confirmLabel="Close">
     <div>
-      Cubby the painless file sharing solution!<br/>
-      Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>.
+      Cubby the painless file sharing solution!
+      <br/>
+      <br/>
+      Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>
       <br/>
     </div>
   </Dialog>

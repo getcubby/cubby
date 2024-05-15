@@ -29,7 +29,7 @@
     "nodemailer": "^6.9.13",
     "nodemailer-smtp-transport": "^2.7.4",
     "once": "^1.4.0",
-    "pankow": "^1.4.0",
+    "pankow": "^1.4.2",
     "safetydance": "^2.4.0",
     "session-file-store": "^1.5.0",
     "superagent": "^9.0.2",
@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "chromedriver": "^124.0.2",
+    "chromedriver": "^124.0.3",
     "expect.js": "^0.3.1",
     "mocha": "^10.4.0",
     "selenium-webdriver": "^4.20.0",

@@ -171,14 +171,6 @@ export default {
 
 <style scoped>
 
-.p-toolbar {
-  padding: 0.5rem;
-}
-
-.p-toolbar .pankow-button {
-  margin: 0 2px;
-}
-
 .file-actions {
   margin-right: 50px;
 }

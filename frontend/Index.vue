@@ -147,27 +147,27 @@
     </div>
   </Dialog>
 
-  <Transition name="pop">
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'image'">
       <ImageViewer ref="imageViewer" @close="onViewerClose" :navigation-handler="onViewerEntryChanged" :download-handler="downloadHandler" />
     </div>
   </Transition>
-  <Transition name="pop">
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'text'">
       <TextEditor ref="textEditor" @close="onViewerClose" :save-handler="onFileSaved" />
     </div>
   </Transition>
-  <Transition name="pop">
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'pdf'">
       <PdfViewer ref="pdfViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="pop">
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'office'">
       <OfficeViewer ref="officeViewer" :config="config" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="pop">
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'generic'">
       <GenericViewer ref="genericViewer" @close="onViewerClose" />
     </div>

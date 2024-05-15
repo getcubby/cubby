@@ -1,6 +1,6 @@
 <template>
     <div class="preview-container" :class="{ 'visible': visible }">
-      <div class="p-d-flex p-jc-between header" style="padding-bottom: 10px;">Details</div>
+      <div class="header" style="padding-bottom: 10px;">Details</div>
       <div class="preview-icon-container">
         <div class="preview-icon" v-for="entry in selectedEntries.slice(0, 15)" :key="entry.id" :style="{ backgroundImage: entry && getPreviewUrl(entry) ? 'url(' + getPreviewUrl(entry) + ')' : 'none' }"></div>
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: entry && getPreviewUrl(entry) ? 'url(' + getPreviewUrl(entry) + ')' : 'none' }"></div>

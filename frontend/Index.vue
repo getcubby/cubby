@@ -22,23 +22,28 @@
         </div>
       </SideBar>
       <div class="content">
-        <MainToolbar
-          :breadCrumbs="breadCrumbs"
-          :breadCrumbHome="breadCrumbHome"
-          :selectedEntries="selectedEntries"
-          :displayName="profile.displayName"
-          :readonly="isReadonly()"
-          @logout="onLogout(true)"
-          @login="onShowLogin"
-          @upload-file="onUploadFile"
-          @upload-folder="onUploadFolder"
-          @new-file="onNewFile"
-          @directory-up="onUp"
-          @new-folder="onNewFolder"
-          :on-delete="deleteHandler"
-          :on-download="downloadHandler"
-          :on-web-dav-settings="onWebDavSettings"
-        />
+        <TopBar :gap="false">
+          <template #left>
+            <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
+            <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+          </template>
+
+          <template #right>
+            <div class="file-actions">
+              <Button v-show="!readonly && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
+              <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
+            </div>
+
+            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="readonly">Upload</Button>
+            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="readonly">New</Button>
+
+            <div class="profile-actions">
+              <Button v-show="profile" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
+              <Button v-show="!profile" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
+            </div>
+          </template>
+        </TopBar>
+
         <UsersView v-show="view === VIEWS.USERS"/>
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
@@ -89,6 +94,32 @@
       </div>
     </div>
   </div>
+
+  <!-- About Dialog -->
+  <Dialog title="About Cubby" ref="aboutDialog" confirmLabel="Close">
+    <div>
+      Cubby the painless file sharing solution!
+      <br/>
+      <br/>
+      Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>
+      <br/>
+    </div>
+  </Dialog>
+
+  <!-- Office Dialog -->
+  <Dialog title="Office Integration" ref="officeDialog" confirmLabel="Close">
+    <div>
+      Cubby can open office documents acting as a WOPI host. This is tested with Collabora at the moment.<br/>
+      To enable support add the following to the <code>config.json</code> and restart the app:
+      <pre>
+{
+  "collabora": {
+    "host": "https://collabora.domain.com"
+  }
+}
+</pre>
+    </div>
+  </Dialog>
 
   <!-- WebDAV Password Dialog -->
   <Dialog title="WebDAV Password" ref="webDavPasswordDialog" confirmLabel="Save" @confirm="onWebDavSettingsSubmit">
@@ -186,6 +217,9 @@ import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './ut
 import { prettyFileSize, prettyLongDate } from 'pankow/utils';
 
 import {
+  Breadcrumb,
+  Menu,
+  TopBar,
   TextEditor,
   ImageViewer,
   Checkbox,
@@ -210,7 +244,6 @@ import { createShareModel } from './models/ShareModel.js';
 
 import LoginView from './components/LoginView.vue';
 import UsersView from './components/UsersView.vue';
-import MainToolbar from './components/MainToolbar.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 
@@ -232,6 +265,9 @@ export default {
     name: 'IndexView',
     components: {
       Button,
+      Breadcrumb,
+      Menu,
+      TopBar,
       Checkbox,
       Dialog,
       DirectoryView,
@@ -240,7 +276,6 @@ export default {
       ImageViewer,
       InputDialog,
       LoginView,
-      MainToolbar,
       Notification,
       OfficeViewer,
       TextEditor,
@@ -306,7 +341,48 @@ export default {
             expire: false,
             expiresAt: 0
           }
-        }
+        },
+        mainMenu: [{
+          label: 'Users',
+          icon: 'fa-solid fa-users',
+          action: () => window.location.href = '#users'
+        }, {
+          label: 'WebDAV',
+          icon: 'fa-solid fa-globe',
+          action: this.onWebDavSettings
+        }, {
+          label: 'Office Integration',
+          icon: 'fa-solid fa-briefcase',
+          action: () => this.$refs.officeDialog.open()
+        }, {
+          label: 'About',
+          icon: 'fa-solid fa-circle-info',
+          action: () => this.$refs.aboutDialog.open()
+        }, {
+          separator:true
+        }, {
+          label: 'Logout',
+          icon: 'fa-solid fa-right-from-bracket',
+          action: this.onLogout
+        }],
+        newMenu: [{
+          label: 'New File',
+          icon: 'fa-solid fa-file-circle-plus',
+          action: () => this.onNewFile()
+        }, {
+          label: 'New Folder',
+          icon: 'fa-solid fa-folder-plus',
+          action: () => this.onNewFolder()
+        }],
+        uploadMenu: [{
+          label: 'Upload File',
+          icon: 'fa-solid fa-file-arrow-up',
+          action: () => this.onUploadFile()
+        }, {
+          label: 'Upload Folder',
+          icon: 'fa-regular fa-folder-open',
+          action: () => this.onUploadFolder()
+        }]
       };
     },
     methods: {
@@ -923,6 +999,20 @@ label {
   height: 100%;
   top: 0;
   left: 0;
+}
+
+.file-actions {
+  margin-right: 50px;
+}
+
+.profile-actions {
+  margin-left: 50px;
+}
+
+pre {
+  background-color: lightgray;
+  border-radius: 2px;
+  padding: 10px;
 }
 
 .side-bar {

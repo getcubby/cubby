@@ -40,10 +40,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "chromedriver": "^124.0.3",
+    "chromedriver": "^125.0.2",
     "expect.js": "^0.3.1",
     "mocha": "^10.4.0",
-    "selenium-webdriver": "^4.20.0",
+    "selenium-webdriver": "^4.21.0",
     "vite": "^5.2.11"
   },
   "eslintConfig": {

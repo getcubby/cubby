@@ -106,7 +106,7 @@ async function getByAccessToken(accessToken) {
 }
 
 async function list() {
-    const users = await database.query('SELECT * FROM users');
+    const users = await database.query('SELECT * FROM users ORDER BY username');
 
     users.rows.forEach(postProcess);
 

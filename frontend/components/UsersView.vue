@@ -1,12 +1,16 @@
 <template>
   <div>
+    <Dialog :title="`Edit User ${edit.user.username}`" ref="editDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onEditSubmit">
+      <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
+    </Dialog>
+
     <TopBar :gap="false">
       <template #left>
         <span style="font-size: 24px;">Users</span>
       </template>
 
       <template #right>
-        <Button icon="fa-solid fa-plus">Add User</Button>
+        <!-- <Button icon="fa-solid fa-plus">Add User</Button> -->
 
         <div style="margin-left: 50px;">
           <Button v-show="profile" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
@@ -28,7 +32,7 @@
           <div class="users-table-cell">{{ user.username }}</div>
           <div class="users-table-cell"><a :href="`mailto: ${user.email}`">{{ user.email }}</a></div>
           <div class="users-table-cell" style="justify-content: center;"><i class="fa-solid fa-check" v-show="user.admin"></i></div>
-          <div class="users-table-cell" style="justify-content: right;"><Button text="Edit" small/></div>
+          <div class="users-table-cell" style="justify-content: right;"><Button text="Edit" small @click="onEdit(user)"/></div>
         </div>
       </div>
       <div>{{ users.length }} Users</div>
@@ -42,12 +46,14 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 
 import { createMainModel } from '../models/MainModel.js';
 
-import { Button, TopBar } from 'pankow';
+import { Button, Checkbox, Dialog, TopBar } from 'pankow';
 
 export default {
     name: 'UsersView',
     components: {
       Button,
+      Checkbox,
+      Dialog,
       TopBar
     },
     emits: [ 'login' ],
@@ -63,12 +69,31 @@ export default {
       return {
         apiOrigin: API_ORIGIN,
         mainModel: null,
-        users: []
+        users: [],
+        edit: {
+          admin: false,
+          user: {}
+        }
       };
     },
     methods: {
       onLogin() {
         this.$emit('login');
+      },
+      onEdit(user) {
+        this.edit.admin = user.admin;
+        this.edit.user = user;
+        this.$refs.editDialog.open();
+      },
+      async onEditSubmit() {
+        try {
+          await this.mainModel.setAdmin(this.edit.user.username, this.edit.admin);
+        } catch (e) {
+          return console.error(e);
+        }
+
+        this.users = await this.mainModel.getUsers();
+        this.$refs.editDialog.close();
       }
     },
     async mounted() {

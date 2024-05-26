@@ -62,6 +62,16 @@ export function createMainModel(origin) {
 
       if (error || result.statusCode !== 200) throw new Error('Failed to set password', { cause: error || result })
     },
+    async setAdmin(username, isAdmin) {
+      let error, result;
+      try {
+        result = await superagent.put(`${origin}/api/v1/users/${username}/admin`).send({ admin: isAdmin }).withCredentials();
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.statusCode !== 200) throw new Error('Failed to set admin status', { cause: error || result })
+    },
     async getOfficeHandle(entry) {
       let error, result;
       try {

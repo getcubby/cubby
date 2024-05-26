@@ -1,6 +1,5 @@
 <template>
   <div class="users-view">
-    <h1>Users</h1>
     <div v-for="user in users">
       {{ user.username }} <span v-show="user.admin">(admin)</span>
     </div>

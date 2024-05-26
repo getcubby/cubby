@@ -24,18 +24,21 @@
       <div class="content">
         <TopBar :gap="false">
           <template #left>
-            <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
-            <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+            <span class="view-title" v-show="view === VIEWS.USERS">Users</span>
+            <span class="view-title" v-show="view === VIEWS.SETTINGS">Settings</span>
+
+            <Button v-show="view === VIEWS.MAIN" icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
+            <Breadcrumb v-show="view === VIEWS.MAIN" :home="breadCrumbHome" :items="breadCrumbs" />
           </template>
 
           <template #right>
-            <div class="file-actions">
+            <div class="file-actions" v-show="view === VIEWS.MAIN">
               <Button v-show="!readonly && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
               <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
             </div>
 
-            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="readonly">Upload</Button>
-            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="readonly">New</Button>
+            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="readonly" v-show="view === VIEWS.MAIN">Upload</Button>
+            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="readonly" v-show="view === VIEWS.MAIN">New</Button>
 
             <div class="profile-actions">
               <Button v-show="profile" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
@@ -218,24 +221,24 @@ import { prettyFileSize, prettyLongDate } from 'pankow/utils';
 
 import {
   Breadcrumb,
-  Menu,
-  TopBar,
-  TextEditor,
-  ImageViewer,
+  Button,
   Checkbox,
   Dialog,
   DirectoryView,
   Dropdown,
   FileUploader,
+  GenericViewer,
+  ImageViewer,
   InputDialog,
+  Menu,
   Notification,
   PasswordInput,
   PdfViewer,
   ProgressBar,
-  GenericViewer,
-  Button,
   SideBar,
-  TextInput
+  TextEditor,
+  TextInput,
+  TopBar
 } from 'pankow';
 
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
@@ -264,29 +267,29 @@ const beforeUnloadListener = (event) => {
 export default {
     name: 'IndexView',
     components: {
-      Button,
       Breadcrumb,
-      Menu,
-      TopBar,
+      Button,
       Checkbox,
       Dialog,
       DirectoryView,
       Dropdown,
+      FileUploader,
       GenericViewer,
       ImageViewer,
       InputDialog,
       LoginView,
+      Menu,
       Notification,
       OfficeViewer,
-      TextEditor,
-      TextInput,
       PasswordInput,
       PdfViewer,
       PreviewPanel,
       ProgressBar,
       SideBar,
       UsersView,
-      FileUploader
+      TextEditor,
+      TextInput,
+      TopBar
     },
     data() {
       return {
@@ -1046,6 +1049,10 @@ pre {
     height: 100%;
     width: 100%;
     flex-direction: column;
+}
+
+.view-title {
+  font-size: 24px;
 }
 
 .upload {

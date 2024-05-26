@@ -22,32 +22,30 @@
         </div>
       </SideBar>
       <div class="content">
-        <TopBar :gap="false">
-          <template #left>
-            <span class="view-title" v-show="view === VIEWS.USERS">Users</span>
-            <span class="view-title" v-show="view === VIEWS.SETTINGS">Settings</span>
+        <UsersView v-show="view === VIEWS.USERS" :main-menu="mainMenu" :profile="profile" @login="onLogin"/>
 
-            <Button v-show="view === VIEWS.MAIN" icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
-            <Breadcrumb v-show="view === VIEWS.MAIN" :home="breadCrumbHome" :items="breadCrumbs" />
+        <TopBar :gap="false" v-show="view === VIEWS.MAIN">
+          <template #left>
+            <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
+            <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           </template>
 
           <template #right>
-            <div class="file-actions" v-show="view === VIEWS.MAIN">
-              <Button v-show="!readonly && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
+            <div class="file-actions">
+              <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
               <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
             </div>
 
-            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="readonly" v-show="view === VIEWS.MAIN">Upload</Button>
-            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="readonly" v-show="view === VIEWS.MAIN">New</Button>
+            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()">Upload</Button>
+            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()">New</Button>
 
-            <div class="profile-actions">
+            <div style="margin-left: 50px;">
               <Button v-show="profile" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
               <Button v-show="!profile" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
             </div>
           </template>
         </TopBar>
 
-        <UsersView v-show="view === VIEWS.USERS"/>
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
             <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
@@ -404,7 +402,7 @@ export default {
       onCloseSidebar() {
         this.$refs.sideBar.close();
       },
-      async onShowLogin() {
+      async onLogin() {
         this.view = VIEWS.LOGIN;
       },
       async onLogout(clearReturnTo = false) {
@@ -414,7 +412,7 @@ export default {
 
         await this.mainModel.logout();
 
-        this.onShowLogin();
+        this.onLogin();
 
         this.profile.username = '';
         this.profile.email = '';
@@ -1008,10 +1006,6 @@ label {
   margin-right: 50px;
 }
 
-.profile-actions {
-  margin-left: 50px;
-}
-
 pre {
   background-color: lightgray;
   border-radius: 2px;
@@ -1049,10 +1043,6 @@ pre {
     height: 100%;
     width: 100%;
     flex-direction: column;
-}
-
-.view-title {
-  font-size: 24px;
 }
 
 .upload {

@@ -19,12 +19,14 @@
       <div class="users-table">
         <div class="users-table-header">
           <div>Username</div>
+          <div>Email</div>
           <div style="justify-content: center;">Admin</div>
           <div></div>
         </div>
 
         <div v-for="user in users" class="users-table-row">
           <div class="users-table-cell">{{ user.username }}</div>
+          <div class="users-table-cell"><a :href="`mailto: ${user.email}`">{{ user.email }}</a></div>
           <div class="users-table-cell" style="justify-content: center;"><i class="fa-solid fa-check" v-show="user.admin"></i></div>
           <div class="users-table-cell" style="justify-content: right;"><Button text="Edit" small/></div>
         </div>
@@ -87,7 +89,7 @@ export default {
 
 .users-table {
   display: grid;
-  grid-template-columns: auto 100px 100px;
+  grid-template-columns: auto auto 100px 100px;
   margin-bottom: 20px;
 }
 

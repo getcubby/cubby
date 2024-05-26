@@ -3,6 +3,7 @@
 exports = module.exports = {
     isAuthenticated,
     isAdmin,
+    setAdmin,
     tokenAuth,
     sessionAuth,
     optionalSessionAuth,

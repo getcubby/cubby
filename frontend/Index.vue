@@ -123,7 +123,7 @@
   </Dialog>
 
   <!-- WebDAV Password Dialog -->
-  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" confirmLabel="Save" @confirm="onWebDavSettingsSubmit">
+  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onWebDavSettingsSubmit">
     <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
     <p>Set a WebDAV password (will overwrite old one):</p>
     <form @submit="onWebDavSettingsSubmit" @submit.prevent>
@@ -537,7 +537,7 @@ export default {
           return;
         }
 
-        this.webDavPasswordDialog.visible = false;
+        this.$refs.webDavPasswordDialog.close();
       },
       clearSelection() {
         this.selectedEntries = [];

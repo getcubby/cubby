@@ -124,7 +124,7 @@ async function setAdmin(username, admin) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof admin, 'boolean');
 
-    await database.query('UPDATE users SET admin = $1 WHERE username = $3', [ admin, username ]);
+    await database.query('UPDATE users SET admin = $1 WHERE username = $2', [ admin, username ]);
 }
 
 async function setWebdavPassword(username, password) {

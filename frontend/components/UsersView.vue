@@ -16,9 +16,20 @@
     </TopBar>
 
     <div class="users-view">
-      <div v-for="user in users">
-        {{ user.username }} <span v-show="user.admin">(admin)</span>
+      <div class="users-table">
+        <div class="users-table-header">
+          <div>Username</div>
+          <div style="justify-content: center;">Admin</div>
+          <div></div>
+        </div>
+
+        <div v-for="user in users" class="users-table-row">
+          <div class="users-table-cell">{{ user.username }}</div>
+          <div class="users-table-cell" style="justify-content: center;"><i class="fa-solid fa-check" v-show="user.admin"></i></div>
+          <div class="users-table-cell" style="justify-content: right;"><Button text="Edit" small/></div>
+        </div>
       </div>
+      <div>{{ users.length }} Users</div>
     </div>
   </div>
 </template>
@@ -70,7 +81,39 @@ export default {
 <style scoped>
 
 .users-view {
+  max-width: 1024px;
   padding: 20px;
+}
+
+.users-table {
+  display: grid;
+  grid-template-columns: auto 100px 100px;
+  margin-bottom: 20px;
+}
+
+.users-table-header {
+  display: contents;
+}
+
+.users-table-header > div {
+  font-weight: bold;
+  padding: 10px;
+  display: flex;
+}
+
+.users-table-row {
+  display: contents;
+}
+
+.users-table-row > div {
+  padding: 10px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.users-table-row:hover > div {
+  background: whitesmoke;
 }
 
 </style>

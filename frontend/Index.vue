@@ -11,7 +11,7 @@
       <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
       <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
       <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-      <!-- <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a> -->
+      <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a>
 
       <div style="flex-grow: 1">&nbsp;</div>
 

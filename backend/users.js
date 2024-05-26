@@ -8,6 +8,7 @@ exports = module.exports = {
     list,
     setWebdavPassword,
     update,
+    setAdmin,
     remove
 };
 
@@ -56,11 +57,12 @@ async function add(user) {
     const username = user.username;
     const email = user.email;
     const displayName = user.displayName;
-    let password = '';
-    let salt = '';
+    const password = '';
+    const salt = '';
+    const admin = false;
 
     try {
-        const result = await database.query('INSERT INTO users (username, email, display_name, password, salt) VALUES ($1, $2, $3, $4, $5)', [ username, email, displayName, password, salt ]);
+        const result = await database.query('INSERT INTO users (username, email, display_name, password, salt, admin) VALUES ($1, $2, $3, $4, $5, $6)', [ username, email, displayName, password, salt, admin ]);
         if (result.rowCount !== 1) throw new MainError(MainError.DATABASE_ERROR, 'failed to insert');
     } catch (error) {
         if (error.nestedError && error.nestedError.detail && error.nestedError.detail.indexOf('already exists') !== -1 && error.nestedError.detail.indexOf('email') !== -1) throw new MainError(MainError.ALREADY_EXISTS, 'email already exists');
@@ -101,6 +103,13 @@ async function update(username, user) {
     assert.strictEqual(typeof user, 'object');
 
     await database.query('UPDATE users SET email = $1, display_name = $2 WHERE username = $3', [ user.email, user.displayName, username ]);
+}
+
+async function setAdmin(username, admin) {
+    assert.strictEqual(typeof username, 'string');
+    assert.strictEqual(typeof admin, 'boolean');
+
+    await database.query('UPDATE users SET admin = $1 WHERE username = $3', [ admin, username ]);
 }
 
 async function setWebdavPassword(username, password) {

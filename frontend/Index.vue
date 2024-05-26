@@ -2,87 +2,91 @@
   <!-- This is re-used and thus global -->
   <InputDialog ref="inputDialog" />
   <Notification/>
-  <LoginView v-show="ready && showLogin"/>
 
-  <div class="container" v-show="ready && !showLogin">
-   <SideBar class="side-bar" ref="sideBar">
-      <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
+  <div v-show="ready" style="height: 100%;">
+    <LoginView v-show="view === VIEWS.LOGIN"/>
 
-      <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
-      <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
-      <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-      <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a>
+    <div class="container" v-show="view !== VIEWS.LOGIN">
+     <SideBar class="side-bar" ref="sideBar">
+        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-      <div style="flex-grow: 1">&nbsp;</div>
+        <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
+        <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
+        <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
+        <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a>
 
-      <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available))  + ' used' : ''">
-        <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
-      </div>
-    </SideBar>
-    <div class="content">
-      <MainToolbar
-        :breadCrumbs="breadCrumbs"
-        :breadCrumbHome="breadCrumbHome"
-        :selectedEntries="selectedEntries"
-        :displayName="profile.displayName"
-        :readonly="isReadonly()"
-        @logout="onLogout(true)"
-        @upload-file="onUploadFile"
-        @upload-folder="onUploadFolder"
-        @new-file="onNewFile"
-        @directory-up="onUp"
-        @new-folder="onNewFolder"
-        :on-delete="deleteHandler"
-        :on-download="downloadHandler"
-        @login="showLogin=true;"
-        :on-web-dav-settings="onWebDavSettings"
-      />
-      <div class="container" style="overflow: hidden;">
-        <div class="main-container-content">
-          <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
-          <DirectoryView
-            :show-owner="false"
-            :show-extract="false"
-            :show-size="true"
-            :show-modified="true"
-            :show-share="'isSharedWith'"
-            :editable="!isReadonly()"
-            :multi-download="true"
-            @selection-changed="onSelectionChanged"
-            @item-activated="onOpen"
-            :delete-handler="deleteHandler"
-            :share-handler="shareHandler"
-            :rename-handler="renameHandler"
-            :copy-handler="copyHandler"
-            :cut-handler="cutHandler"
-            :paste-handler="pasteHandler"
-            :download-handler="downloadHandler"
-            :new-file-handler="onNewFile"
-            :new-folder-handler="onNewFolder"
-            :upload-file-handler="onUploadFile"
-            :upload-folder-handler="onUploadFolder"
-            :drop-handler="onDrop"
-            :items="entries"
-            :clipboard="clipboard"
-            :fallback-icon="`${BASE_URL}mime-types/none.svg`"
-            style="position: absolute;"
-          >
-            <template #empty>
-              <div v-show="!entries.length" class="no-entries-placeholder">
-                <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
-                <p v-show="activeResourceType === 'recent'">No recent files</p>
-                <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet.</p>
-              </div>
-            </template>
-          </DirectoryView>
+        <div style="flex-grow: 1">&nbsp;</div>
+
+        <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available))  + ' used' : ''">
+          <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
         </div>
-        <PreviewPanel :parentEntry="entry" :selectedEntries="selectedEntries" :visible="previewPanelVisible"/>
+      </SideBar>
+      <div class="content">
+        <MainToolbar
+          :breadCrumbs="breadCrumbs"
+          :breadCrumbHome="breadCrumbHome"
+          :selectedEntries="selectedEntries"
+          :displayName="profile.displayName"
+          :readonly="isReadonly()"
+          @logout="onLogout(true)"
+          @login="onShowLogin"
+          @upload-file="onUploadFile"
+          @upload-folder="onUploadFolder"
+          @new-file="onNewFile"
+          @directory-up="onUp"
+          @new-folder="onNewFolder"
+          :on-delete="deleteHandler"
+          :on-download="downloadHandler"
+          :on-web-dav-settings="onWebDavSettings"
+        />
+        <UsersView v-show="view === VIEWS.USERS"/>
+        <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
+          <div class="main-container-content">
+            <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+            <DirectoryView
+              :show-owner="false"
+              :show-extract="false"
+              :show-size="true"
+              :show-modified="true"
+              :show-share="'isSharedWith'"
+              :editable="!isReadonly()"
+              :multi-download="true"
+              @selection-changed="onSelectionChanged"
+              @item-activated="onOpen"
+              :delete-handler="deleteHandler"
+              :share-handler="shareHandler"
+              :rename-handler="renameHandler"
+              :copy-handler="copyHandler"
+              :cut-handler="cutHandler"
+              :paste-handler="pasteHandler"
+              :download-handler="downloadHandler"
+              :new-file-handler="onNewFile"
+              :new-folder-handler="onNewFolder"
+              :upload-file-handler="onUploadFile"
+              :upload-folder-handler="onUploadFolder"
+              :drop-handler="onDrop"
+              :items="entries"
+              :clipboard="clipboard"
+              :fallback-icon="`${BASE_URL}mime-types/none.svg`"
+              style="position: absolute;"
+            >
+              <template #empty>
+                <div v-show="!entries.length" class="no-entries-placeholder">
+                  <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
+                  <p v-show="activeResourceType === 'recent'">No recent files</p>
+                  <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet.</p>
+                </div>
+              </template>
+            </DirectoryView>
+          </div>
+          <PreviewPanel :parentEntry="entry" :selectedEntries="selectedEntries" :visible="previewPanelVisible"/>
+        </div>
+        <FileUploader
+          ref="fileUploader"
+          :upload-handler="uploadHandler"
+          @finished="onUploadFinished"
+        />
       </div>
-      <FileUploader
-        ref="fileUploader"
-        :upload-handler="uploadHandler"
-        @finished="onUploadFinished"
-      />
     </div>
   </div>
 
@@ -205,12 +209,19 @@ import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
 
 import LoginView from './components/LoginView.vue';
+import UsersView from './components/UsersView.vue';
 import MainToolbar from './components/MainToolbar.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
 const BASE_URL = import.meta.env.BASE_URL || '/';
+
+const VIEWS = {
+  LOGIN: 'login',
+  MAIN: 'main',
+  USERS: 'users'
+};
 
 const beforeUnloadListener = (event) => {
   event.preventDefault();
@@ -239,10 +250,12 @@ export default {
       PreviewPanel,
       ProgressBar,
       SideBar,
+      UsersView,
       FileUploader
     },
     data() {
       return {
+        VIEWS,
         API_ORIGIN,
         BASE_URL,
         ready: false,
@@ -251,6 +264,7 @@ export default {
         mainModel: null,
         shareModel: null,
         directoryModel: null,
+        view: '',
         search: '',
         viewer: '',
         activeResourceType: '',
@@ -311,6 +325,9 @@ export default {
       onCloseSidebar() {
         this.$refs.sideBar.close();
       },
+      async onShowLogin() {
+        this.view = VIEWS.LOGIN;
+      },
       async onLogout(clearReturnTo = false) {
         // stash for use later after re-login
         if (clearReturnTo) localStorage.returnTo = '';
@@ -318,7 +335,8 @@ export default {
 
         await this.mainModel.logout();
 
-        this.showLogin = true;
+        this.onShowLogin();
+
         this.profile.username = '';
         this.profile.email = '';
         this.profile.displayName = '';
@@ -740,6 +758,9 @@ export default {
       async loadPath(path, forceLoad = false) {
         const resource = parseResourcePath(path || this.currentResourcePath);
 
+        // ensure main view
+        this.view = VIEWS.MAIN;
+
         // clear potential viewer first
         if (this.viewer) this.viewer = '';
 
@@ -813,19 +834,33 @@ export default {
       },
     },
     async mounted() {
+      const that = this;
+      function handleHash(hash) {
+        if (hash.indexOf('files/home/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+        } else if (hash.indexOf('files/recent/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+        } else if (hash.indexOf('files/shares/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+        } else if (hash.indexOf('files/groups/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+        } else if (hash.indexOf('users') === 0) {
+          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          that.view = VIEWS.USERS;
+        } else if (hash.indexOf('settings/') === 0) {
+          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          that.view = VIEWS.SETTINGS;
+        } else {
+          window.location.hash = 'files/home/';
+        }
+      }
+
       window.addEventListener('hashchange', () => {
         // allows us to not reload but only change the hash
         if (this.currentHash === decodeURIComponent(window.location.hash)) return;
         this.currentHash = window.location.hash;
 
-        const hash = window.location.hash.slice(1);
-
-        if (hash.indexOf('files/home/') === 0) this.loadPath(hash.slice('files'.length));
-        else if (hash.indexOf('files/recent/') === 0) this.loadPath(hash.slice('files'.length));
-        else if (hash.indexOf('files/shares/') === 0) this.loadPath(hash.slice('files'.length));
-        else if (hash.indexOf('files/groups/') === 0) this.loadPath(hash.slice('files'.length));
-        else if (hash.indexOf('settings/') === 0) return;
-        else window.location.hash = 'files/home/';
+        handleHash(window.location.hash.slice(1));
       }, false);
 
       this.mainModel = createMainModel(API_ORIGIN);
@@ -849,11 +884,7 @@ export default {
       const hash = localStorage.returnTo || window.location.hash.slice(1);
       localStorage.returnTo = '';
 
-      if (hash.indexOf('files/home/') === 0) await this.loadPath(hash.slice('files'.length));
-      else if (hash.indexOf('files/recent/') === 0) await this.loadPath(hash.slice('files'.length));
-      else if (hash.indexOf('files/shares/') === 0) await this.loadPath(hash.slice('files'.length));
-      else if (hash.indexOf('files/groups/') === 0) await this.loadPath(hash.slice('files'.length));
-      else await this.loadPath('/home/');
+      handleHash(window.location.hash.slice(1));
 
       this.ready = true;
     }

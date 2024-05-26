@@ -124,6 +124,9 @@ function init(callback) {
     router.get ('/api/v1/users', users.isAuthenticated, users.list);
     router.put ('/api/v1/users', users.isAuthenticated, users.update);
 
+    // user edit for admins
+    router.put ('/api/v1/users/:username/admin', users.isAuthenticated, users.isAdmin, users.setAdmin);
+
     router.head('/api/v1/files', users.optionalSessionAuth, files.head);
     router.get ('/api/v1/files', users.optionalSessionAuth, files.get);
     router.post('/api/v1/files', users.optionalSessionAuth, multipart({ maxFieldsSize: 2 * 1024, limit: '512mb', timeout: 3 * 60 * 1000 }), files.add);

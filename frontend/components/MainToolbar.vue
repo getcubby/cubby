@@ -104,6 +104,10 @@ export default {
           items: []
         },
         mainMenu: [{
+          label: 'Users',
+          icon: 'fa-solid fa-users',
+          action: () => window.location.href = '#users'
+        }, {
           label: 'WebDAV',
           icon: 'fa-solid fa-globe',
           action: this.onWebDavSettings

@@ -3,6 +3,7 @@
 exports = module.exports = {
     webdavLogin,
     add,
+    exists,
     get,
     getByAccessToken,
     list,
@@ -70,6 +71,20 @@ async function add(user) {
 
         throw error;
     }
+}
+
+async function exists(username) {
+    assert.strictEqual(typeof username, 'string');
+
+    let res = false;
+    try {
+        await get(username);
+        res = true;
+    } catch (error) {
+        if (error.reason !== MainError.NOT_FOUND) console.error(`exists ${username} error:`, error);
+    }
+
+    return res;
 }
 
 async function get(username) {

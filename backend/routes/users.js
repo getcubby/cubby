@@ -51,6 +51,23 @@ function isAdmin(req, res, next) {
     next();
 }
 
+async function setAdmin(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+    assert.strictEqual(typeof req.params.username, 'string');
+    assert.strictEqual(req.user.admin, true);
+
+    if (!users.exists(req.params.username)) return next(new HttpError(409, 'user does not exist'));
+    if (req.user.username === req.params.username) return next(new HttpError(403, 'cannot set admin status on own user'));
+
+    try {
+        await users.setAdmin(req.params.username, req.body.admin);
+    } catch (error) {
+        return next(new HttpError(500, error));
+    }
+
+    next(new HttpSuccess(200, {}));
+}
+
 async function sessionAuth(req, res, next) {
     if (!req.session || !req.session.username) return next(new HttpError(401, 'No login session'));
 

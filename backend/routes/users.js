@@ -2,6 +2,7 @@
 
 exports = module.exports = {
     isAuthenticated,
+    isAdmin,
     tokenAuth,
     sessionAuth,
     optionalSessionAuth,
@@ -38,6 +39,14 @@ async function isAuthenticated(req, res, next) {
     }
 
     req.user = user;
+
+    next();
+}
+
+function isAdmin(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    if (!req.user.admin) return next(new HttpError(403, 'user is not an admin'));
 
     next();
 }

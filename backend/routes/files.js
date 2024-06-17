@@ -72,7 +72,7 @@ async function add(req, res, next) {
 
     const directory = boolLike(req.query.directory);
     const overwrite = boolLike(req.query.overwrite);
-    let filePath = req.query.path ? decodeURIComponent(req.query.path) : '';
+    let filePath = req.query.path || '';
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
     if (!(req.files && req.files.file) && !directory) return next(new HttpError(400, 'missing file or directory'));
@@ -97,7 +97,7 @@ async function add(req, res, next) {
 }
 
 async function head(req, res, next) {
-    const filePath = decodeURIComponent(req.query.path);
+    const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
     const subject = await translateResourcePath(req.user, filePath);
@@ -120,7 +120,7 @@ async function get(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
     const type = req.query.type;
-    let filePath = decodeURIComponent(req.query.path);
+    let filePath = req.query.path;
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
     if (type && (type !== 'raw' && type !== 'download' && type !== 'json')) return next(new HttpError(400, 'type must be either empty, "download" or "raw"'));
@@ -319,7 +319,6 @@ async function get(req, res, next) {
             let memberOfGroups = [];
             try {
                 for (let group of result) {
-                    console.log('000', group)
                     let file = await files.get(`group-${group.id}`, '/');
 
                     file.fileName = group.name;
@@ -359,10 +358,10 @@ async function get(req, res, next) {
 async function update(req, res, next) {
     const action = req.query.action;
 
-    const filePath = decodeURIComponent(req.query.path);
+    const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    let newFilePath = decodeURIComponent(req.query.new_path);
+    let newFilePath = req.query.new_path;
     if (!newFilePath) return next(new HttpError(400, 'action requires new_path argument'));
 
     // from
@@ -390,7 +389,7 @@ async function update(req, res, next) {
 }
 
 async function remove(req, res, next) {
-    let filePath = decodeURIComponent(req.query.path);
+    let filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
     const subject = await translateResourcePath(req.user, filePath);

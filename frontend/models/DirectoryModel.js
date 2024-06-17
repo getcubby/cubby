@@ -38,10 +38,7 @@ export function createDirectoryModel(origin) {
   return {
     name: 'DirectoryModel',
     async get(resource) {
-      const result = await superagent.get(`${origin}/api/v1/files`).withCredentials().query({
-        type: 'json',
-        path: resource.resourcePath
-      });
+      const result = await superagent.get(`${origin}/api/v1/files`).withCredentials().query(`type=json&path=${encodeURIComponent(resource.resourcePath)}`);
 
       const entry = result.body;
 
@@ -83,10 +80,7 @@ export function createDirectoryModel(origin) {
       return entry;
     },
     async getRawContent(resource) {
-      const result = await superagent.get(`${origin}/api/v1/files`).withCredentials().query({
-        type: 'raw',
-        path: resource.resourcePath
-      });
+      const result = await superagent.get(`${origin}/api/v1/files`).withCredentials().query(`type=raw&path=${encodeURIComponent(resource.resourcePath)}`);
 
       return result.text;
     },
@@ -95,7 +89,7 @@ export function createDirectoryModel(origin) {
       formData.append('file', new File([ content ], 'file'));
 
       try {
-        await superagent.post(`${origin}/api/v1/files`).withCredentials().query({ path: resource.resourcePath, overwrite: true }).send(formData);
+        await superagent.post(`${origin}/api/v1/files`).withCredentials().query(`overwrite=true&path=${encodeURIComponent(resource.resourcePath)}`).send(formData);
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         else if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
@@ -109,7 +103,7 @@ export function createDirectoryModel(origin) {
       const newFilePath = pathJoin(resource.resourcePath, newFileName);
 
       try {
-        await superagent.post(`${origin}/api/v1/files`).withCredentials().query({ path: newFilePath }).send(formData);
+        await superagent.post(`${origin}/api/v1/files`).withCredentials().query(`path=${encodeURIComponent(newFilePath)}`).send(formData);
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         else if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
@@ -120,7 +114,7 @@ export function createDirectoryModel(origin) {
     async newFolder(resource, newFolderName) {
       const newFolderPath = pathJoin(resource.resourcePath, newFolderName);
       try {
-        await superagent.post(`${origin}/api/v1/files`).withCredentials().query({ path: newFolderPath, directory: true });
+        await superagent.post(`${origin}/api/v1/files`).withCredentials().query(`directory=true&path=${encodeURIComponent(newFolderPath)}`);
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
@@ -130,7 +124,7 @@ export function createDirectoryModel(origin) {
     },
     async exists(resource, relativeFilePath) {
       try {
-        await superagent.head(`${origin}/api/v1/files`).query({ path: pathJoin(resource.resourcePath, relativeFilePath) }).withCredentials();
+        await superagent.head(`${origin}/api/v1/files`).query(`path=${encodeURIComponent(pathJoin(resource.resourcePath, relativeFilePath))}`).withCredentials();
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 404) return false;
@@ -156,7 +150,7 @@ export function createDirectoryModel(origin) {
       }
 
       await superagent.post(`${origin}/api/v1/files`).withCredentials()
-        .query({ path: resource.resourcePath + '/' + uniqueRelativeFilePath, overwrite: !!file.overwrite })
+        .query(`path${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`)
         .attach('file', file)
         .on('progress', progressHandler);
     },
@@ -183,7 +177,7 @@ export function createDirectoryModel(origin) {
     },
     async rename(fromResource, toResource) {
       try {
-        await superagent.put(`${origin}/api/v1/files`).query({ path: fromResource.resourcePath, action: 'move', new_path: toResource.resourcePath }).withCredentials();
+        await superagent.put(`${origin}/api/v1/files`).query(`path=${encodeURIComponent(fromResource.resourcePath)}&action=move&new_path=${encodeURIComponent(toResource.resourcePath)}`).withCredentials();
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 409) throw new DirectoryModelError(DirectoryModelError.CONFLICT, error);
@@ -192,7 +186,7 @@ export function createDirectoryModel(origin) {
     },
     async remove(resource) {
       try {
-        await superagent.del(`${origin}/api/v1/files`).query({ path: resource.resourcePath }).withCredentials();
+        await superagent.del(`${origin}/api/v1/files`).query(`path=${encodeURIComponent(resource.resourcePath)}`).withCredentials();
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         throw new DirectoryModelError(DirectoryModelError.GENERIC, error);

@@ -190,7 +190,7 @@
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'text'">
-      <TextEditor ref="textEditor" @close="onViewerClose" :save-handler="onFileSaved" />
+      <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="onFileSaved" />
     </div>
   </Transition>
   <Transition name="pankow-fade">
@@ -225,19 +225,22 @@ import {
   DirectoryView,
   Dropdown,
   FileUploader,
-  GenericViewer,
-  ImageViewer,
   InputDialog,
   Menu,
   Notification,
   PasswordInput,
-  PdfViewer,
   ProgressBar,
   SideBar,
-  TextEditor,
   TextInput,
   TopBar
 } from 'pankow';
+
+import {
+  GenericViewer,
+  ImageViewer,
+  PdfViewer,
+  TextViewer
+} from 'pankow-viewers';
 
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
@@ -285,7 +288,7 @@ export default {
       ProgressBar,
       SideBar,
       UsersView,
-      TextEditor,
+      TextViewer,
       TextInput,
       TopBar
     },
@@ -874,8 +877,8 @@ export default {
           } else if (this.$refs.officeViewer.canHandle(entry)) {
             this.$refs.officeViewer.open(entry);
             this.viewer = 'office';
-          } else if (this.$refs.textEditor.canHandle(entry)) {
-            this.$refs.textEditor.open(entry, await this.directoryModel.getRawContent(resource));
+          } else if (this.$refs.textViewer.canHandle(entry)) {
+            this.$refs.textViewer.open(entry, await this.directoryModel.getRawContent(resource));
             this.viewer = 'text';
           } else {
             this.viewer = 'generic';

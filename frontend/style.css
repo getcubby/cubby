@@ -3,8 +3,6 @@
 }
 
 html, body {
-  --text-color: #495057;
-  --text-color-secondary: #6c757d;
   --primary-color: #2196F3;
   --primary-color-text: #ffffff;
   --hover-background-color: #e9ecef;
@@ -16,17 +14,8 @@ html, body {
   font-size: 13px; /* this also defines the overall widget size as all sizes are in rem */
   font-family: var(--font-family);
   font-weight: 400;
-  color: var(--text-color);
+  color: var(--pankow-text-color);
   overflow: hidden;
-}
-
-a {
-  color: var(--primary-color);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--text-color-secondary);
 }
 
 #app {
@@ -34,23 +23,11 @@ a:hover {
   overflow: hidden;
 }
 
-.main-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-.main-container-toolbar {
-    border-bottom: solid 1px #e6e6e6;
-}
-
-.main-container-body {
-    display: flex;
-    overflow: hidden;
-    width: 100%;
-    justify-content: center;
-    flex-grow: 1;
+@media (prefers-color-scheme: dark) {
+  .container {
+    background-color: black;
+    color: var(--pankow-color-light-dark);
+  }
 }
 
 .main-container-content {

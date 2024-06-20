@@ -77,7 +77,6 @@ export default {
     overflow: hidden;
     width: 0;
     transition: width ease-in 300ms;
-    border-left: 1px solid #f8f9fa;
 }
 
 .preview-container.visible {

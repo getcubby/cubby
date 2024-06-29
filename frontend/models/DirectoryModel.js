@@ -150,7 +150,7 @@ export function createDirectoryModel(origin) {
       }
 
       await superagent.post(`${origin}/api/v1/files`).withCredentials()
-        .query(`path${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`)
+        .query(`path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`)
         .attach('file', file)
         .on('progress', progressHandler);
     },

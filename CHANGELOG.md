@@ -183,3 +183,7 @@
 * Make sidebar work on mobile
 * Various cleanups of unused primevue class definitions
 
+[2.1.0]
+* Many small bigfixes
+* Initial dark-mode support
+

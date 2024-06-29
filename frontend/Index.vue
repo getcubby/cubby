@@ -97,7 +97,7 @@
   </div>
 
   <!-- About Dialog -->
-  <Dialog title="About Cubby" ref="aboutDialog" confirmLabel="Close">
+  <Dialog title="About Cubby" ref="aboutDialog" rejectLabel="Close">
     <div>
       Cubby the painless file sharing solution!
       <br/>
@@ -108,7 +108,7 @@
   </Dialog>
 
   <!-- Office Dialog -->
-  <Dialog title="Office Integration" ref="officeDialog" confirmLabel="Close">
+  <Dialog title="Office Integration" ref="officeDialog" rejectLabel="Close">
     <div>
       Cubby can open office documents acting as a WOPI host. This is tested with Collabora at the moment.<br/>
       To enable support add the following to the <code>config.json</code> and restart the app:

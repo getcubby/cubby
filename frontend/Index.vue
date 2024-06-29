@@ -32,7 +32,7 @@
 
           <template #right>
             <div class="file-actions">
-              <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="onDelete(selectedEntries)"/>
+              <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="deleteHandler(selectedEntries)"/>
               <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
             </div>
 
@@ -628,7 +628,7 @@ export default {
         }
 
         const confirmed = await this.$refs.inputDialog.confirm({
-          message: 'Really delete files?',
+          message: `Really delete ${entries.length} items?`,
           confirmStyle: 'danger',
           confirmLabel: 'Yes',
           rejectLabel: 'Cancel'

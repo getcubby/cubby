@@ -71,16 +71,18 @@ describe('Application life cycle test', function () {
             await browser.findElement(By.id('loginSubmitButton')).click();
         }
 
-        await waitForElement(By.className('profile-actions'));
+        await waitForElement(By.id('profileMenuDropdown'));
     }
 
     async function logout() {
         await browser.get('https://' + app.fqdn);
         await browser.sleep(2000);
-        await waitForElement(By.className('profile-actions'));
-        await browser.findElement(By.className('profile-actions')).click();
+
+        await waitForElement(By.id('profileMenuDropdown'));
+        await browser.findElement(By.id('profileMenuDropdown')).click();
         await waitForElement(By.xpath('//div[text()="Logout"]'));
         await browser.findElement(By.xpath('//div[text()="Logout"]')).click();
+
         await waitForElement(By.id('loginButton'));
     }
 

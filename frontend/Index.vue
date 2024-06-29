@@ -40,7 +40,7 @@
             <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()">New</Button>
 
             <div style="margin-left: 50px;">
-              <Button v-show="profile.username" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
+              <Button v-show="profile.username" id="profileMenuDropdown" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
               <Button v-show="!profile.username" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
             </div>
           </template>

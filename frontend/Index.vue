@@ -1015,6 +1015,12 @@ pre {
   padding: 10px;
 }
 
+@media (prefers-color-scheme: dark) {
+  pre {
+    background-color: black;
+  }
+}
+
 .side-bar {
     display: flex;
     height: 100%;

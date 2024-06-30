@@ -916,6 +916,9 @@ export default {
     async mounted() {
       const that = this;
       function handleHash(hash) {
+        // we handle decoded paths internally
+        hash = decodeURIComponent(hash);
+
         if (hash.indexOf('files/home/') === 0) {
           that.loadPath(hash.slice('files'.length));
         } else if (hash.indexOf('files/recent/') === 0) {

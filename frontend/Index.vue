@@ -22,22 +22,27 @@
         </div>
       </SideBar>
       <div class="content">
-        <UsersView v-show="view === VIEWS.USERS" :main-menu="mainMenu" :profile="profile" @login="onLogin"/>
-
-        <TopBar :gap="false" v-show="view === VIEWS.MAIN">
+        <TopBar :gap="false">
           <template #left>
-            <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
-            <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+            <template v-if="view === VIEWS.USERS">
+              <span style="font-size: 24px;">Users</span>
+            </template>
+            <template v-if="view === VIEWS.MAIN">
+              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
+              <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+            </template>
           </template>
 
           <template #right>
-            <div class="file-actions">
-              <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="deleteHandler(selectedEntries)"/>
-              <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
-            </div>
+            <template v-if="view === VIEWS.MAIN">
+              <div class="file-actions">
+                <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="deleteHandler(selectedEntries)"/>
+                <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
+              </div>
 
-            <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()">Upload</Button>
-            <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()">New</Button>
+              <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()">Upload</Button>
+              <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()">New</Button>
+            </template>
 
             <div style="margin-left: 50px;">
               <Button v-show="profile.username" id="profileMenuDropdown" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
@@ -46,6 +51,7 @@
           </template>
         </TopBar>
 
+        <UsersView v-show="view === VIEWS.USERS" :main-menu="mainMenu" :profile="profile" @login="onLogin"/>
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
             <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>

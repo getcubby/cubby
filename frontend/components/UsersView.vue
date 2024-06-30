@@ -4,21 +4,6 @@
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
-    <TopBar :gap="false">
-      <template #left>
-        <span style="font-size: 24px;">Users</span>
-      </template>
-
-      <template #right>
-        <!-- <Button icon="fa-solid fa-plus">Add User</Button> -->
-
-        <div style="margin-left: 50px;">
-          <Button v-show="profile" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
-          <Button v-show="!profile" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
-        </div>
-      </template>
-    </TopBar>
-
     <div class="users-view">
       <div class="users-table">
         <div class="users-table-header">
@@ -46,15 +31,14 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 
 import { createMainModel } from '../models/MainModel.js';
 
-import { Button, Checkbox, Dialog, TopBar } from 'pankow';
+import { Button, Checkbox, Dialog } from 'pankow';
 
 export default {
     name: 'UsersView',
     components: {
       Button,
       Checkbox,
-      Dialog,
-      TopBar
+      Dialog
     },
     emits: [ 'login' ],
     props: {

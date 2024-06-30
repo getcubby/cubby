@@ -184,6 +184,7 @@
 * Various cleanups of unused primevue class definitions
 
 [2.1.0]
+* Add users view and prepare for admin role
 * Many small bigfixes
 * Initial dark-mode support
 

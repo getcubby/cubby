@@ -445,7 +445,7 @@ export default {
       async onNewFile() {
         const newFileName = await this.$refs.inputDialog.prompt({
           message: 'New Filename',
-          value: 'newfile.txt',
+          value: '',
           confirmStyle: 'success',
           confirmLabel: 'Save',
           rejectLabel: 'Close'
@@ -470,7 +470,7 @@ export default {
       async onNewFolder() {
         const newFolderName = await this.$refs.inputDialog.prompt({
           message: 'New Foldername',
-          value: 'newfolder',
+          value: '',
           confirmStyle: 'success',
           confirmLabel: 'Save',
           rejectLabel: 'Close'

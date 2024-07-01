@@ -1014,6 +1014,10 @@ label {
   left: 0;
 }
 
+.file-actions {
+  white-space: nowrap;
+}
+
 @media only screen and (min-width: 767px) {
   .file-actions {
     margin-right: 50px;

@@ -1,14 +1,24 @@
 <template>
   <div class="container">
-    <div class="left">
-      <img src="/logo-transparent.svg" style="width: 30%; margin: auto;"/>
-      <div class="footer">
-        by <a href="https://cloudron.io" target="_blank">Cloudron</a>
+    <div class="desktop">
+      <div class="left">
+        <img src="/logo-transparent.svg" style="width: 30%; margin: auto;"/>
+        <div class="footer">
+          by <a href="https://cloudron.io" target="_blank">Cloudron</a>
+        </div>
+      </div>
+      <div class="right">
+        <h1>Cubby</h1>
+        <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
       </div>
     </div>
-    <div class="right">
-      <h1>Cubby</h1>
-      <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
+    <div class="mobile">
+      <img src="/logo.svg" style="height: 50%; max-height: 128px; margin: 20px auto;"/>
+      <div style="flex-grow: 1; text-align: center;">
+        <h1>Cubby</h1>
+        <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
+      </div>
+      <div class="mobile-footer">by <a href="https://cloudron.io" target="_blank">Cloudron</a></div>
     </div>
   </div>
 </template>
@@ -36,15 +46,34 @@ export default {
 <style scoped>
 
 .container {
+  height: 100%;
+}
+
+.mobile {
+  display: none;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+}
+
+.mobile-footer {
+  color: var(--pankow-color-dark);
+  text-align: center;
+  margin: 6px;
+}
+
+.desktop {
   display: flex;
   flex-direction: row;
   align-items: stretch;
+  height: 100%;
+  width: 100%;
 }
 
 .left {
   background: linear-gradient(90deg, rgb(168, 85, 247) 0%, #0071e3 100%);
   flex-grow: 1;
-  display: none;
+  display: flex;
   max-width: 40%;
   align-items: center;
   align-content: center;
@@ -52,15 +81,18 @@ export default {
   justify-content: space-between;
 }
 
-@media (min-width:320px) {
-  .left {
+@media only screen and (max-width: 768px) and (orientation: portrait) {
+  .mobile {
     display: flex;
+  }
+
+  .desktop {
+    display: none;
   }
 }
 
 .right {
   display: flex;
-  background-color: white;
   align-self: stretch;
   flex-direction: column;
   padding: 40px;

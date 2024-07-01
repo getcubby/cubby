@@ -7,7 +7,7 @@
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
     <div class="container" v-show="view !== VIEWS.LOGIN">
-     <SideBar class="side-bar" ref="sideBar">
+      <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>

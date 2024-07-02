@@ -188,3 +188,8 @@
 * Many small bigfixes
 * Initial dark-mode support
 
+[2.1.1]
+* Various mobile layout fixes
+* Reduce view flickering
+* Darker icon color
+

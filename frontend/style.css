@@ -24,6 +24,10 @@ html, body {
 }
 
 @media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: black;
+  }
+
   .container {
     background-color: black;
     color: var(--pankow-color-light-dark);

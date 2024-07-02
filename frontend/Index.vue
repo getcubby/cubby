@@ -6,7 +6,7 @@
   <div v-show="ready" style="height: 100%;">
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
-    <div class="container" v-show="view !== VIEWS.LOGIN">
+    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
@@ -844,9 +844,6 @@ export default {
       async loadPath(path, forceLoad = false) {
         const resource = parseResourcePath(path || this.currentResourcePath);
 
-        // ensure main view
-        this.view = VIEWS.MAIN;
-
         // clear potential viewer first
         if (this.viewer) this.viewer = '';
 
@@ -863,6 +860,9 @@ export default {
           else if (error.status === 404) return console.error('Failed to load entry', resource, error);
           else console.error(error);
         }
+
+        // ensure main view
+        this.view = VIEWS.MAIN;
 
         // update the browser hash
         window.location.hash = `files${resource.resourcePath}`;

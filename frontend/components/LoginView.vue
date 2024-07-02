@@ -13,7 +13,7 @@
       </div>
     </div>
     <div class="mobile">
-      <img src="/logo.svg" style="height: 50%; max-height: 128px; margin: 20px auto;"/>
+      <img src="/logo.svg" style="height: 50%; max-height: 128px; margin: 10% auto;"/>
       <div style="flex-grow: 1; text-align: center;">
         <h1>Cubby</h1>
         <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>

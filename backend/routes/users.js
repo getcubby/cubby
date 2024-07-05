@@ -54,6 +54,7 @@ async function isAuthenticated(req, res, next) {
     if (all.length === 1) {
         console.log(`First user created. Making ${user.username} the admin.`);
         await users.setAdmin(user.username, true);
+        user.admin = true;
     }
 
     req.user = user;

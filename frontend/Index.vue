@@ -1048,7 +1048,7 @@ pre {
     display: flex;
     height: 100%;
     min-width: 250px;
-    background: linear-gradient(90deg, rgb(168, 85, 247) 0%,rgb(33, 150, 243) 100%);
+    background: linear-gradient(90deg, rgb(168, 85, 247) 0%, var(--pankow-color-primary) 100%);
     color: white;
     padding: 10px;
     flex-direction: column;

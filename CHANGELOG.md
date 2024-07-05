@@ -192,4 +192,5 @@
 * Various mobile layout fixes
 * Reduce view flickering
 * Darker icon color
+* Fixes for admin view
 

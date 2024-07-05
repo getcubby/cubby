@@ -23,6 +23,11 @@ fs.mkdirSync(constants.GROUPS_DATA_ROOT, { recursive: true });
 fs.mkdirSync(constants.THUMBNAIL_ROOT, { recursive: true });
 fs.mkdirSync(constants.SESSION_PATH, { recursive: true });
 
+if (!fs.existsSync(constants.SESSION_SECRET_FILE_PATH)) {
+    console.log('Generating new session secret...');
+    fs.writeFileSync(constants.SESSION_SECRET_FILE_PATH, require('crypto').randomBytes(20).toString('hex'), 'utf8');
+}
+
 // we shall crash if this fails
 diskusage.calculate();
 

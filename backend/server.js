@@ -11,6 +11,7 @@ var express = require('express'),
     cors = require('./cors.js'),
     users = require('./routes/users.js'),
     files = require('./routes/files.js'),
+    fs = require('fs'),
     shares = require('./routes/shares.js'),
     office = require('./routes/office.js'),
     webdav = require('./routes/webdav.js'),
@@ -40,7 +41,7 @@ function init(callback) {
 
     const sessionOptions = {
         store: new FileStore({ path: constants.SESSION_PATH }),
-        secret: 'cubby goes lightly',
+        secret: fs.readFileSync(constants.SESSION_SECRET_FILE_PATH, 'utf8'),
         resave: false,
         saveUninitialized: false,
         cookie: {
@@ -160,7 +161,7 @@ function init(callback) {
             baseURL: process.env.APP_ORIGIN,
             clientID: process.env.OIDC_CLIENT_ID,
             clientSecret: process.env.OIDC_CLIENT_SECRET,
-            secret: 'Cubby secret should be unique I guess',
+            secret: 'oidc-' + fs.readFileSync(constants.SESSION_SECRET_FILE_PATH, 'utf8'),
             authorizationParams: {
                 response_type: 'code',
                 scope: 'openid profile email'

@@ -13,5 +13,6 @@ ENV USER_DATA_PATH="/app/data/data/"
 ENV GROUPS_DATA_PATH="/app/data/groups/"
 ENV THUMBNAIL_PATH="/app/data/groups/"
 ENV SESSION_PATH="/app/data/sessions/"
+ENV SESSION_SECRET_FILE_PATH="/app/data/.session.secret"
 
 CMD [ "/app/code/start.sh" ]

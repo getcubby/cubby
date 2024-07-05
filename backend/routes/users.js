@@ -32,7 +32,12 @@ async function isAuthenticated(req, res, next) {
                 email: req.oidc.user.email,
                 displayName: req.oidc.user.name
             };
+
             await users.add(user);
+
+            // make first user admin
+            const count = await users.list().length;
+            if (count === 1) await users.setAdmin(user.username, true);
         } catch (e) {
             console.error('Failed to add user', req.user.oidc.user, e);
             return next(new HttpError(500, 'internal error'));

@@ -17,6 +17,7 @@ export function createMainModel(origin) {
         username: result.body.username,
         email: result.body.email,
         displayName: result.body.displayName,
+        admin: !!result.body.admin,
         diskusage: {
           used: result.body.diskusage.used || 0,
           size: result.body.diskusage.size || 0,

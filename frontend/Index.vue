@@ -355,6 +355,7 @@ export default {
         mainMenu: [{
           label: 'Users',
           icon: 'fa-solid fa-users',
+          visible: () => this.profile.admin,
           action: () => window.location.href = '#users'
         }, {
           label: 'WebDAV',
@@ -363,6 +364,7 @@ export default {
         }, {
           label: 'Office Integration',
           icon: 'fa-solid fa-briefcase',
+          visible: () => this.profile.admin,
           action: () => this.$refs.officeDialog.open()
         }, {
           label: 'About',

@@ -15,6 +15,7 @@ exports = module.exports = {
 var assert = require('assert'),
     users = require('../users.js'),
     diskusage = require('../diskusage.js'),
+    MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;
 
@@ -25,23 +26,34 @@ async function isAuthenticated(req, res, next) {
     try {
         user = await users.get(req.oidc.user.sub);
     } catch (e) {
-        try {
-            user = {
-                username: req.oidc.user.sub,
-                password: '',
-                email: req.oidc.user.email,
-                displayName: req.oidc.user.name
-            };
+        if (e.reason !== MainError.NOT_FOUND) return next(new HttpError(500, 'internal error'));
+    }
 
-            await users.add(user);
+    if (user) {
+        req.user = user;
+        return next();
+    }
 
-            // make first user admin
-            const count = await users.list().length;
-            if (count === 1) await users.setAdmin(user.username, true);
-        } catch (e) {
-            console.error('Failed to add user', req.user.oidc.user, e);
-            return next(new HttpError(500, 'internal error'));
-        }
+    try {
+        console.log('New user found. Adding to database.', req.oidc.user.sub);
+
+        await users.add({
+            username: req.oidc.user.sub,
+            password: '',
+            email: req.oidc.user.email,
+            displayName: req.oidc.user.name
+        });
+    } catch (e) {
+        if (e.reason !== MainError.ALREADY_EXISTS) return next(new HttpError(500, 'internal error'));
+    }
+
+    user = await users.get(req.oidc.user.sub);
+
+    // make first user admin
+    const all = await users.list();
+    if (all.length === 1) {
+        console.log(`First user created. Making ${user.username} the admin.`);
+        await users.setAdmin(user.username, true);
     }
 
     req.user = user;

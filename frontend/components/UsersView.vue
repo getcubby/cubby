@@ -40,7 +40,6 @@ export default {
       Checkbox,
       Dialog
     },
-    emits: [ 'login' ],
     props: {
       profile: {
         type: Object
@@ -61,9 +60,6 @@ export default {
       };
     },
     methods: {
-      onLogin() {
-        this.$emit('login');
-      },
       onEdit(user) {
         this.edit.admin = user.admin;
         this.edit.user = user;
@@ -76,14 +72,16 @@ export default {
           return console.error(e);
         }
 
-        this.users = await this.mainModel.getUsers();
+        await this.refresh();
+
         this.$refs.editDialog.close();
+      },
+      async refresh() {
+        this.users = await this.mainModel.getUsers();
       }
     },
     async mounted() {
       this.mainModel = createMainModel(API_ORIGIN);
-
-      this.users = await this.mainModel.getUsers();
     }
 };
 

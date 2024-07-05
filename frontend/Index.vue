@@ -51,7 +51,7 @@
           </template>
         </TopBar>
 
-        <UsersView v-show="view === VIEWS.USERS" :main-menu="mainMenu" :profile="profile" @login="onLogin"/>
+        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :main-menu="mainMenu" :profile="profile"/>
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
             <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
@@ -938,6 +938,7 @@ export default {
           that.view = VIEWS.MAIN;
         } else if (hash.indexOf('users') === 0) {
           if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          that.$refs.usersView.refresh();
           that.view = VIEWS.USERS;
         } else if (hash.indexOf('settings/') === 0) {
           if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');

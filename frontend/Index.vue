@@ -863,9 +863,6 @@ export default {
           else console.error(error);
         }
 
-        // ensure main view
-        this.view = VIEWS.MAIN;
-
         // update the browser hash
         window.location.hash = `files${resource.resourcePath}`;
 
@@ -929,12 +926,16 @@ export default {
 
         if (hash.indexOf('files/home/') === 0) {
           that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/recent/') === 0) {
           that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/groups/') === 0) {
           that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
         } else if (hash.indexOf('users') === 0) {
           if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
           that.view = VIEWS.USERS;

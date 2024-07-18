@@ -16,7 +16,6 @@ var express = require('express'),
     office = require('./routes/office.js'),
     webdav = require('./routes/webdav.js'),
     misc = require('./routes/misc.js'),
-    multipart = require('./routes/multipart.js'),
     morgan = require('morgan'),
     oidc = require('express-openid-connect'),
     session = require('express-session'),
@@ -130,7 +129,7 @@ function init(callback) {
 
     router.head('/api/v1/files', users.optionalSessionAuth, files.head);
     router.get ('/api/v1/files', users.optionalSessionAuth, files.get);
-    router.post('/api/v1/files', users.optionalSessionAuth, multipart({ maxFieldsSize: 2 * 1024, limit: '512mb', timeout: 3 * 60 * 1000 }), files.add);
+    router.post('/api/v1/files', users.optionalSessionAuth, files.add);
     router.put ('/api/v1/files', users.optionalSessionAuth, files.update);
     router.del ('/api/v1/files', users.optionalSessionAuth, files.remove);
 

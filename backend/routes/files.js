@@ -72,22 +72,19 @@ async function add(req, res, next) {
 
     const directory = boolLike(req.query.directory);
     const overwrite = boolLike(req.query.overwrite);
-    let filePath = req.query.path || '';
+    const mtime = req.query.mtime ? new Date(req.query.mtime) : null;
+    const filePath = req.query.path || '';
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
-    if (!(req.files && req.files.file) && !directory) return next(new HttpError(400, 'missing file or directory'));
-    if ((req.files && req.files.file) && directory) return next(new HttpError(400, 'either file or directory'));
-
-    var mtime = req.fields && req.fields.mtime ? new Date(req.fields.mtime) : null;
 
     const subject = await translateResourcePath(req.user, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
-    try {
+   try {
         if (directory) await files.addDirectory(subject.usernameOrGroup, subject.filePath);
-        else await files.addOrOverwriteFile(subject.usernameOrGroup, subject.filePath, req.files.file.path, mtime, overwrite);
+        else await files.addOrOverwriteFileStream(subject.usernameOrGroup, subject.filePath, req, mtime, overwrite);
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
         return next(new HttpError(500, error));

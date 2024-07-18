@@ -149,10 +149,39 @@ export function createDirectoryModel(origin) {
         uniqueRelativeFilePath = insertFilenameModifier(uniqueRelativeFilePath, extension, '-new');
       }
 
-      await superagent.post(`${origin}/api/v1/files`).withCredentials()
-        .query(`path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`)
-        .attach('file', file)
-        .on('progress', progressHandler);
+      const req = new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else {
+            reject({
+              status: xhr.status,
+              statusText: xhr.statusText
+            });
+          }
+        });
+        xhr.addEventListener('error', () => {
+          reject({
+            status: xhr.status,
+            statusText: xhr.statusText
+          });
+        });
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.loaded) progressHandler({ direction: 'upload', loaded: event.loaded});
+        });
+
+        xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`);
+
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.setRequestHeader('Content-Length', file.size);
+
+        xhr.send(file);
+      });
+
+      const res = await req;
     },
     async download(resource, files) {
       if (files.length === 1 && !files[0].isDirectory) {

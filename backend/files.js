@@ -5,6 +5,7 @@ exports = module.exports = {
 
     getValidFullPath,
     addDirectory,
+    addOrOverwriteFileStream,
     addOrOverwriteFile,
     addOrOverwriteFileContents,
     get,
@@ -69,12 +70,12 @@ async function addDirectory(usernameOrGroup, filePath) {
     }
 }
 
-async function addOrOverwriteFile(usernameOrGroup, filePath, sourceFilePath, mtime, overwrite) {
+async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, overwrite) {
     assert.strictEqual(typeof usernameOrGroup, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
-    assert.strictEqual(typeof sourceFilePath, 'string');
+    assert.strictEqual(typeof stream, 'object');
 
     const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -91,9 +92,13 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, sourceFilePath, mti
     if (stat && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
     try {
+        const pipeline = require('node:stream/promises').pipeline;
         await fs.ensureDir(path.dirname(fullFilePath));
-        await fs.move(sourceFilePath, fullFilePath, { overwrite: true });
+        const writeStream = require('fs').createWriteStream(fullFilePath);
+        await pipeline(stream, writeStream);
     } catch (error) {
+        // attempt to purge already uploaded bits
+        try { await fs.remove(fullFilePath); } catch () {}
         throw new MainError(MainError.FS_ERROR, error);
     }
 
@@ -105,6 +110,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, sourceFilePath, mti
         var fd = fs.openSync(fullFilePath);
         fs.futimesSync(fd, mtime, mtime);
     } catch (error) {
+        try { await fs.remove(fullFilePath); } catch () {}
         throw new MainError(MainError.FS_ERROR, error);
     }
 }

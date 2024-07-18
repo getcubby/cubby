@@ -5,7 +5,6 @@ exports = module.exports = {
 
     getValidFullPath,
     addDirectory,
-    addOrOverwriteFileStream,
     addOrOverwriteFile,
     addOrOverwriteFileContents,
     get,
@@ -98,7 +97,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
         await pipeline(stream, writeStream);
     } catch (error) {
         // attempt to purge already uploaded bits
-        try { await fs.remove(fullFilePath); } catch () {}
+        try { await fs.remove(fullFilePath); } catch (e) {}
         throw new MainError(MainError.FS_ERROR, error);
     }
 
@@ -110,7 +109,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
         var fd = fs.openSync(fullFilePath);
         fs.futimesSync(fd, mtime, mtime);
     } catch (error) {
-        try { await fs.remove(fullFilePath); } catch () {}
+        try { await fs.remove(fullFilePath); } catch (e) {}
         throw new MainError(MainError.FS_ERROR, error);
     }
 }

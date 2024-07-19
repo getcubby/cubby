@@ -194,3 +194,7 @@
 * Darker icon color
 * Fixes for admin view
 
+[2.1.2]
+* Stream file uploads directly, skip temporary files
+* Early dark-mode to avoid white flashes
+

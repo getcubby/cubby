@@ -198,3 +198,8 @@
 * Stream file uploads directly, skip temporary files
 * Early dark-mode to avoid white flashes
 
+[2.1.3]
+* Fix file upload regression
+* Update to new pankow image viewer with better mobile scroll support
+* More dark-mode fixes
+

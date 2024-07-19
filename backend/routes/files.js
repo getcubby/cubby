@@ -84,7 +84,7 @@ async function add(req, res, next) {
 
    try {
         if (directory) await files.addDirectory(subject.usernameOrGroup, subject.filePath);
-        else await files.addOrOverwriteFileStream(subject.usernameOrGroup, subject.filePath, req, mtime, overwrite);
+        else await files.addOrOverwriteFile(subject.usernameOrGroup, subject.filePath, req, mtime, overwrite);
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
         return next(new HttpError(500, error));

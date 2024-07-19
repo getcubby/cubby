@@ -16,6 +16,7 @@ html, body {
   font-weight: 400;
   color: var(--pankow-text-color);
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #app {

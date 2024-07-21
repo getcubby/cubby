@@ -29,7 +29,7 @@
     "nodemailer-smtp-transport": "^2.7.4",
     "once": "^1.4.0",
     "pankow": "^1.6.8",
-    "pankow-viewers": "^1.0.3",
+    "pankow-viewers": "^1.0.4",
     "safetydance": "^2.4.0",
     "session-file-store": "^1.5.0",
     "superagent": "^9.0.2",

@@ -96,6 +96,7 @@
         <FileUploader
           ref="fileUploader"
           :upload-handler="uploadHandler"
+          :job-pre-flight-check-handler="uploadJobPreFlightCheckHandler"
           @finished="onUploadFinished"
         />
       </div>
@@ -402,6 +403,15 @@ export default {
       prettyLongDate,
       showAllFiles() {
         window.location.hash = 'files/home/';
+      },
+      async uploadJobPreFlightCheckHandler(job) {
+        // abort if target folder already exists
+        if (job.folder && await this.directoryModel.exists(parseResourcePath(job.targetFolder), job.folder)) {
+          window.pankow.notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
+          return false;
+        }
+
+        return true;
       },
       async uploadHandler(targetDir, file, progressHandler) {
         const resource = parseResourcePath(targetDir);

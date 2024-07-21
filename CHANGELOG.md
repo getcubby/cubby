@@ -203,3 +203,8 @@
 * Update to new pankow image viewer with better mobile scroll support
 * More dark-mode fixes
 
+[2.1.4]
+* Use .part paradigm for file uploads
+* Use improve ImageViewer from pankow
+* Fix folder upload if folder already exists
+

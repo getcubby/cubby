@@ -90,18 +90,24 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
 
     if (stat && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
+    // we first upload to .part file and the rename
+    const fullFilePathPart = fullFilePath + '.part';
+
     try {
         const pipeline = require('node:stream/promises').pipeline;
         await fs.ensureDir(path.dirname(fullFilePath));
-        const writeStream = require('fs').createWriteStream(fullFilePath);
+        const writeStream = require('fs').createWriteStream(fullFilePathPart);
         await pipeline(stream, writeStream);
+
+        // rename .part after upload pipeline finished
+        await fs.rename(fullFilePathPart, fullFilePath);
     } catch (error) {
-        // attempt to purge already uploaded bits
-        try { await fs.remove(fullFilePath); } catch (e) {}
+        try { await fs.remove(fullFilePathPart); } catch (e) {}
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
+    // kick off in background
+    diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
 
     if (!mtime) return;
 

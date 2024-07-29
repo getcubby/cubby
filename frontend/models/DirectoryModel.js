@@ -97,19 +97,44 @@ export function createDirectoryModel(origin) {
       }
     },
     async newFile(resource, newFileName) {
-      const formData = new FormData();
-      formData.append('file', new Blob());
+      const file = new Blob();
 
-      const newFilePath = pathJoin(resource.resourcePath, newFileName);
+      const req = new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
 
-      try {
-        await superagent.post(`${origin}/api/v1/files`).withCredentials().query(`path=${encodeURIComponent(newFilePath)}`).send(formData);
-      } catch (error) {
-        if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
-        else if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
-        else if (error.status === 409) throw new DirectoryModelError(DirectoryModelError.CONFLICT, error);
-        throw new DirectoryModelError(DirectoryModelError.GENERIC, error);
-      }
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else if (xhr.status === 409) {
+            reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
+          } else if (error.status === 401) {
+            reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
+          } else if (error.status === 403) {
+            reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
+          } else {
+            reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
+              status: xhr.status,
+              statusText: xhr.statusText
+            }));
+          }
+        });
+        xhr.addEventListener('error', () => {
+          reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
+            status: xhr.status,
+            statusText: xhr.statusText
+          }));
+        });
+
+        xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + newFileName)}`);
+
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.setRequestHeader('Content-Length', file.size);
+
+        xhr.send(file);
+      });
+
+      const res = await req;
     },
     async newFolder(resource, newFolderName) {
       const newFolderPath = pathJoin(resource.resourcePath, newFolderName);
@@ -156,18 +181,24 @@ export function createDirectoryModel(origin) {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(xhr.response);
+          } else if (xhr.status === 409) {
+            reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
+          } else if (error.status === 401) {
+            reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
+          } else if (error.status === 403) {
+            reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
           } else {
-            reject({
+            reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
               status: xhr.status,
               statusText: xhr.statusText
-            });
+            }));
           }
         });
         xhr.addEventListener('error', () => {
-          reject({
+          reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
             status: xhr.status,
             statusText: xhr.statusText
-          });
+          }));
         });
         xhr.upload.addEventListener('progress', (event) => {
           if (event.loaded) progressHandler({ direction: 'upload', loaded: event.loaded});

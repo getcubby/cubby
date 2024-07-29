@@ -17,7 +17,7 @@
     "connect-timeout": "^1.9.0",
     "db-migrate": "^0.11.14",
     "db-migrate-pg": "^1.5.2",
-    "debug": "^4.3.5",
+    "debug": "^4.3.6",
     "express": "^4.19.2",
     "express-openid-connect": "^2.17.1",
     "express-session": "^1.18.0",
@@ -33,18 +33,18 @@
     "safetydance": "^2.4.0",
     "session-file-store": "^1.5.0",
     "superagent": "^9.0.2",
-    "vue": "^3.4.33",
+    "vue": "^3.4.34",
     "webdav-server": "^2.6.2",
     "xmldom": "^0.6.0",
     "xpath": "0.0.34"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.5",
-    "chromedriver": "^126.0.5",
+    "@vitejs/plugin-vue": "^5.1.1",
+    "chromedriver": "^127.0.0",
     "expect.js": "^0.3.1",
     "mocha": "^10.7.0",
     "selenium-webdriver": "^4.23.0",
-    "vite": "^5.3.4"
+    "vite": "^5.3.5"
   },
   "eslintConfig": {
     "root": true,

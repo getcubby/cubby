@@ -104,7 +104,7 @@ function init(callback) {
                     const nodes = xpath.select('/wopi-discovery/net-zone/app/action', doc);
                     if (nodes) {
                         // better handle with other viewers
-                        const filteredExtensions = [ 'txt', 'csv', 'key', 'svg', 'bmp', 'png', 'gif', 'tiff', 'jpg', 'jpeg', 'pdf' ];
+                        const filteredExtensions = [ 'txt', 'key', 'svg', 'bmp', 'png', 'gif', 'tiff', 'jpg', 'jpeg', 'pdf' ];
                         const extensions = nodes.map(function (n) { return n.getAttribute('ext'); }).filter(function (e) { return !!e; }).filter((e) => filteredExtensions.indexOf(e) === -1);
                         tmp.viewers.collabora = { extensions };
                     }

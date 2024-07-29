@@ -208,3 +208,8 @@
 * Use improve ImageViewer from pankow
 * Fix folder upload if folder already exists
 
+[2.1.5]
+* Fix new file creation
+* Fix saving text files
+* Handle csv files with office integration if enabled
+

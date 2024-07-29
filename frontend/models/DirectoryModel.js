@@ -85,16 +85,44 @@ export function createDirectoryModel(origin) {
       return result.text;
     },
     async saveFile(resource, content) {
-      const formData = new FormData();
-      formData.append('file', new File([ content ], 'file'));
+      const file = new File([ content ], '');
 
-      try {
-        await superagent.post(`${origin}/api/v1/files`).withCredentials().query(`overwrite=true&path=${encodeURIComponent(resource.resourcePath)}`).send(formData);
-      } catch (error) {
-        if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
-        else if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
-        throw new DirectoryModelError(DirectoryModelError.GENERIC, error);
-      }
+      const req = new Promise(function (resolve, reject) {
+        const xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else if (xhr.status === 409) {
+            reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
+          } else if (xhr.status === 401) {
+            reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
+          } else if (xhr.status === 403) {
+            reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
+          } else {
+            reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
+              status: xhr.status,
+              statusText: xhr.statusText
+            }));
+          }
+        });
+        xhr.addEventListener('error', () => {
+          reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
+            status: xhr.status,
+            statusText: xhr.statusText
+          }));
+        });
+
+        xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath)}&overwrite=true`);
+
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.setRequestHeader('Content-Length', file.size);
+
+        xhr.send(file);
+      });
+
+      const res = await req;
     },
     async newFile(resource, newFileName) {
       const file = new Blob();
@@ -108,9 +136,9 @@ export function createDirectoryModel(origin) {
             resolve(xhr.response);
           } else if (xhr.status === 409) {
             reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
-          } else if (error.status === 401) {
+          } else if (xhr.status === 401) {
             reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
-          } else if (error.status === 403) {
+          } else if (xhr.status === 403) {
             reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
           } else {
             reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
@@ -183,9 +211,9 @@ export function createDirectoryModel(origin) {
             resolve(xhr.response);
           } else if (xhr.status === 409) {
             reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
-          } else if (error.status === 401) {
+          } else if (xhr.status === 401) {
             reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
-          } else if (error.status === 403) {
+          } else if (xhr.status === 403) {
             reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
           } else {
             reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
@@ -204,7 +232,7 @@ export function createDirectoryModel(origin) {
           if (event.loaded) progressHandler({ direction: 'upload', loaded: event.loaded});
         });
 
-        xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}&overwrite=${!!file.overwrite}`);
+        xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}`);
 
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
         xhr.setRequestHeader('Content-Length', file.size);

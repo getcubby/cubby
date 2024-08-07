@@ -41,6 +41,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.1",
     "chromedriver": "^127.0.0",
+    "eslint-plugin-vue": "^9.27.0",
     "expect.js": "^0.3.1",
     "mocha": "^10.7.0",
     "selenium-webdriver": "^4.23.0",

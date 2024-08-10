@@ -664,7 +664,7 @@ export default {
             console.error(`Failed to remove file ${entries[i].name}:`, e);
           }
         }
-
+        
         await this.refresh();
 
         window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });

@@ -593,36 +593,45 @@ export default {
       async onDrop(targetFolder, dataTransfer, files) {
         const fullTargetFolder = sanitize(`${this.currentResourcePath}/${targetFolder}`);
 
-        const that = this;
-        function traverseFileTree(item, path) {
-          if (item.isFile) {
-            item.file(function (file) {
-              that.$refs.fileUploader.addFiles([file], sanitize(`${that.currentResourcePath}/${targetFolder}`), false);
-            });
-          } else if (item.isDirectory) {
-            // Get folder contents
-            var dirReader = item.createReader();
-            dirReader.readEntries(function (entries) {
-              for (let i in entries) {
-                traverseFileTree(entries[i], item.name);
-              }
-            });
-          }
-        }
-
         if (dataTransfer) {
           // figure if a folder was dropped on a modern browser, in this case the first would have to be a directory
           let folderItem;
           try {
               folderItem = dataTransfer.items[0].webkitGetAsEntry();
-              if (folderItem.isFile) return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder, false);
+              if (folderItem.isFile) return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder);
           } catch (e) {
-              return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder, false);
+              return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder);
+          }
+
+          const fileList = [];
+          async function traverseFileTree(item, path) {
+            return new Promise(async (resolve, reject) => {
+              if (item.isFile) {
+                item.file((file) => {
+                  fileList.push(file);
+                  resolve();
+                }, reject);
+              } else if (item.isDirectory) {
+                // Get folder contents
+                const dirReader = item.createReader();
+                const entries = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
+
+                for (let i in entries) {
+                  await traverseFileTree(entries[i], item.name);
+                }
+
+                resolve();
+              } else {
+                console.log('Skipping uknown file type', item);
+                resolve();
+              }
+            });
           }
 
           // if we got here we have a folder drop and a modern browser
           // now traverse the folder tree and create a file list
-          traverseFileTree(folderItem, '');
+          await traverseFileTree(folderItem, '');
+          this.$refs.fileUploader.addFiles(fileList, sanitize(`${this.currentResourcePath}/${targetFolder}`));
         } else {
           if (!files.length) return;
 

@@ -75,6 +75,7 @@ async function setAdmin(req, res, next) {
     assert.strictEqual(typeof req.params.username, 'string');
     assert.strictEqual(req.user.admin, true);
 
+    if (typeof req.body.admin !== 'boolean') return next(new HttpError(400, 'admin must be a boolean'));
     if (!users.exists(req.params.username)) return next(new HttpError(409, 'user does not exist'));
     if (req.user.username === req.params.username) return next(new HttpError(403, 'cannot set admin status on own user'));
 

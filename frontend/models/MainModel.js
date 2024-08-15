@@ -1,4 +1,4 @@
-import superagent from 'superagent';
+import fetcher from '../fetcher.js';
 
 export function createMainModel(origin) {
   return {
@@ -6,12 +6,12 @@ export function createMainModel(origin) {
     async getProfile() {
       let error, result;
       try {
-        result = await superagent.get(`${origin}/api/v1/profile`).withCredentials();
+        result = await fetcher.get(`${origin}/api/v1/profile`);
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to get profile', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to get profile', { cause: error || result })
 
       return {
         username: result.body.username,
@@ -28,12 +28,12 @@ export function createMainModel(origin) {
     async getConfig() {
       let error, result;
       try {
-        result = await superagent.get(`${origin}/api/v1/config`).withCredentials();
+        result = await fetcher.get(`${origin}/api/v1/config`);
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to get config', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to get config', { cause: error || result })
 
       return {
         viewers: {
@@ -44,50 +44,50 @@ export function createMainModel(origin) {
     async getUsers() {
       let error, result;
       try {
-        result = await superagent.get(`${origin}/api/v1/users`).withCredentials();
+        result = await fetcher.get(`${origin}/api/v1/users`);
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to get users', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to get users', { cause: error || result })
 
       return result.body.users;
     },
     async setWebDavPassword(password) {
       let error, result;
       try {
-        result = await superagent.put(`${origin}/api/v1/users`).send({ password }).withCredentials();
+        result = await fetcher.put(`${origin}/api/v1/users`, { password });
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to set password', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to set password', { cause: error || result })
     },
     async setAdmin(username, isAdmin) {
       let error, result;
       try {
-        result = await superagent.put(`${origin}/api/v1/users/${username}/admin`).send({ admin: isAdmin }).withCredentials();
+        result = await fetcher.put(`${origin}/api/v1/users/${username}/admin`, { admin: isAdmin });
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to set admin status', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
     },
     async getOfficeHandle(entry) {
       let error, result;
       try {
-        result = await superagent.get(`${origin}/api/v1/office/handle`).query({ resourcePath: entry.resourcePath }).withCredentials();
+        result = await fetcher.get(`${origin}/api/v1/office/handle`, { resourcePath: entry.resourcePath });
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to get office handle', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to get office handle', { cause: error || result })
 
       return result.body;
     },
     async logout() {
       try {
-        await superagent.get(`${origin}/api/v1/logout`).withCredentials();
+        await fetcher.get(`${origin}/api/v1/logout`);
       } catch (e) {
         console.error('Error logging out', e);
       }

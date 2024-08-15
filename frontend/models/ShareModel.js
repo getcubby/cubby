@@ -1,4 +1,4 @@
-import superagent from 'superagent';
+import fetcher from '../fetcher.js';
 
 export function createShareModel(origin) {
   return {
@@ -16,24 +16,24 @@ export function createShareModel(origin) {
 
       let error, result;
       try {
-        result = await superagent.post(`${origin}/api/v1/shares`, tmp).withCredentials();
+        result = await fetcher.post(`${origin}/api/v1/shares`, tmp);
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to create shared', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to create shared', { cause: error || result })
 
       return result.body.shareId;
     },
     async remove(shareId) {
       let error, result;
       try {
-        result = await superagent.delete(`${origin}/api/v1/shares`).query({ shareId }).withCredentials();
+        result = await fetcher.del(`${origin}/api/v1/shares`, { shareId });
       } catch (e) {
         error = e;
       }
 
-      if (error || result.statusCode !== 200) throw new Error('Failed to delete share', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to delete share', { cause: error || result })
     },
     getLink(shareId) {
       return `${window.location.origin}/api/v1/shares/${shareId}?type=raw`;

@@ -1,5 +1,9 @@
 import { createApp } from 'vue';
 
+// this is only for local dev where the origins differ
+import fetcher from './fetcher.js';
+if (import.meta.env.DEV) fetcher.globalOptions.credentials = 'include';
+
 import '@fontsource/noto-sans';
 
 import './style.css';

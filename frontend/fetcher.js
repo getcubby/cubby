@@ -19,12 +19,37 @@ async function request(uri, method, headers, query, body, options) {
 
     try {
         response = await fetch(url, fetchOptions);
-        result = await response.json();
+        if (!response.ok) {
+            const error = new Error(await response.text());
+            error.status = response.status;
+            throw error;
+        }
+
+        const headers = response.headers;
+        const contentType = headers.get('Content-Type');
+
+        if (method === 'HEAD') {
+            result = '';
+        } else {
+            if (contentType.indexOf('application/json') !== -1) {
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    throw new Error(`Failed to parse response as json for content type ${contentType}.`, e);
+                }
+            } else {
+                result = await response.text();
+            }
+        }
     } catch (e) {
         throw e;
     }
 
     return { status: response.status, body: result };
+}
+
+async function head(uri, query = {}, options = {}) {
+    return await request(uri, 'HEAD', {}, query, null, options);
 }
 
 async function get(uri, query = {}, options = {}) {
@@ -45,6 +70,7 @@ async function del(uri, query = {}, options = {}) {
 
 export default {
     globalOptions,
+    head,
     get,
     post,
     put,

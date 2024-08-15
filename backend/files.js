@@ -55,12 +55,7 @@ async function addDirectory(usernameOrGroup, filePath) {
 
     debug('addDirectory:', fullFilePath);
 
-    try {
-        var stat = fs.statSync(fullFilePath);
-        if (stat) throw new MainError(MainError.ALREADY_EXISTS);
-    } catch (error) {
-        if (error.code !== 'ENOENT') throw new MainError(MainError.FS_ERROR, error);
-    }
+    if (fs.existsSync(fullFilePath)) throw new MainError(MainError.ALREADY_EXISTS);
 
     try {
         await fs.ensureDir(fullFilePath);

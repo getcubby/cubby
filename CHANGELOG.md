@@ -213,3 +213,8 @@
 * Fix saving text files
 * Handle csv files with office integration if enabled
 
+[2.1.6]
+* Fix dropping a folder into the browser view
+* Avoid resetting the view on upload progress
+* Fix crash when calling setAdmin route
+* Move from superagent to Pankow fetcher()

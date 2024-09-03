@@ -768,7 +768,25 @@ export default {
         this.refreshShareDialogEntry();
       },
       async refresh() {
-        await this.loadPath(null, true);
+        const resource = parseResourcePath(this.currentResourcePath);
+
+        let entry;
+        try {
+          entry = await this.directoryModel.get(resource, resource.path);
+        } catch (error) {
+          if (error.status === 401) return this.onLogout();
+          else if (error.status === 404) this.error = 'Does not exist';
+          else console.error(error);
+          return;
+        }
+
+        entry.files.forEach(function (e) {
+          e.extension = getExtension(e);
+          e.filePathNew = e.fileName;
+        });
+
+        this.entry = entry;
+        this.entries = entry.files;
       },
       async loadMainDirectory(path, entry, forceLoad = false) {
         // path is files/filepath or shares/shareid/filepath

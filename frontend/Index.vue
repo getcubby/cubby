@@ -594,23 +594,18 @@ export default {
         const fullTargetFolder = sanitize(`${this.currentResourcePath}/${targetFolder}`);
 
         if (dataTransfer) {
-          // figure if a folder was dropped on a modern browser, in this case the first would have to be a directory
-          let folderItem;
-          try {
-              folderItem = dataTransfer.items[0].webkitGetAsEntry();
-              if (folderItem.isFile) return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder);
-          } catch (e) {
-              return this.$refs.fileUploader.addFiles(dataTransfer.files, fullTargetFolder);
+          async function getFile(entry) {
+            return new Promise((resolve, reject) => {
+              entry.file(resolve, reject);
+            });
           }
 
           const fileList = [];
           async function traverseFileTree(item, path) {
             return new Promise(async (resolve, reject) => {
               if (item.isFile) {
-                item.file((file) => {
-                  fileList.push(file);
-                  resolve();
-                }, reject);
+                fileList.push(await getFile(item));
+                resolve();
               } else if (item.isDirectory) {
                 // Get folder contents
                 const dirReader = item.createReader();
@@ -628,9 +623,15 @@ export default {
             });
           }
 
-          // if we got here we have a folder drop and a modern browser
-          // now traverse the folder tree and create a file list
-          await traverseFileTree(folderItem, '');
+          for (const item of dataTransfer.items) {
+            const entry = item.webkitGetAsEntry();
+
+            if (entry.isFile) {
+              fileList.push(await getFile(entry));
+            } else if (entry.isDirectory) {
+              await traverseFileTree(entry, sanitize(`${this.currentResourcePath}/${targetFolder}`));
+            }
+          }
           this.$refs.fileUploader.addFiles(fileList, sanitize(`${this.currentResourcePath}/${targetFolder}`));
         } else {
           if (!files.length) return;

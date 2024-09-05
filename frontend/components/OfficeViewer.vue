@@ -45,7 +45,7 @@ export default {
   emits: [ 'close' ],
   data() {
     return {
-      entry: null,
+      entry: {},
       wopiToken: '',
       wopiUrl: ''
     };

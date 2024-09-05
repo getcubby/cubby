@@ -41,6 +41,28 @@ export function createMainModel(origin) {
         }
       };
     },
+    async getWopiHost() {
+      let error, result;
+      try {
+        result = await fetcher.get(`${origin}/api/v1/settings/office`);
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.status !== 200) throw new Error('Failed to get wopi host', { cause: error || result })
+
+      return result.body.host || '';
+    },
+    async setWopiHost(wopiHost) {
+      let error, result;
+      try {
+        result = await fetcher.put(`${origin}/api/v1/settings/office`, { host: wopiHost });
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.status !== 200) throw new Error('Failed to set wopi host', { cause: error || result })
+    },
     async getUsers() {
       let error, result;
       try {

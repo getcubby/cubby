@@ -115,17 +115,14 @@
   </Dialog>
 
   <!-- Office Dialog -->
-  <Dialog title="Office Integration" ref="officeDialog" rejectLabel="Close">
+  <Dialog title="Office Integration" ref="officeDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onOfficeSettingsSubmit">
     <div>
-      Cubby can open office documents acting as a WOPI host. This is tested with Collabora at the moment.<br/>
-      To enable support add the following to the <code>config.json</code> and restart the app:
-      <pre>
-{
-  "collabora": {
-    "host": "https://collabora.domain.com"
-  }
-}
-</pre>
+      <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
+      <p>WOPI / Collabora hostname:</p>
+      <form @submit="onOfficeSettingsSubmit" @submit.prevent>
+        <TextInput v-model="officeDialog.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%" />
+        <small class="has-error" v-show="officeDialog.error">{{ officeDialog.error }}</small>
+      </form>
     </div>
   </Dialog>
 
@@ -339,6 +336,10 @@ export default {
           error: '',
           password: ''
         },
+        officeDialog: {
+          error: '',
+          wopiHost: ''
+        },
         shareDialog: {
           visible: false,
           error: '',
@@ -366,7 +367,7 @@ export default {
           label: 'Office Integration',
           icon: 'fa-solid fa-briefcase',
           visible: () => this.profile.admin,
-          action: () => this.$refs.officeDialog.open()
+          action: this.onOfficeSettings
         }, {
           label: 'About',
           icon: 'fa-solid fa-circle-info',
@@ -559,6 +560,44 @@ export default {
         }
 
         this.$refs.webDavPasswordDialog.close();
+      },
+      async onOfficeSettings() {
+        this.officeDialog.error = '';
+
+        try {
+          this.officeDialog.wopiHost = await this.mainModel.getWopiHost();
+        } catch (error) {
+          this.officeDialog.wopiHost = ''
+          this.officeDialog.error = error.message;
+          console.log('Failed to get wopi host:', error);
+        }
+
+        this.$refs.officeDialog.open();
+      },
+      async onOfficeSettingsSubmit() {
+        console.log(this.officeDialog.wopiHost)
+        try {
+          await this.mainModel.setWopiHost(this.officeDialog.wopiHost);
+        } catch (error) {
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          else {
+            this.officeDialog.error = 'Unkown error, check logs';
+            console.error('Failed to set wopi host:', error)
+          }
+
+          return;
+        }
+
+        await this.refreshConfig();
+
+        this.$refs.officeDialog.close();
+      },
+      async refreshConfig() {
+        try {
+          this.config = await this.mainModel.getConfig();
+        } catch (e) {
+          if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
+        }
       },
       clearSelection() {
         this.selectedEntries = [];
@@ -1003,11 +1042,7 @@ export default {
         if (e.cause && e.cause.status !== 401) return console.error('Failed to get profile.', e);
       }
 
-      try {
-        this.config = await this.mainModel.getConfig();
-      } catch (e) {
-        if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
-      }
+      await this.refreshConfig();
 
       this.directoryModel = createDirectoryModel(API_ORIGIN);
 

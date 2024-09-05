@@ -87,6 +87,7 @@ function init(callback) {
     }
 
     router.get ('/api/v1/profile', users.isAuthenticated, users.profile);
+
     router.get ('/api/v1/config', users.isAuthenticated, async function (req, res, next) {
         // currently we only send configs for collabora
 
@@ -117,6 +118,21 @@ function init(callback) {
         }
 
         next(new HttpSuccess(200, tmp));
+    });
+
+    router.get ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, async function (req, res, next) {
+        const officeSettings = config.get('collabora');
+        return next(new HttpSuccess(200, officeSettings));
+    });
+    router.put ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, async function (req, res, next) {
+        try {
+            config.set('collabora', { host: req.body.host });
+        } catch (e) {
+            console.error(e);
+            return next(new HttpError(500, 'failed to commit office settings'));
+        }
+
+        next(new HttpSuccess(200, {}));
     });
 
     router.get ('/api/v1/oidc/login', oidcLogin);

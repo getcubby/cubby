@@ -92,13 +92,13 @@ export default {
   height: 100%;
   width: 100%;
   border: none;
-  padding: 5px 10px;
 }
 
 .main-nav-bar {
   position: absolute;
-  width: 100%;
+  right: 0;
   text-align: right;
+  padding: 5px 10px;
 }
 
 .main-layout {

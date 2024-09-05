@@ -1,19 +1,12 @@
 <template>
   <MainLayout :gap="false" class="main-layout">
     <template #header>
-      <TopBar class="navbar" :gap="false">
-        <template #left>
-        </template>
-        <template #center>
-          <div class="file-name">{{ entry ? entry.fileName : '' }}</div>
-        </template>
-        <template #right>
-          <Button icon="fa-solid fa-download" success @click="onDownload" style="margin-right: 5px;"/>
-          <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
-        </template>
-      </TopBar>
     </template>
     <template #body>
+      <div class="main-nav-bar">
+        <Button icon="fa-solid fa-download" success @click="onDownload" style="margin-right: 5px;"/>
+        <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
+      </div>
       <div style="display: none">
         <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
           <input name="ui_defaults" value="SavedUIState=false;TextSidebar=false" type="hidden"/>
@@ -39,6 +32,16 @@ export default {
     MainLayout,
     TopBar
   },
+  props: {
+    config: {
+      type: Object,
+      default(rawProps) { return { viewers: { collabora: { extensions: [] }}}; }
+    },
+    tr: {
+      type: Function,
+      default(id) { console.warn('Missing tr for OfficeViewer'); return utils.translation(id); }
+    }
+  },
   emits: [ 'close' ],
   data() {
     return {
@@ -46,13 +49,6 @@ export default {
       wopiToken: '',
       wopiUrl: ''
     };
-  },
-  props: {
-    config: {},
-    tr: {
-      type: Function,
-      default(id) { console.warn('Missing tr for OfficeViewer'); return utils.translation(id); }
-    }
   },
   methods: {
     canHandle(entry) {
@@ -85,8 +81,6 @@ export default {
     onDownload() {
       window.location.href = this.entry.downloadFileUrl;
     }
-  },
-  mounted() {
   }
 };
 
@@ -98,6 +92,13 @@ export default {
   height: 100%;
   width: 100%;
   border: none;
+  padding: 5px 10px;
+}
+
+.main-nav-bar {
+  position: absolute;
+  width: 100%;
+  text-align: right;
 }
 
 .main-layout {

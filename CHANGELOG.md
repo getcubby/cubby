@@ -218,3 +218,7 @@
 * Avoid resetting the view on upload progress
 * Fix crash when calling setAdmin route
 * Move from superagent to Pankow fetcher()
+
+[2.1.7]
+* Improve OfficeViewer to reduce vertical space usage
+

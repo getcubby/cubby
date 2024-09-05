@@ -4,7 +4,9 @@ exports = module.exports = {
     getHandle,
     checkFileInfo,
     getFile,
-    putFile
+    putFile,
+    getSettings,
+    setSettings
 };
 
 var assert = require('assert'),
@@ -163,4 +165,20 @@ async function putFile(req, res, next) {
     }
 
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));
+}
+
+async function getSettings(req, res, next) {
+    const officeSettings = config.get('collabora');
+    return next(new HttpSuccess(200, officeSettings));
+}
+
+async function setSettings(req, res, next) {
+    try {
+        config.set('collabora', { host: req.body.host });
+    } catch (e) {
+        console.error(e);
+        return next(new HttpError(500, 'failed to commit office settings'));
+    }
+
+    next(new HttpSuccess(200, {}));
 }

@@ -17,7 +17,7 @@
 
         <div style="flex-grow: 1">&nbsp;</div>
 
-        <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available))  + ' used' : ''">
+        <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available)) + ' used' : ''">
           <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
         </div>
       </SideBar>
@@ -91,7 +91,7 @@
               </template>
             </DirectoryView>
           </div>
-          <PreviewPanel :parentEntry="entry" :selectedEntries="selectedEntries" :visible="previewPanelVisible"/>
+          <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" :visible="previewPanelVisible"/>
         </div>
         <FileUploader
           ref="fileUploader"
@@ -104,7 +104,7 @@
   </div>
 
   <!-- About Dialog -->
-  <Dialog title="About Cubby" ref="aboutDialog" rejectLabel="Close">
+  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close">
     <div>
       Cubby the painless file sharing solution!
       <br/>
@@ -115,7 +115,7 @@
   </Dialog>
 
   <!-- Office Dialog -->
-  <Dialog title="Office Integration" ref="officeDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onOfficeSettingsSubmit">
+  <Dialog title="Office Integration" ref="officeDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onOfficeSettingsSubmit">
     <div>
       <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
       <p>WOPI / Collabora hostname:</p>
@@ -127,7 +127,7 @@
   </Dialog>
 
   <!-- WebDAV Password Dialog -->
-  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onWebDavSettingsSubmit">
+  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onWebDavSettingsSubmit">
     <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
     <p>Set a WebDAV password (will overwrite old one):</p>
     <form @submit="onWebDavSettingsSubmit" @submit.prevent>
@@ -143,13 +143,13 @@
       <form @submit="onCreateShare" @submit.prevent>
         <!-- TODO optionDisabled="alreadyUsed"  -->
         <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
-        <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" optionKey="username" optionLabel="userAndDisplayName" placeholder="Select a user"/>
+        <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
         <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
       </form>
 
       <h3>Shared with</h3>
       <div>
-        <div v-for="link in shareDialog.sharedWith" class="shared-link">
+        <div v-for="link in shareDialog.sharedWith" class="shared-link" :key="link.id">
           <div>{{ link.receiverUsername || link.receiverEmail }}</div>
           <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
         </div>
@@ -175,7 +175,7 @@
 
       <h3>Shared Links</h3>
       <div>
-        <div v-for="link in shareDialog.sharedLinks" class="shared-link">
+        <div v-for="link in shareDialog.sharedLinks" class="shared-link" :key="link.id">
           <Button small outline @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
           <div>Created: {{ prettyLongDate(link.createdAt) }}</div>
           <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
@@ -283,7 +283,6 @@ export default {
       ImageViewer,
       InputDialog,
       LoginView,
-      Menu,
       Notification,
       OfficeViewer,
       PasswordInput,
@@ -398,6 +397,65 @@ export default {
           action: () => this.onUploadFolder()
         }]
       };
+    },
+    async mounted() {
+      const that = this;
+      function handleHash(hash) {
+        // we handle decoded paths internally
+        hash = decodeURIComponent(hash);
+
+        if (hash.indexOf('files/home/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
+        } else if (hash.indexOf('files/recent/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
+        } else if (hash.indexOf('files/shares/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
+        } else if (hash.indexOf('files/groups/') === 0) {
+          that.loadPath(hash.slice('files'.length));
+          that.view = VIEWS.MAIN;
+        } else if (hash.indexOf('users') === 0) {
+          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          that.$refs.usersView.refresh();
+          that.view = VIEWS.USERS;
+        } else if (hash.indexOf('settings/') === 0) {
+          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          that.view = VIEWS.SETTINGS;
+        } else {
+          window.location.hash = 'files/home/';
+        }
+      }
+
+      window.addEventListener('hashchange', () => {
+        // allows us to not reload but only change the hash
+        if (this.currentHash === decodeURIComponent(window.location.hash)) return;
+        this.currentHash = window.location.hash;
+
+        handleHash(window.location.hash.slice(1));
+      }, false);
+
+      this.mainModel = createMainModel(API_ORIGIN);
+      this.shareModel = createShareModel(API_ORIGIN);
+
+      try {
+        this.profile = await this.mainModel.getProfile();
+      } catch (e) {
+        if (e.cause && e.cause.status !== 401) return console.error('Failed to get profile.', e);
+      }
+
+      await this.refreshConfig();
+
+      this.directoryModel = createDirectoryModel(API_ORIGIN);
+
+      // initial load with hash if any
+      const hash = localStorage.returnTo || window.location.hash.slice(1);
+      localStorage.returnTo = '';
+
+      handleHash(window.location.hash.slice(1));
+
+      this.ready = true;
     },
     methods: {
       prettyFileSize,
@@ -994,65 +1052,6 @@ export default {
           window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
         }
       },
-    },
-    async mounted() {
-      const that = this;
-      function handleHash(hash) {
-        // we handle decoded paths internally
-        hash = decodeURIComponent(hash);
-
-        if (hash.indexOf('files/home/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('files/recent/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('files/shares/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('files/groups/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('users') === 0) {
-          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
-          that.$refs.usersView.refresh();
-          that.view = VIEWS.USERS;
-        } else if (hash.indexOf('settings/') === 0) {
-          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
-          that.view = VIEWS.SETTINGS;
-        } else {
-          window.location.hash = 'files/home/';
-        }
-      }
-
-      window.addEventListener('hashchange', () => {
-        // allows us to not reload but only change the hash
-        if (this.currentHash === decodeURIComponent(window.location.hash)) return;
-        this.currentHash = window.location.hash;
-
-        handleHash(window.location.hash.slice(1));
-      }, false);
-
-      this.mainModel = createMainModel(API_ORIGIN);
-      this.shareModel = createShareModel(API_ORIGIN);
-
-      try {
-        this.profile = await this.mainModel.getProfile();
-      } catch (e) {
-        if (e.cause && e.cause.status !== 401) return console.error('Failed to get profile.', e);
-      }
-
-      await this.refreshConfig();
-
-      this.directoryModel = createDirectoryModel(API_ORIGIN);
-
-      // initial load with hash if any
-      const hash = localStorage.returnTo || window.location.hash.slice(1);
-      localStorage.returnTo = '';
-
-      handleHash(window.location.hash.slice(1));
-
-      this.ready = true;
     }
 };
 

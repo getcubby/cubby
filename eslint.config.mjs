@@ -9,6 +9,7 @@ export default [
       // override/add rules settings here, such as:
       'vue/html-self-closing': 'off',
       'vue/html-closing-bracket-spacing': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
       'vue/attributes-order': 'off',
       'vue/max-attributes-per-line': 'off'
     }

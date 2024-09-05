@@ -23,14 +23,13 @@
 
 <script>
 
-import { MainLayout, TopBar, Button, utils } from 'pankow';
+import { MainLayout, Button, utils } from 'pankow';
 
 export default {
   name: 'OfficeViewer',
   components: {
     Button,
-    MainLayout,
-    TopBar
+    MainLayout
   },
   props: {
     config: {

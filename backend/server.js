@@ -2,7 +2,6 @@
 
 var express = require('express'),
     path = require('path'),
-    bodyParser = require('body-parser'),
     lastMile = require('connect-lastmile'),
     Dom = require('xmldom').DOMParser,
     xpath = require('xpath'),
@@ -151,11 +150,11 @@ function init(callback) {
     router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
     router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);
     router.get ('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, office.getFile);
-    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, bodyParser.raw(), office.putFile);
+    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw(), office.putFile);
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
-    app.use('/api', bodyParser.json());
-    app.use('/api', bodyParser.urlencoded({ extended: false, limit: '100mb' }));
+    app.use('/api', express.json());
+    app.use('/api', express.urlencoded({ extended: false, limit: '100mb' }));
     app.use(webdav.express());
 
     if (process.env.OIDC_ISSUER_BASE_URL) {

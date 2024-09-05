@@ -4,7 +4,7 @@
     </template>
     <template #body>
       <div class="main-nav-bar">
-        <Button icon="fa-solid fa-download" success @click="onDownload" style="margin-right: 5px;"/>
+        <Button icon="fa-solid fa-download" success :href="entry.downloadFileUrl" target="_blank" style="margin-right: 5px;"/>
         <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
       </div>
       <div style="display: none">
@@ -77,9 +77,6 @@ export default {
     onClose() {
       this.$refs.officeViewer.src = 'about:blank';
       this.$emit('close');
-    },
-    onDownload() {
-      window.location.href = this.entry.downloadFileUrl;
     }
   }
 };

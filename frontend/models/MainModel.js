@@ -54,14 +54,8 @@ export function createMainModel(origin) {
       return result.body.host || '';
     },
     async setWopiHost(wopiHost) {
-      let error, result;
-      try {
-        result = await fetcher.put(`${origin}/api/v1/settings/office`, { host: wopiHost });
-      } catch (e) {
-        error = e;
-      }
-
-      if (error || result.status !== 200) throw new Error('Failed to set wopi host', { cause: error || result })
+      const result = await fetcher.put(`${origin}/api/v1/settings/office`, { host: wopiHost });
+      if (result.status !== 200) throw new Error('Failed to set wopi host', result);
     },
     async getUsers() {
       let error, result;

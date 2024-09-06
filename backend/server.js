@@ -3,8 +3,6 @@
 var express = require('express'),
     path = require('path'),
     lastMile = require('connect-lastmile'),
-    Dom = require('xmldom').DOMParser,
-    xpath = require('xpath'),
     config = require('./config.js'),
     constants = require('./constants.js'),
     cors = require('./cors.js'),
@@ -86,38 +84,7 @@ function init(callback) {
     }
 
     router.get ('/api/v1/profile', users.isAuthenticated, users.profile);
-
-    router.get ('/api/v1/config', users.isAuthenticated, async function (req, res, next) {
-        // currently we only send configs for collabora
-
-        const tmp = {
-            viewers: {}
-        };
-
-        const collaboraHost = config.get('collabora.host', '');
-        if (collaboraHost) {
-            try {
-                const res = await fetch(`${collaboraHost}/hosting/discovery`);
-
-                const doc = new Dom().parseFromString(await res.text());
-                if (doc) {
-                    const nodes = xpath.select('/wopi-discovery/net-zone/app/action', doc);
-                    if (nodes) {
-                        // better handle with other viewers
-                        const filteredExtensions = [ 'txt', 'key', 'svg', 'bmp', 'png', 'gif', 'tiff', 'jpg', 'jpeg', 'pdf' ];
-                        const extensions = nodes.map(function (n) { return n.getAttribute('ext'); }).filter(function (e) { return !!e; }).filter((e) => filteredExtensions.indexOf(e) === -1);
-                        tmp.viewers.collabora = { extensions };
-                    }
-
-                    console.log(`Supported office extensions on ${collaboraHost}:`, tmp.viewers.collabora);
-                }
-            } catch (error) {
-                console.error('Failed to get collabora config. Disabling office viewer.', error);
-            }
-        }
-
-        next(new HttpSuccess(200, tmp));
-    });
+    router.get ('/api/v1/config', users.isAuthenticated, misc.getConfig);
 
     router.get ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.getSettings);
     router.put ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.setSettings);

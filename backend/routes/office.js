@@ -10,17 +10,19 @@ exports = module.exports = {
 };
 
 var assert = require('assert'),
+    config = require('../config.js'),
     crypto = require('crypto'),
     debug = require('debug')('cubby:routes:office'),
-    MainError = require('../mainerror.js'),
-    files = require('../files.js'),
-    translateResourcePath = require('./files.js').translateResourcePath,
-    config = require('../config.js'),
-    tokens = require('../tokens.js'),
     Dom = require('xmldom').DOMParser,
-    xpath = require('xpath'),
+    files = require('../files.js'),
     HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+    HttpSuccess = require('connect-lastmile').HttpSuccess,
+    MainError = require('../mainerror.js'),
+    office = require('../office.js'),
+    safe = require('safetydance'),
+    tokens = require('../tokens.js'),
+    translateResourcePath = require('./files.js').translateResourcePath,
+    xpath = require('xpath');
 
 const HANDLES = {};
 
@@ -173,10 +175,16 @@ async function getSettings(req, res, next) {
 }
 
 async function setSettings(req, res, next) {
-    try {
-        config.set('collabora', { host: req.body.host });
-    } catch (e) {
-        console.error(e);
+    // basic host testing
+    const [error] = await safe(office.getSupportedExtensions(req.body.host));
+    if (error) {
+        console.error(`Failed to connect to WOPI host ${req.body.host}`, error);
+        return next(new HttpError(412, 'Cannot connect to WOPI host'));
+    }
+
+    const [setError] = await safe(config.set('collabora', { host: req.body.host }));
+    if (setError) {
+        console.error(setError);
         return next(new HttpError(500, 'failed to commit office settings'));
     }
 

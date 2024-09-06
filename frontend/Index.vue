@@ -633,13 +633,12 @@ export default {
         this.$refs.officeDialog.open();
       },
       async onOfficeSettingsSubmit() {
-        console.log(this.officeDialog.wopiHost)
         try {
           await this.mainModel.setWopiHost(this.officeDialog.wopiHost);
         } catch (error) {
           if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
           else {
-            this.officeDialog.error = 'Unkown error, check logs';
+            this.officeDialog.error = error.message;
             console.error('Failed to set wopi host:', error)
           }
 

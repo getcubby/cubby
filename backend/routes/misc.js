@@ -1,19 +1,41 @@
 'use strict';
 
 exports = module.exports = {
+    getConfig,
     getPreview,
     download
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     archiver = require('archiver'),
+    config = require('../config.js'),
     debug = require('debug')('cubby:routes:misc'),
     files = require('../files.js'),
     MainError = require('../mainerror.js'),
+    office = require('../office.js'),
     path = require('path'),
     preview = require('../preview.js'),
+    safe = require('safetydance'),
     shares = require('../shares.js'),
-    HttpError = require('connect-lastmile').HttpError;
+    HttpError = require('connect-lastmile').HttpError,
+    HttpSuccess = require('connect-lastmile').HttpSuccess;
+
+async function getConfig(req, res, next) {
+    // currently we only send configs for collabora
+
+    const tmp = {
+        viewers: {}
+    };
+
+    const collaboraHost = config.get('collabora.host', '');
+    if (collaboraHost) {
+        const [error, extensions] = await safe(office.getSupportedExtensions(collaboraHost));
+        if (error) console.error('Failed to get collabora config. Disabling office viewer.', error);
+        else tmp.viewers.collabora = { extensions };
+    }
+
+    next(new HttpSuccess(200, tmp));
+}
 
 async function getPreview(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');

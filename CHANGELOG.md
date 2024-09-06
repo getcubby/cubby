@@ -222,3 +222,8 @@
 [2.1.7]
 * Improve OfficeViewer to reduce vertical space usage
 
+[2.1.8]
+* Add settings UI for OfficeViewer
+* Various dark mode fixes
+* Update dependencies
+

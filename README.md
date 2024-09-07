@@ -18,6 +18,8 @@ Download and build the app:
 curl -L https://git.cloudron.io/cloudron/cubby/-/archive/master/cubby-master.tar | tar x
 cd cubby-master
 npm install
+cd frontend
+npm install
 npm run build
 ```
 

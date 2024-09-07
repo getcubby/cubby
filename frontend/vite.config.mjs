@@ -15,6 +15,9 @@ export default defineConfig({
   },
   // https://vitejs.dev/guide/build.html#multi-page-app
   build: {
+    // output in project root /frontend-dist
+    outDir: '../frontend-dist',
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),

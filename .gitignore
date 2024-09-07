@@ -1,12 +1,13 @@
 .DS_Store
 node_modules
-/dist
+frontend-dist/
 
 .data/
 .groups/
 .thumbnails/
 .sessions/
 config.json
+.secret
 
 # local env files
 .env.local

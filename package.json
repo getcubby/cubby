@@ -4,9 +4,6 @@
   "private": true,
   "scripts": {
     "start": "npm run db-migrate && ./app.js",
-    "dev": "vite --port 5555 --force",
-    "build": "vite build",
-    "serve": "vite preview",
     "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
   },
   "dependencies": {
@@ -30,16 +27,11 @@
     "xpath": "0.0.34"
   },
   "devDependencies": {
-    "@fontsource/noto-sans": "^5.0.22",
-    "@vitejs/plugin-vue": "^5.1.3",
+    "@eslint/js": "^9.10.0",
     "chromedriver": "^128.0.1",
-    "eslint-plugin-vue": "^9.28.0",
+    "eslint": "^9.10.0",
     "expect.js": "^0.3.1",
     "mocha": "^10.7.3",
-    "pankow": "^2.0.0",
-    "pankow-viewers": "^1.0.5",
-    "selenium-webdriver": "^4.24.0",
-    "vite": "^5.4.3",
-    "vue": "^3.5.3"
+    "selenium-webdriver": "^4.24.0"
   }
 }

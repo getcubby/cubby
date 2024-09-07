@@ -227,3 +227,7 @@
 * Various dark mode fixes
 * Update dependencies
 
+[2.1.9]
+* Reduced UI flickering during load
+* Internal project layout refactoring
+

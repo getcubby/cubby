@@ -1137,6 +1137,12 @@ pre {
     flex-direction: column;
 }
 
+@media (prefers-color-scheme: dark) {
+  .side-bar {
+    filter: brightness(80%);
+  }
+}
+
 .side-bar-entry {
   cursor: pointer;
   color: white;

@@ -401,16 +401,15 @@ export default {
     },
     async mounted() {
       const that = this;
-      function handleHash(hash) {
+
+      async function handleHash(hash) {
         // we handle decoded paths internally
         hash = decodeURIComponent(hash);
 
         if (hash.indexOf('files/home/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
+          if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/recent/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
+          if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
@@ -439,22 +438,22 @@ export default {
 
       this.mainModel = createMainModel(API_ORIGIN);
       this.shareModel = createShareModel(API_ORIGIN);
+      this.directoryModel = createDirectoryModel(API_ORIGIN);
 
       try {
         this.profile = await this.mainModel.getProfile();
       } catch (e) {
-        if (e.cause && e.cause.status !== 401) return console.error('Failed to get profile.', e);
+        return console.error(e);
       }
 
-      await this.refreshConfig();
-
-      this.directoryModel = createDirectoryModel(API_ORIGIN);
+      if (this.profile) await this.refreshConfig();
+      else this.profile = {};
 
       // initial load with hash if any
       const hash = localStorage.returnTo || window.location.hash.slice(1);
       localStorage.returnTo = '';
 
-      handleHash(window.location.hash.slice(1));
+      await handleHash(window.location.hash.slice(1));
 
       this.ready = true;
     },
@@ -981,13 +980,14 @@ export default {
         this.entries = entry.files;
         this.viewer = '';
       },
+      // return false/true on fail/success
       async loadPath(path, forceLoad = false) {
         const resource = parseResourcePath(path || this.currentResourcePath);
 
         // clear potential viewer first
         if (this.viewer) this.viewer = '';
 
-        if (!forceLoad && this.currentResourcePath === resource.resourcePath) return;
+        if (!forceLoad && this.currentResourcePath === resource.resourcePath) return true;
 
         let entry;
         try {
@@ -996,9 +996,15 @@ export default {
           this.entries = [];
           entry = {};
 
-          if (error.status === 401 || error.status === 403) return this.onLogout();
-          else if (error.status === 404) return console.error('Failed to load entry', resource, error);
-          else console.error(error);
+          if (error.status === 401 || error.status === 403) {
+            this.onLogout();
+            return false;
+          } else if (error.status === 404) {
+            console.error('Failed to load entry', resource, error);
+            return false;
+          } else {
+            console.error(error);
+          }
         }
 
         // update the browser hash
@@ -1030,6 +1036,8 @@ export default {
         } else {
           this.clearSelection();
         }
+
+        return true;
       },
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;

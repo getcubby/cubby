@@ -4,14 +4,8 @@ export function createMainModel(origin) {
   return {
     name: 'MainModel',
     async getProfile() {
-      let error, result;
-      try {
-        result = await fetcher.get(`${origin}/api/v1/profile`);
-      } catch (e) {
-        error = e;
-      }
-
-      if (error || result.status !== 200) throw new Error('Failed to get profile', { cause: error || result })
+      const result = await fetcher.get(`${origin}/api/v1/profile`);
+      if (result.status !== 200) return null;
 
       return {
         username: result.body.username,

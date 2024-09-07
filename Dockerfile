@@ -3,13 +3,14 @@ FROM cloudron/base:4.2.0@sha256:46da2fffb36353ef714f97ae8e962bd2c212ca091108d768
 RUN mkdir -p /app/code
 WORKDIR /app/code
 
-COPY frontend /app/code/
-WORKDIR /app/code/frontend
-RUN npm install
-RUN npm run build
+# build frontend into /app/code/frontend-dist and purge build assets
+COPY frontend /app/code/frontend/
+RUN cd /app/code/frontend && npm install && npm run build && rm -rf /app/code/frontend
 
-COPY migrations backend package.json package-lock.json app.js start.sh /app/code/
-WORKDIR /app/code
+# backend
+COPY migrations /app/code/migrations/
+COPY backend /app/code/backend/
+COPY package.json package-lock.json app.js start.sh /app/code/
 RUN npm install --omit dev
 
 ENV CONFIG_FILE_PATH="/app/data/config.json"

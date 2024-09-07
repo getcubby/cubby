@@ -2,6 +2,7 @@
 
 const assert = require('assert'),
     fs = require('fs'),
+    constants = require('./constants.js'),
     crypto = require('crypto'),
     isBinaryFileSync = require('isbinaryfile').isBinaryFileSync,
     preview = require('./preview.js');
@@ -88,10 +89,10 @@ Entry.prototype.getPreviewUrl = function () {
     var mime = this.mimeType.split('/');
     var previewUrl = '/mime-types/' + mime[0] + '-' + mime[1] + '.svg';
 
-    if (fs.existsSync('frontend/public' + previewUrl)) return previewUrl;
+    if (fs.existsSync(constants.FRONTEND_DIST_PATH + previewUrl)) return previewUrl;
 
     previewUrl = '/mime-types/' + mime[0] + '-x-generic.svg';
-    if (fs.existsSync('frontend/public' + previewUrl)) return previewUrl;
+    if (fs.existsSync(constants.FRONTEND_DIST_PATH + previewUrl)) return previewUrl;
 
     return '/mime-types/application-octet-stream.svg';
 };

@@ -176,7 +176,7 @@ function init(callback) {
     }
 
     app.use(router);
-    app.use('/', express.static(path.resolve(__dirname, '../frontend-dist')));
+    app.use('/', express.static(constants.FRONTEND_DIST_PATH));
 
     app.use(lastMile());
 

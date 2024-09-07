@@ -1,6 +1,6 @@
 <template>
   <div class="user-table-container">
-    <Dialog :title="`Edit User ${edit.user.username}`" ref="editDialog" rejectLabel="Cancel" confirmLabel="Save" confirmStyle="success" @confirm="onEditSubmit">
+    <Dialog :title="`Edit User ${edit.user.username}`" ref="editDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onEditSubmit">
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
@@ -11,7 +11,6 @@
       <template #action="slotProps"><Button text="Edit" small @click="onEdit(slotProps)" style="float: right"/></template>
     </TableView>
     <div class="user-count">{{ tableModel.length }} Users</div>
-
   </div>
 </template>
 
@@ -33,10 +32,8 @@ export default {
     },
     props: {
       profile: {
-        type: Object
-      },
-      mainMenu: {
-        type: Array
+        type: Object,
+        default: function () { return {}; }
       }
     },
     data() {
@@ -69,6 +66,9 @@ export default {
         tableModel: []
       };
     },
+    async mounted() {
+      this.mainModel = createMainModel(API_ORIGIN);
+    },
     methods: {
       onEdit(user) {
         this.edit.admin = user.admin;
@@ -89,9 +89,6 @@ export default {
       async refresh() {
         this.tableModel = await this.mainModel.getUsers();
       }
-    },
-    async mounted() {
-      this.mainModel = createMainModel(API_ORIGIN);
     }
 };
 

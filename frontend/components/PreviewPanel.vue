@@ -1,30 +1,30 @@
 <template>
-    <div class="preview-container" :class="{ 'visible': visible }">
-      <div class="header" style="padding-bottom: 10px;">Details</div>
-      <div class="preview-icon-container">
-        <div class="preview-icon" v-for="entry in selectedEntries.slice(0, 15)" :key="entry.id" :style="{ backgroundImage: entry && getPreviewUrl(entry) ? 'url(' + getPreviewUrl(entry) + ')' : 'none' }"></div>
-        <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: entry && getPreviewUrl(entry) ? 'url(' + getPreviewUrl(entry) + ')' : 'none' }"></div>
-      </div>
-      <div class="detail" v-show="selectedEntries.length <= 1">
-        <p>Owner</p>
-        <span>{{ entry.owner }}</span>
-      </div>
-      <div class="detail" v-show="selectedEntries.length <= 1">
-        <p>Updated</p>
-        <span>{{ prettyLongDate(entry.mtime) }}</span>
-      </div>
-      <div class="detail" v-show="selectedEntries.length > 1">
-        <p>{{ selectedEntries.length }} files selected</p>
-      </div>
-      <div class="detail">
-        <p>Size</p>
-        <span>{{ prettyFileSize(combinedSize) }}</span>
-      </div>
-      <div class="detail" v-show="selectedEntries.length <= 1">
-        <p>Type</p>
-        <span >{{ entry.mimeType }}</span>
-      </div>
+  <div class="preview-container" :class="{ 'visible': visible }">
+    <div class="header" style="padding-bottom: 10px;">Details</div>
+    <div class="preview-icon-container">
+      <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
+      <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
     </div>
+    <div class="detail" v-show="selectedEntries.length <= 1">
+      <p>Owner</p>
+      <span>{{ entry.owner }}</span>
+    </div>
+    <div class="detail" v-show="selectedEntries.length <= 1">
+      <p>Updated</p>
+      <span>{{ prettyLongDate(entry.mtime) }}</span>
+    </div>
+    <div class="detail" v-show="selectedEntries.length > 1">
+      <p>{{ selectedEntries.length }} files selected</p>
+    </div>
+    <div class="detail">
+      <p>Size</p>
+      <span>{{ prettyFileSize(combinedSize) }}</span>
+    </div>
+    <div class="detail" v-show="selectedEntries.length <= 1">
+      <p>Type</p>
+      <span >{{ entry.mimeType }}</span>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -34,10 +34,6 @@ import { prettyLongDate, prettyFileSize } from 'pankow/utils';
 
 export default {
     name: 'PreviewPanel',
-    emits: [ 'close' ],
-    data() {
-        return {};
-    },
     props: {
         parentEntry: {
             type: Object,
@@ -48,6 +44,10 @@ export default {
             default: function () { return []; }
         },
         visible: Boolean
+    },
+    emits: [ 'close' ],
+    data() {
+        return {};
     },
     computed: {
         entry() {
@@ -61,8 +61,6 @@ export default {
         prettyLongDate,
         prettyFileSize,
         getPreviewUrl,
-    },
-    mounted() {
     }
 };
 

@@ -135,9 +135,9 @@ function init(callback) {
         app.use((req, res, next) => {
             res.oidc = {
                 login(options) {
-                    res.writeHead(200, { 'Content-Type': 'text/html' })
+                    res.writeHead(200, { 'Content-Type': 'text/html' });
                     res.write(require('fs').readFileSync(__dirname + '/oidc_develop_user_select.html', 'utf8').replaceAll('REDIRECT_URI', options.authorizationParams.redirect_uri));
-                    res.end()
+                    res.end();
                 }
             };
 
@@ -176,7 +176,7 @@ function init(callback) {
     }
 
     app.use(router);
-    app.use('/', express.static(constants.FRONTEND_DIST_PATH));
+    app.use('/', express.static(path.resolve(__dirname, '../frontend-dist')));
 
     app.use(lastMile());
 

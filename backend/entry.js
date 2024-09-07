@@ -1,8 +1,7 @@
 'use strict';
 
 const assert = require('assert'),
-    fs = require('fs'),
-    constants = require('./constants.js'),
+    mimeIcons = require('./mimeicons.js'),
     crypto = require('crypto'),
     isBinaryFileSync = require('isbinaryfile').isBinaryFileSync,
     preview = require('./preview.js');
@@ -86,13 +85,10 @@ Entry.prototype.getPreviewUrl = function () {
         return `/api/v1/preview/${type}/${ownerId}/${previewHash}`;
     }
 
-    var mime = this.mimeType.split('/');
-    var previewUrl = '/mime-types/' + mime[0] + '-' + mime[1] + '.svg';
+    const mime = this.mimeType.split('/');
 
-    if (fs.existsSync(constants.FRONTEND_DIST_PATH + previewUrl)) return previewUrl;
-
-    previewUrl = '/mime-types/' + mime[0] + '-x-generic.svg';
-    if (fs.existsSync(constants.FRONTEND_DIST_PATH + previewUrl)) return previewUrl;
+    if (mimeIcons[mime[0] + '-' + mime[1]]) return '/mime-types/' + mime[0] + '-' + mime[1] + '.svg';
+    if (mimeIcons[mime[0] + '-x-generic']) return '/mime-types/' + mime[0] + '-x-generic.svg';
 
     return '/mime-types/application-octet-stream.svg';
 };

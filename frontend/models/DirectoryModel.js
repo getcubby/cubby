@@ -38,6 +38,7 @@ export function createDirectoryModel(origin) {
     name: 'DirectoryModel',
     async get(resource) {
       const result = await fetcher.get(`${origin}/api/v1/files`, { type: 'json', path: resource.resourcePath });
+      if (result.status !== 200) throw result;
 
       const entry = result.body;
 
@@ -80,6 +81,7 @@ export function createDirectoryModel(origin) {
     },
     async getRawContent(resource) {
       const result = await fetcher.get(`${origin}/api/v1/files`, { type: 'raw', path: resource.resourcePath });
+      if (result.status !== 200) throw result;
       return result.body;
     },
     async saveFile(resource, content) {
@@ -165,7 +167,8 @@ export function createDirectoryModel(origin) {
     async newFolder(resource, newFolderName) {
       const newFolderPath = pathJoin(resource.resourcePath, newFolderName);
       try {
-        await fetcher.post(`${origin}/api/v1/files`, {}, { directory: true, path: newFolderPath });
+        const result = await fetcher.post(`${origin}/api/v1/files`, {}, { directory: true, path: newFolderPath });
+        if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED, error);
@@ -175,7 +178,8 @@ export function createDirectoryModel(origin) {
     },
     async exists(resource, relativeFilePath) {
       try {
-        await fetcher.head(`${origin}/api/v1/files`, { path: pathJoin(resource.resourcePath, relativeFilePath)});
+        const result = await fetcher.head(`${origin}/api/v1/files`, { path: pathJoin(resource.resourcePath, relativeFilePath)});
+        if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 404) return false;
@@ -263,7 +267,8 @@ export function createDirectoryModel(origin) {
     },
     async rename(fromResource, toResource) {
       try {
-        await fetcher.put(`${origin}/api/v1/files`, {}, { action: 'move', path: fromResource.resourcePath, new_path: toResource.resourcePath });
+        const result = await fetcher.put(`${origin}/api/v1/files`, {}, { action: 'move', path: fromResource.resourcePath, new_path: toResource.resourcePath });
+        if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 409) throw new DirectoryModelError(DirectoryModelError.CONFLICT, error);
@@ -272,7 +277,8 @@ export function createDirectoryModel(origin) {
     },
     async remove(resource) {
       try {
-        await fetcher.del(`${origin}/api/v1/files`, { path: resource.resourcePath });
+        const result = await fetcher.del(`${origin}/api/v1/files`, { path: resource.resourcePath });
+        if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         throw new DirectoryModelError(DirectoryModelError.GENERIC, error);
@@ -280,7 +286,8 @@ export function createDirectoryModel(origin) {
     },
     async copy(fromResource, toResource) {
       try {
-        await fetcher.put(`${origin}/api/v1/files`, {}, { action: 'copy', path: fromResource.resourcePath, new_path: toResource.resourcePath });
+        const result = await fetcher.put(`${origin}/api/v1/files`, {}, { action: 'copy', path: fromResource.resourcePath, new_path: toResource.resourcePath });
+        if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
         if (error.status === 409) throw new DirectoryModelError(DirectoryModelError.CONFLICT, error);

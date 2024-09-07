@@ -1,16 +1,12 @@
-'use strict';
-
 exports = module.exports = {
     add,
     get,
     remove
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     crypto = require('crypto'),
-    debug = require('debug')('cubby:tokens'),
-    database = require('./database.js'),
-    MainError = require('./mainerror.js');
+    database = require('./database.js');
 
 function postProcess(data) {
     return data;

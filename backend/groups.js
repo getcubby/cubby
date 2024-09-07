@@ -1,5 +1,3 @@
-'use strict';
-
 exports = module.exports = {
     add,
     get,
@@ -9,7 +7,7 @@ exports = module.exports = {
     isPartOf
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:groups'),
     database = require('./database.js'),
@@ -37,11 +35,11 @@ async function add(id, name, users = []) {
         args: [ id, name ]
     }];
 
-    for (let username of users) {
+    for (const username of users) {
         queries.push({
             query: 'INSERT INTO group_members (group_id, username) VALUES ($1, $2)',
             args: [ id, username ]
-        })
+        });
     }
 
     try {
@@ -74,7 +72,7 @@ async function list(username = '') {
     assert.strictEqual(typeof username, 'string');
 
     let query = 'SELECT * FROM groups';
-    let args = [];
+    const args = [];
 
     if (username) {
         query = `${query} LEFT OUTER JOIN group_members ON groups.id = group_members.group_id WHERE group_members.username = $1`;

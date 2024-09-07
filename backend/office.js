@@ -8,6 +8,8 @@ const Dom = require('xmldom').DOMParser,
 async function getSupportedExtensions(wopiHost) {
     const res = await fetch(`${wopiHost}/hosting/discovery`);
 
+    let extensions = [];
+
     const doc = new Dom().parseFromString(await res.text());
     if (doc) {
         const nodes = xpath.select('/wopi-discovery/net-zone/app/action', doc);

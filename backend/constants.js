@@ -1,6 +1,4 @@
-'use strict';
-
-var path = require('path');
+const path = require('path');
 
 exports = module.exports = {
     SESSION_SECRET_FILE_PATH: process.env.SESSION_SECRET_FILE_PATH || path.resolve(__dirname, '../.secret'),

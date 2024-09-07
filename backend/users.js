@@ -1,5 +1,3 @@
-'use strict';
-
 exports = module.exports = {
     webdavLogin,
     add,
@@ -13,17 +11,17 @@ exports = module.exports = {
     remove
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     crypto = require('crypto'),
     debug = require('debug')('cubby:users'),
     database = require('./database.js'),
     tokens = require('./tokens.js'),
     MainError = require('./mainerror.js');
 
-var CRYPTO_SALT_SIZE = 64; // 512-bit salt
-var CRYPTO_ITERATIONS = 10000; // iterations
-var CRYPTO_KEY_LENGTH = 512; // bits
-var CRYPTO_DIGEST = 'sha1'; // used to be the default in node 4.1.1 cannot change since it will affect existing db records
+const CRYPTO_SALT_SIZE = 64; // 512-bit salt
+const CRYPTO_ITERATIONS = 10000; // iterations
+const CRYPTO_KEY_LENGTH = 512; // bits
+const CRYPTO_DIGEST = 'sha1'; // used to be the default in node 4.1.1 cannot change since it will affect existing db records
 
 function postProcess(data) {
     data.displayName = data.display_name;

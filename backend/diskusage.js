@@ -1,5 +1,3 @@
-'use strict';
-
 exports = module.exports = {
     getByUsername,
     getByUsernameAndDirectory,
@@ -7,7 +5,7 @@ exports = module.exports = {
     calculate
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     debug = require('debug')('cubby:diskusage'),
     execSync = require('child_process').execSync,
     constants = require('./constants.js'),
@@ -106,7 +104,7 @@ async function calculate() {
 
     const userList = await users.list();
 
-    for (let user of userList) {
+    for (const user of userList) {
         await calculateByUsername(user.username);
     }
 }

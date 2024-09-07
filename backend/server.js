@@ -3,7 +3,6 @@
 var express = require('express'),
     path = require('path'),
     lastMile = require('connect-lastmile'),
-    config = require('./config.js'),
     constants = require('./constants.js'),
     cors = require('./cors.js'),
     users = require('./routes/users.js'),
@@ -14,9 +13,7 @@ var express = require('express'),
     webdav = require('./routes/webdav.js'),
     misc = require('./routes/misc.js'),
     oidc = require('express-openid-connect'),
-    session = require('express-session'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+    session = require('express-session');
 
 exports = module.exports = {
     init
@@ -51,7 +48,7 @@ function init(callback) {
     }
 
     // currently for local development. vite runs on http://localhost:5173
-    app.use(cors({ origins: [ '*' ], allowCredentials: true }))
+    app.use(cors({ origins: [ '*' ], allowCredentials: true }));
 
     app.use(session(sessionOptions));
 

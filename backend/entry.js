@@ -1,5 +1,3 @@
-'use strict';
-
 const assert = require('assert'),
     mimeIcons = require('./mimeicons.js'),
     crypto = require('crypto'),

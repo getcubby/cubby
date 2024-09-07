@@ -1,5 +1,3 @@
-'use strict';
-
 exports = module.exports = {
     HOME: 'home',
 
@@ -15,7 +13,7 @@ exports = module.exports = {
     recent
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:files'),
     fs = require('fs-extra'),
@@ -97,7 +95,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
         // rename .part after upload pipeline finished
         await fs.rename(fullFilePathPart, fullFilePath);
     } catch (error) {
-        try { await fs.remove(fullFilePathPart); } catch (e) {}
+        try { await fs.remove(fullFilePathPart); } catch (e) {} // eslint-disable-line
         throw new MainError(MainError.FS_ERROR, error);
     }
 
@@ -110,7 +108,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
         var fd = fs.openSync(fullFilePath);
         fs.futimesSync(fd, mtime, mtime);
     } catch (error) {
-        try { await fs.remove(fullFilePath); } catch (e) {}
+        try { await fs.remove(fullFilePath); } catch (e) {} // eslint-disable-line
         throw new MainError(MainError.FS_ERROR, error);
     }
 }
@@ -196,13 +194,13 @@ async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
     const ownerUsername = isGroup(usernameOrGroup) ? null : usernameOrGroup;
     const ownerGroup = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : null;
     const sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, filePath);
-    for (let file of files) {
+    for (const file of files) {
         file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, file.filePath);
     }
 
     // attach diskusage
     const size = await diskusage.getByUsernameAndDirectory(usernameOrGroup, filePath);
-    for (let file of files) {
+    for (const file of files) {
         if (!file.isDirectory) continue;
 
         file.size = await diskusage.getByUsernameAndDirectory(usernameOrGroup, file.filePath);
@@ -404,12 +402,12 @@ async function recent(usernameOrGroup, daysAgo = 3, maxFiles = 100) {
         throw new MainError(MainError.INTERNAL_ERROR, error);
     }
 
-    let result = [];
+    const result = [];
 
     const localResolvedPrefix = path.join(constants.USER_DATA_ROOT, usernameOrGroup);
 
     // we limit files to maxFiles
-    for (let filePath of filePaths.slice(0, maxFiles)) {
+    for (const filePath of filePaths.slice(0, maxFiles)) {
         try {
             const stat = await fs.stat(filePath);
             if (!stat.isFile()) throw new MainError(MainError.FS_ERROR, 'recent should only list files');

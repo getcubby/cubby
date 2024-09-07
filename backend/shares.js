@@ -1,5 +1,3 @@
-'use strict';
-
 exports = module.exports = {
     list,
     get,
@@ -9,7 +7,7 @@ exports = module.exports = {
     remove
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     debug = require('debug')('cubby:shares'),
     files = require('./files.js'),
     database = require('./database.js'),

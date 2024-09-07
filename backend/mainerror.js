@@ -1,7 +1,4 @@
-'use strict';
-
 const assert = require('assert'),
-    HttpError = require('connect-lastmile').HttpError,
     util = require('util');
 
 exports = module.exports = MainError;

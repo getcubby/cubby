@@ -1,8 +1,6 @@
-'use strict';
+const fs = require('fs');
 
-var fs = require('fs');
-
-var GLOBS2_FILE = '/usr/share/mime/globs2';
+const GLOBS2_FILE = '/usr/share/mime/globs2';
 
 var gTypes = null;
 
@@ -17,7 +15,7 @@ function init() {
     try {
         glob2 = fs.readFileSync(GLOBS2_FILE, 'utf8');
     } catch (e) {
-        console.log('Failed to load globs2 file. Using built-in media-types.');
+        console.log('Failed to load globs2 file. Using built-in media-types.', e);
         return;
     }
 

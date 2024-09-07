@@ -1,6 +1,4 @@
-'use strict';
-
-var assert = require('assert'),
+const assert = require('assert'),
     constants = require('./constants.js'),
     crypto = require('crypto'),
     debug = require('debug')('cubby:preview'),

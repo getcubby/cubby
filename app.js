@@ -1,18 +1,11 @@
 #!/usr/bin/env node
 
-'use strict';
-
-var constants = require('./backend/constants.js'),
+const constants = require('./backend/constants.js'),
     database = require('./backend/database.js'),
     fs = require('fs'),
     config = require('./backend/config.js'),
     diskusage = require('./backend/diskusage.js'),
     server = require('./backend/server.js');
-
-function exit(error) {
-    if (error) console.error(error);
-    process.exit(error ? 1 : 0);
-}
 
 database.init();
 config.init(process.env.CONFIG_FILE_PATH || 'config.json');
@@ -35,7 +28,10 @@ diskusage.calculate();
 setInterval(diskusage.calculate, 1000 * 60 * 60);
 
 server.init(async function (error) {
-    if (error) exit(error);
+    if (error) {
+        console.error(error);
+        process.exit(error ? 1 : 0);
+    }
 
     console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
     console.log('Cubby is up and running.');

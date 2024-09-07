@@ -1,12 +1,10 @@
-'use strict';
-
 exports = module.exports = {
     init,
     query,
     transaction
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     MainError = require('./mainerror.js'),
     debug = require('debug')('cubby:database'),
     pg = require('pg');
@@ -36,8 +34,8 @@ function init() {
 
     // the pool will emit an error on behalf of any idle clients
     // it contains if a backend error or network partition happens
-    gConnectionPool.on('error', function (error, client) {
-        console.error('Unexpected error on idle client', error)
+    gConnectionPool.on('error', function (error) {
+        console.error('Unexpected error on idle client', error);
     });
 }
 
@@ -61,7 +59,7 @@ async function transaction(queries) {
 
     try {
         await gConnectionPool.query('BEGIN');
-        for (let query of queries) {
+        for (const query of queries) {
             await gConnectionPool.query(query.query, query.args);
         }
         await gConnectionPool.query('COMMIT');

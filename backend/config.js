@@ -1,12 +1,10 @@
-'use strict';
-
 exports = module.exports = {
     init,
     get,
     set
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     debug = require('debug')('cubby:config'),
     fs = require('fs'),
     path = require('path'),
@@ -27,7 +25,7 @@ function init(configFilePath) {
 
     try {
         gConfig = require(gConfigFilePath);
-    } catch (e) {
+    } catch (e) { // eslint-disable-line
         debug(`Unable to load config file at ${gConfigFilePath}. Using defaults.`);
     }
 

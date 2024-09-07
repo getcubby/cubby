@@ -103,7 +103,7 @@ export default {
 .header {
     padding: 10px;
     text-align: left;
-    border-bottom: solid 2px #2196f3;
+    border-bottom: solid 2px var(--pankow-color-primary);
 }
 
 .detail > p {

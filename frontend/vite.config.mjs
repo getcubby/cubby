@@ -13,15 +13,10 @@ export default defineConfig({
       allow: ['..','../..','../../..']
     },
   },
-  // https://vitejs.dev/guide/build.html#multi-page-app
+  // https://vitejs.dev/config/build-options
   build: {
-    // output in project root /frontend-dist
     outDir: '../frontend-dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        index: resolve(__dirname, 'index.html'),
-      },
-    },
+    emptyOutDir: true, // by default false for outDir outside current folder
+    chunkSizeWarningLimit: 5000,  // really don't care so avoid warning
   },
 });

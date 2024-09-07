@@ -1,4 +1,4 @@
-import fetcher from '../fetcher.js';
+import { fetcher } from 'pankow';
 import { sanitize, pathJoin } from 'pankow/utils';
 import { parseResourcePath } from '../utils.js';
 

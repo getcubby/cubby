@@ -176,15 +176,18 @@ async function getSettings(req, res, next) {
 
 async function setSettings(req, res, next) {
     // basic host testing
-    const [error] = await safe(office.getSupportedExtensions(req.body.host));
+    const [error, result] = await safe(office.getSupportedExtensions(req.body.host));
     if (error) {
         console.error(`Failed to connect to WOPI host ${req.body.host}`, error);
         return next(new HttpError(412, 'Cannot connect to WOPI host'));
     }
 
-    const [setError] = await safe(config.set('collabora', { host: req.body.host }));
-    if (setError) {
-        console.error(setError);
+    if (result.length === 0) return next(new HttpError(412, 'Does not appear to be a supported WOPI host'));
+
+    try {
+        config.set('collabora', { host: req.body.host });
+    } catch (e) {
+        console.error(e);
         return next(new HttpError(500, 'failed to commit office settings'));
     }
 

@@ -1,4 +1,4 @@
-import fetcher from '../fetcher.js';
+import { fetcher } from 'pankow';
 
 export function createMainModel(origin) {
   return {
@@ -55,7 +55,8 @@ export function createMainModel(origin) {
     },
     async setWopiHost(wopiHost) {
       const result = await fetcher.put(`${origin}/api/v1/settings/office`, { host: wopiHost });
-      if (result.status !== 200) throw new Error('Failed to set wopi host', result);
+      if (result.status === 412) throw new Error(result.body.message);
+      if (result.status !== 200) throw new Error(`Unexptected ok status code ${result.status} ${result.statusText}`);
     },
     async getUsers() {
       let error, result;

@@ -1,4 +1,4 @@
-import fetcher from '../fetcher.js';
+import { fetcher } from 'pankow';
 
 export function createShareModel(origin) {
   return {

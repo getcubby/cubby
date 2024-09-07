@@ -115,7 +115,7 @@
   </Dialog>
 
   <!-- Office Dialog -->
-  <Dialog title="Office Integration" ref="officeDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onOfficeSettingsSubmit">
+  <Dialog title="Office Integration" ref="officeDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" :confirm-busy="officeDialog.confirmBusy" @confirm="onOfficeSettingsSubmit">
     <div>
       <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
       <p>WOPI / Collabora hostname:</p>
@@ -337,6 +337,7 @@ export default {
         },
         officeDialog: {
           error: '',
+          confirmBusy: false,
           wopiHost: ''
         },
         shareDialog: {
@@ -621,6 +622,7 @@ export default {
       },
       async onOfficeSettings() {
         this.officeDialog.error = '';
+        this.officeDialog.confirmBusy = false;
 
         try {
           this.officeDialog.wopiHost = await this.mainModel.getWopiHost();
@@ -633,14 +635,15 @@ export default {
         this.$refs.officeDialog.open();
       },
       async onOfficeSettingsSubmit() {
+        this.officeDialog.confirmBusy = true;
+
         try {
           await this.mainModel.setWopiHost(this.officeDialog.wopiHost);
         } catch (error) {
           if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
-          else {
-            this.officeDialog.error = error.message;
-            console.error('Failed to set wopi host:', error)
-          }
+          else this.officeDialog.error = error.message;
+
+          this.officeDialog.confirmBusy = false;
 
           return;
         }
@@ -648,6 +651,7 @@ export default {
         await this.refreshConfig();
 
         this.$refs.officeDialog.close();
+        this.officeDialog.confirmBusy = false;
       },
       async refreshConfig() {
         try {

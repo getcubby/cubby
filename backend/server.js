@@ -13,7 +13,6 @@ var express = require('express'),
     office = require('./routes/office.js'),
     webdav = require('./routes/webdav.js'),
     misc = require('./routes/misc.js'),
-    morgan = require('morgan'),
     oidc = require('express-openid-connect'),
     session = require('express-session'),
     HttpError = require('connect-lastmile').HttpError,
@@ -50,22 +49,6 @@ function init(callback) {
         app.enable('trust proxy');
         sessionOptions.cookie.secure = true;
     }
-
-    app.use(morgan(function (tokens, req, res) {
-        return [
-            tokens.method(req, res),
-            tokens.url(req, res).replace(/(access_token=)[^&]+/, '$1' + '<redacted>'),
-            tokens.status(req, res),
-            res.errorBody ? res.errorBody.status : '',  // attached by connect-lastmile. can be missing when router errors like 404
-            res.errorBody ? res.errorBody.message : '', // attached by connect-lastmile. can be missing when router errors like 404
-            tokens['response-time'](req, res), 'ms', '-',
-            tokens.res(req, res, 'content-length')
-        ].join(' ');
-    }, {
-        immediate: false,
-        // only log failed requests by default
-        // skip: function (req, res) { return res.statusCode < 400; }
-    }));
 
     // currently for local development. vite runs on http://localhost:5173
     app.use(cors({ origins: [ '*' ], allowCredentials: true }))

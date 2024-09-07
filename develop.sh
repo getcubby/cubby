@@ -6,7 +6,7 @@ HELP_MESSAGE="
 This script allows easier local development with a dockerized database
 
  Options:
-   --fresh         Start with a fresh database
+   --fresh         Start fresh. Empty database and frontend build
    --help          Show this message
 "
 
@@ -35,6 +35,9 @@ export POSTGRESQL_PORT=5432
 if [[ "${fresh}" == "true" ]]; then
     echo "=> Removing postgres container ${CONTAINER_NAME} if exists..."
     docker rm -f ${CONTAINER_NAME} || true
+
+    echo "=> Purge frontend build at frontend-dist/"
+    rm -rf frontend-dist
 fi
 
 OUT=`docker inspect ${CONTAINER_NAME}` || true
@@ -57,11 +60,19 @@ done
 echo "=> Ensure database"
 psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
 
+echo "=> Ensure frontend build"
+if [[ ! -d "frontend-dist" ]]; then
+    cd frontend
+    npm i
+    npm run build
+    cd ..
+fi
+
 echo "========================================================================================="
 echo ""
-echo "If running the vite dev server as below in a second terminal on the side for live-reload"
+echo "To run the vite dev server as below in a second terminal on the side for live-reload"
 echo ""
-echo "VITE_API_ORIGIN=http://localhost:3000 npm run dev"
+echo "cd frontend && VITE_API_ORIGIN=http://localhost:3000 npm run dev"
 echo ""
 echo "========================================================================================="
 

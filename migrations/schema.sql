@@ -61,3 +61,16 @@ CREATE TABLE group_members(
     username VARCHAR(128) REFERENCES users(username),
 
     UNIQUE (group_id, username));
+
+CREATE TABLE IF NOT EXISTS groupfolders(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    name VARCHAR(256) NOT NULL,
+    folder_path VARCHAR(512) NOT NULL,
+
+    PRIMARY KEY(id));
+
+CREATE TABLE groupfolders_members(
+    groupfolder_id VARCHAR(128) REFERENCES groupfolders(id),
+    username VARCHAR(128) REFERENCES users(username),
+
+    UNIQUE (groupfolder_id, username));

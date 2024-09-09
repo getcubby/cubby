@@ -17,7 +17,7 @@ var assert = require('assert'),
     util = require('util'),
     path = require('path'),
     shares = require('../shares.js'),
-    groups = require('../groups.js'),
+    groupFolders = require('../groupfolders.js'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;
@@ -50,16 +50,16 @@ async function translateResourcePath(user, filePath) {
 
         // actual path is without shares/<shareId>/
         return { resource, usernameOrGroup: share.ownerUsername || share.ownerGroup, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
-    } else if (resource === 'groups') {
+    } else if (resource === 'groupfolders') {
         const groupId = filePath.split('/')[1];
         if (!groupId) return null;
 
-        const group = await groups.get(groupId);
+        const group = await groupFolders.get(groupId);
 
         // check if the user is part of the group
-        if (!groups.isPartOf(group, user.username)) return null;
+        if (!groupFolders.isPartOf(group, user.username)) return null;
 
-        // actual path is without groups/<groupId>/
+        // actual path is without groupfolder/<groupId>/
         return { resource, usernameOrGroup: `group-${group.id}`, filePath: filePath.split('/').slice(2).join('/') };
     } else {
         return null;
@@ -263,15 +263,15 @@ async function get(req, res, next) {
 
             next(new HttpSuccess(200, entry.withoutPrivate()));
         }
-    } else if (resource === 'groups') {
-        const groupId = filePath.split('/')[1];
-        if (groupId) {
-            const group = await groups.get(groupId);
-            if (!group) return next(new HttpError(404, 'no such group'));
+    } else if (resource === 'groupfolders') {
+        const groupFolderId = filePath.split('/')[1];
+        if (groupFolderId) {
+            const group = await groupFolders.get(groupFolderId);
+            if (!group) return next(new HttpError(404, 'no such groupfolder'));
 
-            if (!groups.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
-            // actual path is without groups/<groupId>/
+            // actual path is without groupfolder/<groupId>/
             const groupFilePath = '/' + filePath.split('/').slice(2).join('/');
 
             let file;
@@ -283,7 +283,7 @@ async function get(req, res, next) {
             }
 
             if (type === 'raw') {
-                if (file.isDirectory) return res.redirect(`/#files/groups/${groupId}/`);
+                if (file.isDirectory) return res.redirect(`/#files/groupfolders/${groupFolderId}/`);
                 return res.sendFile(file._fullFilePath);
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
@@ -299,7 +299,7 @@ async function get(req, res, next) {
 
             next(new HttpSuccess(200, file.asGroup().withoutPrivate()));
         } else {
-            debug('listGroups');
+            debug('listGroupFolders');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
@@ -307,15 +307,15 @@ async function get(req, res, next) {
             let result = [];
 
             try {
-                result = await groups.list(req.user.username);
+                result = await groupFolders.list(req.user.username);
             } catch (error) {
                 return next(new HttpError(500, error));
             }
 
-            // Collect all file entries from groups
-            let memberOfGroups = [];
+            // Collect all file entries from groupfolder
+            const memberOfGroups = [];
             try {
-                for (let group of result) {
+                for (const group of result) {
                     let file = await files.get(`group-${group.id}`, '/');
 
                     file.fileName = group.name;
@@ -332,9 +332,9 @@ async function get(req, res, next) {
             }
 
             const entry = new Entry({
-                id: 'groups',
-                fullFilePath: '/groups',
-                fileName: 'Groups',
+                id: 'groupfolders',
+                fullFilePath: '/groupfolders',
+                fileName: 'Group Folder',
                 filePath: '/',
                 isDirectory: true,
                 isFile: false,

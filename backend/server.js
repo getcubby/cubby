@@ -1,19 +1,18 @@
-'use strict';
-
-var express = require('express'),
-    path = require('path'),
-    lastMile = require('connect-lastmile'),
-    constants = require('./constants.js'),
+const constants = require('./constants.js'),
     cors = require('./cors.js'),
-    users = require('./routes/users.js'),
+    express = require('express'),
     files = require('./routes/files.js'),
     fs = require('fs'),
-    shares = require('./routes/shares.js'),
-    office = require('./routes/office.js'),
-    webdav = require('./routes/webdav.js'),
+    groupFolders = require('./routes/groupfolders.js'),
+    lastMile = require('connect-lastmile'),
     misc = require('./routes/misc.js'),
+    office = require('./routes/office.js'),
     oidc = require('express-openid-connect'),
-    session = require('express-session');
+    path = require('path'),
+    session = require('express-session'),
+    shares = require('./routes/shares.js'),
+    users = require('./routes/users.js'),
+    webdav = require('./routes/webdav.js');
 
 exports = module.exports = {
     init
@@ -68,6 +67,12 @@ function init(callback) {
 
     router.get ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.getSettings);
     router.put ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.setSettings);
+
+    router.post('/api/v1/settings/groupfolders', users.isAuthenticated, users.isAdmin, groupFolders.add);
+    router.get ('/api/v1/settings/groupfolders', users.isAuthenticated, users.isAdmin, groupFolders.list);
+    router.get ('/api/v1/settings/groupfolders/:id', users.isAuthenticated, users.isAdmin, groupFolders.get);
+    router.put ('/api/v1/settings/groupfolders/:id', users.isAuthenticated, users.isAdmin, groupFolders.update);
+    router.del ('/api/v1/settings/groupfolders/:id', users.isAuthenticated, users.isAdmin, groupFolders.remove);
 
     router.get ('/api/v1/oidc/login', oidcLogin);
 

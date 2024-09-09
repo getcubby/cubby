@@ -84,18 +84,18 @@ function parseResourcePath(resourcePath) {
         result.id = 'shares';
         // without shareId we show the root (share listing)
         result.resourcePath = `/${result.type}/` + (result.shareId ? (result.shareId + result.path) : '');
-    } else if (resourcePath.indexOf('/groups/') === 0) {
-        result.type = 'groups';
+    } else if (resourcePath.indexOf('/groupfolders/') === 0) {
+        result.type = 'groupfolders';
         result.groupId = resourcePath.split('/')[2];
         result.path = resourcePath.slice(('/' + result.type + '/' + result.groupId).length) || '/';
-        // parent could be parten folder inside share or  the virutal groups folder
+        // parent could be parent folder inside share or  the virtual groupfolders
         if (!result.groupId || result.path === '/') {
-            result.parentResourcePath = '/groups/';
+            result.parentResourcePath = '/groupfolders/';
         } else {
             const oneFolderUp = result.path.slice(0, result.path.lastIndexOf('/'));
-            result.parentResourcePath = `/groups/${result.groupId}${oneFolderUp}/`;
+            result.parentResourcePath = `/groupfolders/${result.groupId}${oneFolderUp}/`;
         }
-        result.id = 'groups';
+        result.id = 'groupfolders';
         // without groupId we show the root (share listing)
         result.resourcePath = `/${result.type}/` + (result.groupId ? (result.groupId + result.path) : '');
     } else {

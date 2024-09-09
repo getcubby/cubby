@@ -6,14 +6,14 @@
   <div v-show="ready" style="height: 100%;">
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
-    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.MAIN">
+    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-        <!-- <a class="side-bar-entry" v-show="profile.username" href="#files/groups/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Files</a> -->
+        <a class="side-bar-entry" v-show="profile.username" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
 
@@ -26,6 +26,9 @@
           <template #left>
             <template v-if="view === VIEWS.USERS">
               <span style="font-size: 24px;">Users</span>
+            </template>
+            <template v-if="view === VIEWS.SETTINGS">
+              <span style="font-size: 24px;">Settings</span>
             </template>
             <template v-if="view === VIEWS.MAIN">
               <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
@@ -51,7 +54,9 @@
           </template>
         </TopBar>
 
-        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :main-menu="mainMenu" :profile="profile"/>
+        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
+        <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
+
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
             <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
@@ -252,6 +257,7 @@ import { createShareModel } from './models/ShareModel.js';
 
 import LoginView from './components/LoginView.vue';
 import UsersView from './components/UsersView.vue';
+import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 
@@ -261,7 +267,8 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 const VIEWS = {
   LOGIN: 'login',
   MAIN: 'main',
-  USERS: 'users'
+  USERS: 'users',
+  SETTINGS: 'settings'
 };
 
 const beforeUnloadListener = (event) => {
@@ -280,6 +287,7 @@ export default {
       Dropdown,
       FileUploader,
       GenericViewer,
+      SettingsView,
       ImageViewer,
       InputDialog,
       LoginView,
@@ -360,6 +368,11 @@ export default {
           visible: () => this.profile.admin,
           action: () => window.location.href = '#users'
         }, {
+          label: 'Settings',
+          icon: 'fa-solid fa-cog',
+          visible: () => this.profile.admin,
+          action: () => window.location.href = '#settings'
+        }, {
           label: 'WebDAV',
           icon: 'fa-solid fa-globe',
           action: this.onWebDavSettings
@@ -413,14 +426,14 @@ export default {
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('files/groups/') === 0) {
+        } else if (hash.indexOf('files/groupfolders/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
         } else if (hash.indexOf('users') === 0) {
           if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
           that.$refs.usersView.refresh();
           that.view = VIEWS.USERS;
-        } else if (hash.indexOf('settings/') === 0) {
+        } else if (hash.indexOf('settings') === 0) {
           if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
           that.view = VIEWS.SETTINGS;
         } else {
@@ -948,23 +961,23 @@ export default {
               route: '#files/shares/' + resource.shareId + '/'
             });
           }
-        } else if (resource.type === 'groups') {
+        } else if (resource.type === 'groupfolders') {
           this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
             return {
               label: decodeURIComponent(e),
-              route: '#files/groups/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
+              route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
             };
           });
           this.breadCrumbHome = {
             icon: 'fa-solid fa-user-group',
-            route: '#files/groups/'
+            route: '#files/groupfolders/'
           };
 
           // if we are not toplevel, add the share information
           if (entry.share) {
             this.breadCrumbs.unshift({
               label: entry.share.filePath.slice(1), // remove slash at the beginning
-              route: '#files/groups/' + resource.groupId + '/'
+              route: '#files/groupfolders/' + resource.groupId + '/'
             });
           }
         } else {
@@ -1041,7 +1054,7 @@ export default {
       },
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
-        else if (entry.group && entry.group.id) window.location.hash = `files/groups/${entry.group.id}${entry.filePath}`;
+        else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
         else window.location.hash = `files/home${entry.filePath}`;
       },
       onViewerClose() {

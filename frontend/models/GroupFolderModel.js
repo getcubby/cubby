@@ -31,7 +31,7 @@ export function createGroupFolderModel(origin) {
         error = e;
       }
 
-      if (error || result.status !== 200) throw new Error('Failed to delete groupFolder', { cause: error || result })
+      if (error || result.status !== 200) throw new Error('Failed to list groupFolders', { cause: error || result })
 
       return result.body.groupFolder;
     },

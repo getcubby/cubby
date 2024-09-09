@@ -16,11 +16,10 @@ const assert = require('assert'),
     MainError = require('./mainerror.js');
 
 function postProcess(data) {
-    data.groupFolderId = data.group_id;
-    delete data.group_id;
-
     data.folderPath = data.folder_path;
     delete data.folder_path;
+
+    if (!data.folderPath) data.folderPath = path.join(constants.GROUPS_DATA_ROOT, data.id);
 
     return data;
 }
@@ -84,10 +83,16 @@ async function list(username = '') {
     }
 
     const result = await database.query(query, args);
+    const folders = result.rows;
 
-    result.rows.forEach(postProcess);
+    folders.forEach(postProcess);
 
-    return result.rows;
+    for (const folder of folders) {
+        const result = await database.query('SELECT * FROM groupfolders_members WHERE groupfolder_id = $1', [ folder.id ]);
+        folder.members = result.rows.map((m) => m.username);
+    }
+
+    return folders;
 }
 
 async function remove(id) {

@@ -35,12 +35,4 @@ server.init(async function (error) {
 
     console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
     console.log('Cubby is up and running.');
-
-    // create test group
-    const groupFolders = require('./backend/groupfolders.js');
-    try {
-        await groupFolders.add('family', 'Family', '', [ 'admin', 'helena' ]);
-    } catch (e) {
-        console.error('---', e);
-    }
 });

@@ -2,19 +2,31 @@
   <div class="settings-container">
     <InputDialog ref="settingsInputDialog" />
 
-    <Dialog title="Add Group Folder" ref="addGroupFolderDialog" reject-label="Cancel" confirm-label="Add" confirm-style="success" @confirm="onAddGroupFolderSubmit">
+    <Dialog
+      title="Add Group Folder"
+      ref="addGroupFolderDialog"
+      reject-label="Cancel"
+      confirm-label="Add"
+      :confirm-busy="groupFolderAdd.busy"
+      :confirm-active="!!groupFolderAdd.name"
+      confirm-style="success"
+      @confirm="onAddGroupFolderSubmit"
+    >
+      <p class="has-error" v-show="groupFolderAdd.error">{{ groupFolderAdd.error }}</p>
       <label>Name</label>
-      <TextInput :model="groupFolderAdd.name" style="width: 100%;"/>
+      <TextInput v-model="groupFolderAdd.name" style="width: 100%;" />
+      <label>Slug</label>
+      <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
       <label>Path</label>
-      <TextInput :model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
+      <TextInput v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
       <label>Members</label>
       <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderAddRemoveMember(member)">{{ member.username }}</Button>
       <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
     </Dialog>
 
     <h1>Group Folders <Button outline icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h1>
-    <TableView style="max-height: 200px;" :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
-      <template #folderPath="slotProps">...{{ slotProps.folderPath.slice(-20) }} </template>
+    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
+      <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
       <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
       <template #action="slotProps">
         <div style="text-align: right;">
@@ -34,7 +46,7 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 import { createMainModel } from '../models/MainModel.js';
 import { createGroupFolderModel } from '../models/GroupFolderModel.js';
 
-import { Button, Checkbox, Dialog, Dropdown, InputDialog, TableView, TextInput } from 'pankow';
+import { Button, Dialog, InputDialog, TableView, TextInput } from 'pankow';
 
 const mainModel = createMainModel(API_ORIGIN);
 const groupFolderModel = createGroupFolderModel(API_ORIGIN);
@@ -43,9 +55,7 @@ export default {
     name: 'SettingsView',
     components: {
       Button,
-      Checkbox,
       Dialog,
-      Dropdown,
       InputDialog,
       TableView,
       TextInput
@@ -64,6 +74,10 @@ export default {
             label: 'Name',
             sort: true
           },
+          id: {
+            label: 'Slug',
+            sort: true
+          },
           folderPath: {
             label: 'Path',
             sort: true
@@ -79,19 +93,22 @@ export default {
         },
         groupFolderTableModel: [],
         groupFolderAdd: {
+          error: '',
+          busy: false,
           availableUsersMenuModel: [],
           name: '',
+          slug: '',
           folderPath: '',
           members: []
         }
       };
     },
     async mounted() {
-      await this.refreshGroupFolder();
+      await this.refreshGroupFolders();
       this.users = await mainModel.getUsers();
     },
     methods: {
-      async refreshGroupFolder() {
+      async refreshGroupFolders() {
         try {
           this.groupFolderTableModel = await groupFolderModel.list();
         } catch (error) {
@@ -99,7 +116,10 @@ export default {
         }
       },
       async onAddGroupFolder() {
+        this.groupFolderAdd.busy = false;
+        this.groupFolderAdd.error = '';
         this.groupFolderAdd.name = '';
+        this.groupFolderAdd.slug = '';
         this.groupFolderAdd.members = [];
         this.groupFolderAdd.folderPath = '';
         this.groupFolderAdd.availableUsersMenuModel = []
@@ -119,6 +139,25 @@ export default {
         this.groupFolderAdd.members.splice(index, 1);
       },
       async onAddGroupFolderSubmit() {
+        this.groupFolderAdd.busy = true;
+
+        try {
+          await groupFolderModel.add({
+            name: this.groupFolderAdd.name,
+            slug: this.groupFolderAdd.slug,
+            path: this.groupFolderAdd.folderPath,
+            members: this.groupFolderAdd.members.map((m) => m.username)
+          });
+        } catch (e) {
+          console.log(e)
+          this.groupFolderAdd.error = e.message;
+          this.groupFolderAdd.busy = false;
+          return;
+        }
+
+        await this.refreshGroupFolders();
+
+        this.groupFolderAdd.busy = false;
         this.$refs.addGroupFolderDialog.close();
       },
       onEditGroupFolder(groupFolder) {
@@ -134,7 +173,13 @@ export default {
 
         if (!yes) return;
 
-        console.log('remove', groupFolder);
+        try {
+          await groupFolderModel.remove(groupFolder.id);
+        } catch (e) {
+          return console.error('Failed to delete groupFolder.', e);
+        }
+
+        await this.refreshGroupFolders();
       }
     }
 };
@@ -144,7 +189,6 @@ export default {
 <style scoped>
 
 .settings-container {
-  max-width: 1024px;
   padding: 20px;
 }
 

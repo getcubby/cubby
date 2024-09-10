@@ -9,6 +9,7 @@ exports = module.exports = {
 
 const assert = require('assert'),
     constants = require('./constants.js'),
+    crypto = require('crypto'),
     debug = require('debug')('cubby:groupfolders'),
     database = require('./database.js'),
     fs = require('fs-extra'),
@@ -25,23 +26,26 @@ function postProcess(data) {
 }
 
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(id, name, folderPath = '', users = []) {
-    assert.strictEqual(typeof id, 'string');
+async function add(idOrSlug, name, folderPath = '', users = []) {
+    assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
     assert.strictEqual(typeof folderPath, 'string');
     assert(Array.isArray(users));
 
-    debug(`add: ${id} by name ${name} at ${folderPath} with users ${users}`);
+    // if no id slug is provided generate one
+    if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
+
+    debug(`add: ${idOrSlug} by name ${name} at ${folderPath} with users ${users}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name, folder_path) VALUES ($1, $2, $3)',
-        args: [ id, name, folderPath ]
+        args: [ idOrSlug, name, folderPath ]
     }];
 
     for (const username of users) {
         queries.push({
             query: 'INSERT INTO groupfolders_members (groupfolder_id, username) VALUES ($1, $2)',
-            args: [ id, username ]
+            args: [ idOrSlug, username ]
         });
     }
 
@@ -52,6 +56,10 @@ async function add(id, name, folderPath = '', users = []) {
         if (error.nestedError && error.nestedError.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
         throw error;
     }
+
+    // ensure folder
+    if (!folderPath) folderPath = path.join(constants.GROUPS_DATA_ROOT, idOrSlug);
+    fs.mkdirSync(folderPath, { recursive: true });
 }
 
 async function get(id) {

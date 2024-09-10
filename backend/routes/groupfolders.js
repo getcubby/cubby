@@ -8,17 +8,35 @@ exports = module.exports = {
 
 var assert = require('assert'),
     debug = require('debug')('cubby:routes:groupfolders'),
+    constants = require('../constants.js'),
     groupFolders = require('../groupfolders.js'),
     HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+    HttpSuccess = require('connect-lastmile').HttpSuccess,
+    MainError = require('../mainerror.js'),
+    path = require('path');
 
 async function add(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
     assert(req.user.admin === true);
 
-    debug(`add:`);
+    const name = req.body.name;
+    const folderPath = req.body.path || '';
+    const members = req.body.members || [];
+    const slug = req.body.slug || '';
 
-    next(new HttpError(500, 'not implemented'));
+    // TODO validate args
+
+    debug(`add: ${name} at ${folderPath || path.join(constants.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
+
+    try {
+        await groupFolders.add(slug, name, folderPath, members);
+    } catch (e) {
+        if (e.reason === MainError.NOT_FOUND) return next(new HttpError(412, 'member not found'));
+        if (e.reason === MainError.ALREADY_EXISTS) return next(new HttpError(412, 'slug already exists'));
+        return next(new HttpError(500, e));
+    }
+
+    return next(new HttpSuccess(200, {}));
 }
 
 async function list(req, res, next) {
@@ -65,5 +83,11 @@ async function remove(req, res, next) {
 
     debug(`remove: ${groupFolderId}`);
 
-    next(new HttpError(500, 'not implemented'));
+    try {
+        await groupFolders.remove(groupFolderId);
+    } catch (e) {
+        return next(new HttpError(500, e));
+    }
+
+    return next(new HttpSuccess(200, {}));
 }

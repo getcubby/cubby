@@ -231,3 +231,7 @@
 * Reduced UI flickering during load
 * Internal project layout refactoring
 
+[2.2.0]
+* Add group folder feature
+* Add settings view
+

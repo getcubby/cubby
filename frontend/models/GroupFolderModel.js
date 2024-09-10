@@ -6,7 +6,7 @@ export function createGroupFolderModel(origin) {
   return {
     name: 'GroupFolderModel',
     async add(data) {
-      let tmp = {
+      const tmp = {
         name: data.name,
         slug: data.slug,
         path: data.path,
@@ -24,8 +24,17 @@ export function createGroupFolderModel(origin) {
 
       return result.body.groupFolder;
     },
-    async remove(groupFolderId, purge = true) {
-      const result = await fetcher.del(`${origin}/api/v1/settings/groupfolders/${groupFolderId}`, { purge });
+    async update(id, data) {
+      const tmp = {
+        name: data.name,
+        members: data.members
+      };
+
+      const result = await fetcher.put(`${origin}/api/v1/settings/groupfolders/${id}`, tmp);
+      if (result.status !== 200) throw result.body;
+    },
+    async remove(id, purge = true) {
+      const result = await fetcher.del(`${origin}/api/v1/settings/groupfolders/${id}`, { purge });
       if (result.status !== 200) throw result.body;
     }
   };

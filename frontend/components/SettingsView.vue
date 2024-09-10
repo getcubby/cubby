@@ -20,8 +20,26 @@
       <label>Path</label>
       <TextInput v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
       <label>Members</label>
-      <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderAddRemoveMember(member)">{{ member.username }}</Button>
+      <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderAdd.members, member)">{{ member.username }}</Button>
       <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
+    </Dialog>
+
+    <Dialog
+      :title="`Edit Group Folder ${groupFolderEdit.id}`"
+      ref="editGroupFolderDialog"
+      reject-label="Cancel"
+      confirm-label="Save"
+      :confirm-busy="groupFolderEdit.busy"
+      :confirm-active="!!groupFolderEdit.name"
+      confirm-style="success"
+      @confirm="onEditGroupFolderSubmit"
+    >
+      <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>
+      <label>Name</label>
+      <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
+      <label>Members</label>
+      <Button v-for="member in groupFolderEdit.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderEdit.members, member)">{{ member.username }}</Button>
+      <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
     </Dialog>
 
     <h1>Group Folders <Button outline icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h1>
@@ -100,6 +118,13 @@ export default {
           slug: '',
           folderPath: '',
           members: []
+        },
+        groupFolderEdit: {
+          error: '',
+          busy: false,
+          availableUsersMenuModel: [],
+          name: '',
+          members: []
         }
       };
     },
@@ -114,6 +139,11 @@ export default {
         } catch (error) {
           console.error('Failed to list groupFolder.', error);
         }
+      },
+      // helper for member add/edit
+      groupFolderRemoveMember(members, member) {
+        const index = members.findIndex((m) => m.username === member.username);
+        members.splice(index, 1);
       },
       async onAddGroupFolder() {
         this.groupFolderAdd.busy = false;
@@ -133,10 +163,6 @@ export default {
         }
 
         this.$refs.addGroupFolderDialog.open();
-      },
-      groupFolderAddRemoveMember(member) {
-        const index = this.groupFolderAdd.members.findIndex((m) => m.username === member.username);
-        this.groupFolderAdd.members.splice(index, 1);
       },
       async onAddGroupFolderSubmit() {
         this.groupFolderAdd.busy = true;
@@ -161,7 +187,42 @@ export default {
         this.$refs.addGroupFolderDialog.close();
       },
       onEditGroupFolder(groupFolder) {
-        console.log('edit', groupFolder);
+        this.groupFolderEdit.busy = false;
+        this.groupFolderEdit.error = '';
+        this.groupFolderEdit.id = groupFolder.id;
+        this.groupFolderEdit.name = groupFolder.name;
+        this.groupFolderEdit.members = groupFolder.members.map((m) => this.users.find((u) => u.username === m) );
+        this.groupFolderEdit.availableUsersMenuModel = []
+        for (const user of this.users) {
+          const item = {
+            label: user.username,
+            visible: () => { return !this.groupFolderEdit.members.find((m) => m.username === user.username) },
+            action: () => { this.groupFolderEdit.members.push(user) }
+          };
+          this.groupFolderEdit.availableUsersMenuModel.push(item);
+        }
+
+        this.$refs.editGroupFolderDialog.open();
+      },
+      async onEditGroupFolderSubmit() {
+        this.groupFolderEdit.busy = true;
+
+        try {
+          await groupFolderModel.update(this.groupFolderEdit.id, {
+            name: this.groupFolderEdit.name,
+            members: this.groupFolderEdit.members.map((m) => m.username)
+          });
+        } catch (e) {
+          console.log(e)
+          this.groupFolderEdit.error = e.message;
+          this.groupFolderEdit.busy = false;
+          return;
+        }
+
+        await this.refreshGroupFolders();
+
+        this.groupFolderEdit.busy = false;
+        this.$refs.editGroupFolderDialog.close();
       },
       async onRemoveGroupFolder(groupFolder) {
         const yes = await this.$refs.settingsInputDialog.confirm({

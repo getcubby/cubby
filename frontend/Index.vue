@@ -1088,10 +1088,6 @@ hr {
     border-top: 1px solid #d0d0d0;
 }
 
-label {
-    font-weight: bold;
-}
-
 .container {
     display: flex;
     width: 100%;

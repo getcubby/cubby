@@ -2,6 +2,7 @@ exports = module.exports = {
     add,
     get,
     list,
+    update,
     remove,
 
     isPartOf
@@ -26,23 +27,23 @@ function postProcess(data) {
 }
 
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(idOrSlug, name, folderPath = '', users = []) {
+async function add(idOrSlug, name, folderPath = '', members = []) {
     assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
     assert.strictEqual(typeof folderPath, 'string');
-    assert(Array.isArray(users));
+    assert(Array.isArray(members));
 
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    debug(`add: ${idOrSlug} by name ${name} at ${folderPath} with users ${users}`);
+    debug(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${members}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name, folder_path) VALUES ($1, $2, $3)',
         args: [ idOrSlug, name, folderPath ]
     }];
 
-    for (const username of users) {
+    for (const username of members) {
         queries.push({
             query: 'INSERT INTO groupfolders_members (groupfolder_id, username) VALUES ($1, $2)',
             args: [ idOrSlug, username ]
@@ -101,6 +102,39 @@ async function list(username = '') {
     }
 
     return folders;
+}
+
+async function update(id, name, members) {
+    assert.strictEqual(typeof id, 'string');
+    assert.strictEqual(typeof name, 'string');
+    assert(Array.isArray(members));
+
+    debug(`update: ${id} by name ${name} with members ${members}`);
+
+    const queries = [{
+        query: 'UPDATE groupfolders set name=$1 WHERE id=$2',
+        args: [ name, id ]
+    }];
+
+    queries.push({
+        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id=$1',
+        args: [ id ]
+    });
+
+    for (const username of members) {
+        queries.push({
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, username) VALUES ($1, $2)',
+            args: [ id, username ]
+        });
+    }
+
+    try {
+        await database.transaction(queries);
+    } catch (error) {
+        if (error.nestedError && error.nestedError.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
+        if (error.nestedError && error.nestedError.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
+        throw error;
+    }
 }
 
 async function remove(id) {

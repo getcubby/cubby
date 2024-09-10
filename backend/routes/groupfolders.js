@@ -57,9 +57,9 @@ async function get(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
     assert(req.user.admin === true);
 
-    const groupFolderId = req.params.id;
+    const id = req.params.id;
 
-    debug(`get: ${groupFolderId}`);
+    debug(`get: ${id}`);
 
     next(new HttpError(500, 'not implemented'));
 }
@@ -68,23 +68,34 @@ async function update(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
     assert(req.user.admin === true);
 
-    const groupFolderId = req.params.id;
+    const id = req.params.id;
+    const name = req.body.name;
+    const members = req.body.members;
 
-    debug(`update: ${groupFolderId}`);
+    // TODO validate args
 
-    next(new HttpError(500, 'not implemented'));
+    debug(`update: ${id} with ${name} and members ${members.join(',')}`);
+
+    try {
+        await groupFolders.update(id, name, members);
+    } catch (e) {
+        if (e.reason === MainError.NOT_FOUND) return next(new HttpError(412, 'member not found'));
+        return next(new HttpError(500, e));
+    }
+
+    return next(new HttpSuccess(200, {}));
 }
 
 async function remove(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
     assert(req.user.admin === true);
 
-    const groupFolderId = req.params.id;
+    const id = req.params.id;
 
-    debug(`remove: ${groupFolderId}`);
+    debug(`remove: ${id}`);
 
     try {
-        await groupFolders.remove(groupFolderId);
+        await groupFolders.remove(id);
     } catch (e) {
         return next(new HttpError(500, e));
     }

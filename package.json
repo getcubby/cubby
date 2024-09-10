@@ -12,7 +12,7 @@
     "db-migrate": "^0.11.14",
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.3.7",
-    "express": "^4.19.2",
+    "express": "^4.20.0",
     "express-openid-connect": "^2.17.1",
     "express-session": "^1.18.0",
     "fs-extra": "^11.2.0",

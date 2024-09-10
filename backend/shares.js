@@ -31,8 +31,8 @@ function postProcess(data) {
     data.ownerUsername = data.owner_username;
     delete data.owner_username;
 
-    data.ownerGroup = data.owner_group;
-    delete data.owner_Group;
+    data.ownerGroupfolder = data.owner_groupfolder;
+    delete data.owner_groupfolder;
 
     data.filePath = data.file_path;
     delete data.file_path;
@@ -65,9 +65,9 @@ async function list(username) {
     return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail; });
 }
 
-async function create({ ownerUsername, ownerGroup, filePath, receiverUsername, receiverEmail, readonly, expiresAt = 0 }) {
+async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = 0 }) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
-    assert(typeof ownerGroup === 'string' || !ownerGroup);
+    assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
     assert(typeof receiverUsername === 'string' || !receiverUsername);
     assert(typeof receiverEmail === 'string' || !receiverEmail);
@@ -77,15 +77,15 @@ async function create({ ownerUsername, ownerGroup, filePath, receiverUsername, r
     // ensure we have a bool with false as fallback
     readonly = !!readonly;
 
-    debug(`create: ${ownerUsername || ownerGroup} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
+    debug(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
 
-    const fullFilePath = files.getValidFullPath(ownerUsername || `group-${ownerGroup}`, filePath);
+    const fullFilePath = files.getValidFullPath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
-    await database.query('INSERT INTO shares (id, owner_username, owner_group, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
-        shareId, ownerUsername || null, ownerGroup || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAt || null
+    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
+        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAt || null
     ]);
 
     const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
@@ -106,14 +106,14 @@ async function get(shareId) {
     return postProcess(result.rows[0]);
 }
 
-async function getByOwnerAndFilepath(ownerUsername, ownerGroup, filepath) {
+async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
-    assert(typeof ownerGroup === 'string' || !ownerGroup);
+    assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof filepath, 'string');
 
-    debug(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroup:${ownerGroup} filepath:${filepath}`);
+    debug(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE (owner_username = $1 OR owner_group = $2) AND file_path ~ $3', [ ownerUsername, ownerGroup, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    const result = await database.query('SELECT * FROM shares WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path ~ $3', [ ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 
@@ -122,19 +122,19 @@ async function getByOwnerAndFilepath(ownerUsername, ownerGroup, filepath) {
     return result.rows;
 }
 
-async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroup, receiver, filepath, exactMatch = false) {
+async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiver, filepath, exactMatch = false) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
-    assert(typeof ownerGroup === 'string' || !ownerGroup);
+    assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof receiver, 'string');
     assert.strictEqual(typeof filepath, 'string');
     assert.strictEqual(typeof exactMatch, 'boolean');
 
-    debug(`getByOwnerAndReceiverAndFilepath: ownerUsername:${ownerUsername} ownerGroup:${ownerGroup} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
+    debug(`getByOwnerAndReceiverAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
 
     let result;
 
-    if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_group = $3) AND file_path = $4', [ receiver, ownerUsername, ownerGroup, filepath ]);
-    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_group = $3) AND file_path ~ $4', [ receiver, ownerUsername, ownerGroup, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path = $4', [ receiver, ownerUsername, ownerGroupfolder, filepath ]);
+    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path ~ $4', [ receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 

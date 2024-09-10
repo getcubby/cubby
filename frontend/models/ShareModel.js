@@ -10,7 +10,7 @@ export function createShareModel(origin) {
       };
 
       if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
-      if (data.ownerGroup) tmp.ownerGroup = data.ownerGroup;
+      if (data.ownerGroupfolder) tmp.ownerGroupfolder = data.ownerGroupfolder;
       if (data.expiresAt) tmp.expiresAt = data.expiresAt;
       if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
 

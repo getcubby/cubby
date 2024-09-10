@@ -91,7 +91,8 @@
                 <div v-show="!entries.length" class="no-entries-placeholder">
                   <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
                   <p v-show="activeResourceType === 'recent'">No recent files</p>
-                  <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet.</p>
+                  <p v-show="activeResourceType === 'groupfolders'">Not part of any group folder yet</p>
+                  <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
                 </div>
               </template>
             </DirectoryView>
@@ -849,9 +850,9 @@ export default {
         const readonly = true; // always readonly for now
         const expiresAt = this.shareDialog.shareLink.expires ? this.shareDialog.shareLink.expiresAt : 0;
         const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
-        const ownerGroup = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
+        const ownerGroupfolder = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
 
-        const shareId = await this.shareModel.create({ ownerUsername, ownerGroup, path, readonly, expiresAt });
+        const shareId = await this.shareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, expiresAt });
 
         this.copyShareIdLinkToClipboard(shareId);
 
@@ -862,9 +863,9 @@ export default {
         const readonly = this.shareDialog.readonly;
         const receiverUsername = this.shareDialog.receiverUsername;
         const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
-        const ownerGroup = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
+        const ownerGroupfolder = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
 
-        await this.shareModel.create({ ownerUsername, ownerGroup, path, readonly, receiverUsername });
+        await this.shareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, receiverUsername });
 
         // reset the form
         this.shareDialog.error = '';

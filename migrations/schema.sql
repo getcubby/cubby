@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS tokens(
 CREATE TABLE IF NOT EXISTS shares(
     id VARCHAR(128) NOT NULL UNIQUE,
     owner_username VARCHAR(128),
-    owner_group VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
     file_path VARCHAR(256) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS shares(
 
     FOREIGN KEY(receiver_username) REFERENCES users(username),
     FOREIGN KEY(owner_username) REFERENCES users(username),
-    ownerGroupConstraint FOREIGN KEY(owner_group) REFERENCES groups(id),
+    ownerGroupConstraint FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
     PRIMARY KEY(id));
 
 CREATE TABLE IF NOT EXISTS groups(

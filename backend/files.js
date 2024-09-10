@@ -26,15 +26,15 @@ const assert = require('assert'),
     diskusage = require('./diskusage.js'),
     MainError = require('./mainerror.js');
 
-function isGroup(usernameOrGroup) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+function isGroupfolder(usernameOrGroupfolder) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
 
-    return usernameOrGroup.indexOf('group-') === 0;
+    return usernameOrGroupfolder.indexOf('groupfolder-') === 0;
 }
 
-function getValidFullPath(usernameOrGroup, filePath) {
-    const dataRoot = isGroup(usernameOrGroup) ? constants.GROUPS_DATA_ROOT : constants.USER_DATA_ROOT;
-    const identifier = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : usernameOrGroup;
+function getValidFullPath(usernameOrGroupfolder, filePath) {
+    const dataRoot = isGroupfolder(usernameOrGroupfolder) ? constants.GROUPS_DATA_ROOT : constants.USER_DATA_ROOT;
+    const identifier = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : usernameOrGroupfolder;
 
     fs.mkdirSync(path.join(dataRoot, identifier), { recursive: true });
 
@@ -44,11 +44,11 @@ function getValidFullPath(usernameOrGroup, filePath) {
     return fullFilePath;
 }
 
-async function addDirectory(usernameOrGroup, filePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function addDirectory(usernameOrGroupfolder, filePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debug('addDirectory:', fullFilePath);
@@ -62,17 +62,17 @@ async function addDirectory(usernameOrGroup, filePath) {
     }
 }
 
-async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, overwrite) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime, overwrite) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strictEqual(typeof stream, 'object');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`addOrOverwriteFile: ${usernameOrGroup} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
+    debug(`addOrOverwriteFile: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
     var stat;
     try {
@@ -100,7 +100,7 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
     }
 
     // kick off in background
-    diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
+    diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullFilePath));
 
     if (!mtime) return;
 
@@ -113,17 +113,17 @@ async function addOrOverwriteFile(usernameOrGroup, filePath, stream, mtime, over
     }
 }
 
-async function addOrOverwriteFileContents(usernameOrGroup, filePath, content, mtime, overwrite) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strict(Buffer.isBuffer(content));
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`addOrOverwriteFileContents: ${usernameOrGroup} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
+    debug(`addOrOverwriteFileContents: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
     var stat;
     try {
@@ -141,7 +141,7 @@ async function addOrOverwriteFileContents(usernameOrGroup, filePath, content, mt
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullFilePath));
 
     if (!mtime) return;
 
@@ -153,13 +153,13 @@ async function addOrOverwriteFileContents(usernameOrGroup, filePath, content, mt
     }
 }
 
-async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof fullFilePath, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof stats, 'object');
 
-    debug(`getDirectory: from ${usernameOrGroup} at ${fullFilePath} filePath:${filePath}`);
+    debug(`getDirectory: from ${usernameOrGroupfolder} at ${fullFilePath} filePath:${filePath}`);
 
     let files;
 
@@ -182,7 +182,7 @@ async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
                 mtime: file.stat.mtime,
                 isDirectory: file.stat.isDirectory(),
                 isFile: file.stat.isFile(),
-                owner: usernameOrGroup,
+                owner: usernameOrGroupfolder,
                 mimeType: file.stat.isDirectory() ? 'inode/directory' : mime(file.name)
             });
         });
@@ -191,19 +191,19 @@ async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
     }
 
     // attach shares
-    const ownerUsername = isGroup(usernameOrGroup) ? null : usernameOrGroup;
-    const ownerGroup = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : null;
-    const sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, filePath);
+    const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
+    const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
+    const sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath);
     for (const file of files) {
-        file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, file.filePath);
+        file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, file.filePath);
     }
 
     // attach diskusage
-    const size = await diskusage.getByUsernameAndDirectory(usernameOrGroup, filePath);
+    const size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, filePath);
     for (const file of files) {
         if (!file.isDirectory) continue;
 
-        file.size = await diskusage.getByUsernameAndDirectory(usernameOrGroup, file.filePath);
+        file.size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, file.filePath);
     }
 
     return new Entry({
@@ -214,27 +214,27 @@ async function getDirectory(usernameOrGroup, fullFilePath, filePath, stats) {
         mtime: stats.mtime,
         isDirectory: true,
         isFile: false,
-        owner: usernameOrGroup,
+        owner: usernameOrGroupfolder,
         sharedWith: sharedWith || [],
         mimeType: 'inode/directory',
         files: files
     });
 }
 
-async function getFile(usernameOrGroup, fullFilePath, filePath, stats) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof fullFilePath, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof stats, 'object');
 
-    debug(`getFile: ${usernameOrGroup} ${fullFilePath}`);
+    debug(`getFile: ${usernameOrGroupfolder} ${fullFilePath}`);
 
-    const ownerUsername = isGroup(usernameOrGroup) ? null : usernameOrGroup;
-    const ownerGroup = isGroup(usernameOrGroup) ? usernameOrGroup.slice('group-'.length) : null;
+    const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
+    const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
 
     let result;
     try {
-        result = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroup, filePath);
+        result = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath);
     } catch (error) {
         // TODO not sure what to do here
         console.error(error);
@@ -244,7 +244,7 @@ async function getFile(usernameOrGroup, fullFilePath, filePath, stats) {
 
     if (stats.isDirectory()) {
         try {
-            size = await diskusage.getByUsernameAndDirectory(usernameOrGroup, filePath);
+            size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, filePath);
         } catch (error) {
             console.error(error);
         }
@@ -261,25 +261,25 @@ async function getFile(usernameOrGroup, fullFilePath, filePath, stats) {
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),
         sharedWith: result || [],
-        owner: usernameOrGroup,
+        owner: usernameOrGroupfolder,
         mimeType: stats.isDirectory() ? 'inode/directory' : mime(filePath)
     });
 }
 
-async function get(usernameOrGroup, filePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function get(usernameOrGroupfolder, filePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`get: ${usernameOrGroup} ${filePath}`);
+    debug(`get: ${usernameOrGroupfolder} ${filePath}`);
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     let result;
     try {
         const stat = await fs.stat(fullFilePath);
-        if (stat.isDirectory()) result = await getDirectory(usernameOrGroup, fullFilePath, filePath, stat);
-        if (stat.isFile()) result = await getFile(usernameOrGroup, fullFilePath, filePath, stat);
+        if (stat.isDirectory()) result = await getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stat);
+        if (stat.isFile()) result = await getFile(usernameOrGroupfolder, fullFilePath, filePath, stat);
     } catch (error) {
         if (error.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
         throw new MainError(MainError.FS_ERROR, error);
@@ -288,13 +288,13 @@ async function get(usernameOrGroup, filePath) {
     return result;
 }
 
-async function head(usernameOrGroup, filePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function head(usernameOrGroupfolder, filePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`head: ${usernameOrGroup} ${filePath}`);
+    debug(`head: ${usernameOrGroupfolder} ${filePath}`);
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     try {
@@ -307,7 +307,7 @@ async function head(usernameOrGroup, filePath) {
             isDirectory: stat.isDirectory(),
             isFile: stat.isFile(),
             // sharedWith: result || [],
-            owner: usernameOrGroup,
+            owner: usernameOrGroupfolder,
             mimeType: stat.isDirectory() ? 'inode/directory' : mime(filePath)
         };
     } catch (error) {
@@ -316,16 +316,16 @@ async function head(usernameOrGroup, filePath) {
     }
 }
 
-async function move(usernameOrGroup, filePath, newUsernameOrGroup, newFilePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
-    assert.strictEqual(typeof newUsernameOrGroup, 'string');
+    assert.strictEqual(typeof newUsernameOrGroupfolder, 'string');
     assert.strictEqual(typeof newFilePath, 'string');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    const fullNewFilePath = getValidFullPath(newUsernameOrGroup, newFilePath);
+    const fullNewFilePath = getValidFullPath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debug(`move ${fullFilePath} -> ${fullNewFilePath}`);
@@ -339,20 +339,20 @@ async function move(usernameOrGroup, filePath, newUsernameOrGroup, newFilePath) 
     }
 
     // TODO maybe be smart to check if folders are within the same parent folder
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullNewFilePath));
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullFilePath));
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullNewFilePath));
 }
 
-async function copy(usernameOrGroup, filePath, newUsernameOrGroup, newFilePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
-    assert.strictEqual(typeof newUsernameOrGroup, 'string');
+    assert.strictEqual(typeof newUsernameOrGroupfolder, 'string');
     assert.strictEqual(typeof newFilePath, 'string');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    const fullNewFilePath = getValidFullPath(newUsernameOrGroup, newFilePath);
+    const fullNewFilePath = getValidFullPath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debug(`copy ${fullFilePath} -> ${fullNewFilePath}`);
@@ -365,14 +365,14 @@ async function copy(usernameOrGroup, filePath, newUsernameOrGroup, newFilePath) 
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullNewFilePath));
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullNewFilePath));
 }
 
-async function remove(usernameOrGroup, filePath) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function remove(usernameOrGroupfolder, filePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, filePath);
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debug(`remove ${fullFilePath}`);
@@ -383,14 +383,14 @@ async function remove(usernameOrGroup, filePath) {
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroup, path.dirname(fullFilePath));
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, path.dirname(fullFilePath));
 }
 
-async function recent(usernameOrGroup, daysAgo = 3, maxFiles = 100) {
-    assert.strictEqual(typeof usernameOrGroup, 'string');
+async function recent(usernameOrGroupfolder, daysAgo = 3, maxFiles = 100) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof daysAgo, 'number');
 
-    const fullFilePath = getValidFullPath(usernameOrGroup, '/');
+    const fullFilePath = getValidFullPath(usernameOrGroupfolder, '/');
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     let filePaths = [];
@@ -404,14 +404,14 @@ async function recent(usernameOrGroup, daysAgo = 3, maxFiles = 100) {
 
     const result = [];
 
-    const localResolvedPrefix = path.join(constants.USER_DATA_ROOT, usernameOrGroup);
+    const localResolvedPrefix = path.join(constants.USER_DATA_ROOT, usernameOrGroupfolder);
 
     // we limit files to maxFiles
     for (const filePath of filePaths.slice(0, maxFiles)) {
         try {
             const stat = await fs.stat(filePath);
             if (!stat.isFile()) throw new MainError(MainError.FS_ERROR, 'recent should only list files');
-            result.push(await getFile(usernameOrGroup, filePath, filePath.slice(localResolvedPrefix.length), stat));
+            result.push(await getFile(usernameOrGroupfolder, filePath, filePath.slice(localResolvedPrefix.length), stat));
         } catch (error) {
             console.error(`Error in getting recent file ${filePath}`, error);
         }

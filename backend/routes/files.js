@@ -38,7 +38,7 @@ async function translateResourcePath(user, filePath) {
     if (resource !== 'shares' && !user) return null;
 
     if (resource === 'home') {
-        return { resource, usernameOrGroup: user.username, filePath };
+        return { resource, usernameOrGroupfolder: user.username, filePath };
     } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
         if (!shareId) return null;
@@ -49,7 +49,7 @@ async function translateResourcePath(user, filePath) {
         if (user && share.receiverUsername && share.receiverUsername !== user.username) return null;
 
         // actual path is without shares/<shareId>/
-        return { resource, usernameOrGroup: share.ownerUsername || share.ownerGroup, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+        return { resource, usernameOrGroupfolder: share.ownerUsername || share.ownerGroupfolder, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
     } else if (resource === 'groupfolders') {
         const groupId = filePath.split('/')[1];
         if (!groupId) return null;
@@ -60,7 +60,7 @@ async function translateResourcePath(user, filePath) {
         if (!groupFolders.isPartOf(group, user.username)) return null;
 
         // actual path is without groupfolder/<groupId>/
-        return { resource, usernameOrGroup: `group-${group.id}`, filePath: filePath.split('/').slice(2).join('/') };
+        return { resource, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: filePath.split('/').slice(2).join('/') };
     } else {
         return null;
     }
@@ -83,8 +83,8 @@ async function add(req, res, next) {
     debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
    try {
-        if (directory) await files.addDirectory(subject.usernameOrGroup, subject.filePath);
-        else await files.addOrOverwriteFile(subject.usernameOrGroup, subject.filePath, req, mtime, overwrite);
+        if (directory) await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
+        else await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
         return next(new HttpError(500, error));
@@ -104,7 +104,7 @@ async function head(req, res, next) {
 
     let result;
     try {
-        result = await files.head(subject.usernameOrGroup, subject.filePath);
+        result = await files.head(subject.usernameOrGroupfolder, subject.filePath);
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         return next(new HttpError(500, error));
@@ -192,7 +192,7 @@ async function get(req, res, next) {
 
             let file;
             try {
-                file = await files.get(share.ownerUsername || `group-${share.ownerGroup}`, path.join(share.filePath, shareFilePath));
+                file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath));
             } catch (error) {
                 if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
                 return next(new HttpError(500, error));
@@ -229,9 +229,9 @@ async function get(req, res, next) {
             }
 
             // Collect all file entries from shares
-            let sharedFiles = [];
-            for (let share of result) {
-                const owner = share.ownerGroup ? `group-${share.ownerGroup}` : share.ownerUsername;
+            const sharedFiles = [];
+            for (const share of result) {
+                const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUsername;
 
                 try {
                     let file = await files.get(owner, share.filePath);
@@ -276,7 +276,7 @@ async function get(req, res, next) {
 
             let file;
             try {
-                file = await files.get(`group-${group.id}`, groupFilePath);
+                file = await files.get(`groupfolder-${group.id}`, groupFilePath);
             } catch (error) {
                 if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
                 return next(new HttpError(500, error));
@@ -316,7 +316,7 @@ async function get(req, res, next) {
             const memberOfGroups = [];
             try {
                 for (const group of result) {
-                    let file = await files.get(`group-${group.id}`, '/');
+                    let file = await files.get(`groupfolder-${group.id}`, '/');
 
                     file.fileName = group.name;
                     file.isShare = false;
@@ -358,7 +358,7 @@ async function update(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    let newFilePath = req.query.new_path;
+    const newFilePath = req.query.new_path;
     if (!newFilePath) return next(new HttpError(400, 'action requires new_path argument'));
 
     // from
@@ -369,12 +369,12 @@ async function update(req, res, next) {
     const newSubject =  await translateResourcePath(req.user, newFilePath);
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`update: [${action}] ${subject.resource} ${subject.usernameOrGroup} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroup} ${newSubject.filePath}`);
+    debug(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
 
     // TODO support shares
     try {
-        if (action === 'move') await files.move(subject.usernameOrGroup, subject.filePath, newSubject.usernameOrGroup, newSubject.filePath);
-        else if (action === 'copy') await files.copy(subject.usernameOrGroup, subject.filePath, newSubject.usernameOrGroup, newSubject.filePath);
+        if (action === 'move') await files.move(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
+        else if (action === 'copy') await files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
@@ -386,16 +386,16 @@ async function update(req, res, next) {
 }
 
 async function remove(req, res, next) {
-    let filePath = req.query.path;
+    const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
     const subject = await translateResourcePath(req.user, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`remove: ${subject.resource} ${subject.usernameOrGroup} ${subject.filePath}`);
+    debug(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 
     try {
-        await files.remove(subject.usernameOrGroup, subject.filePath);
+        await files.remove(subject.usernameOrGroupfolder, subject.filePath);
     } catch (error) {
         return next(new HttpError(500, error));
     }

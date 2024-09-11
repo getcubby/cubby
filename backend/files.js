@@ -1,6 +1,8 @@
 exports = module.exports = {
     HOME: 'home',
 
+    isGroupfolder,
+
     getValidFullPath,
     addDirectory,
     addOrOverwriteFile,

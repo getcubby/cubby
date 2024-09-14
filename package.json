@@ -12,7 +12,7 @@
     "db-migrate": "^0.11.14",
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.3.7",
-    "express": "^4.20.0",
+    "express": "^4.21.0",
     "express-openid-connect": "^2.17.1",
     "express-session": "^1.18.0",
     "fs-extra": "^11.2.0",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
-    "chromedriver": "^128.0.1",
+    "chromedriver": "^128.0.3",
     "eslint": "^9.10.0",
     "expect.js": "^0.3.1",
     "mocha": "^10.7.3",

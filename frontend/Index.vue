@@ -16,10 +16,6 @@
         <a class="side-bar-entry" v-show="profile.username" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
-
-        <div v-show="profile.diskusage" :title="profile.diskusage ? (prettyFileSize(profile.diskusage.used) + ' of ' + prettyFileSize(profile.diskusage.available)) + ' used' : ''">
-          <ProgressBar class="diskusage" :value="profile.diskusage ? ((profile.diskusage.used / profile.diskusage.size) * 100) : 0">&nbsp;</ProgressBar>
-        </div>
       </SideBar>
       <div class="content">
         <TopBar :gap="false">
@@ -239,7 +235,6 @@ import {
   Menu,
   Notification,
   PasswordInput,
-  ProgressBar,
   SideBar,
   TextInput,
   TopBar
@@ -297,7 +292,6 @@ export default {
       PasswordInput,
       PdfViewer,
       PreviewPanel,
-      ProgressBar,
       SideBar,
       UsersView,
       TextViewer,

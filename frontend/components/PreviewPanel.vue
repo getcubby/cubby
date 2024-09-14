@@ -3,7 +3,7 @@
     <div class="header" style="padding-bottom: 10px;">Details</div>
     <div class="preview-icon-container">
       <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
-      <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
+      <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
     </div>
     <div class="detail" v-show="selectedEntries.length <= 1">
       <p>Owner</p>

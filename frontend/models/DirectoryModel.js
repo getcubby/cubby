@@ -52,7 +52,7 @@ export function createDirectoryModel(origin) {
       entry.isBinary = !!entry.isBinary;
       entry.icon = entry.previewUrl;
       entry.resourcePath = resource.resourcePath;
-      entry.url = `#files${entry.resourcePath}`;
+      entry.href = `#files${entry.resourcePath}`;
       entry.resource = parseResourcePath(entry.resourcePath);
       entry.fullFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=raw`;
       entry.downloadFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=download`;
@@ -71,7 +71,7 @@ export function createDirectoryModel(origin) {
         // shares need to add the share id if we are on meta toplevel
         if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}`);
         else child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
-        child.url = `#files${child.resourcePath}`;
+        child.href = `#files${child.resourcePath}`;
 
         child.resource = parseResourcePath(child.resourcePath);
         child.fullFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=raw`;

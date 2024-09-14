@@ -69,8 +69,6 @@
               :delete-handler="deleteHandler"
               :share-handler="shareHandler"
               :rename-handler="renameHandler"
-              :copy-handler="copyHandler"
-              :cut-handler="cutHandler"
               :paste-handler="pasteHandler"
               :download-handler="downloadHandler"
               :new-file-handler="onNewFile"
@@ -79,7 +77,6 @@
               :upload-folder-handler="onUploadFolder"
               :drop-handler="onDrop"
               :items="entries"
-              :clipboard="clipboard"
               :fallback-icon="`${BASE_URL}mime-types/none.svg`"
               style="position: absolute;"
             >
@@ -316,10 +313,6 @@ export default {
         profile: {},
         config: {},
         viewers: [],
-        clipboard: {
-          action: '', // copy or cut
-          files: []
-        },
         currentHash: '',
         error: '',
         entry: {},
@@ -577,31 +570,14 @@ export default {
 
         this.refresh();
       },
-      async copyHandler(files) {
-        if (!files) return;
-
-        this.clipboard = {
-          action: 'copy',
-          files
-        };
-      },
-      async cutHandler(files) {
-        if (!files) return;
-
-        this.clipboard = {
-          action: 'cut',
-          files
-        };
-      },
-      async pasteHandler(target) {
-        if (!this.clipboard.files || !this.clipboard.files.length) return;
+      async pasteHandler(action, files, target) {
+        if (!files || !files.length) return;
 
         window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
         this.pasteInProgress = true;
 
         const resource = parseResourcePath((target && target.isDirectory) ? sanitize(this.currentResourcePath + '/' + target.fileName) : this.currentResourcePath);
-        await this.directoryModel.paste(resource, this.clipboard.action, this.clipboard.files);
-        this.clipboard = {};
+        await this.directoryModel.paste(resource, action, files);
         await this.refresh();
 
         window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });

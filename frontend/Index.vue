@@ -944,11 +944,11 @@ export default {
             route: '#files/groupfolders/'
           };
 
-          // if we are not toplevel, add the share information
-          if (entry.share) {
+          // if we are not toplevel, add the groupfolder information
+          if (entry.group) {
             this.breadCrumbs.unshift({
-              label: entry.share.filePath.slice(1), // remove slash at the beginning
-              route: '#files/groupfolders/' + resource.groupId + '/'
+              label: entry.group.name,
+              route: '#files/groupfolders/' + entry.group.id + '/'
             });
           }
         } else {

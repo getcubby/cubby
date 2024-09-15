@@ -48,7 +48,6 @@ export function createDirectoryModel(origin) {
       entry.folderPath = entry.filePath.slice(-entry.fileName.length);
       entry.previewUrl = `${origin}${entry.previewUrl}`;
       entry.modified = new Date(entry.mtime);
-      entry.type = entry.isDirectory ? 'directory' : 'file',
       entry.isBinary = !!entry.isBinary;
       entry.icon = entry.previewUrl;
       entry.resourcePath = resource.resourcePath;
@@ -64,7 +63,6 @@ export function createDirectoryModel(origin) {
         child.folderPath = entry.folderPath.slice(-child.fileName.length);
         child.previewUrl = `${origin}${child.previewUrl}`;
         child.modified = new Date(child.mtime);
-        child.type = child.isDirectory ? 'directory' : 'file',
         entry.isBinary = !!entry.isBinary;
         child.icon = child.previewUrl;
 

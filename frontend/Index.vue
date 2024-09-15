@@ -150,7 +150,7 @@
       <div>
         <div v-for="link in shareDialog.sharedWith" class="shared-link" :key="link.id">
           <div>{{ link.receiverUsername || link.receiverEmail }}</div>
-          <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+          <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
         </div>
         <div v-show="shareDialog.sharedWith.length === 0">
           Not shared with anyone yet

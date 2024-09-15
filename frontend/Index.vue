@@ -39,12 +39,12 @@
                 <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
               </div>
 
-              <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()">Upload</Button>
-              <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()">New</Button>
+              <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>
+              <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
             </template>
 
             <div class="profile-dropdown">
-              <Button v-show="profile.username" id="profileMenuDropdown" icon="fa-regular fa-user" secondary :menu="mainMenu">{{ profile.displayName }}</Button>
+              <Button v-show="profile.username" id="profileMenuDropdown" icon="fa-regular fa-user" secondary :menu="mainMenu" tool><span class="pankow-no-mobile">{{ profile.displayName }}</span></Button>
               <Button v-show="!profile.username" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
             </div>
           </template>
@@ -1115,12 +1115,6 @@ pre {
     color: white;
     padding: 10px;
     flex-direction: column;
-}
-
-@media (prefers-color-scheme: dark) {
-  .side-bar {
-    filter: brightness(80%);
-  }
 }
 
 .side-bar-entry {

@@ -235,3 +235,8 @@
 * Add group folder feature
 * Add settings view
 
+[2.2.1]
+* Improve DirectoryView performance for large folders
+* Calculate Groupfolder sizes
+* Update dependencies
+

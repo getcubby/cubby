@@ -27,7 +27,7 @@
               <span style="font-size: 24px;">Settings</span>
             </template>
             <template v-if="view === VIEWS.MAIN">
-              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain></Button>
+              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
               <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
             </template>
           </template>
@@ -35,8 +35,8 @@
           <template #right>
             <template v-if="view === VIEWS.MAIN">
               <div class="file-actions">
-                <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger @click="deleteHandler(selectedEntries)"/>
-                <Button icon="fa-solid fa-download" outline @click="downloadHandler(selectedEntries || null)"/>
+                <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
+                <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
               </div>
 
               <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>

@@ -708,6 +708,10 @@ export default {
 
           for (const item of dataTransfer.items) {
             const entry = item.webkitGetAsEntry();
+            if (!entry) {
+              console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
+              continue;
+            }
 
             if (entry.isFile) {
               fileList.push(await getFile(entry));

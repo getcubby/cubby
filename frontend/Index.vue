@@ -207,6 +207,11 @@
     </div>
   </Transition>
   <Transition name="pankow-fade">
+    <div class="viewer-container" v-show="viewer === 'markdown'">
+      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :save-handler="onFileSaved" />
+    </div>
+  </Transition>
+  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'generic'">
       <GenericViewer ref="genericViewer" @close="onViewerClose" />
     </div>
@@ -253,6 +258,7 @@ import UsersView from './components/UsersView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
+import MarkdownViewer from './components/MarkdownViewer.vue';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
 const BASE_URL = import.meta.env.BASE_URL || '/';
@@ -285,6 +291,7 @@ export default {
       InputDialog,
       LoginView,
       Notification,
+      MarkdownViewer,
       OfficeViewer,
       PasswordInput,
       PdfViewer,
@@ -1014,6 +1021,9 @@ export default {
           } else if (this.$refs.officeViewer.canHandle(entry)) {
             this.$refs.officeViewer.open(entry);
             this.viewer = 'office';
+          } else if (this.$refs.markdownViewer.canHandle(entry)) {
+            this.$refs.markdownViewer.open(entry, await this.directoryModel.getRawContent(resource));
+            this.viewer = 'markdown';
           } else if (this.$refs.textViewer.canHandle(entry)) {
             this.$refs.textViewer.open(entry, await this.directoryModel.getRawContent(resource));
             this.viewer = 'text';

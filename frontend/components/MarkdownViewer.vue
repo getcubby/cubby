@@ -95,7 +95,7 @@ export default {
   data() {
     return {
       busySave: false,
-      isChanged: true,
+      isChanged: false,
       entry: {},
       isStrong: false,
       paragraphType: null,
@@ -108,6 +108,18 @@ export default {
       }, {
         slug: 'h2',
         display: 'Header 2'
+      }, {
+        slug: 'h3',
+        display: 'Header 3'
+      }, {
+        slug: 'h4',
+        display: 'Header 4'
+      }, {
+        slug: 'h5',
+        display: 'Header 5'
+      }, {
+        slug: 'h6',
+        display: 'Header 6'
       }, {
         slug: 'code',
         display: 'Code Block'

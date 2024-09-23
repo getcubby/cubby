@@ -105,6 +105,12 @@ function parseResourcePath(resourcePath) {
     return result;
 }
 
+function prettyType(entry) {
+    if (!entry || !entry.mimeType) return '';
+    if (entry.mimeType === 'application/octet-stream') return 'unknown';
+    return entry.mimeType.split('/')[1];
+}
+
 function getEntryIdentifier(entry) {
     if (entry.share) return `${entry.share.id}/${entry.filePath}`;
     else if (entry.group) return `${entry.group.id}/${entry.filePath}`;
@@ -133,6 +139,7 @@ export {
     copyToClipboard,
     urlSearchQuery,
     parseResourcePath,
+    prettyType,
     getEntryIdentifier,
     entryListSort
 };

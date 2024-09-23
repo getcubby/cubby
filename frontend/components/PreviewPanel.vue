@@ -22,14 +22,14 @@
     </div>
     <div class="detail" v-show="selectedEntries.length <= 1">
       <p>Type</p>
-      <span >{{ entry.mimeType }}</span>
+      <span >{{ prettyType(selectedEntries.length ? selectedEntries[0] : parentEntry) }}</span>
     </div>
   </div>
 </template>
 
 <script>
 
-import { getPreviewUrl } from '../utils.js';
+import { getPreviewUrl, prettyType } from '../utils.js';
 import { prettyLongDate, prettyFileSize } from 'pankow/utils';
 
 export default {
@@ -60,6 +60,7 @@ export default {
     methods: {
         prettyLongDate,
         prettyFileSize,
+        prettyType,
         getPreviewUrl,
     }
 };

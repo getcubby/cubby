@@ -4,17 +4,17 @@
       <div class="tool-bar">
         <div class="tool-bar-left">
           <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 20px;"/>
-          <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToggleStrong()" />
-          <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToggleEm()" />
-          <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToggleCode()" />
+          <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
+          <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
+          <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
 
           <Dropdown v-model="paragraphType" :options="paragraphTypes" option-label="display" option-key="slug" style="margin-left: 20px; margin-right: 20px;" />
 
-          <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToggleUnorderedList()" />
-          <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToggleOrderedList()" />
+          <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
+          <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
 
-          <Button icon="fa-solid fa-indent" secondary outline tool @click="onSinkList()" />
-          <Button icon="fa-solid fa-outdent" secondary outline tool @click="onLiftList()" />
+          <Button icon="fa-solid fa-outdent" secondary outline tool v-show="tools.lift.available" @click="onToolbutton(tools.lift)" />
+          <Button icon="fa-solid fa-indent" secondary outline tool v-show="tools.sink.available" @click="onToolbutton(tools.sink)" />
         </div>
         <div class="tool-bar-right">
           <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
@@ -66,7 +66,7 @@ function menuPlugin(app, tools) {
 
           for (const tool in tools) {
             tools[tool].available = tools[tool].cmd(editorView.state, null, editorView);
-            tools[tool].active = markActive(editorView.state, toRaw(tools[tool].mark));
+            if (tools[tool].mark) tools[tool].active = markActive(editorView.state, toRaw(tools[tool].mark));
           }
         }
       };
@@ -142,6 +142,30 @@ export default {
           available: false,
           mark: schema.marks.code,
           cmd: toggleMark(schema.marks.code)
+        },
+        ul: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: wrapInList(schema.nodes.bullet_list, {})
+        },
+        ol: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: wrapInList(schema.nodes.ordered_list, { order: 1 })
+        },
+        lift: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: liftListItem(schema.nodes.list_item)
+        },
+        sink: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: sinkListItem(schema.nodes.list_item)
         }
       }
     };
@@ -175,40 +199,9 @@ export default {
     canHandle(entry) {
       return entry.fileName.endsWith('md');
     },
-    onToggleStrong() {
-      const cmd = toggleMark(schema.marks.strong);
+    onToolbutton(tool) {
       view.focus();
-      cmd(view.state, view.dispatch);
-    },
-    onToggleEm() {
-      const cmd = toggleMark(schema.marks.em);
-      view.focus();
-      cmd(view.state, view.dispatch);
-    },
-    onToggleCode() {
-      const cmd = toggleMark(schema.marks.code);
-      view.focus();
-      cmd(view.state, view.dispatch);
-    },
-    onToggleUnorderedList() {
-      const cmd = wrapInList(schema.nodes.bullet_list, {});
-      view.focus();
-      cmd(view.state, view.dispatch);
-    },
-    onToggleOrderedList() {
-      const cmd = wrapInList(schema.nodes.ordered_list, { order: 1 });
-      view.focus();
-      cmd(view.state, view.dispatch);
-    },
-    onSinkList() {
-      view.focus();
-      const cmd = sinkListItem(schema.nodes.list_item);
-      cmd(view.state, view.dispatch);
-    },
-    onLiftList() {
-      view.focus();
-      const cmd = liftListItem(schema.nodes.list_item);
-      cmd(view.state, view.dispatch);
+      tool.cmd(view.state, view.dispatch);
     },
     async onSave() {
       this.busySave = true;

@@ -6,6 +6,7 @@
       </div>
       <div class="right">
         <h1>Cubby</h1>
+        <h2>The painless file sharing solution</h2>
         <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
         <div class="footer">
           By <a href="https://cloudron.io" target="_blank">Cloudron</a>
@@ -16,6 +17,7 @@
       <img src="/logo.svg" style="height: 50%; max-height: 128px; margin: 10% auto;"/>
       <div style="flex-grow: 1; text-align: center;">
         <h1>Cubby</h1>
+        <h2>The painless file sharing solution</h2>
         <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
       </div>
       <div class="mobile-footer">By <a href="https://cloudron.io" target="_blank">Cloudron</a></div>
@@ -104,6 +106,16 @@ export default {
   padding: 40px;
   white-space: nowrap;
   justify-content: center;
+}
+
+h1 {
+  margin-bottom: 0;
+}
+
+h2 {
+  font-size: 16px;
+  margin-top: 10px;
+  margin-bottom: 30px;
 }
 
 .footer {

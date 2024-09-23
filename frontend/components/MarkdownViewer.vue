@@ -244,7 +244,7 @@ export default {
 
 .tool-bar {
   padding: 5px 10px;
-  background-color: white;
+  background-color: var(--pankow-dialog-background-color);
   display: flex;
 }
 
@@ -256,7 +256,7 @@ export default {
 }
 
 .main-layout {
-  background-color: #f7f7f7;
+  background-color: var(--pankow-color-background);
 }
 
 .editor-wrapper {
@@ -268,10 +268,11 @@ export default {
 }
 
 .editor {
-  background-color: white;
+  background-color: var(--pankow-dialog-background-color);
   width: 100%;
   max-width: 1024px;
   box-shadow: var(--pankow-box-shadow);
+  color: var(--pankow-text-color);
 }
 
 </style>

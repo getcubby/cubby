@@ -5,13 +5,13 @@
         <div class="tool-bar-left">
           <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 20px;"/>
           <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToggleStrong()" />
-          <Button icon="fa-solid fa-italic" secondary outline tool @click="onToggleEm()" />
-          <Button icon="fa-solid fa-code" secondary outline tool @click="onToggleCode()" />
+          <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToggleEm()" />
+          <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToggleCode()" />
 
           <Dropdown v-model="paragraphType" :options="paragraphTypes" option-label="display" option-key="slug" style="margin-left: 20px; margin-right: 20px;" />
 
-          <!-- <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToggleUnorderedList()" /> -->
-          <!-- <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToggleOrderedList()" /> -->
+          <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToggleUnorderedList()" />
+          <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToggleOrderedList()" />
         </div>
         <div class="tool-bar-right">
           <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
@@ -29,6 +29,7 @@
 
 <script>
 
+import { toRaw } from 'vue';
 import { MainLayout, Button, Dropdown, utils } from 'pankow';
 
 import { EditorState, Plugin } from "prosemirror-state";
@@ -37,12 +38,20 @@ import { undo, redo, history } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
 import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemirror-markdown";
+import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirror-schema-list"
 import { exampleSetup } from "prosemirror-example-setup"
 
 import './MarkdownViewer.css';
 
 // cannot be reactive
 let view;
+
+// https://github.com/ProseMirror/prosemirror-example-setup/blob/8c11be6850604081dceda8f36e08d2426875e19a/src/menu.ts#L58
+function markActive(state, type) {
+  let { from, $from, to, empty } = state.selection
+  if (empty) return !!type.isInSet(state.storedMarks || $from.marks())
+  else return state.doc.rangeHasMark(from, to, type)
+}
 
 // plugin to track editor changes into vuejs
 function menuPlugin(app, tools) {
@@ -54,25 +63,7 @@ function menuPlugin(app, tools) {
 
           for (const tool in tools) {
             tools[tool].available = tools[tool].cmd(editorView.state, null, editorView);
-
-            let { $from, to, node } = editorView.state.selection;// as NodeSelection
-            // console.log('---', $from, to, node)
-
-            let oState = editorView.state;
-            let oSelection = oState.selection;
-            let oDoc = oState.doc;
-            let o = { from: oSelection.from, to: oSelection.to };
-
-            if (oSelection.empty) {
-              tools[tool].active = tools[tool].mark.isInSet(editorView.state.storedMarks || oSelection.$cursor.marks())
-            } else {
-              tools[tool].active = oDoc.rangeHasMark(o.from, o.to, tools[tool].mark)
-            }
-
-            // if (node) active = node.hasMarkup(nodeType, options.attrs);
-            // else active = to <= $from.end() && $from.parent.hasMarkup(nodeType, options.attrs);
-
-            // console.log(tool, tools[tool].available, tools[tool].active)
+            tools[tool].active = markActive(editorView.state, toRaw(tools[tool].mark));
           }
         }
       };
@@ -124,6 +115,18 @@ export default {
           available: false,
           mark: schema.marks.strong,
           cmd: toggleMark(schema.marks.strong)
+        },
+        em: {
+          active: false,
+          available: false,
+          mark: schema.marks.em,
+          cmd: toggleMark(schema.marks.em)
+        },
+        code: {
+          active: false,
+          available: false,
+          mark: schema.marks.code,
+          cmd: toggleMark(schema.marks.code)
         }
       }
     };
@@ -173,12 +176,12 @@ export default {
       cmd(view.state, view.dispatch);
     },
     onToggleUnorderedList() {
-      const cmd = setBlockType(schema.nodes.bullet_list, {});
+      const cmd = wrapInList(schema.nodes.bullet_list, {});
       view.focus();
       cmd(view.state, view.dispatch);
     },
     onToggleOrderedList() {
-      const cmd = setBlockType(schema.nodes.ordered_list, { order: 1 });
+      const cmd = wrapInList(schema.nodes.ordered_list, { order: 1 });
       view.focus();
       cmd(view.state, view.dispatch);
     },

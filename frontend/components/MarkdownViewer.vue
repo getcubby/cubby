@@ -12,6 +12,9 @@
 
           <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToggleUnorderedList()" />
           <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToggleOrderedList()" />
+
+          <Button icon="fa-solid fa-indent" secondary outline tool @click="onSinkList()" />
+          <Button icon="fa-solid fa-outdent" secondary outline tool @click="onLiftList()" />
         </div>
         <div class="tool-bar-right">
           <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
@@ -38,7 +41,7 @@ import { undo, redo, history } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
 import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemirror-markdown";
-import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirror-schema-list"
+import { wrapInList, liftListItem, sinkListItem } from "prosemirror-schema-list"
 import { exampleSetup } from "prosemirror-example-setup"
 
 import './MarkdownViewer.css';
@@ -183,6 +186,16 @@ export default {
     onToggleOrderedList() {
       const cmd = wrapInList(schema.nodes.ordered_list, { order: 1 });
       view.focus();
+      cmd(view.state, view.dispatch);
+    },
+    onSinkList() {
+      view.focus();
+      const cmd = sinkListItem(schema.nodes.list_item);
+      cmd(view.state, view.dispatch);
+    },
+    onLiftList() {
+      view.focus();
+      const cmd = liftListItem(schema.nodes.list_item);
       cmd(view.state, view.dispatch);
     },
     async onSave() {

@@ -3,13 +3,13 @@
     <div class="desktop">
       <div class="left">
         <img src="/logo-transparent.svg" style="width: 30%; margin: auto;"/>
-        <div class="footer">
-          by <a href="https://cloudron.io" target="_blank">Cloudron</a>
-        </div>
       </div>
       <div class="right">
         <h1>Cubby</h1>
         <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
+        <div class="footer">
+          By <a href="https://cloudron.io" target="_blank">Cloudron</a>
+        </div>
       </div>
     </div>
     <div class="mobile">
@@ -18,7 +18,7 @@
         <h1>Cubby</h1>
         <Button id="loginButton" :href="apiOrigin + '/api/v1/oidc/login'">Login with Cloudron</Button>
       </div>
-      <div class="mobile-footer">by <a href="https://cloudron.io" target="_blank">Cloudron</a></div>
+      <div class="mobile-footer">By <a href="https://cloudron.io" target="_blank">Cloudron</a></div>
     </div>
   </div>
 </template>
@@ -111,6 +111,8 @@ export default {
   width: 100%;
   font-size: 12px;
   padding: 5px;
+  position: absolute;
+  bottom: 5px;
 }
 
 .footer a {

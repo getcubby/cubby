@@ -500,7 +500,16 @@ export default {
 
         await this.mainModel.logout();
 
-        // we reload the whole app by now in mainModel.logout()
+        this.onLogin();
+
+        this.profile.username = '';
+        this.profile.email = '';
+        this.profile.displayName = '';
+        this.profile.diskusage = {
+          used: 0,
+          size: 0,
+          available: 0
+        };
       },
       onViewerEntryChanged(entry) {
         // prevent to reload image

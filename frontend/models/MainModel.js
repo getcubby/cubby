@@ -102,8 +102,6 @@ export function createMainModel(origin) {
       } catch (e) {
         console.error('Error logging out', e);
       }
-
-      window.location.href = '/';
     }
   };
 }

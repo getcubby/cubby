@@ -35,9 +35,13 @@
 import { toRaw } from 'vue';
 import { MainLayout, Button, Dropdown, utils } from 'pankow';
 
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { ySyncPlugin, yCursorPlugin, yUndoPlugin, undo, redo, initProseMirrorDoc, prosemirrorToYXmlFragment } from 'y-prosemirror';
+
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { undo, redo, history } from "prosemirror-history";
+// import { undo, redo, history } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
 import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemirror-markdown";
@@ -85,6 +89,10 @@ export default {
     saveHandler: {
       type: Function,
       default() { console.warn('Missing saveHandler for MarkdownViewer'); }
+    },
+    profile: {
+      type: Object,
+      default() { return {}; }
     },
     tr: {
       type: Function,
@@ -217,14 +225,45 @@ export default {
 
       this.entry = entry;
 
-      const state = EditorState.create({
-        doc: defaultMarkdownParser.parse(content),
-        plugins: exampleSetup({ schema, menuBar: false }).concat(menuPlugin(this, this.tools))
-      });
-
       if (view) view.destroy();
 
-      view = new EditorView(this.$refs.editorNode, { state });
+      const markdownDoc = defaultMarkdownParser.parse(content);
+
+      // unique id at the websocket server
+      const collabDocId = entry.id;
+
+      const ydoc = new Y.Doc();
+      const provider = new WebsocketProvider(
+        'wss://demos.yjs.dev/ws', // use the public ws server
+        // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
+        collabDocId,
+        ydoc
+      );
+      provider.connect();
+
+      // required to have a fragment attached to the ydoc, for some reason I can't see how to attach a fragment later
+      const emptyFragment = ydoc.getXmlFragment('prosemirror');
+
+      const yXmlFragment = prosemirrorToYXmlFragment(markdownDoc, emptyFragment);
+      const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
+
+      provider.awareness.setLocalStateField('user', { color: '#008833', name: this.profile.displayName })
+
+      view = new EditorView(this.$refs.editorNode, {
+        state: EditorState.create({
+          doc,
+          schema,
+          plugins: [
+            ySyncPlugin(yXmlFragment, { mapping }),
+            yCursorPlugin(provider.awareness),
+            yUndoPlugin(),
+            keymap({
+              'Mod-z': undo,
+              'Mod-y': redo,
+              'Mod-Shift-z': redo
+            })].concat(exampleSetup({ schema, menuBar: false })).concat(menuPlugin(this, this.tools))
+          })
+      });
     },
     onClose() {
       this.$emit('close');

@@ -208,7 +208,7 @@
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
-      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :save-handler="onFileSaved" />
+      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

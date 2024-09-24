@@ -82,9 +82,9 @@
             >
               <template #empty>
                 <div v-show="!entries.length" class="no-entries-placeholder">
-                  <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length)">Folder is empty</p>
+                  <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
                   <p v-show="activeResourceType === 'recent'">No recent files</p>
-                  <p v-show="activeResourceType === 'groupfolders'">Not part of any group folder yet</p>
+                  <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
                   <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
                 </div>
               </template>

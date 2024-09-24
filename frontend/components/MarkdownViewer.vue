@@ -236,7 +236,7 @@ export default {
 
       // run module example server: HOST=localhost PORT=1234 npx y-websocket
       // const webSocketHost = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 'localhost:1234';
-      const webSocketHost = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
+      const webSocketHost = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
 
       const provider = new WebsocketProvider(webSocketHost, collabDocId, ydoc );
       provider.connect();

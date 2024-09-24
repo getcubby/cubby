@@ -191,6 +191,8 @@ function init(callback) {
     wsServer.on('connection', yUtils.setupWSConnection);
 
     httpServer.on('upgrade', (request, socket, head) => {
+        console.log('TODO: add websocket auth!');
+
         // You may check auth of request here..
         // Call `wsServer.HandleUpgrade` *after* you checked whether the client has access
         // (e.g. by checking cookies, or url parameters).

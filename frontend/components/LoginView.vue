@@ -119,7 +119,6 @@ h2 {
 }
 
 .footer {
-  color: white;
   width: 100%;
   font-size: 12px;
   padding: 5px;
@@ -127,13 +126,8 @@ h2 {
   bottom: 5px;
 }
 
-.footer a {
-  color: white;
-}
-
 .footer a:hover,
 .footer a:active {
-  color: white;
   text-decoration: underline;
 }
 

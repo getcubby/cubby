@@ -351,20 +351,21 @@ img.ProseMirror-separator {
   word-break: normal;
   pointer-events: none;
 }
+
 /* This renders the username above the caret */
 .ProseMirror-yjs-cursor > div {
   position: absolute;
   top: -1.05em;
   left: -1px;
+  background-color: var(--pankow-color-background-hover);
+  font-family: var(--font-family);
   font-size: 13px;
-  background-color: rgb(250, 129, 0);
-  font-family: serif;
   font-style: normal;
   font-weight: normal;
   line-height: normal;
   user-select: none;
   color: white;
-  padding-left: 2px;
-  padding-right: 2px;
+  padding: 0 4px;
   white-space: nowrap;
+  border-top-left-radius: var(--pankow-border-radius);
 }

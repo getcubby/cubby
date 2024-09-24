@@ -4,6 +4,7 @@ const constants = require('./constants.js'),
     files = require('./routes/files.js'),
     fs = require('fs'),
     groupFolders = require('./routes/groupfolders.js'),
+    http = require('http'),
     lastMile = require('connect-lastmile'),
     misc = require('./routes/misc.js'),
     office = require('./routes/office.js'),
@@ -12,7 +13,9 @@ const constants = require('./constants.js'),
     session = require('express-session'),
     shares = require('./routes/shares.js'),
     users = require('./routes/users.js'),
-    webdav = require('./routes/webdav.js');
+    webdav = require('./routes/webdav.js'),
+    ws = require('ws'),
+    yUtils = require('y-websocket/bin/utils');
 
 exports = module.exports = {
     init
@@ -182,9 +185,24 @@ function init(callback) {
 
     app.use(lastMile());
 
-    var server = app.listen(3000, function () {
-        var host = server.address().address;
-        var port = server.address().port;
+    const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, app);
+    const wsServer = new ws.Server({ noServer: true });
+
+    wsServer.on('connection', yUtils.setupWSConnection);
+
+    httpServer.on('upgrade', (request, socket, head) => {
+        // You may check auth of request here..
+        // Call `wsServer.HandleUpgrade` *after* you checked whether the client has access
+        // (e.g. by checking cookies, or url parameters).
+        // See https://github.com/websockets/ws#client-authentication
+        wsServer.handleUpgrade(request, socket, head, /** @param {any} ws */ ws => {
+            wsServer.emit('connection', ws, request);
+        });
+    });
+
+    httpServer.listen(3000, function () {
+        const host = httpServer.address().address;
+        const port = httpServer.address().port;
 
         console.log(`Listening on http://${host}:${port}`);
 

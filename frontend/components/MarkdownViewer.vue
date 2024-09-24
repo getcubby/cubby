@@ -229,16 +229,16 @@ export default {
 
       const markdownDoc = defaultMarkdownParser.parse(content);
 
-      // unique id at the websocket server
+      // unique id at the websocket server to create a new collaboration "room"
       const collabDocId = entry.id;
 
       const ydoc = new Y.Doc();
-      const provider = new WebsocketProvider(
-        'wss://demos.yjs.dev/ws', // use the public ws server
-        // `ws${location.protocol.slice(4)}//${location.host}/ws`, // alternatively: use the local ws server (run `npm start` in root directory)
-        collabDocId,
-        ydoc
-      );
+
+      // run module example server: HOST=localhost PORT=1234 npx y-websocket
+      // const webSocketHost = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 'localhost:1234';
+      const webSocketHost = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
+
+      const provider = new WebsocketProvider(webSocketHost, collabDocId, ydoc );
       provider.connect();
 
       // required to have a fragment attached to the ydoc, for some reason I can't see how to attach a fragment later
@@ -247,7 +247,7 @@ export default {
       const yXmlFragment = prosemirrorToYXmlFragment(markdownDoc, emptyFragment);
       const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
 
-      provider.awareness.setLocalStateField('user', { color: '#008833', name: this.profile.displayName })
+      provider.awareness.setLocalStateField('user', { color: '#27ce65', name: this.profile.displayName })
 
       view = new EditorView(this.$refs.editorNode, {
         state: EditorState.create({

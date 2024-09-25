@@ -14,8 +14,8 @@
     >
       <p class="has-error" v-show="groupFolderAdd.error">{{ groupFolderAdd.error }}</p>
       <label>Name</label>
-      <TextInput v-model="groupFolderAdd.name" style="width: 100%;" />
-      <label>Slug</label>
+      <TextInput v-model="groupFolderAdd.name" style="width: 100%;" @change="groupFolderAdd.slug = slugify(groupFolderAdd.name)"/>
+      <label>Slug (cannot be changed later)</label>
       <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
       <label v-show="false">Disk Storage Path</label>
       <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
@@ -65,6 +65,8 @@ import { createMainModel } from '../models/MainModel.js';
 import { createGroupFolderModel } from '../models/GroupFolderModel.js';
 
 import { Button, Dialog, InputDialog, TableView, TextInput } from 'pankow';
+
+import slugify from '../slugify.js';
 
 const mainModel = createMainModel(API_ORIGIN);
 const groupFolderModel = createGroupFolderModel(API_ORIGIN);
@@ -131,6 +133,7 @@ export default {
     async mounted() {
     },
     methods: {
+      slugify,
       async open() {
         if (!this.profile.admin) return false;
 

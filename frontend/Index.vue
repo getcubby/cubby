@@ -750,7 +750,7 @@ export default {
         }
 
         const confirmed = await this.$refs.inputDialog.confirm({
-          message: `Really delete ${entries.length} items?`,
+          message: `Really delete ${entries.length} item${ entries.length === 1 ? '' : 's' }?`,
           confirmStyle: 'danger',
           confirmLabel: 'Yes',
           rejectLabel: 'Cancel'

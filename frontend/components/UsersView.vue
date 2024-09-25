@@ -4,7 +4,7 @@
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
-    <TableView style="max-height: 200px; width: 90%; max-width: 800px;" :columns="tableColumns" :model="tableModel">
+    <TableView style="max-height: 200px;" :columns="tableColumns" :model="tableModel">
       <template #username="slotProps">{{ slotProps.username }}</template>
       <template #email="slotProps">{{ slotProps.email }}</template>
       <template #admin="slotProps"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>
@@ -101,7 +101,6 @@ export default {
 <style scoped>
 
 .user-table-container {
-  max-width: 1024px;
   padding: 20px;
 }
 

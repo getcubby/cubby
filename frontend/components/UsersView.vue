@@ -70,6 +70,13 @@ export default {
       this.mainModel = createMainModel(API_ORIGIN);
     },
     methods: {
+      async open() {
+        if (!this.profile.admin) return false;
+
+        this.tableModel = await this.mainModel.getUsers();
+
+        return true;
+      },
       onEdit(user) {
         this.edit.admin = user.admin;
         this.edit.user = user;
@@ -82,12 +89,9 @@ export default {
           return console.error(e);
         }
 
-        await this.refresh();
+        this.tableModel = await this.mainModel.getUsers();
 
         this.$refs.editDialog.close();
-      },
-      async refresh() {
-        this.tableModel = await this.mainModel.getUsers();
       }
     }
 };

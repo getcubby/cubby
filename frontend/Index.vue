@@ -425,11 +425,10 @@ export default {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
         } else if (hash.indexOf('users') === 0) {
-          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
-          that.$refs.usersView.refresh();
+          if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.USERS;
         } else if (hash.indexOf('settings') === 0) {
-          if (!that.profile && !that.profile.admin) return console.error('Only allowed for admins');
+          if (! await that.$refs.settingsView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.SETTINGS;
         } else {
           window.location.hash = 'files/home/';

@@ -129,10 +129,17 @@ export default {
       };
     },
     async mounted() {
-      await this.refreshGroupFolders();
-      this.users = await mainModel.getUsers();
     },
     methods: {
+      async open() {
+        if (!this.profile.admin) return false;
+
+        this.users = await mainModel.getUsers();
+
+        await this.refreshGroupFolders();
+
+        return true;
+      },
       async refreshGroupFolders() {
         try {
           this.groupFolderTableModel = await groupFolderModel.list();

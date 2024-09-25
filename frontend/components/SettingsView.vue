@@ -42,7 +42,7 @@
       <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
     </Dialog>
 
-    <h1>Group Folders <Button outline icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h1>
+    <h1>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h1>
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
       <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
       <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
@@ -53,7 +53,16 @@
         </div>
       </template>
     </TableView>
-    <!-- <h1>Office Integration</h1> -->
+
+    <h1>Office Integration</h1>
+    <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
+    <form @submit="onOfficeSubmit" @submit.prevent>
+      <label for="wopiHostnameInput">WOPI / Collabora hostname:</label>
+      <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
+      <Button type="submit" @click="onOfficeSubmit" :loading="office.busy">Save</Button>
+      <br/>
+      <small class="has-error" v-show="office.error">{{ office.error }}</small>
+    </form>
   </div>
 </template>
 
@@ -61,6 +70,7 @@
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
 
+import { DirectoryModelError } from '../models/DirectoryModel.js';
 import { createMainModel } from '../models/MainModel.js';
 import { createGroupFolderModel } from '../models/GroupFolderModel.js';
 
@@ -111,6 +121,11 @@ export default {
             sort: false
           }
         },
+        office: {
+          error: '',
+          busy: false,
+          wopiHost: ''
+        },
         groupFolderTableModel: [],
         groupFolderAdd: {
           error: '',
@@ -140,6 +155,17 @@ export default {
         this.users = await mainModel.getUsers();
 
         await this.refreshGroupFolders();
+
+        this.office.error = '';
+        this.office.confirmBusy = false;
+
+        try {
+          this.office.wopiHost = await mainModel.getWopiHost();
+        } catch (error) {
+          this.office.wopiHost = ''
+          this.office.error = error.message;
+          console.log('Failed to get wopi host:', error);
+        }
 
         return true;
       },
@@ -251,6 +277,28 @@ export default {
         }
 
         await this.refreshGroupFolders();
+      },
+      async onOfficeSubmit() {
+        this.office.busy = true;
+
+        try {
+          await mainModel.setWopiHost(this.office.wopiHost);
+        } catch (error) {
+          this.office.error = error.message;
+          this.office.busy = false;
+          return;
+        }
+
+        this.office.error = '';
+
+        try {
+          this.office.wopiHost = await mainModel.getWopiHost();
+        } catch (error) {
+          this.office.wopiHost = ''
+          this.office.error = error.message;
+        }
+
+        this.office.busy = false;
       }
     }
 };
@@ -264,10 +312,11 @@ export default {
 }
 
 h1 {
-  font-size: 16px;
+  font-size: 20px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  margin-top: 30px;
 }
 
 </style>

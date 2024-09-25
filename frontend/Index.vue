@@ -113,18 +113,6 @@
     </div>
   </Dialog>
 
-  <!-- Office Dialog -->
-  <Dialog title="Office Integration" ref="officeDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" :confirm-busy="officeDialog.confirmBusy" @confirm="onOfficeSettingsSubmit">
-    <div>
-      <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
-      <p>WOPI / Collabora hostname:</p>
-      <form @submit="onOfficeSettingsSubmit" @submit.prevent>
-        <TextInput v-model="officeDialog.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%" />
-        <small class="has-error" v-show="officeDialog.error">{{ officeDialog.error }}</small>
-      </form>
-    </div>
-  </Dialog>
-
   <!-- WebDAV Password Dialog -->
   <Dialog title="WebDAV Password" ref="webDavPasswordDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onWebDavSettingsSubmit">
     <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
@@ -338,11 +326,6 @@ export default {
           error: '',
           password: ''
         },
-        officeDialog: {
-          error: '',
-          confirmBusy: false,
-          wopiHost: ''
-        },
         shareDialog: {
           visible: false,
           error: '',
@@ -371,11 +354,6 @@ export default {
           label: 'WebDAV',
           icon: 'fa-solid fa-globe',
           action: this.onWebDavSettings
-        }, {
-          label: 'Office Integration',
-          icon: 'fa-solid fa-briefcase',
-          visible: () => this.profile.admin,
-          action: this.onOfficeSettings
         }, {
           label: 'About',
           icon: 'fa-solid fa-circle-info',
@@ -609,39 +587,6 @@ export default {
         }
 
         this.$refs.webDavPasswordDialog.close();
-      },
-      async onOfficeSettings() {
-        this.officeDialog.error = '';
-        this.officeDialog.confirmBusy = false;
-
-        try {
-          this.officeDialog.wopiHost = await this.mainModel.getWopiHost();
-        } catch (error) {
-          this.officeDialog.wopiHost = ''
-          this.officeDialog.error = error.message;
-          console.log('Failed to get wopi host:', error);
-        }
-
-        this.$refs.officeDialog.open();
-      },
-      async onOfficeSettingsSubmit() {
-        this.officeDialog.confirmBusy = true;
-
-        try {
-          await this.mainModel.setWopiHost(this.officeDialog.wopiHost);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
-          else this.officeDialog.error = error.message;
-
-          this.officeDialog.confirmBusy = false;
-
-          return;
-        }
-
-        await this.refreshConfig();
-
-        this.$refs.officeDialog.close();
-        this.officeDialog.confirmBusy = false;
       },
       async refreshConfig() {
         try {

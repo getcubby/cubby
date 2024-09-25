@@ -436,14 +436,6 @@ export default {
         }
       }
 
-      window.addEventListener('hashchange', () => {
-        // allows us to not reload but only change the hash
-        if (this.currentHash === decodeURIComponent(window.location.hash)) return;
-        this.currentHash = window.location.hash;
-
-        handleHash(window.location.hash.slice(1));
-      }, false);
-
       this.mainModel = createMainModel(API_ORIGIN);
       this.shareModel = createShareModel(API_ORIGIN);
       this.directoryModel = createDirectoryModel(API_ORIGIN);
@@ -451,7 +443,7 @@ export default {
       try {
         this.profile = await this.mainModel.getProfile();
       } catch (e) {
-        return console.error(e);
+        return console.error('mounted: getProfile() error', e);
       }
 
       if (this.profile) await this.refreshConfig();
@@ -461,7 +453,15 @@ export default {
       const hash = localStorage.returnTo || window.location.hash.slice(1);
       localStorage.returnTo = '';
 
-      await handleHash(window.location.hash.slice(1));
+      await handleHash(hash);
+
+      window.addEventListener('hashchange', () => {
+        // allows us to not reload but only change the hash
+        if (this.currentHash === decodeURIComponent(window.location.hash)) return;
+        this.currentHash = window.location.hash;
+
+        handleHash(window.location.hash.slice(1));
+      }, false);
 
       this.ready = true;
     },
@@ -493,14 +493,13 @@ export default {
       async onLogin() {
         this.view = VIEWS.LOGIN;
       },
-      async onLogout(clearReturnTo = false) {
-        // stash for use later after re-login
-        if (clearReturnTo) localStorage.returnTo = '';
-        else localStorage.returnTo = window.location.hash.slice(1);
-
+      async onLogout() {
         await this.mainModel.logout();
-
-        this.onLogin();
+        window.location.href = '/';
+      },
+      onInvalidSession() {
+        // stash for use later after re-login
+        localStorage.returnTo = window.location.hash.slice(1);
 
         this.profile.username = '';
         this.profile.email = '';
@@ -510,6 +509,8 @@ export default {
           size: 0,
           available: 0
         };
+
+        this.onLogin();
       },
       onViewerEntryChanged(entry) {
         // prevent to reload image
@@ -543,7 +544,7 @@ export default {
         try {
           await this.directoryModel.newFile(resource, newFileName);
         } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
           else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('File name not allowed');
           else if (error.reason === DirectoryModelError.CONFLICT) console.error('File already exists');
           else console.error('Failed to add file, unknown error:', error)
@@ -568,7 +569,7 @@ export default {
         try {
           await this.directoryModel.newFolder(resource, newFolderName);
         } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
           else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('Folder name not allowed');
           else if (error.reason === DirectoryModelError.CONFLICT) console.error('Folder already exists');
           else console.error('Failed to add folder, unknown error:', error)
@@ -599,7 +600,7 @@ export default {
         try {
           await this.mainModel.setWebDavPassword(this.webDavPasswordDialog.password);
         } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
           else {
             this.webDavPasswordDialog.error = 'Unkown error, check logs';
             console.error('Failed to set webdav password:', error)
@@ -630,7 +631,7 @@ export default {
         try {
           await this.mainModel.setWopiHost(this.officeDialog.wopiHost);
         } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onLogout();
+          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
           else this.officeDialog.error = error.message;
 
           this.officeDialog.confirmBusy = false;
@@ -868,7 +869,7 @@ export default {
         try {
           entry = await this.directoryModel.get(resource, resource.path);
         } catch (error) {
-          if (error.status === 401) return this.onLogout();
+          if (error.status === 401) return this.onInvalidSession();
           else if (error.status === 404) this.error = 'Does not exist';
           else console.error(error);
           return;
@@ -896,7 +897,7 @@ export default {
             this.entries = [];
             entry = {};
 
-            if (error.status === 401) return this.onLogout();
+            if (error.status === 401) return this.onInvalidSession();
             else if (error.status === 404) this.error = 'Does not exist';
             else console.error(error);
           }
@@ -992,7 +993,7 @@ export default {
           entry = {};
 
           if (error.status === 401 || error.status === 403) {
-            this.onLogout();
+            this.onInvalidSession();
             return false;
           } else if (error.status === 404) {
             console.error('Failed to load entry', resource, error);

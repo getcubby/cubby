@@ -23,7 +23,7 @@
       </div>
     </template>
     <template #body>
-      <div class="editor-wrapper">
+      <div class="editor-wrapper" @click="focusView()">
         <div class="editor" ref="editorNode"></div>
       </div>
     </template>
@@ -260,6 +260,11 @@ export default {
             })].concat(exampleSetup({ schema, menuBar: false })).concat(menuPlugin(this, this.tools))
           })
       });
+
+      view.focus();
+    },
+    focusView() {
+      if (view) view.focus();
     },
     onClose() {
       // stop syncing

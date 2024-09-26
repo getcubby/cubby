@@ -124,7 +124,7 @@
   </Dialog>
 
   <!-- Share Dialog -->
-  <Dialog :title="shareDialog.entry.fileName" ref="shareDialog">
+  <Dialog :title="shareDialog.entry.fileName" ref="shareDialog" reject-label="Close">
     <div style="width: 720px;">
       <h3>Create Share</h3>
       <form @submit="onCreateShare" @submit.prevent>

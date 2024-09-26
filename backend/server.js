@@ -104,7 +104,7 @@ function init(callback) {
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);
 
     // starts or returns a YDoc collaboration object
-    router.get ('/api/v1/collab/handle/:id', users.isAuthenticated, collab.getHandle);
+    router.get ('/api/v1/collab/handle', users.isAuthenticated, collab.getHandle);
 
     router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
     router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);

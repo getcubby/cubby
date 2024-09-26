@@ -24,6 +24,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
 
     // TODO check that files is an array of Entries
 
+    this.id = crypto.createHash('sha1').update(owner + filePath).digest('base64');
     this._fullFilePath = fullFilePath;
     this.fileName = fileName;
     this.filePath = filePath;
@@ -93,7 +94,7 @@ Entry.prototype.getPreviewUrl = function () {
 
 Entry.prototype.withoutPrivate = function () {
     return {
-        id: this.id || crypto.createHash('sha1').update(this.owner + this.filePath).digest('base64'),
+        id: this.id,
         fileName: this.fileName,
         filePath: this.filePath,
         owner: this.owner,

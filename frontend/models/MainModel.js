@@ -102,7 +102,7 @@ export function createMainModel(origin) {
 
       let error, result;
       try {
-        result = await fetcher.get(`${origin}/api/v1/collab/handle/${entry.id}`);
+        result = await fetcher.get(`${origin}/api/v1/collab/handle`, { path: entry.resourcePath });
       } catch (e) {
         error = e;
       }

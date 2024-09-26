@@ -29,11 +29,11 @@
     "y-websocket": "^2.0.4"
   },
   "devDependencies": {
-    "@eslint/js": "^9.10.0",
-    "chromedriver": "^128.0.3",
-    "eslint": "^9.10.0",
+    "@eslint/js": "^9.11.1",
+    "chromedriver": "^129.0.0",
+    "eslint": "^9.11.1",
     "expect.js": "^0.3.1",
     "mocha": "^10.7.3",
-    "selenium-webdriver": "^4.24.0"
+    "selenium-webdriver": "^4.25.0"
   }
 }

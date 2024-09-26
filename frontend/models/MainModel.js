@@ -96,6 +96,21 @@ export function createMainModel(origin) {
 
       return result.body;
     },
+    async getCollabHandle(entry) {
+      // TODO we may want to generate the ID this based on the resource path on the server to be able to check,
+      //      if the markdown file itself has changed on disk and we would need to discard the ydoc fragment (we would lose collab history though)
+
+      let error, result;
+      try {
+        result = await fetcher.get(`${origin}/api/v1/collab/handle/${entry.id}`);
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || !(result.status === 200 || result.status === 201)) throw new Error('Failed to get collab handle', { cause: error || result })
+
+      return { isNew: result.status === 201, id: result.body.id, fragmentName: result.body.fragmentName };
+    },
     async logout() {
       try {
         await fetcher.get(`${origin}/api/v1/logout`);

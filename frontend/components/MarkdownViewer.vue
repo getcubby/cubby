@@ -51,7 +51,9 @@ import { exampleSetup } from "prosemirror-example-setup"
 import './MarkdownViewer.css';
 
 // cannot be reactive
-let view;
+let view, provider;
+
+const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
 
 // https://github.com/ProseMirror/prosemirror-example-setup/blob/8c11be6850604081dceda8f36e08d2426875e19a/src/menu.ts#L58
 function markActive(state, type) {
@@ -225,36 +227,30 @@ export default {
 
       this.entry = entry;
 
-      if (view) view.destroy();
-
-      const markdownDoc = defaultMarkdownParser.parse(content);
-
-      // unique id at the websocket server to create a new collaboration "room"
-      const collabDocId = entry.id;
+      // starts the ydoc if not exists
+      const collabHandle = await this.$root.mainModel.getCollabHandle(entry);
 
       const ydoc = new Y.Doc();
 
-      // run module example server: HOST=localhost PORT=1234 npx y-websocket
-      // const webSocketHost = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 'localhost:1234';
-      const webSocketHost = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
-
-      const provider = new WebsocketProvider(webSocketHost, collabDocId, ydoc );
-      provider.connect();
-
-      // required to have a fragment attached to the ydoc, for some reason I can't see how to attach a fragment later
-      const emptyFragment = ydoc.getXmlFragment('prosemirror');
-
-      const yXmlFragment = prosemirrorToYXmlFragment(markdownDoc, emptyFragment);
-      const { doc, mapping } = initProseMirrorDoc(yXmlFragment, schema)
-
+      provider = new WebsocketProvider(WEBSOCKET_URI, collabHandle.id, ydoc);
       provider.awareness.setLocalStateField('user', { color: '#27ce65', name: this.profile.displayName })
+
+      let fragment = ydoc.getXmlFragment(collabHandle.fragmentName);
+
+      // see if we have to init the fragment with the markdown content
+      if (collabHandle.isNew) {
+        const markdownDoc = defaultMarkdownParser.parse(content);
+        fragment = prosemirrorToYXmlFragment(markdownDoc, fragment);
+      }
+
+      const { doc, mapping } = initProseMirrorDoc(fragment, schema)
 
       view = new EditorView(this.$refs.editorNode, {
         state: EditorState.create({
           doc,
           schema,
           plugins: [
-            ySyncPlugin(yXmlFragment, { mapping }),
+            ySyncPlugin(fragment, { mapping }),
             yCursorPlugin(provider.awareness),
             yUndoPlugin(),
             keymap({
@@ -266,6 +262,10 @@ export default {
       });
     },
     onClose() {
+      // stop syncing
+      if (provider) provider.destroy();
+      if (view) view.destroy();
+
       this.$emit('close');
     }
   }

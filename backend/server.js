@@ -1,4 +1,5 @@
-const constants = require('./constants.js'),
+const collab = require('./routes/collab.js'),
+    constants = require('./constants.js'),
     cors = require('./cors.js'),
     express = require('express'),
     files = require('./routes/files.js'),
@@ -101,6 +102,9 @@ function init(callback) {
     router.get ('/api/v1/preview/:type/:id/:hash', users.optionalSessionAuth, shares.optionalAttachReceiver, misc.getPreview);
 
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);
+
+    // starts or returns a YDoc collaboration object
+    router.get ('/api/v1/collab/handle/:id', users.isAuthenticated, collab.getHandle);
 
     router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
     router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);

@@ -746,7 +746,7 @@ export default {
           user.alreadyUsed = this.shareDialog.entry.sharedWith.find((share) => { return share.receiverUsername === user.username; });
         });
 
-        this.refresh();
+        this.refresh(this.shareDialog.entry);
       },
       async shareHandler(entry) {
         this.shareDialog.error = '';
@@ -806,26 +806,40 @@ export default {
         await this.shareModel.remove(share.id);
         this.refreshShareDialogEntry();
       },
-      async refresh() {
-        const resource = parseResourcePath(this.currentResourcePath);
+      async refresh(entry = null) {
+        if (entry) {
+          try {
+            entry = await this.directoryModel.get(entry.resource, entry.resource.path);
+          } catch (error) {
+            if (error.status === 401) return this.onInvalidSession();
+            else if (error.status === 404) this.error = 'Does not exist';
+            else console.error(error);
+            return;
+          }
 
-        let entry;
-        try {
-          entry = await this.directoryModel.get(resource, resource.path);
-        } catch (error) {
-          if (error.status === 401) return this.onInvalidSession();
-          else if (error.status === 404) this.error = 'Does not exist';
-          else console.error(error);
-          return;
+          // this will replace the entry to keep bindings alive
+          const idx = this.entries.findIndex((e) => e.id === entry.id );
+          if (idx !== -1) this.entries.splice(idx, 1, entry);
+        } else {
+          const resource = parseResourcePath(this.currentResourcePath);
+
+          try {
+            entry = await this.directoryModel.get(resource, resource.path);
+          } catch (error) {
+            if (error.status === 401) return this.onInvalidSession();
+            else if (error.status === 404) this.error = 'Does not exist';
+            else console.error(error);
+            return;
+          }
+
+          entry.files.forEach(function (e) {
+            e.extension = getExtension(e);
+            e.filePathNew = e.fileName;
+          });
+
+          this.entry = entry;
+          this.entries = entry.files;
         }
-
-        entry.files.forEach(function (e) {
-          e.extension = getExtension(e);
-          e.filePathNew = e.fileName;
-        });
-
-        this.entry = entry;
-        this.entries = entry.files;
       },
       async loadMainDirectory(path, entry, forceLoad = false) {
         // path is files/filepath or shares/shareid/filepath

@@ -48,6 +48,8 @@ import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemi
 import { wrapInList, liftListItem, sinkListItem } from "prosemirror-schema-list"
 import { exampleSetup } from "prosemirror-example-setup"
 
+import "prosemirror-gapcursor/style/gapcursor.css";
+
 import './MarkdownViewer.css';
 
 // cannot be reactive

@@ -3,18 +3,23 @@
     <template #header>
       <div class="tool-bar">
         <div class="tool-bar-left">
-          <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 20px;"/>
+          <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 40px;"/>
           <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
           <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
           <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
 
-          <Dropdown v-model="paragraphType" :options="paragraphTypes" option-label="display" option-key="slug" style="margin-left: 20px; margin-right: 20px;" />
+          <Dropdown v-model="paragraphType" :options="paragraphTypes" option-label="display" option-key="slug" style="margin-right: 40px;" />
 
           <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
           <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
 
-          <Button icon="fa-solid fa-outdent" secondary outline tool v-show="tools.lift.available" @click="onToolbutton(tools.lift)" />
-          <Button icon="fa-solid fa-indent" secondary outline tool v-show="tools.sink.available" @click="onToolbutton(tools.sink)" />
+          <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!tools.lift.available" @click="onToolbutton(tools.lift)" />
+          <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!tools.sink.available" @click="onToolbutton(tools.sink)" />
+
+          <Button icon="fa-solid fa-minus" secondary outline tool @click="onToolbutton(tools.hr)" style="margin-left: 40px; margin-right: 40px;" />
+
+          <Button icon="fa-solid fa-rotate-left" secondary outline tool @click="onToolbutton(tools.undo)" />
+          <Button icon="fa-solid fa-rotate-right" secondary outline tool @click="onToolbutton(tools.redo)" style="margin-right: 40px;" />
         </div>
         <div class="tool-bar-right">
           <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
@@ -58,10 +63,19 @@ let view, provider;
 const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
 
 // https://github.com/ProseMirror/prosemirror-example-setup/blob/8c11be6850604081dceda8f36e08d2426875e19a/src/menu.ts#L58
-function markActive(state, type) {
+function markActive(state, markType) {
   let { from, $from, to, empty } = state.selection
-  if (empty) return !!type.isInSet(state.storedMarks || $from.marks())
-  else return state.doc.rangeHasMark(from, to, type)
+  if (empty) return !!markType.isInSet(state.storedMarks || $from.marks())
+  else return state.doc.rangeHasMark(from, to, markType)
+}
+
+function canInsert(state, nodeType) {
+  let $from = state.selection.$from
+  for (let d = $from.depth; d >= 0; d--) {
+    let index = $from.index(d)
+    if ($from.node(d).canReplaceWith(index, index, nodeType)) return true
+  }
+  return false
 }
 
 // plugin to track editor changes into vuejs
@@ -178,6 +192,30 @@ export default {
           available: false,
           mark: null,
           cmd: sinkListItem(schema.nodes.list_item)
+        },
+        hr: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: (state, dispatch, view) => {
+            if (dispatch) dispatch(state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create()));
+          }
+        },
+        undo: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: (state, dispatch, view) => {
+            if (dispatch) undo(state);
+          }
+        },
+        redo: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: (state, dispatch, view) => {
+            if (dispatch) redo(state);
+          }
         }
       }
     };
@@ -201,7 +239,7 @@ export default {
 
       if (!cmd) return;
 
-      cmd(view.state, view.dispatch);
+      cmd(view.state, view.dispatch, view);
     }
   },
   mounted() {
@@ -213,7 +251,7 @@ export default {
     },
     onToolbutton(tool) {
       view.focus();
-      tool.cmd(view.state, view.dispatch);
+      tool.cmd(view.state, view.dispatch, view);
     },
     async onSave() {
       this.busySave = true;

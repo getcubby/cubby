@@ -202,10 +202,6 @@ function init(callback) {
         // (e.g. by checking cookies, or url parameters).
         // See https://github.com/websockets/ws#client-authentication
         wsServer.handleUpgrade(request, socket, head, /** @param {any} ws */ ws => {
-            ws.on('close', (code, reason) => {
-                console.log('websocket close', code, reason)
-            });
-
             wsServer.emit('connection', ws, request);
         });
     });

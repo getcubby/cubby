@@ -12,6 +12,14 @@ const debug = require('debug')('cubby:routes:collab'),
 
 const FRAGEMENT_NAME = 'cubby-markdownviewer';
 
+// set noop persistence for now. This will ensure docs without connections are purged from memory
+// https://github.com/yjs/y-websocket/blob/master/bin/utils.cjs#L223
+yUtils.setPersistence({
+    provider: 'cubbyPersistence',
+    bindState: async (docName, ydoc) => {},
+    writeState: async (_docName, _ydoc) => {}
+});
+
 async function getHandle(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));

@@ -107,6 +107,9 @@
   <!-- Search result Dialog -->
   <Dialog title="" ref="searchResultsDialog" reject-label="Close">
     <div>
+      <div v-show="searchResults.length === 0">
+        No results found.
+      </div>
       <div v-for="result in searchResults" :key="result.filepath" class="search-result-entry" @click="onOpenEntryFromSearch(result.entry)">
         <img :src="result.entry.previewUrl"/>
         <div style="margin-left: 10px;">

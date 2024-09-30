@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 const constants = require('./backend/constants.js'),
-    database = require('./backend/database.js'),
-    fs = require('fs'),
     config = require('./backend/config.js'),
+    database = require('./backend/database.js'),
     diskusage = require('./backend/diskusage.js'),
+    fs = require('fs'),
+    path = require('path'),
     recoll = require('./backend/recoll.js'),
-    server = require('./backend/server.js');
+    server = require('./backend/server.js'),
+    users = require('./backend/users.js');
 
 database.init();
 config.init(process.env.CONFIG_FILE_PATH || 'config.json');
@@ -22,15 +24,6 @@ if (!fs.existsSync(constants.SESSION_SECRET_FILE_PATH)) {
     fs.writeFileSync(constants.SESSION_SECRET_FILE_PATH, require('crypto').randomBytes(20).toString('hex'), 'utf8');
 }
 
-// we shall crash if this fails
-diskusage.calculate();
-
-// currently just update this every hour to put less strain on the disk
-setInterval(diskusage.calculate, 1000 * 60 * 60);
-
-// don't await
-recoll.index();
-
 server.init(async function (error) {
     if (error) {
         console.error(error);
@@ -39,4 +32,12 @@ server.init(async function (error) {
 
     console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
     console.log('Cubby is up and running.');
+
+    // ensure at least users home dirs
+    const userList = await users.list();
+    for (const user of userList) fs.mkdirSync(path.join(constants.USER_DATA_ROOT, user.username), { recursive: true });
+
+    // refresh data in background
+    diskusage.calculate();
+    recoll.index();
 });

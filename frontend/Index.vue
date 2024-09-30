@@ -8,9 +8,9 @@
 
     <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
+        <h1 style="margin-bottom: 30px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
-        <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch"/>
+        <div class="side-bar-entry search-entry" style="margin-bottom: 30px;"><i class="fa-solid fa-magnifying-glass" style="cursor: pointer;" @click="onSearch"></i> <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch" class="search-input"/></div>
 
         <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
@@ -478,9 +478,10 @@ export default {
         this.refresh();
       },
       async onSearch() {
+        if (!this.searchQuery) return;
+
         this.searchResults = await this.mainModel.search(this.searchQuery);
         this.$refs.searchResultsDialog.open();
-        // console.log(this.searchResults);
       },
       onCloseSidebar() {
         this.$refs.sideBar.close();
@@ -1124,6 +1125,14 @@ pre {
   padding-right: 10px;
 }
 
+.side-bar-entry.search-entry {
+  display: flex;
+  align-items: center;
+  cursor: auto;
+  padding: 0 10px;
+  padding-left: 20px;
+}
+
 .content {
     display: flex;
     height: 100%;
@@ -1155,6 +1164,12 @@ pre {
 .shared-link {
   display: flex;
   justify-content: space-between;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  color: var(--pankow-color-text);
 }
 
 @media only screen and (max-width: 767px) {

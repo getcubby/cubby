@@ -37,6 +37,7 @@ async function indexByUsername(username) {
     }
     fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
 
+    // TODO we actually do not want to even buffer stdout here, but execFile can't not do this
     try {
         await exec('index', 'recollindex', [ '-c', configPath ], {});
     } catch (e) {

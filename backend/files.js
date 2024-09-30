@@ -299,18 +299,18 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
 async function getByAbsolutePath(absolutePath) {
     assert.strictEqual(typeof absolutePath, 'string');
 
-    if (absolutePath.indexOf(constants.GROUPS_DATA_ROOT) === 0) {
-        // groupfolder path
-        const tmp = absolutePath.slice(constants.GROUPS_DATA_ROOT.length);
-        const groupFolder = tmp.split('/')[1];
-        const filePath = tmp.slice(groupFolder.length+1);
-        return await get('groupfolder-' + groupFolder, filePath);
-    } else if (absolutePath.indexOf(constants.USER_DATA_ROOT) === 0) {
+    if (absolutePath.indexOf(constants.USER_DATA_ROOT) === 0) {
         // user path
         const tmp = absolutePath.slice(constants.USER_DATA_ROOT.length);
         const username = tmp.split('/')[1];
         const filePath = tmp.slice(username.length+1);
         return await get(username, filePath);
+    } else if (absolutePath.indexOf(constants.GROUPS_DATA_ROOT) === 0) {
+        // groupfolder path
+        const tmp = absolutePath.slice(constants.GROUPS_DATA_ROOT.length);
+        const groupFolder = tmp.split('/')[1];
+        const filePath = tmp.slice(groupFolder.length+1);
+        return await get('groupfolder-' + groupFolder, filePath);
     }
 
     console.error(`getByAbsolutePath: invalid path, should not happen ${absolutePath}`);

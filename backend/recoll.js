@@ -62,12 +62,16 @@ async function searchByUsername(username, query) {
         const filePath = Buffer.from(parts[0], 'base64').toString();
         const fileName = Buffer.from(parts[1], 'base64').toString();
         const abstract = Buffer.from(parts[2], 'base64').toString();
-        const entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
 
-        if (!entry) {
-            debug(`searchByUsername: Entry not found for ${filePath}`);
-            continue;
+        let entry;
+        try {
+            entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
+        } catch (e) {
+            debug(`searchByUsername: Entry not found for ${filePath}`, e);
         }
+
+        // skip
+        if (!entry) continue;
 
         results.push({
             filePath,

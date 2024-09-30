@@ -311,10 +311,11 @@ async function getByAbsolutePath(absolutePath) {
         const groupFolder = tmp.split('/')[1];
         const filePath = tmp.slice(groupFolder.length+1);
         return await get('groupfolder-' + groupFolder, filePath);
-    } else {
-        console.error(`getByAbsolutePath: invalid path, should not happen ${absolutePath}`);
-        return null;
     }
+
+    console.error(`getByAbsolutePath: invalid path, should not happen ${absolutePath}`);
+
+    throw new MainError(MainError.NOT_FOUND);
 }
 
 async function get(usernameOrGroupfolder, filePath) {

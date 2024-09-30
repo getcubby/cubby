@@ -11,7 +11,7 @@ exports = module.exports = async function execArgs(tag, file, args, options) {
 
     debug(`${tag} execArgs: ${file} ${JSON.stringify(args)}`);
 
-    const execOptions = Object.assign({ encoding: 'utf8', shell: false }, options);
+    const execOptions = Object.assign({ encoding: 'utf8', shell: false, maxBuffer: 1024 * 1024 * 1024 }, options);
 
     return new Promise((resolve, reject) => {
         const cp = child_process.execFile(file, args, execOptions, function (error, stdout, stderr) {

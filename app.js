@@ -5,6 +5,7 @@ const constants = require('./backend/constants.js'),
     fs = require('fs'),
     config = require('./backend/config.js'),
     diskusage = require('./backend/diskusage.js'),
+    recoll = require('./backend/recoll.js'),
     server = require('./backend/server.js');
 
 database.init();
@@ -26,6 +27,9 @@ diskusage.calculate();
 
 // currently just update this every hour to put less strain on the disk
 setInterval(diskusage.calculate, 1000 * 60 * 60);
+
+// don't await
+recoll.index();
 
 server.init(async function (error) {
     if (error) {

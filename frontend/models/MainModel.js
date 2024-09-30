@@ -111,6 +111,18 @@ export function createMainModel(origin) {
 
       return { isNew: result.status === 201, id: result.body.id, fragmentName: result.body.fragmentName };
     },
+    async search(query) {
+      let error, result;
+      try {
+        result = await fetcher.get(`${origin}/api/v1/search`, { query });
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.status !== 200) throw new Error('Failed to search', { cause: error || result })
+
+      return result.body.results;
+    },
     async logout() {
       try {
         await fetcher.get(`${origin}/api/v1/logout`);

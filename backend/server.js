@@ -102,6 +102,7 @@ function init(callback) {
     router.get ('/api/v1/preview/:type/:id/:hash', users.optionalSessionAuth, shares.optionalAttachReceiver, misc.getPreview);
 
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);
+    router.get ('/api/v1/search', users.isAuthenticated, misc.search);
 
     // starts or returns a YDoc collaboration object
     router.get ('/api/v1/collab/handle', users.isAuthenticated, collab.getHandle);

@@ -10,6 +10,8 @@
       <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
+        <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch"/>
+
         <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
@@ -101,6 +103,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Search result Dialog -->
+  <Dialog title="" ref="searchResultsDialog" reject-label="Close">
+    <div>
+      <p v-for="result in searchResults" :key="result.filepath">
+        <b>{{ result.fileName }}</b> <small>{{ result.mimeType }}</small>
+      </p>
+    </div>
+  </Dialog>
 
   <!-- About Dialog -->
   <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close">
@@ -301,6 +312,8 @@ export default {
         mainModel: null,
         shareModel: null,
         directoryModel: null,
+        searchQuery: '',
+        searchResults: [],
         view: '',
         search: '',
         viewer: '',
@@ -463,6 +476,11 @@ export default {
         await this.directoryModel.upload(resource, file, progressHandler);
 
         this.refresh();
+      },
+      async onSearch() {
+        this.searchResults = await this.mainModel.search(this.searchQuery);
+        this.$refs.searchResultsDialog.open();
+        // console.log(this.searchResults);
       },
       onCloseSidebar() {
         this.$refs.sideBar.close();

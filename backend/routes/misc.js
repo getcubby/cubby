@@ -3,7 +3,8 @@
 exports = module.exports = {
     getConfig,
     getPreview,
-    download
+    download,
+    search
 };
 
 const assert = require('assert'),
@@ -15,6 +16,7 @@ const assert = require('assert'),
     office = require('../office.js'),
     path = require('path'),
     preview = require('../preview.js'),
+    recoll = require('../recoll.js'),
     safe = require('safetydance'),
     shares = require('../shares.js'),
     HttpError = require('connect-lastmile').HttpError,
@@ -147,4 +149,23 @@ async function download(req, res, next) {
     }
 
     archive.finalize();
+}
+
+async function search(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    const query = req.query.query || '';
+    if (!query) return next(new HttpError(400, 'non-empty query arg required'));
+
+    debug(`search: ${req.user.username} ${query}`);
+
+    let results;
+    try {
+        results = await recoll.searchByUsername(req.user.username, query);
+    } catch (e) {
+        console.error('search error:', e);
+        return next(new HttpError(500, 'search failed'));
+    }
+
+    next(new HttpSuccess(200, { results }));
 }

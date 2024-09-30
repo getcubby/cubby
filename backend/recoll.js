@@ -37,7 +37,11 @@ async function indexByUsername(username) {
     }
     fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
 
-    await exec('index', 'recollindex', [ '-c', configPath ], {});
+    try {
+        await exec('index', 'recollindex', [ '-c', configPath ], {});
+    } catch (e) {
+        console.error('Failed to create or update recoll index for user.', e);
+    }
 
     debug(`indexByUsername: ${username} done`);
 }

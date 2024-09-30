@@ -297,9 +297,9 @@ async function getByAbsolutePath(absolutePath) {
     } else if (absolutePath.indexOf(constants.GROUPS_DATA_ROOT) === 0) {
         // groupfolder path
         const tmp = absolutePath.slice(constants.GROUPS_DATA_ROOT.length);
-        const username = tmp.split('/')[1];
-        const filePath = tmp.slice(username.length+1);
-        return await get(username, filePath);
+        const groupFolder = tmp.split('/')[1];
+        const filePath = tmp.slice(groupFolder.length+1);
+        return await get('groupfolder-' + groupFolder, filePath);
     } else {
         console.error(`getByAbsolutePath: invalid path, should not happen ${absolutePath}`);
         return null;

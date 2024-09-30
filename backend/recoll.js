@@ -9,7 +9,9 @@ const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:search'),
     exec = require('./exec.js'),
+    files = require('./files.js'),
     fs = require('fs'),
+    groupFolders = require('./groupfolders.js'),
     path = require('path'),
     users = require('./users.js');
 
@@ -27,7 +29,13 @@ async function indexByUsername(username) {
     const configFilePath = path.join(configPath, 'recoll.conf');
 
     fs.mkdirSync(configPath, { recursive: true });
-    if (!fs.existsSync(configFilePath)) fs.writeFileSync(configFilePath, `topdirs = ${path.join(constants.USER_DATA_ROOT, username)}`);
+
+    // collect all paths we want to index and write config file
+    const pathsToIndex = [ path.join(constants.USER_DATA_ROOT, username) ];
+    for (const groupFolder of await groupFolders.list(username)) {
+        pathsToIndex.push(groupFolder.folderPath);
+    }
+    fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
 
     await exec('index', 'recollindex', [ '-c', configPath ], {});
 
@@ -44,18 +52,28 @@ async function searchByUsername(username, query) {
     const dbFilePath = path.join(configPath, 'xapiandb');
     if (!fs.existsSync(dbFilePath)) await indexByUsername(username);
 
-    const out = await exec('search', 'recoll', [ '-t', '-F', 'mtype url filename', '-c', configPath, query ], {});
+    const out = await exec('search', 'recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ], {});
 
-    // console.log(out)
     const results = [];
 
     // first two lines and last are info
     for (const line of out.split('\n').slice(2).slice(0, -1)) {
         const parts = line.split(' ');
+        const filePath = Buffer.from(parts[0], 'base64').toString();
+        const fileName = Buffer.from(parts[1], 'base64').toString();
+        const abstract = Buffer.from(parts[2], 'base64').toString();
+        const entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
+
+        if (!entry) {
+            debug(`searchByUsername: Entry not found for ${filePath}`);
+            continue;
+        }
+
         results.push({
-            mimeType: Buffer.from(parts[0], 'base64').toString(),
-            filePath: Buffer.from(parts[1], 'base64').toString(),
-            fileName: Buffer.from(parts[2], 'base64').toString()
+            filePath,
+            fileName,
+            abstract,
+            entry: entry.withoutPrivate()
         });
     }
 

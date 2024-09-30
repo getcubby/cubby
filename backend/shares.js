@@ -79,7 +79,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 
     debug(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
 
-    const fullFilePath = files.getValidFullPath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
+    const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');

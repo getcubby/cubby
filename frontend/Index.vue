@@ -107,9 +107,13 @@
   <!-- Search result Dialog -->
   <Dialog title="" ref="searchResultsDialog" reject-label="Close">
     <div>
-      <p v-for="result in searchResults" :key="result.filepath">
-        <b>{{ result.fileName }}</b> <small>{{ result.mimeType }}</small>
-      </p>
+      <div v-for="result in searchResults" :key="result.filepath" class="search-result-entry" @click="onOpenEntryFromSearch(result.entry)">
+        <img :src="result.entry.previewUrl"/>
+        <div style="margin-left: 10px;">
+          <b>{{ result.fileName }}</b><br/>
+          <small>{{ result.abstract }}</small>
+        </div>
+      </div>
     </div>
   </Dialog>
 
@@ -1015,10 +1019,14 @@ export default {
 
         return true;
       },
+      onOpenEntryFromSearch(entry) {
+        this.$refs.searchResultsDialog.close();
+        this.onOpen(entry);
+      },
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
         else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
-        else window.location.hash = `files/home${entry.filePath}`;
+        else window.location.hash = `files/home/${entry.filePath}`;
       },
       onViewerClose() {
         this.viewer = '';
@@ -1176,6 +1184,17 @@ pre {
   .side-bar-toggle {
     display: none;
   }
+}
+
+.search-result-entry {
+  display: flex;
+  align-items: start;
+  cursor: pointer;
+  padding: 10px 5px;
+}
+
+.search-result-entry:hover {
+  background-color: var(--pankow-color-background-hover);
 }
 
 </style>

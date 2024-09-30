@@ -21,6 +21,7 @@ const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:files'),
     fs = require('fs-extra'),
+    groupFolders = require('./groupfolders.js'),
     path = require('path'),
     util = require('util'),
     exec = util.promisify(require('child_process').exec),
@@ -182,6 +183,12 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
 
     let files;
 
+    const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
+    const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
+
+    // for groups attach it
+    const group = ownerGroupfolder ? await groupFolders.get(ownerGroupfolder) : null;
+
     try {
         const contents = await fs.readdir(fullFilePath);
         files = contents.map(function (file) {
@@ -201,6 +208,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
                 mtime: file.stat.mtime,
                 isDirectory: file.stat.isDirectory(),
                 isFile: file.stat.isFile(),
+                group: group,
                 owner: usernameOrGroupfolder,
                 mimeType: file.stat.isDirectory() ? 'inode/directory' : mime(file.name)
             });
@@ -210,8 +218,6 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
     }
 
     // attach shares
-    const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
-    const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
     const sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath);
     for (const file of files) {
         file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, file.filePath);
@@ -233,6 +239,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         mtime: stats.mtime,
         isDirectory: true,
         isFile: false,
+        group: group,
         owner: usernameOrGroupfolder,
         sharedWith: sharedWith || [],
         mimeType: 'inode/directory',
@@ -271,11 +278,15 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         size = stats.size;
     }
 
+    // for groups attach it
+    const group = ownerGroupfolder ? await groupFolders.get(ownerGroupfolder) : null;
+
     return new Entry({
         fullFilePath: fullFilePath,
         fileName: path.basename(fullFilePath),
         filePath: filePath,
         size: size,
+        group: group,
         mtime: stats.mtime,
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),

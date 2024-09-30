@@ -290,13 +290,6 @@ async function get(req, res, next) {
                 return res.download(file._fullFilePath);
             }
 
-            // for now we only allow raw or download on publicly shared links
-            // if (!req.user) return next(new HttpError(403, 'not allowed'));
-
-            // those files are always part of this share
-            file.files.forEach(function (f) { f.group = group; });
-            file.group = group;
-
             next(new HttpSuccess(200, file.asGroup().withoutPrivate()));
         } else {
             debug('listGroupFolders');
@@ -321,7 +314,6 @@ async function get(req, res, next) {
                     file.fileName = group.name;
                     file.isShare = false;
                     file.isGroup = true;
-                    file.group = group;
                     file = file.asGroup('/');
                     file.id = group.id;
 

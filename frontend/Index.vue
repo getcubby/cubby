@@ -1180,7 +1180,7 @@ pre {
 .search-input {
   border: none;
   background: transparent;
-  color: var(--pankow-color-text);
+  color: var(--pankow-text-color);
 }
 
 @media only screen and (max-width: 767px) {

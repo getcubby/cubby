@@ -112,7 +112,7 @@
   </div>
 
   <!-- Search result Dialog -->
-  <Dialog title="" ref="searchResultsDialog" reject-label="Close">
+  <Dialog title="" ref="searchResultsDialog" reject-label="Close" @close="searchQuery = ''">
     <div>
       <div v-show="searchResults.length === 0">
         No results found.

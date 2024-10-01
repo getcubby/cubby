@@ -1178,6 +1178,11 @@ pre {
   color: white;
 }
 
+.search-input::placeholder {
+  color: white;
+  opacity: 0.5;
+}
+
 @media only screen and (max-width: 767px) {
   .side-bar-toggle {
     display: none;

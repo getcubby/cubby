@@ -507,11 +507,6 @@ export default {
         this.profile.username = '';
         this.profile.email = '';
         this.profile.displayName = '';
-        this.profile.diskusage = {
-          used: 0,
-          size: 0,
-          available: 0
-        };
 
         this.onLogin();
       },

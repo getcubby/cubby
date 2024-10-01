@@ -134,10 +134,6 @@ async function tokenAuth(req, res, next) {
 async function profile(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const result = await diskusage.getByUsername(req.user.username);
-
-    req.user.diskusage = result;
-
     // TODO remove private fields
     next(new HttpSuccess(200, req.user));
 }

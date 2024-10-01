@@ -8,7 +8,7 @@ exports = module.exports = {
 const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:diskusage'),
-    execSync = require('child_process').execSync,
+    exec = require('./exec.js'),
     files = require('./files.js'),
     groupFolders = require('./groupfolders.js'),
     users = require('./users.js'),
@@ -66,7 +66,7 @@ async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryP
     }
 
     try {
-        const out = execSync(`du -b ${directoryPath}`, { encoding: 'utf8' });
+        const out = exec('du', [ '-b', directoryPath ], {});
         out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
             const parts = l.split('\t');
             if (parts.length !== 2) return;
@@ -98,7 +98,7 @@ async function calculateByUsername(usernameOrGroupFolder) {
         const groupFolder = await groupFolders.get(id);
 
         try {
-            const out = execSync(`du -b ${groupFolder.folderPath}`, { encoding: 'utf8' });
+            const out = exec('du', [ '-b', groupFolder.folderPath ], {});
             out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
                 const parts = l.split('\t');
                 if (parts.length !== 2) return;
@@ -117,7 +117,7 @@ async function calculateByUsername(usernameOrGroupFolder) {
         const username = usernameOrGroupFolder;
 
         try {
-            const out = execSync(`du -b ${path.join(constants.USER_DATA_ROOT, username)}`, { encoding: 'utf8' });
+            const out = exec('du', [ '-b', path.join(constants.USER_DATA_ROOT, username) ], {});
             out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
                 const parts = l.split('\t');
                 if (parts.length !== 2) return;

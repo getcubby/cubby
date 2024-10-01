@@ -20,6 +20,22 @@ async function index() {
     for (const user of userList) await indexByUsername(user.username);
 }
 
+// TODO provide faster index operations on individual paths:
+// recollindex -e [<filepath [path ...]>]
+//     Purge data for individual files. No stem database updates.
+//     Reads paths on stdin if none is given as argument.
+// recollindex -i [-f] [-Z] [-P] [<filepath [path ...]>]
+//     Index individual files. No database purge or stem database updates
+//     Will read paths on stdin if none is given as argument
+//     -f : ignore skippedPaths and skippedNames while doing this
+//     -Z : force reindex of each file
+//     -P : force running a purge pass (very special use, don't do this if not sure)
+// recollindex -r [-K] [-f] [-Z] [-p pattern] <top>
+//    Recursive partial reindex.
+//      -p : filter file names, multiple instances are allowed, e.g.:
+//         -p *.odt -p *.pdf
+//      -K : skip previously failed files (they are retried by default)
+
 async function indexByUsername(username) {
     assert.strictEqual(typeof username, 'string');
 
@@ -37,9 +53,9 @@ async function indexByUsername(username) {
     }
     fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
 
-    // TODO we actually do not want to even buffer stdout here, but execFile can't not do this
     try {
-        await exec('index', 'recollindex', [ '-c', configPath ], {});
+        // we don't care about the huge stdout for now
+        await exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] });
     } catch (e) {
         console.error('Failed to create or update recoll index for user.', e);
     }
@@ -57,7 +73,7 @@ async function searchByUsername(username, query) {
     const dbFilePath = path.join(configPath, 'xapiandb');
     if (!fs.existsSync(dbFilePath)) await indexByUsername(username);
 
-    const out = await exec('search', 'recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ], {});
+    const out = await exec('recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ], {});
 
     const results = [];
 

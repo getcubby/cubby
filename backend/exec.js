@@ -2,34 +2,44 @@ const assert = require('assert'),
     child_process = require('child_process'),
     debug = require('debug')('cubby:exec');
 
-// default encoding utf8, no shell, handles input, separate args, wait for process to finish
-exports = module.exports = async function execArgs(tag, file, args, options) {
-    assert.strictEqual(typeof tag, 'string');
-    assert.strictEqual(typeof file, 'string');
+exports = module.exports = function exec(command, args, options) {
+    assert.strictEqual(typeof command, 'string');
     assert(Array.isArray(args));
     assert.strictEqual(typeof options, 'object');
 
-    debug(`${tag} execArgs: ${file} ${JSON.stringify(args)}`);
+    debug(`${command} ${JSON.stringify(args)}`);
 
-    const execOptions = Object.assign({ encoding: 'utf8', shell: false, maxBuffer: 1024 * 1024 * 1024 }, options);
+    options = Object.assign({ encoding: 'utf8', shell: false }, options);
+
+    const p = child_process.spawn(command, args, options);
+    let stderr = '';
+    let stdout = '';
 
     return new Promise((resolve, reject) => {
-        const cp = child_process.execFile(file, args, execOptions, function (error, stdout, stderr) {
-            if (!error) return resolve(stdout);
+        // p.stdout and p.stderr may be null if stdio option is non-default
+        if (p.stdout) {
+            p.stdout.on('data', (d) => {
+                stdout += d;
+            });
+        }
 
-            const e = new Error(`${tag} errored with code ${error.code} message ${error.message}`);
+        if (p.stderr) {
+            p.stderr.on('data', (d) => {
+                stderr += d;
+            });
+        }
+
+        p.on('exit', (code) => {
+            if (code === 0) return resolve(stdout);
+
+            const e = new Error(`${command} errored with code ${code}`);
             e.stdout = stdout; // when promisified, this is the way to get stdout
             e.stderr = stderr; // when promisified, this is the way to get stderr
-            e.code = error.code;
-            e.signal = error.signal;
-            debug(`${tag}: ${file} with args ${args.join(' ')} errored`, error);
+            e.code = code;
+
+            debug(`${command} with args ${args.join(' ')} errored`, e);
+
             reject(e);
         });
-
-        // https://github.com/nodejs/node/issues/25231
-        if (options.input) {
-            cp.stdin.write(options.input);
-            cp.stdin.end();
-        }
     });
 };

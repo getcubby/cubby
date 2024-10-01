@@ -18,6 +18,9 @@
         <a class="side-bar-entry" v-show="profile.username" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
+
+        <Menu ref="mainMenuElement" :model="mainMenu"></Menu>
+        <div class="side-bar-entry" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
         <TopBar :gap="false">
@@ -45,10 +48,7 @@
               <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
             </template>
 
-            <div class="profile-dropdown">
-              <Button v-show="profile.username" id="profileMenuDropdown" icon="fa-regular fa-user" secondary :menu="mainMenu" tool><span class="pankow-no-mobile">{{ profile.displayName }}</span></Button>
-              <Button v-show="!profile.username" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
-            </div>
+            <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
           </template>
         </TopBar>
 
@@ -296,6 +296,7 @@ export default {
       ImageViewer,
       InputDialog,
       LoginView,
+      Menu,
       Notification,
       MarkdownViewer,
       OfficeViewer,
@@ -465,6 +466,9 @@ export default {
     methods: {
       prettyFileSize,
       prettyLongDate,
+      onMainMenu(event, elem) {
+        this.$refs.mainMenuElement.open(event, event.target);
+      },
       showAllFiles() {
         window.location.hash = 'files/home/';
       },
@@ -1121,6 +1125,9 @@ pre {
   padding: 10px;
   padding-left: 20px;
   border-radius: 3px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .side-bar-entry:hover {

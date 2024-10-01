@@ -8,6 +8,7 @@ frontend-dist/
 .sessions/
 config.json
 .secret
+.recoll/
 
 # local env files
 .env.local

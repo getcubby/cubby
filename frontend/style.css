@@ -27,11 +27,6 @@ html, body {
   }
 }
 
-.main-container-content {
-    overflow: scroll;
-    flex-grow: 1;
-}
-
 .main-container-footer {
     display: flex;
     padding: 10px;

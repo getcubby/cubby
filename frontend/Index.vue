@@ -8,9 +8,7 @@
 
     <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <h1 style="margin-bottom: 30px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
-
-        <div class="side-bar-entry search-entry" style="margin-bottom: 30px;"><i class="fa-solid fa-magnifying-glass" style="cursor: pointer;" @click="onSearch"></i> <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch" class="search-input"/></div>
+        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
@@ -20,10 +18,10 @@
         <div style="flex-grow: 1">&nbsp;</div>
 
         <Menu ref="mainMenuElement" :model="mainMenu"></Menu>
-        <div class="side-bar-entry" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
+        <div class="side-bar-entry side-bar-entry-button" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
-        <TopBar :gap="false">
+        <TopBar :gap="false" :left-grow="true">
           <template #left>
             <template v-if="view === VIEWS.USERS">
               <span style="font-size: 24px;">Users</span>
@@ -32,8 +30,11 @@
               <span style="font-size: 24px;">Settings</span>
             </template>
             <template v-if="view === VIEWS.MAIN">
-              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
-              <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+              <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
+                <Spinner v-show="searchBusy" />
+                <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
+              </div>
             </template>
           </template>
 
@@ -58,42 +59,48 @@
         <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
           <div class="main-container-content">
             <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
-            <DirectoryView
-              :show-owner="false"
-              :show-extract="false"
-              :show-size="true"
-              :show-modified="true"
-              :show-share="'isSharedWith'"
-              :editable="!isReadonly()"
-              :multi-download="true"
-              @selection-changed="onSelectionChanged"
-              @item-activated="onOpen"
-              :delete-handler="deleteHandler"
-              :share-handler="shareHandler"
-              :rename-handler="renameHandler"
-              :paste-handler="pasteHandler"
-              :download-handler="downloadHandler"
-              :new-file-handler="onNewFile"
-              :new-folder-handler="onNewFolder"
-              :upload-file-handler="onUploadFile"
-              :upload-folder-handler="onUploadFolder"
-              :drop-handler="onDrop"
-              :items="entries"
-              :fallback-icon="`${BASE_URL}mime-types/none.svg`"
-              style="position: absolute;"
-            >
-              <template #empty>
-                <div v-show="!entries.length" class="no-entries-placeholder">
-                  <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
-                  <p v-show="activeResourceType === 'recent'">No recent files</p>
-                  <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
-                  <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
-                </div>
-              </template>
-            </DirectoryView>
+            <div class="breadcrumb-bar">
+              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
+              <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+            </div>
+            <div style="overflow: hidden; height: calc(100% - 46px);">
+              <DirectoryView
+                :show-owner="false"
+                :show-extract="false"
+                :show-size="true"
+                :show-modified="true"
+                :show-share="'isSharedWith'"
+                :editable="!isReadonly()"
+                :multi-download="true"
+                @selection-changed="onSelectionChanged"
+                @item-activated="onOpen"
+                :delete-handler="deleteHandler"
+                :share-handler="shareHandler"
+                :rename-handler="renameHandler"
+                :paste-handler="pasteHandler"
+                :download-handler="downloadHandler"
+                :new-file-handler="onNewFile"
+                :new-folder-handler="onNewFolder"
+                :upload-file-handler="onUploadFile"
+                :upload-folder-handler="onUploadFolder"
+                :drop-handler="onDrop"
+                :items="entries"
+                :fallback-icon="`${BASE_URL}mime-types/none.svg`"
+              >
+                <template #empty>
+                  <div v-show="!entries.length" class="no-entries-placeholder">
+                    <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
+                    <p v-show="activeResourceType === 'recent'">No recent files</p>
+                    <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
+                    <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
+                  </div>
+                </template>
+              </DirectoryView>
+            </div>
           </div>
           <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" :visible="previewPanelVisible"/>
         </div>
+
         <FileUploader
           ref="fileUploader"
           :upload-handler="uploadHandler"
@@ -244,6 +251,7 @@ import {
   Notification,
   PasswordInput,
   SideBar,
+  Spinner,
   TextInput,
   TopBar
 } from 'pankow';
@@ -304,6 +312,7 @@ export default {
       PdfViewer,
       PreviewPanel,
       SideBar,
+      Spinner,
       UsersView,
       TextViewer,
       TextInput,
@@ -321,6 +330,7 @@ export default {
         shareModel: null,
         directoryModel: null,
         searchQuery: '',
+        searchBusy: false,
         searchResults: [],
         view: '',
         search: '',
@@ -491,8 +501,12 @@ export default {
       async onSearch() {
         if (!this.searchQuery) return;
 
+        this.searchBusy = true;
+
         this.searchResults = await this.mainModel.search(this.searchQuery);
         this.$refs.searchResultsDialog.open();
+
+        this.searchBusy = false;
       },
       onCloseSidebar() {
         this.$refs.sideBar.close();
@@ -1138,40 +1152,40 @@ pre {
   padding-right: 10px;
 }
 
-.side-bar-entry.search-entry {
-  display: flex;
-  align-items: center;
-  cursor: auto;
-  padding: 0 10px;
-  padding-left: 20px;
+.side-bar-entry-button {
+  background-color: rgba(255,255,255,0.2);
+}
+
+.side-bar-entry-button:hover {
+  background-color: rgba(255,255,255,0.7);
+  color: var(--pankow-text-color);
 }
 
 .content {
-    display: flex;
-    height: 100%;
-    width: 100%;
-    flex-direction: column;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
 }
 
 .upload {
-    display: flex;
-    height: 50px;
-    width: 100%;
-    padding: 10px;
-    flex-direction: column;
+  display: flex;
+  height: 50px;
+  width: 100%;
+  padding: 10px;
+  flex-direction: column;
 }
 
 .main-container-content {
-    position: relative;
+  position: relative;
+  overflow: hidden;
+  flex-grow: 1;
 }
 
 .side-bar-toggle {
-    position: sticky;
-    float: right;
-    z-index: 30;
-    top: 3px;
-    padding: 10px 15px;
-    cursor: pointer;
+  float: right;
+  padding: 10px 15px;
+  cursor: pointer;
 }
 
 .shared-link {
@@ -1179,15 +1193,23 @@ pre {
   justify-content: space-between;
 }
 
+.breadcrumb-bar {
+  display: flex;
+  margin: auto 0px;
+  align-items: center;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  margin-left: 20px;
+}
+
 .search-input {
   border: none;
   background: transparent;
-  color: white;
-}
-
-.search-input::placeholder {
-  color: white;
-  opacity: 0.5;
+  flex-grow: 1;
 }
 
 @media only screen and (max-width: 767px) {
@@ -1205,6 +1227,11 @@ pre {
 
 .search-result-entry:hover {
   background-color: var(--pankow-color-background-hover);
+}
+
+.search-result-panel {
+  border-radius: var(--pankow-border-radius);
+  background: white;
 }
 
 </style>

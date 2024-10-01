@@ -73,7 +73,7 @@ async function searchByUsername(username, query) {
     const dbFilePath = path.join(configPath, 'xapiandb');
     if (!fs.existsSync(dbFilePath)) await indexByUsername(username);
 
-    const out = await exec('recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ], {});
+    const out = await exec('recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ]);
 
     const results = [];
 

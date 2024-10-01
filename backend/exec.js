@@ -5,7 +5,9 @@ const assert = require('assert'),
 exports = module.exports = function exec(command, args, options) {
     assert.strictEqual(typeof command, 'string');
     assert(Array.isArray(args));
-    assert.strictEqual(typeof options, 'object');
+
+    if (options) assert.strictEqual(typeof options, 'object');
+    else options = {};
 
     debug(`${command} ${JSON.stringify(args)}`);
 

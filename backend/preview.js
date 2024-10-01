@@ -2,7 +2,7 @@ const assert = require('assert'),
     constants = require('./constants.js'),
     crypto = require('crypto'),
     debug = require('debug')('cubby:preview'),
-    exec = require('util').promisify(require('child_process').exec),
+    exec = require('./exec.js'),
     fs = require('fs-extra'),
     path = require('path');
 
@@ -55,8 +55,8 @@ const generators = [{
 
             try {
                 await fs.ensureDir(constants.THUMBNAIL_ROOT);
-                if (mimeType === 'image/gif') await exec(`convert -auto-orient -thumbnail 512 "${fullFilePath}[0]" "${targetPath}"`);
-                else await exec(`convert -auto-orient -thumbnail 512 "${fullFilePath}" "${targetPath}"`);
+                if (mimeType === 'image/gif') await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath+'[0]', targetPath ]);
+                else await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath, targetPath ]);
             } catch (e) {
                 console.error(`Failed to create thumbnail for ${fullFilePath}`, e);
             }

@@ -56,8 +56,7 @@ async function runChangeHooks(usernameOrGroupfolder, filePath) {
     await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, filePath);
 
     if (isGroupfolder(usernameOrGroupfolder)) {
-        // TODO maybe only index for users which are part of that groupfolder
-        await recoll.index();
+        await recoll.indexByGroupFolder(usernameOrGroupfolder.slice('groupfolder-'.length));
     } else {
         await recoll.indexByUsername(usernameOrGroupfolder);
     }

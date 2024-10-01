@@ -1,6 +1,7 @@
 exports = module.exports = {
     index,
     indexByUsername,
+    indexByGroupFolder,
 
     searchByUsername
 };
@@ -61,6 +62,17 @@ async function indexByUsername(username) {
     }
 
     debug(`indexByUsername: ${username} done`);
+}
+
+async function indexByGroupFolder(groupFolder) {
+    assert.strictEqual(typeof groupFolder, 'string');
+
+    debug(`indexByGroupFolder: ${groupFolder} ...`);
+
+    const folder = await groupFolders.get(groupFolder);
+    for (const member of folder.members) await indexByUsername(member);
+
+    debug(`indexByGroupFolder: ${groupFolder} done`);
 }
 
 async function searchByUsername(username, query) {

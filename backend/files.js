@@ -23,8 +23,7 @@ const assert = require('assert'),
     fs = require('fs-extra'),
     groupFolders = require('./groupfolders.js'),
     path = require('path'),
-    util = require('util'),
-    exec = util.promisify(require('child_process').exec),
+    exec = require('./exec.js'),
     mime = require('./mime.js'),
     Entry = require('./entry.js'),
     shares = require('./shares.js'),
@@ -448,7 +447,7 @@ async function recent(usernameOrGroupfolder, daysAgo = 3, maxFiles = 100) {
     let filePaths = [];
     try {
         // -mtime 3 == 3 days ago
-        const { stdout } = await exec(`find ${fullFilePath} -type f -mtime -${daysAgo}`);
+        const stdout = await exec('find', [ fullFilePath, '-type', 'f', '-mtime', `-${daysAgo}` ]);
         filePaths = stdout.toString().split('\n').map(function (f) { return f.trim(); }).filter(function (f) { return !!f; });
     } catch (error) {
         throw new MainError(MainError.INTERNAL_ERROR, error);

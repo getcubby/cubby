@@ -33,7 +33,7 @@
               <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
                 <Spinner v-show="searchBusy" />
-                <TextInput v-model="searchQuery" placeholder="Search ..." @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
+                <TextInput v-model="searchQuery" ref="searchInput" placeholder="Search ..." @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
               </div>
             </template>
           </template>
@@ -149,53 +149,45 @@
   </Dialog>
 
   <!-- Share Dialog -->
-  <Dialog :title="shareDialog.entry.fileName" ref="shareDialog" reject-label="Close">
-    <div style="width: 720px;">
-      <h3>Create Share</h3>
-      <form @submit="onCreateShare" @submit.prevent>
-        <!-- TODO optionDisabled="alreadyUsed"  -->
-        <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
-        <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
-        <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
-      </form>
+  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialog" reject-label="Close">
+    <div>
+      <TabView :tabs="{ user: 'with a User', link: 'via Link' }" default-active="user">
+        <template #user>
+          <div style="margin-bottom: 10px;">
+            <div v-for="link in shareDialog.sharedWith" class="shared-link" :key="link.id">
+              <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
+              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+            </div>
+            <div v-show="shareDialog.sharedWith.length === 0" class="shared-link-empty">
+              Not shared with anyone yet
+            </div>
+          </div>
 
-      <h3>Shared with</h3>
-      <div>
-        <div v-for="link in shareDialog.sharedWith" class="shared-link" :key="link.id">
-          <div>{{ link.receiverUsername || link.receiverEmail }}</div>
-          <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-        </div>
-        <div v-show="shareDialog.sharedWith.length === 0">
-          Not shared with anyone yet
-        </div>
-      </div>
-
-      <br/>
-
-      <h3 style="margin-top: 0;">Create Share Link</h3>
-      <div>
-        <div>
-          <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
-        </div>
-        <br/>
-        <div>
-          <input type="date" v-model="shareDialog.shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareDialog.shareLink.expire"/>
-        </div>
-        <br/>
-        <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
-      </div>
-
-      <h3>Shared Links</h3>
-      <div>
-        <div v-for="link in shareDialog.sharedLinks" class="shared-link" :key="link.id">
-          <Button small outline @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
-          <div>Created: {{ prettyLongDate(link.createdAt) }}</div>
-          <Button small danger outline icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-        </div>
-        <div v-show="shareDialog.sharedLinks.length === 0">
-          No shared links yet
-        </div>
-      </div>
+          <form @submit="onCreateShare" @submit.prevent>
+            <!-- TODO optionDisabled="alreadyUsed"  -->
+            <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
+            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
+            <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
+          </form>
+        </template>
+        <template #link>
+          <div style="margin-bottom: 10px;">
+            <div v-for="link in shareDialog.sharedLinks" class="shared-link" :key="link.id">
+              <div>Created {{ prettyDate(link.createdAt) }}</div>
+              <Button small outline tool @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
+              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+            </div>
+            <div v-show="shareDialog.sharedLinks.length === 0" class="shared-link-empty">
+              No shared links yet
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
+            <input type="date" v-model="shareDialog.shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareDialog.shareLink.expire"/>
+            <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
+          </div>
+        </template>
+      </TabView>
     </div>
   </Dialog>
 
@@ -236,7 +228,7 @@
 'use strict';
 
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
-import { prettyFileSize, prettyLongDate } from 'pankow/utils';
+import { prettyFileSize, prettyDate, prettyLongDate } from 'pankow/utils';
 
 import {
   Breadcrumb,
@@ -252,6 +244,7 @@ import {
   PasswordInput,
   SideBar,
   Spinner,
+  TabView,
   TextInput,
   TopBar
 } from 'pankow';
@@ -314,6 +307,7 @@ export default {
       SideBar,
       Spinner,
       UsersView,
+      TabView,
       TextViewer,
       TextInput,
       TopBar
@@ -475,6 +469,7 @@ export default {
     },
     methods: {
       prettyFileSize,
+      prettyDate,
       prettyLongDate,
       onMainMenu(event, elem) {
         this.$refs.mainMenuElement.open(event, event.target);
@@ -1188,9 +1183,15 @@ pre {
   cursor: pointer;
 }
 
-.shared-link {
+.shared-link, .shared-link-empty {
   display: flex;
   justify-content: space-between;
+  padding-left: 10px;
+  align-items: center;
+}
+
+.shared-link:hover {
+  background-color: var(--pankow-color-background-hover);
 }
 
 .breadcrumb-bar {

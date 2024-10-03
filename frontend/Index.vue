@@ -18,7 +18,7 @@
         <div style="flex-grow: 1">&nbsp;</div>
 
         <Menu ref="mainMenuElement" :model="mainMenu"></Menu>
-        <div class="side-bar-entry side-bar-entry-button" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
+        <div class="side-bar-entry side-bar-entry-button" id="profileMenuDropdown" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
         <TopBar :gap="false" :left-grow="true">

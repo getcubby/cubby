@@ -253,12 +253,7 @@ export function createDirectoryModel(origin) {
         const name = files.length === 1 ? files[0].fileName : folderPath.slice(folderPath.slice(0, -1).lastIndexOf('/')+1).slice(0, -1);
         params.append('name', name);
         params.append('skipPath', folderPath);
-
-        params.append('entries', JSON.stringify(files.map(function (entry) {
-          return {
-            resourcePath: entry.resourcePath
-          };
-        })));
+        params.append('entries', files.map(function (entry) { return entry.resourcePath; }));
 
         window.location.href = `${origin}/api/v1/download?${params.toString()}`;
       }

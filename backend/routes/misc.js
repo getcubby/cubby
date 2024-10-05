@@ -12,6 +12,7 @@ const assert = require('assert'),
     config = require('../config.js'),
     debug = require('debug')('cubby:routes:misc'),
     files = require('../files.js'),
+    groupFolders = require('../groupfolders.js'),
     MainError = require('../mainerror.js'),
     office = require('../office.js'),
     path = require('path'),
@@ -78,16 +79,11 @@ async function getPreview(req, res, next) {
 async function download(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    let entries;
-    try {
-        entries = JSON.parse(req.query.entries);
-        if (!Array.isArray(entries)) return next(new HttpError(400, 'entries must be a non-empty stringified array'));
-    } catch (e) {
-        return next(new HttpError(400, 'entries must be a non-empty stringified array'));
-    }
-
+    const entries = req.query.entries.split(',');
     const skipPath = req.query.skipPath || '';
     const name = req.query.name || 'cubby';
+
+    if (!Array.isArray(entries)) return next(new HttpError(400, 'entries must be a non-empty stringified array'));
 
     debug(`download: type=zip skipPath=${skipPath}`, entries);
 
@@ -105,20 +101,17 @@ async function download(req, res, next) {
         next(new HttpError(500, error));
     });
 
-    res.attachment(`${name}.zip`);
-    archive.pipe(res);
-
     // collect and attach all requested files
-    for (const entry of entries) {
+    for (const resourcePath of entries) {
         try {
-            const resource = decodeURIComponent(entry.resourcePath).split('/')[1];
+            const resource = resourcePath.split('/')[1];
             if (!resource) return next(new HttpError(400, 'invalid resource'));
-            const filePath = decodeURIComponent(entry.resourcePath).slice(resource.length+1);
+            const filePath = resourcePath.slice(resource.length+1);
 
             let file = null;
 
             if (resource === 'home') {
-                file = await files.get(req.user.username /* FIXME should be resource */, filePath);
+                file = await files.get(req.user.username, filePath);
             } else if (resource === 'shares') {
                 const shareId = filePath.split('/')[1];
                 if (!shareId)  return next(new HttpError(404, 'missing share id'));
@@ -127,26 +120,37 @@ async function download(req, res, next) {
                 if (!share) return next(new HttpError(404, 'no such share'));
 
                 // actual path is without shares/<shareId>/
-                const shareFilePath = filePath.split('/').slice(2).join('/');
+                const actualFilePath = filePath.split('/').slice(2).join('/');
 
-                try {
-                    file = await files.get(share.owner, path.join(share.filePath, shareFilePath));
-                } catch (error) {
-                    if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
-                    return next(new HttpError(500, error));
-                }
+                file = await files.get(share.owner, path.join(share.filePath, actualFilePath));
+            } else if (resource === 'groupfolders') {
+                const groupFolderSlug = filePath.split('/')[1];
+                if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
+
+                const groupFolder = await groupFolders.get(groupFolderSlug);
+                if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
+
+                // actual path is without groupfolders/<slug>/
+                const actualFilePath = filePath.split('/').slice(2).join('/');
+
+                file = await files.get('groupfolder-' + groupFolderSlug, actualFilePath);
             } else {
                 return next(new HttpError(404, `resource ${resource} not supported for download`));
             }
 
-            debug(`download: add ${entry.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
+            debug(`download: add ${file.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
 
             if (file.isDirectory) archive.directory(file._fullFilePath, file.filePath.slice(skipPath.length));
             else archive.file(file._fullFilePath, { name: file.filePath.slice(skipPath.length) });
         } catch (error) {
-            console.error('download: cannot get entry', entry, error);
+            console.error('download: cannot get file', resourcePath, error);
+            if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
+            return next(new HttpError(500, error));
         }
     }
+
+    res.attachment(`${name}.zip`);
+    archive.pipe(res);
 
     archive.finalize();
 }

@@ -7,6 +7,7 @@
     "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.1.0",
     "archiver": "^7.0.1",
     "connect-lastmile": "^2.2.0",
     "db-migrate": "^0.11.14",

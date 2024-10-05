@@ -4,7 +4,7 @@ import { createApp } from 'vue';
 import { fetcher } from 'pankow';
 if (import.meta.env.DEV) fetcher.globalOptions.credentials = 'include';
 
-import '@fontsource/noto-sans';
+import '@fontsource/inter';
 
 import './style.css';
 

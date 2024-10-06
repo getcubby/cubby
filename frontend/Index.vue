@@ -1133,16 +1133,16 @@ pre {
   color: white;
   padding: 10px;
   padding-left: 20px;
+  margin-bottom: 5px;
   border-radius: 3px;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-  transition: font-size ease-out 100ms;
 }
 
 .side-bar-entry.active {
+  background-color: rgba(255,255,255,0.1);
   font-weight: bold;
-  font-size: 19px;
 }
 
 .side-bar-entry:hover {

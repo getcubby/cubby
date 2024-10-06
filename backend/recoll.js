@@ -87,7 +87,8 @@ async function searchByUsername(username, query) {
 
     const out = await exec('recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ]);
 
-    const results = [];
+    const fileNameMatch = [];
+    const fileContentMatch = [];
 
     // first two lines and last are info
     for (const line of out.split('\n').slice(2).slice(0, -1)) {
@@ -95,6 +96,9 @@ async function searchByUsername(username, query) {
         const filePath = Buffer.from(parts[0], 'base64').toString();
         const fileName = Buffer.from(parts[1], 'base64').toString();
         const abstract = Buffer.from(parts[2], 'base64').toString();
+
+        // skip archives
+        if (!filePath.endsWith(fileName)) continue;
 
         let entry;
         try {
@@ -106,13 +110,16 @@ async function searchByUsername(username, query) {
         // skip
         if (!entry) continue;
 
-        results.push({
+        const result = {
             filePath,
             fileName,
             abstract,
             entry: entry.withoutPrivate()
-        });
+        };
+
+        if (fileName.indexOf(query) !== -1) fileNameMatch.push(result);
+        else fileContentMatch.push(result);
     }
 
-    return results;
+    return fileNameMatch.concat(fileContentMatch);
 }

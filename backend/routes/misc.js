@@ -165,7 +165,9 @@ async function search(req, res, next) {
 
     let results;
     try {
-        results = await recoll.searchByUsername(req.user.username, query);
+        const matchFilename = await recoll.searchByUsername(req.user.username, 'filename:' + query);
+        const matchWithin = await recoll.searchByUsername(req.user.username, query + ' -filename:' + query);
+        results = matchFilename.concat(matchWithin);
     } catch (e) {
         console.error('search error:', e);
         return next(new HttpError(500, 'search failed'));

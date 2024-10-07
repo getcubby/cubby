@@ -30,11 +30,7 @@
               <span style="font-size: 24px;">Settings</span>
             </template>
             <template v-if="view === VIEWS.MAIN">
-              <div class="search-bar">
-                <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
-                <Spinner v-show="searchBusy" />
-                <TextInput v-model="searchQuery" ref="searchInput" placeholder="Search ..." @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
-              </div>
+              <SearchBar @item-activated="onOpen"/>
             </template>
           </template>
 
@@ -110,22 +106,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Search result Dialog -->
-  <Dialog title="" ref="searchResultsDialog" reject-label="Close" @close="searchQuery = ''">
-    <div>
-      <div v-show="searchResults.length === 0">
-        No results found.
-      </div>
-      <div v-for="result in searchResults" :key="result.filepath" class="search-result-entry" @click="onOpenEntryFromSearch(result.entry)">
-        <img :src="result.entry.previewUrl"/>
-        <div style="margin-left: 10px;">
-          <b>{{ result.fileName }}</b><br/>
-          <small>{{ result.abstract }}</small>
-        </div>
-      </div>
-    </div>
-  </Dialog>
 
   <!-- About Dialog -->
   <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close">
@@ -266,6 +246,7 @@ import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 import MarkdownViewer from './components/MarkdownViewer.vue';
+import SearchBar from './components/SearchBar.vue';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
 const BASE_URL = import.meta.env.BASE_URL || '/';
@@ -304,6 +285,7 @@ export default {
       PasswordInput,
       PdfViewer,
       PreviewPanel,
+      SearchBar,
       SideBar,
       Spinner,
       UsersView,
@@ -323,9 +305,6 @@ export default {
         mainModel: null,
         shareModel: null,
         directoryModel: null,
-        searchQuery: '',
-        searchBusy: false,
-        searchResults: [],
         view: '',
         search: '',
         viewer: '',
@@ -492,16 +471,6 @@ export default {
         await this.directoryModel.upload(resource, file, progressHandler);
 
         this.refresh();
-      },
-      async onSearch() {
-        if (!this.searchQuery) return;
-
-        this.searchBusy = true;
-
-        this.searchResults = await this.mainModel.search(this.searchQuery);
-        this.$refs.searchResultsDialog.open();
-
-        this.searchBusy = false;
       },
       onCloseSidebar() {
         this.$refs.sideBar.close();
@@ -1030,10 +999,6 @@ export default {
 
         return true;
       },
-      onOpenEntryFromSearch(entry) {
-        this.$refs.searchResultsDialog.close();
-        this.onOpen(entry);
-      },
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
         else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
@@ -1206,39 +1171,10 @@ pre {
   align-items: center;
 }
 
-.search-bar {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  margin-left: 20px;
-}
-
-.search-input {
-  border: none;
-  background: transparent;
-  flex-grow: 1;
-}
-
 @media only screen and (max-width: 767px) {
   .side-bar-toggle {
     display: none;
   }
-}
-
-.search-result-entry {
-  display: flex;
-  align-items: start;
-  cursor: pointer;
-  padding: 10px 5px;
-}
-
-.search-result-entry:hover {
-  background-color: var(--pankow-color-background-hover);
-}
-
-.search-result-panel {
-  border-radius: var(--pankow-border-radius);
-  background: white;
 }
 
 </style>

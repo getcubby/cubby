@@ -136,6 +136,12 @@ export default {
   background-color: var(--pankow-color-background-hover);
 }
 
+.search-result-entry > img {
+  height: 75px;
+  width: 75px;
+  object-fit: cover;
+}
+
 .search-result-panel {
   border-bottom-left-radius: var(--pankow-border-radius);
   border-bottom-right-radius: var(--pankow-border-radius);

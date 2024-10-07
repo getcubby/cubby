@@ -116,6 +116,9 @@ export function createMainModel(origin) {
 
       if (error || result.status !== 200) throw new Error('Failed to search', { cause: error || result })
 
+      // only needed for local development
+      result.body.results.forEach((e) => { e.entry.previewUrl = `${origin}${e.entry.previewUrl}`; });
+
       return result.body.results;
     },
     async logout() {

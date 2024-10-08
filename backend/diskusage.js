@@ -66,7 +66,7 @@ async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryP
     }
 
     try {
-        const out = exec('du', [ '-b', directoryPath ]);
+        const out = await exec('du', [ '-b', directoryPath ]);
         out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
             const parts = l.split('\t');
             if (parts.length !== 2) return;
@@ -98,7 +98,7 @@ async function calculateByUsername(usernameOrGroupFolder) {
         const groupFolder = await groupFolders.get(id);
 
         try {
-            const out = exec('du', [ '-b', groupFolder.folderPath ]);
+            const out = await exec('du', [ '-b', groupFolder.folderPath ]);
             out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
                 const parts = l.split('\t');
                 if (parts.length !== 2) return;
@@ -117,7 +117,7 @@ async function calculateByUsername(usernameOrGroupFolder) {
         const username = usernameOrGroupFolder;
 
         try {
-            const out = exec('du', [ '-b', path.join(constants.USER_DATA_ROOT, username) ]);
+            const out = await exec('du', [ '-b', path.join(constants.USER_DATA_ROOT, username) ]);
             out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
                 const parts = l.split('\t');
                 if (parts.length !== 2) return;

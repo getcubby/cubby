@@ -6,7 +6,7 @@
     <div class="search-bar" ref="searchBar" :class="{'open': open,'results-open': resultsOpen}">
       <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
       <Spinner v-show="searchBusy" />
-      <TextInput v-model="searchQuery" ref="searchInput" placeholder="Search ..." @focus="onFocus" @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
+      <TextInput v-model="searchQuery" ref="searchInput" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
     </div>
     <Transition name="pankow-roll-down">
       <div v-show="resultsOpen" ref="searchResults" class="search-result-panel">
@@ -47,6 +47,7 @@ export default {
     return {
       mainModel: null,
       searchBusy: false,
+      dismissed: false,
       searchQuery: '',
       searchResults: [],
       resultsOpen: false,
@@ -61,11 +62,13 @@ export default {
       if (!this.searchQuery) return;
 
       this.searchBusy = true;
-
-      this.searchResults = await this.mainModel.search(this.searchQuery);
-      this.resultsOpen = true;
-
+      const results = await this.mainModel.search(this.searchQuery);
       this.searchBusy = false;
+
+      if (this.dismissed) return;
+
+      this.searchResults = results;
+      this.resultsOpen = true;
     },
     onDismiss() {
       this.open = false;
@@ -73,6 +76,7 @@ export default {
 
       this.searchQuery = '';
       this.searchBusy = false;
+      this.dismissed = true;
 
       setTimeout(() => {
         this.searchResults = [];
@@ -80,6 +84,7 @@ export default {
     },
     onFocus() {
       this.open = true;
+      this.dismissed = false;
       this.$refs.searchResults.style.width = this.$refs.searchBar.offsetWidth + 'px';
     },
     onOpenEntryFromSearch(entry) {
@@ -111,7 +116,7 @@ export default {
 
 .open {
   z-index: 2001;
-  background: white;
+  background: var(--pankow-dialog-background-color);
 }
 
 .search-bar.results-open {
@@ -146,7 +151,7 @@ export default {
   border-bottom-left-radius: var(--pankow-border-radius);
   border-bottom-right-radius: var(--pankow-border-radius);
   position: absolute;
-  background: white;
+  background: var(--pankow-dialog-background-color);
   top: 45px;
   z-index: 2000;
   box-shadow: var(--pankow-menu-shadow);

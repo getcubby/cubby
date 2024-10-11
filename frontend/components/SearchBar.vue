@@ -69,6 +69,9 @@ export default {
 
       this.searchResults = results;
       this.resultsOpen = true;
+
+      // maintain focus
+      setTimeout(() => { this.$refs.searchInput.$el.focus(); }, 0);
     },
     onDismiss() {
       this.open = false;

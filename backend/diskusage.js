@@ -44,6 +44,8 @@ async function getByUsernameAndDirectory(username, filepath) {
 
     if (!gCache[username]) await calculateByUsername(username);
 
+    if (filepath === '/') return gCache[username].used || 0;
+
     return gCache[username].directories[filepath] || 0;
 }
 

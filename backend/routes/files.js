@@ -332,6 +332,7 @@ async function get(req, res, next) {
                 isFile: false,
                 isShare: false,
                 isGroup: true,
+                size: 0, // toplevel groupfolder has no size
                 owner: req.user.username,
                 mimeType: 'inode/share',
                 files: memberOfGroups

@@ -59,7 +59,7 @@
     <form @submit="onOfficeSubmit" @submit.prevent>
       <label for="wopiHostnameInput">WOPI / Collabora hostname:</label>
       <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
-      <Button type="submit" @click="onOfficeSubmit" :loading="office.busy">Save</Button>
+      <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy">Save</Button>
       <br/>
       <small class="has-error" v-show="office.error">{{ office.error }}</small>
     </form>

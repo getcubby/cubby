@@ -31,12 +31,11 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 
 import { createMainModel } from '../models/MainModel.js';
 
-import { Dialog, Spinner, TextInput } from 'pankow';
+import { Spinner, TextInput } from 'pankow';
 
 export default {
   name: 'SearchBar',
   components: {
-    Dialog,
     Spinner,
     TextInput
   },
@@ -108,6 +107,13 @@ export default {
   flex-grow: 1;
 }
 
+/* do not cover the main sidebar toggle */
+@media (max-width: 576px) {
+  .search-bar-container {
+    padding-left: 40px;
+  }
+}
+
 .search-bar {
   padding-left: 10px;
   border-radius: var(--pankow-border-radius);
@@ -118,7 +124,7 @@ export default {
 }
 
 .open {
-  z-index: 2001;
+  z-index: 3001;
   background: var(--pankow-dialog-background-color);
 }
 
@@ -156,7 +162,7 @@ export default {
   position: absolute;
   background: var(--pankow-dialog-background-color);
   top: 45px;
-  z-index: 2000;
+  z-index: 3000;
   box-shadow: var(--pankow-menu-shadow);
   overflow: scroll;
   max-height: calc(100% - 60px);

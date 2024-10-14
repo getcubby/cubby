@@ -79,7 +79,7 @@ export default {
 }
 
 .preview-container.visible {
-    width: 350px;
+    width: min(33%, 350px);
 }
 
 .preview-icon-container {

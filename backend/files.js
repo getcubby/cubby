@@ -416,7 +416,7 @@ async function remove(usernameOrGroupfolder, filePath) {
     debug(`remove ${fullFilePath}`);
 
     try {
-        await fsPromises.rm(fullFilePath);
+        await fsPromises.rm(fullFilePath, { recursive: true });
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }

@@ -58,6 +58,7 @@
             <div class="breadcrumb-bar">
               <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
               <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+              <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" />
             </div>
             <div style="overflow: hidden; height: calc(100% - 46px);">
               <DirectoryView
@@ -379,6 +380,25 @@ export default {
           action: () => this.onNewFolder()
         }],
         uploadMenu: [{
+          label: 'Upload File',
+          icon: 'fa-solid fa-file-arrow-up',
+          action: () => this.onUploadFile()
+        }, {
+          label: 'Upload Folder',
+          icon: 'fa-regular fa-folder-open',
+          action: () => this.onUploadFolder()
+        }],
+        newAndUploadMenu: [{
+          label: 'New File',
+          icon: 'fa-solid fa-file-circle-plus',
+          action: () => this.onNewFile()
+        }, {
+          label: 'New Folder',
+          icon: 'fa-solid fa-folder-plus',
+          action: () => this.onNewFolder()
+        }, {
+          separator:true
+        }, {
           label: 'Upload File',
           icon: 'fa-solid fa-file-arrow-up',
           action: () => this.onUploadFile()

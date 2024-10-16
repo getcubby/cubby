@@ -961,6 +961,7 @@ export default {
             return false;
           } else {
             console.error(error);
+            return false;
           }
         }
 

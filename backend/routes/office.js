@@ -18,6 +18,7 @@ var assert = require('assert'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess,
     MainError = require('../mainerror.js'),
+    mime = require('../mime.js'),
     office = require('../office.js'),
     safe = require('safetydance'),
     tokens = require('../tokens.js'),
@@ -33,6 +34,9 @@ async function getHandle(req, res, next) {
     const collaboraHost = config.get('collabora.host', '');
     if (!collaboraHost) return next(new HttpError(412, 'collabora office not configured'));
 
+    const subject = await translateResourcePath(req.user, resourcePath);
+    if (!subject) return next(new HttpError(403, 'not allowed'));
+
     let doc;
     try {
         const res = await fetch(`${collaboraHost}/hosting/discovery`);
@@ -44,12 +48,11 @@ async function getHandle(req, res, next) {
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
     // currently for collabora urlsrc for all mimeTypes is the same
-    var mimeType = 'text/plain';
-    var nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
-    if (!nodes || nodes.length !== 1) return next(new HttpError(500, 'The requested mime type is not handled'));
-
-    const subject = await translateResourcePath(req.user, resourcePath);
-    if (!subject) return next(new HttpError(403, 'not allowed'));
+    // var mimeType = 'text/plain';
+    // var mimeType = 'application/vnd.oasis.opendocument.text';
+    const mimeType = mime(subject.filePath);
+    const nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
+    if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
 
     debug(`getHandle: ${subject.resource} ${subject.filePath}`);
 

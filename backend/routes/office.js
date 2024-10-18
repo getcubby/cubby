@@ -47,9 +47,6 @@ async function getHandle(req, res, next) {
 
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
-    // currently for collabora urlsrc for all mimeTypes is the same
-    // var mimeType = 'text/plain';
-    // var mimeType = 'application/vnd.oasis.opendocument.text';
     const mimeType = mime(subject.filePath);
     const nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
     if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));

@@ -55,9 +55,12 @@
     </TableView>
 
     <h1>Office Integration</h1>
-    <p>Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>. This is only tested with Collabora at the moment.</p>
+    <p>
+      Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>.
+      Currently this is tested with Collabora and OnlyOffice installed on Cloudron.
+    </p>
     <form @submit="onOfficeSubmit" @submit.prevent>
-      <label for="wopiHostnameInput">WOPI / Collabora hostname:</label>
+      <label for="wopiHostnameInput">WOPI hostname:</label>
       <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
       <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy">Save</Button>
       <br/>

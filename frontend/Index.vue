@@ -58,7 +58,7 @@
             <div class="breadcrumb-bar">
               <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
               <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
-              <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" />
+              <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly()" />
             </div>
             <div style="overflow: hidden; height: calc(100% - 46px);">
               <DirectoryView

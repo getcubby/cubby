@@ -224,9 +224,7 @@ import {
   Notification,
   PasswordInput,
   SideBar,
-  Spinner,
   TabView,
-  TextInput,
   TopBar
 } from 'pankow';
 
@@ -288,11 +286,9 @@ export default {
       PreviewPanel,
       SearchBar,
       SideBar,
-      Spinner,
       UsersView,
       TabView,
       TextViewer,
-      TextInput,
       TopBar
     },
     data() {

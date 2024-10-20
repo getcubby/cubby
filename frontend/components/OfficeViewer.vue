@@ -4,8 +4,8 @@
     </template>
     <template #body>
       <div class="main-nav-bar">
-        <Button icon="fa-solid fa-download" success :href="entry.downloadFileUrl" target="_blank" style="margin-right: 5px;"/>
-        <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
+        <Button icon="fa-solid fa-download" success tool :href="entry.downloadFileUrl" target="_blank" style="margin-right: 5px;"/>
+        <Button icon="fa-solid fa-xmark" tool @click="onClose"/>
       </div>
       <div style="display: none">
         <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">

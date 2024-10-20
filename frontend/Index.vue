@@ -1023,7 +1023,7 @@ export default {
       onOpen(entry) {
         if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
         else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
-        else window.location.hash = `files/home/${entry.filePath}`;
+        else window.location.hash = `files/home${entry.filePath}`;
       },
       onViewerClose() {
         this.viewer = '';

@@ -738,6 +738,9 @@ export default {
         window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
       },
       async renameHandler(file, newName) {
+        // this will make the change immediate for the UI even if not yet committed
+        file.name = newName;
+
         const fromResource = file.resource;
         const toResource = parseResourcePath(sanitize(this.currentResourcePath + '/' + newName));
 

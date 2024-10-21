@@ -48,8 +48,8 @@
       <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
       <template #action="slotProps">
         <div style="text-align: right;">
-          <Button text="Edit" outline small @click="onEditGroupFolder(slotProps)" />
-          <Button text="Remove" danger outline small @click="onRemoveGroupFolder(slotProps)" />
+          <Button text="Edit" outline small tool @click="onEditGroupFolder(slotProps)" />
+          <Button text="Remove" danger outline small tool @click="onRemoveGroupFolder(slotProps)" />
         </div>
       </template>
     </TableView>

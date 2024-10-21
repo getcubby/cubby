@@ -62,6 +62,7 @@
             </div>
             <div style="overflow: hidden; height: calc(100% - 46px);">
               <DirectoryView
+                ref="directoryView"
                 :show-owner="false"
                 :show-extract="false"
                 :show-size="true"
@@ -549,7 +550,9 @@ export default {
           return;
         }
 
-        this.refresh();
+        await this.refresh();
+
+        this.$refs.directoryView.highlightByName(newFileName);
       },
       async onNewFolder() {
         const newFolderName = await this.$refs.inputDialog.prompt({
@@ -574,7 +577,9 @@ export default {
           return;
         }
 
-        this.refresh();
+        await this.refresh();
+
+        this.$refs.directoryView.highlightByName(newFolderName);
       },
       async pasteHandler(action, files, target) {
         if (!files || !files.length) return;
@@ -750,6 +755,8 @@ export default {
 
         await this.directoryModel.rename(fromResource, toResource);
         await this.refresh();
+
+        this.$refs.directoryView.highlightByName(file.name);
       },
       isReadonly() {
         if (window.location.hash === '#files/shares/' || window.location.hash === '#files/recent/') return true;

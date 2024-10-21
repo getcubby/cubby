@@ -131,7 +131,7 @@
   </Dialog>
 
   <!-- Share Dialog -->
-  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialog" reject-label="Close">
+  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialog" :show-x="true">
     <div>
       <TabView :tabs="{ user: 'with a User', link: 'via Link' }" default-active="user">
         <template #user>

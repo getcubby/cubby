@@ -414,8 +414,10 @@ export default {
 
         if (hash.indexOf('files/home/') === 0) {
           if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
+          else window.location.hash = 'files/home/';
         } else if (hash.indexOf('files/recent/') === 0) {
           if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
+          else window.location.hash = 'files/recent/';
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
@@ -977,6 +979,7 @@ export default {
             return false;
           } else if (error.status === 404) {
             console.error('Failed to load entry', resource, error);
+            window.pankow.notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
             return false;
           } else {
             console.error(error);

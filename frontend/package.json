@@ -10,7 +10,7 @@
     "@vitejs/plugin-vue": "^5.1.4",
     "eslint": "^9.13.0",
     "eslint-plugin-vue": "^9.29.1",
-    "pankow": "^2.2.7",
+    "pankow": "^2.2.9",
     "pankow-viewers": "^1.0.8",
     "prosemirror-commands": "^1.6.1",
     "prosemirror-example-setup": "^1.2.3",

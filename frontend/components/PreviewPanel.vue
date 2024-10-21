@@ -20,16 +20,12 @@
       <p>Size</p>
       <span>{{ prettyFileSize(combinedSize) }}</span>
     </div>
-    <div class="detail" v-show="selectedEntries.length <= 1">
-      <p>Type</p>
-      <span >{{ prettyType(selectedEntries.length ? selectedEntries[0] : parentEntry) }}</span>
-    </div>
   </div>
 </template>
 
 <script>
 
-import { getPreviewUrl, prettyType } from '../utils.js';
+import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize } from 'pankow/utils';
 
 export default {
@@ -60,7 +56,6 @@ export default {
     methods: {
         prettyLongDate,
         prettyFileSize,
-        prettyType,
         getPreviewUrl,
     }
 };

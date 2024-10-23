@@ -1,20 +1,21 @@
 <template>
   <div class="shares">
+    <InputDialog ref="sharesInputDialog" />
+
     <h1>Shared by You</h1>
 
-    <TableView :columns="tableColumns" :model="tableModel">
+    <TableView :columns="tableColumns" :model="tableModel" defaultSortBy="target">
       <template #icon="slotProps"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
       <template #target="slotProps">
-        {{ slotProps.file.fileName }}
-        <br/>
-        <small>{{ slotProps.file.filePath }}</small>
+        {{ slotProps.file.filePath.slice(1) }}
       </template>
       <template #receiver="slotProps">
         <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
         <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
         {{ slotProps.receiverUsername }}
       </template>
-      <template #action="slotProps"></template>
+      <template #action="slotProps">
+        <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/></template>
     </TableView>
     <div class="share-count">{{ tableModel.length }} Shares</div>
   </div>
@@ -26,13 +27,14 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 
 import { createShareModel } from '../models/ShareModel.js';
 
-import { Button, Icon, TableView } from 'pankow';
+import { Button, Icon, InputDialog, TableView } from 'pankow';
 
 export default {
     name: 'SharesView',
     components: {
       Button,
       Icon,
+      InputDialog,
       TableView
     },
     props: {
@@ -76,7 +78,7 @@ export default {
       this.shareModel = createShareModel(API_ORIGIN);
     },
     methods: {
-      async open() {
+      async refresh() {
         this.tableModel = await this.shareModel.list();
 
         // set properties for sorting the table
@@ -84,8 +86,28 @@ export default {
           s.target = s.file.filePath.toLowerCase();
           s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
         });
-
+      },
+      async open() {
+        await this.refresh();
         return true;
+      },
+      async onDelete(share) {
+        const yes = await this.$refs.sharesInputDialog.confirm({
+          message: `Really delete share ${share.file.fileName}?`,
+          confirmStyle: 'danger',
+          confirmLabel: 'Yes',
+          rejectLabel: 'No'
+        });
+
+        if (!yes) return;
+
+        try {
+          await this.shareModel.remove(share.id);
+        } catch (e) {
+          return console.error('Failed to delete share.', e);
+        }
+
+        await this.refresh();
       }
     }
 };

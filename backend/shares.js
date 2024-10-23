@@ -1,5 +1,6 @@
 exports = module.exports = {
     list,
+    listSharedWith,
     get,
     create,
     getByOwnerAndFilepath,
@@ -52,7 +53,7 @@ function postProcess(data) {
     return data;
 }
 
-async function list(username) {
+async function listSharedWith(username) {
     assert.strictEqual(typeof username, 'string');
 
     debug(`list: ${username}`);
@@ -63,6 +64,18 @@ async function list(username) {
 
     // only return non link shares
     return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail; });
+}
+
+async function list(username) {
+    assert.strictEqual(typeof username, 'string');
+
+    debug(`listSharedWith: ${username}`);
+
+    const result = await database.query('SELECT * FROM shares WHERE owner_username = $1', [ username ]);
+
+    result.rows.forEach(postProcess);
+
+    return result.rows;
 }
 
 async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = 0 }) {

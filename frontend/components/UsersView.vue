@@ -4,6 +4,8 @@
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
+    <h1>Users</h1>
+
     <TableView style="max-height: 200px;" :columns="tableColumns" :model="tableModel">
       <template #username="slotProps">{{ slotProps.username }}</template>
       <template #email="slotProps">{{ slotProps.email }}</template>

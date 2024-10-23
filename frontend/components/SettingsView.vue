@@ -42,7 +42,9 @@
       <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
     </Dialog>
 
-    <h1>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h1>
+    <h1>Settings</h1>
+
+    <h2>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
       <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
       <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
@@ -54,7 +56,7 @@
       </template>
     </TableView>
 
-    <h1>Office Integration</h1>
+    <h2>Office Integration</h2>
     <p>
       Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>.
       Currently this is tested with Collabora and OnlyOffice installed on Cloudron.
@@ -301,6 +303,8 @@ export default {
           this.office.error = error.message;
         }
 
+        await this.$root.refreshConfig();
+
         this.office.busy = false;
       }
     }
@@ -314,7 +318,7 @@ export default {
   padding: 20px;
 }
 
-h1 {
+h2 {
   font-size: 20px;
   display: flex;
   align-items: baseline;

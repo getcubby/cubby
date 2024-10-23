@@ -223,7 +223,7 @@ async function get(req, res, next) {
             let result = [];
 
             try {
-                result = await shares.list(req.user.username);
+                result = await shares.listSharedWith(req.user.username);
             } catch (error) {
                 return next(new HttpError(500, error));
             }

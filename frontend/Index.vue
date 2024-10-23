@@ -6,7 +6,7 @@
   <div v-show="ready" style="height: 100%;">
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
-    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
+    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
@@ -21,21 +21,17 @@
         <div class="side-bar-entry side-bar-entry-button" id="profileMenuDropdown" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
-        <TopBar :gap="false" :left-grow="true">
-          <template #left>
-            <template v-if="view === VIEWS.USERS">
-              <span style="font-size: 24px;">Users</span>
-            </template>
-            <template v-if="view === VIEWS.SETTINGS">
-              <span style="font-size: 24px;">Settings</span>
-            </template>
-            <template v-if="view === VIEWS.MAIN">
+        <SharesView v-show="view === VIEWS.SHARES" ref="sharesView" />
+        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
+        <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
+
+        <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
+          <TopBar :gap="false" :left-grow="true">
+            <template #left>
               <SearchBar @item-activated="onOpen"/>
             </template>
-          </template>
 
-          <template #right>
-            <template v-if="view === VIEWS.MAIN">
+            <template #right>
               <div class="file-actions">
                 <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
                 <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
@@ -43,60 +39,56 @@
 
               <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>
               <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
+
+              <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
             </template>
-
-            <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
-          </template>
-        </TopBar>
-
-        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
-        <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
-
-        <div class="container" style="overflow: hidden;" v-show="view === VIEWS.MAIN">
-          <div class="main-container-content">
-            <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
-            <div class="breadcrumb-bar">
-              <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
-              <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
-              <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly()" />
+          </TopBar>
+          <div class="container" style="overflow: hidden;">
+            <div class="main-container-content">
+              <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+              <div class="breadcrumb-bar">
+                <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
+                <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
+                <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly()" />
+              </div>
+              <div style="overflow: hidden; height: calc(100% - 46px);">
+                <DirectoryView
+                  ref="directoryView"
+                  :show-owner="false"
+                  :show-extract="false"
+                  :show-size="true"
+                  :show-modified="true"
+                  :show-share="'isSharedWith'"
+                  :editable="!isReadonly()"
+                  :multi-download="true"
+                  @selection-changed="onSelectionChanged"
+                  @item-activated="onOpen"
+                  :delete-handler="deleteHandler"
+                  :share-handler="shareHandler"
+                  :rename-handler="renameHandler"
+                  :paste-handler="pasteHandler"
+                  :download-handler="downloadHandler"
+                  :new-file-handler="onNewFile"
+                  :new-folder-handler="onNewFolder"
+                  :upload-file-handler="onUploadFile"
+                  :upload-folder-handler="onUploadFolder"
+                  :drop-handler="onDrop"
+                  :items="entries"
+                  :fallback-icon="`${BASE_URL}mime-types/none.svg`"
+                >
+                  <template #empty>
+                    <div v-show="!entries.length" class="no-entries-placeholder">
+                      <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
+                      <p v-show="activeResourceType === 'recent'">No recent files</p>
+                      <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
+                      <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
+                    </div>
+                  </template>
+                </DirectoryView>
+              </div>
             </div>
-            <div style="overflow: hidden; height: calc(100% - 46px);">
-              <DirectoryView
-                ref="directoryView"
-                :show-owner="false"
-                :show-extract="false"
-                :show-size="true"
-                :show-modified="true"
-                :show-share="'isSharedWith'"
-                :editable="!isReadonly()"
-                :multi-download="true"
-                @selection-changed="onSelectionChanged"
-                @item-activated="onOpen"
-                :delete-handler="deleteHandler"
-                :share-handler="shareHandler"
-                :rename-handler="renameHandler"
-                :paste-handler="pasteHandler"
-                :download-handler="downloadHandler"
-                :new-file-handler="onNewFile"
-                :new-folder-handler="onNewFolder"
-                :upload-file-handler="onUploadFile"
-                :upload-folder-handler="onUploadFolder"
-                :drop-handler="onDrop"
-                :items="entries"
-                :fallback-icon="`${BASE_URL}mime-types/none.svg`"
-              >
-                <template #empty>
-                  <div v-show="!entries.length" class="no-entries-placeholder">
-                    <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
-                    <p v-show="activeResourceType === 'recent'">No recent files</p>
-                    <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
-                    <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
-                  </div>
-                </template>
-              </DirectoryView>
-            </div>
+            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" :visible="previewPanelVisible"/>
           </div>
-          <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" :visible="previewPanelVisible"/>
         </div>
 
         <FileUploader
@@ -242,6 +234,7 @@ import { createShareModel } from './models/ShareModel.js';
 
 import LoginView from './components/LoginView.vue';
 import UsersView from './components/UsersView.vue';
+import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
@@ -255,7 +248,8 @@ const VIEWS = {
   LOGIN: 'login',
   MAIN: 'main',
   USERS: 'users',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  SHARES: 'shares'
 };
 
 const beforeUnloadListener = (event) => {
@@ -286,11 +280,12 @@ export default {
       PdfViewer,
       PreviewPanel,
       SearchBar,
+      SharesView,
       SideBar,
-      UsersView,
       TabView,
       TextViewer,
-      TopBar
+      TopBar,
+      UsersView
     },
     data() {
       return {
@@ -352,6 +347,10 @@ export default {
           icon: 'fa-solid fa-cog',
           visible: () => this.profile.admin,
           action: () => window.location.href = '#settings'
+        }, {
+          label: 'Shared by You',
+          icon: 'fa-solid fa-share-from-square',
+          action: () => window.location.href = '#shares'
         }, {
           label: 'WebDAV',
           icon: 'fa-solid fa-globe',
@@ -428,6 +427,9 @@ export default {
         } else if (hash.indexOf('users') === 0) {
           if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.USERS;
+        } else if (hash.indexOf('shares') === 0) {
+          if (! await that.$refs.sharesView.open()) return window.location.hash = 'files/home/';
+          that.view = VIEWS.SHARES;
         } else if (hash.indexOf('settings') === 0) {
           if (! await that.$refs.settingsView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.SETTINGS;

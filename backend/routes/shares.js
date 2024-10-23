@@ -13,7 +13,6 @@ var assert = require('assert'),
     debug = require('debug')('cubby:routes:shares'),
     shares = require('../shares.js'),
     files = require('../files.js'),
-    Entry = require('../entry.js'),
     util = require('util'),
     path = require('path'),
     MainError = require('../mainerror.js'),
@@ -163,36 +162,23 @@ async function listShares(req, res, next) {
         return next(new HttpError(500, error));
     }
 
+    const validShares = [];
     // Collect all file entries from shares
-    const sharedFiles = [];
-    try {
-        for (const share of result) {
-            let file = await files.get(share.ownerUsername ? share.ownerUsername : `groupfolder-${share.ownerGroupfolder}`, share.filePath);
-
-            file.isShare = true;
-            file.share = share;
-            file = file.asShare(share.filePath);
-
-            sharedFiles.push(file);
+    for (const share of result) {
+        let file;
+        try {
+            file = await files.get(share.ownerUsername ? share.ownerUsername : `groupfolder-${share.ownerGroupfolder}`, share.filePath);
+        } catch (error) {
+            console.error('Share does not map to a file or folder', share, error);
         }
-    } catch (error) {
-        return next(new HttpError(500, error));
+
+        if (!file) continue;
+
+        share.file = file.withoutPrivate();
+        validShares.push(share);
     }
 
-    const entry = new Entry({
-        id: 'shares',
-        fullFilePath: '/shares',
-        fileName: 'Shares',
-        filePath: '/',
-        isDirectory: true,
-        isFile: false,
-        isShare: true,
-        owner: req.user.username,
-        mimeType: 'inode/share',
-        files: sharedFiles
-    });
-
-    next(new HttpSuccess(200, entry.withoutPrivate()));
+    next(new HttpSuccess(200, { shares: validShares }));
 }
 
 async function removeShare(req, res, next) {

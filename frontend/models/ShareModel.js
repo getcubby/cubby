@@ -3,6 +3,23 @@ import { fetcher } from 'pankow';
 export function createShareModel(origin) {
   return {
     name: 'ShareModel',
+    async list() {
+      let error, result;
+      try {
+        result = await fetcher.get(`${origin}/api/v1/shares`);
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.status !== 200) throw new Error('Failed to list shares', { cause: error || result })
+
+      // translate for local development
+      result.body.shares.forEach((s) => {
+        s.file.previewUrl = `${origin}${s.file.previewUrl}`;
+      });
+
+      return result.body.shares;
+    },
     async create(data) {
       let tmp = {
         path: data.path,

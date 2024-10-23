@@ -4,7 +4,7 @@
 
     <h1>Shared by You</h1>
 
-    <TableView :columns="tableColumns" :model="tableModel" defaultSortBy="target">
+    <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
       <template #icon="slotProps"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
       <template #target="slotProps">
         {{ slotProps.file.filePath.slice(1) }}
@@ -15,7 +15,8 @@
         {{ slotProps.receiverUsername }}
       </template>
       <template #action="slotProps">
-        <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/></template>
+        <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/>
+      </template>
     </TableView>
     <div class="share-count">{{ tableModel.length }} Shares</div>
   </div>

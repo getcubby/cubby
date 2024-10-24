@@ -431,12 +431,15 @@ export default {
         } else if (hash.indexOf('users') === 0) {
           if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.USERS;
+          that.onCloseSidebar();
         } else if (hash.indexOf('shares') === 0) {
           if (! await that.$refs.sharesView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.SHARES;
+          that.onCloseSidebar();
         } else if (hash.indexOf('settings') === 0) {
           if (! await that.$refs.settingsView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.SETTINGS;
+          that.onCloseSidebar();
         } else {
           window.location.hash = 'files/home/';
         }

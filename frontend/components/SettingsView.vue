@@ -318,8 +318,14 @@ export default {
   padding: 0 20px;
 }
 
-h2 {
+h1 {
   font-size: 20px;
+  font-weight: normal;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: normal;
   display: flex;
   align-items: baseline;
   justify-content: space-between;

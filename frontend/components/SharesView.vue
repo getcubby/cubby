@@ -117,6 +117,11 @@ export default {
 
 <style scoped>
 
+h1 {
+  font-size: 20px;
+  font-weight: normal;
+}
+
 .shares {
   padding: 0 20px;
 }

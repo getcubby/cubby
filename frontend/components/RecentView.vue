@@ -1,5 +1,11 @@
 <template>
   <div class="recent">
+    <TopBar :gap="false" :left-grow="true">
+      <template #left>
+        <SearchBar @item-activated="onActivateItem"/>
+      </template>
+    </TopBar>
+
     <h1>Recent Files</h1>
 
     <div class="buckets">
@@ -24,15 +30,18 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 import moment from 'moment';
 
 import { createMainModel } from '../models/MainModel.js';
+import SearchBar from './SearchBar.vue';
 
-import { Button } from 'pankow';
+import { Button, TopBar } from 'pankow';
 
 const mainModel = createMainModel(API_ORIGIN);
 
 export default {
   name: 'RecentView',
   components: {
-    Button
+    Button,
+    SearchBar,
+    TopBar
   },
   props: {
   },
@@ -85,10 +94,15 @@ export default {
 <style scoped>
 
 .recent {
-  padding: 0 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: normal;
+  padding: 0 20px;
 }
 
 .bucket {
@@ -97,6 +111,7 @@ export default {
 
 .bucket > h2 {
   font-size: 16px;
+  font-weight: normal;
 }
 
 .hr {
@@ -107,6 +122,7 @@ export default {
 }
 
 .buckets {
+  padding: 0 20px;
   flex-grow: 1;
   overflow: auto;
   margin-bottom: 20px;

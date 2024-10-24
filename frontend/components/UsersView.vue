@@ -102,6 +102,11 @@ export default {
 
 <style scoped>
 
+h1 {
+  font-size: 20px;
+  font-weight: normal;
+}
+
 .user-table-container {
   padding: 0 20px;
 }

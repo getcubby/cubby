@@ -14,6 +14,7 @@
         <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
         {{ slotProps.receiverUsername }}
       </template>
+      <template #createdAt="slotProps"><span :title="slotProps.createdAt">{{ prettyDate(slotProps.createdAt) }}</span></template>
       <template #action="slotProps">
         <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/>
       </template>
@@ -29,6 +30,8 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 import { createShareModel } from '../models/ShareModel.js';
 
 import { Button, Icon, InputDialog, TableView } from 'pankow';
+import { prettyDate } from 'pankow/utils';
+import moment from 'moment';
 
 export default {
     name: 'SharesView',
@@ -67,6 +70,10 @@ export default {
             label: 'With',
             sort: true
           },
+          createdAt: {
+            label: 'Created At',
+            sort: (a, b) => moment(a).isBefore(moment(b)) ? 1 : -1,
+          },
           action: {
             label: '',
             sort: false
@@ -79,6 +86,7 @@ export default {
       this.shareModel = createShareModel(API_ORIGIN);
     },
     methods: {
+      prettyDate,
       async refresh() {
         this.tableModel = await this.shareModel.list();
 

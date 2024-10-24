@@ -397,7 +397,7 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     try {
         // TODO add option for overwrite
-        await fsPromises.copy(fullFilePath, fullNewFilePath, { force: false });
+        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: false, recursive: true });
     } catch (error) {
         if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, error);

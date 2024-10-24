@@ -101,6 +101,7 @@ function init(callback) {
 
     router.get ('/api/v1/preview/:type/:id/:hash', users.optionalSessionAuth, shares.optionalAttachReceiver, misc.getPreview);
 
+    router.get ('/api/v1/recent', users.isAuthenticated, misc.recent);
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);
     router.get ('/api/v1/search', users.isAuthenticated, misc.search);
 

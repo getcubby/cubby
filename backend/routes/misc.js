@@ -4,6 +4,7 @@ exports = module.exports = {
     getConfig,
     getPreview,
     download,
+    recent,
     search
 };
 
@@ -11,6 +12,7 @@ const assert = require('assert'),
     archiver = require('archiver'),
     config = require('../config.js'),
     debug = require('debug')('cubby:routes:misc'),
+    Entry = require('../entry.js'),
     files = require('../files.js'),
     groupFolders = require('../groupfolders.js'),
     MainError = require('../mainerror.js'),
@@ -153,6 +155,36 @@ async function download(req, res, next) {
     archive.pipe(res);
 
     archive.finalize();
+}
+
+async function recent(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 3 : parseInt(req.query.days_ago, 10);
+    const maxFiles = 100;
+
+    debug(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
+
+    let result = [];
+    try {
+        result = await files.recent(req.user.username, daysAgo, maxFiles);
+    } catch (error) {
+        return next(new HttpError(500, error));
+    }
+
+    const entry = new Entry({
+        id: 'recent',
+        fullFilePath: '/recent',
+        fileName: 'Recent',
+        filePath: '/',
+        owner: req.user.username,
+        isDirectory: true,
+        isFile: false,
+        mimeType: 'inode/recent',
+        files: result
+    });
+
+    next(new HttpSuccess(200, entry.withoutPrivate()));
 }
 
 async function search(req, res, next) {

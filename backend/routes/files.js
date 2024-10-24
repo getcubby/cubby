@@ -149,32 +149,6 @@ async function get(req, res, next) {
         }
 
         next(new HttpSuccess(200, result.withoutPrivate()));
-    } else if (resource === 'recent') {
-        const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 3 : parseInt(req.query.days_ago, 10);
-        const maxFiles = 100;
-
-        debug(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
-
-        let result = [];
-        try {
-            result = await files.recent(req.user.username, daysAgo, maxFiles);
-        } catch (error) {
-            return next(new HttpError(500, error));
-        }
-
-        const entry = new Entry({
-            id: 'recent',
-            fullFilePath: '/recent',
-            fileName: 'Recent',
-            filePath: '/',
-            owner: req.user.username,
-            isDirectory: true,
-            isFile: false,
-            mimeType: 'inode/recent',
-            files: result
-        });
-
-        next(new HttpSuccess(200, entry.withoutPrivate()));
     } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
         if (shareId) {

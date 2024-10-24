@@ -203,6 +203,8 @@
 import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
 import { prettyFileSize, prettyDate, prettyLongDate } from 'pankow/utils';
 
+import { useSwipe } from '@vueuse/core';
+
 import {
   Breadcrumb,
   Button,
@@ -468,6 +470,13 @@ export default {
       }, false);
 
       this.ready = true;
+
+      useSwipe(this.$refs.sideBar, {
+        passive: false,
+        onSwipeEnd: (e, direction) => {
+          if (direction === 'left') this.onCloseSidebar();
+        },
+      });
     },
     methods: {
       prettyFileSize,

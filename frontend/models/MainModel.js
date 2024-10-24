@@ -106,6 +106,24 @@ export function createMainModel(origin) {
 
       return { isNew: result.status === 201, id: result.body.id, fragmentName: result.body.fragmentName };
     },
+    async recent() {
+      let error, result;
+      try {
+        result = await fetcher.get(`${origin}/api/v1/recent`);
+      } catch (e) {
+        error = e;
+      }
+
+      if (error || result.status !== 200) throw new Error('Failed to fetch recent', { cause: error || result })
+
+      const entry = result.body;
+
+      // only needed for local development
+      entry.previewUrl = `${origin}${entry.previewUrl}`;
+      entry.files.forEach((e) => { e.previewUrl = `${origin}${e.previewUrl}`; });
+
+      return entry;
+    },
     async search(query) {
       let error, result;
       try {

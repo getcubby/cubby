@@ -1,5 +1,7 @@
 <template>
   <div class="preview-container" :class="{ 'visible': visible }">
+    <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+
     <div class="header" style="padding-bottom: 10px;">Details</div>
     <div class="preview-icon-container">
       <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
@@ -29,35 +31,42 @@ import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize } from 'pankow/utils';
 
 export default {
-    name: 'PreviewPanel',
-    props: {
-        parentEntry: {
-            type: Object,
-            default: function () { return {}; }
-        },
-        selectedEntries: {
-            type: Array,
-            default: function () { return []; }
-        },
-        visible: Boolean
+  name: 'PreviewPanel',
+  props: {
+    parentEntry: {
+      type: Object,
+      default: function () { return {}; }
     },
-    emits: [ 'close' ],
-    data() {
-        return {};
-    },
-    computed: {
-        entry() {
-            return this.selectedEntries.length ? this.selectedEntries[0] : this.parentEntry;
-        },
-        combinedSize() {
-            return this.selectedEntries.length ? this.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : this.parentEntry.size;
-        }
-    },
-    methods: {
-        prettyLongDate,
-        prettyFileSize,
-        getPreviewUrl,
+    selectedEntries: {
+      type: Array,
+      default: function () { return []; }
     }
+  },
+  emits: [ 'close' ],
+  data() {
+    return {
+      visible: localStorage.previewPanelVisible === 'true'
+    };
+  },
+  computed: {
+    entry() {
+      return this.selectedEntries.length ? this.selectedEntries[0] : this.parentEntry;
+    },
+    combinedSize() {
+      return this.selectedEntries.length ? this.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : this.parentEntry.size;
+    }
+  },
+  mounted() {
+  },
+  methods: {
+    prettyLongDate,
+    prettyFileSize,
+    getPreviewUrl,
+    onToggle() {
+      this.visible = !this.visible;
+      localStorage.previewPanelVisible = this.visible;
+    }
+  }
 };
 
 </script>
@@ -115,6 +124,19 @@ export default {
     .preview-container {
         display: none;
     }
+}
+
+.toggle-button {
+  position: absolute;
+  right: 0;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
+@media only screen and (max-width: 767px) {
+  .toggle-button {
+    display: none;
+  }
 }
 
 </style>

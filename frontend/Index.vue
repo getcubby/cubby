@@ -6,12 +6,12 @@
   <div v-show="ready" style="height: 100%;">
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
-    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.MAIN">
+    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.RECENT || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
         <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'recent'}" href="#files/recent/" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'shares'}" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'groupfolders'}" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
@@ -24,6 +24,7 @@
         <SharesView v-show="view === VIEWS.SHARES" ref="sharesView" />
         <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
         <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
+        <RecentView v-show="view === VIEWS.RECENT" ref="recentView" />
 
         <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
           <TopBar :gap="false" :left-grow="true">
@@ -45,7 +46,6 @@
           </TopBar>
           <div class="container" style="overflow: hidden;">
             <div class="main-container-content">
-              <div class="side-bar-toggle" @click="onTogglePreviewPanel" :title="previewPanelVisible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (previewPanelVisible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
               <div class="breadcrumb-bar">
                 <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
                 <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
@@ -79,7 +79,6 @@
                   <template #empty>
                     <div v-show="!entries.length" class="no-entries-placeholder">
                       <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
-                      <p v-show="activeResourceType === 'recent'">No recent files</p>
                       <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
                       <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
                     </div>
@@ -87,7 +86,7 @@
                 </DirectoryView>
               </div>
             </div>
-            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" :visible="previewPanelVisible"/>
+            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries"/>
           </div>
         </div>
 
@@ -239,6 +238,7 @@ import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 import MarkdownViewer from './components/MarkdownViewer.vue';
+import RecentView from './components/RecentView.vue';
 import SearchBar from './components/SearchBar.vue';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
@@ -248,6 +248,7 @@ const VIEWS = {
   LOGIN: 'login',
   MAIN: 'main',
   USERS: 'users',
+  RECENT: 'recent',
   SETTINGS: 'settings',
   SHARES: 'shares'
 };
@@ -279,6 +280,7 @@ export default {
       PasswordInput,
       PdfViewer,
       PreviewPanel,
+      RecentView,
       SearchBar,
       SharesView,
       SideBar,
@@ -313,7 +315,6 @@ export default {
         currentPath: '/',
         currentResourcePath: '',
         currentShare: null,
-        previewPanelVisible: localStorage.previewPanelVisible === 'true',
         breadCrumbs: [],
         breadCrumbHome: {
           icon: 'fa-solid fa-house',
@@ -412,12 +413,15 @@ export default {
         // we handle decoded paths internally
         hash = decodeURIComponent(hash);
 
+        that.activeResourceType = '';
+
+        console.log('----', hash)
+
         if (hash.indexOf('files/home/') === 0) {
           if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
           else window.location.hash = 'files/home/';
-        } else if (hash.indexOf('files/recent/') === 0) {
-          if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
-          else window.location.hash = 'files/recent/';
+        } else if (hash === 'recent') {
+          that.view = VIEWS.RECENT;
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
@@ -629,10 +633,6 @@ export default {
       onSelectionChanged(selectedEntries) {
         this.selectedEntries = selectedEntries;
       },
-      onTogglePreviewPanel() {
-        this.previewPanelVisible = !this.previewPanelVisible;
-        localStorage.previewPanelVisible = this.previewPanelVisible;
-      },
       async onFileSaved(entry, content, done) {
         try {
           await this.directoryModel.saveFile(entry.resource, content);
@@ -761,7 +761,7 @@ export default {
         this.$refs.directoryView.highlightByName(file.name);
       },
       isReadonly() {
-        if (window.location.hash === '#files/shares/' || window.location.hash === '#files/recent/') return true;
+        if (window.location.hash === '#files/shares/') return true;
         if (!this.currentShare) return false;
         return this.currentShare.readonly;
       },
@@ -909,12 +909,6 @@ export default {
           this.breadCrumbHome = {
             icon: 'fa-solid fa-house',
             route: '#files/home/'
-          };
-        } else if (resource.type === 'recent') {
-          this.breadCrumbs = [];
-          this.breadCrumbHome = {
-            icon: 'fa-regular fa-clock',
-            route: '#files/recent/'
           };
         } else if (resource.type === 'shares') {
           this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
@@ -1182,12 +1176,6 @@ pre {
   flex-grow: 1;
 }
 
-.side-bar-toggle {
-  float: right;
-  padding: 10px 15px;
-  cursor: pointer;
-}
-
 .shared-link, .shared-link-empty {
   display: flex;
   justify-content: space-between;
@@ -1203,12 +1191,6 @@ pre {
   display: flex;
   margin: auto 0px;
   align-items: center;
-}
-
-@media only screen and (max-width: 767px) {
-  .side-bar-toggle {
-    display: none;
-  }
 }
 
 </style>

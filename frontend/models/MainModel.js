@@ -119,7 +119,10 @@ export function createMainModel(origin) {
       const entries = result.body.entries;
 
       // only needed for local development
-      entries.forEach((e) => { e.previewUrl = `${origin}${e.previewUrl}`; });
+      entries.forEach((e) => {
+        e.previewUrl = `${origin}${e.previewUrl}`;
+        e.parentFolderUrl = '#files/home' + e.filePath.slice(0, -e.fileName.length);
+      });
 
       return entries;
     },

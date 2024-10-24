@@ -16,6 +16,7 @@
           <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
             <img :src="entry.previewUrl" width="48" height="48" style="object-fit: cover;" />
             <span>{{ entry.fileName }}</span>
+            <Button small outline secondary :href="entry.parentFolderUrl" class="open-folder">Open Folder</Button>
           </div>
         </div>
       </div>
@@ -84,7 +85,8 @@ export default {
   },
   methods: {
     onActivateItem(entry) {
-      this.$emit('item-activated', entry);
+      console.log(entry)
+      // this.$emit('item-activated', entry);
     }
   }
 };
@@ -168,6 +170,14 @@ h1 {
   padding: 5px;
   border-radius: var(--pankow-border-radius);
   background-color: var(--pankow-color-background-hover);
+}
+
+.open-folder {
+  visibility: hidden;
+}
+
+.entry:hover > .open-folder {
+  visibility: visible;
 }
 
 </style>

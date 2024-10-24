@@ -14,7 +14,7 @@
         <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
         {{ slotProps.receiverUsername }}
       </template>
-      <template #createdAt="slotProps"><span :title="slotProps.createdAt">{{ prettyDate(slotProps.createdAt) }}</span></template>
+      <template #createdAt="slotProps"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
       <template #action="slotProps">
         <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/>
       </template>
@@ -30,7 +30,7 @@ const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_OR
 import { createShareModel } from '../models/ShareModel.js';
 
 import { Button, Icon, InputDialog, TableView } from 'pankow';
-import { prettyDate } from 'pankow/utils';
+import { prettyDate, prettyLongDate } from 'pankow/utils';
 import moment from 'moment';
 
 export default {
@@ -87,6 +87,7 @@ export default {
     },
     methods: {
       prettyDate,
+      prettyLongDate,
       async refresh() {
         this.tableModel = await this.shareModel.list();
 

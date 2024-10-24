@@ -109,20 +109,19 @@ export function createMainModel(origin) {
     async recent() {
       let error, result;
       try {
-        result = await fetcher.get(`${origin}/api/v1/recent`);
+        result = await fetcher.get(`${origin}/api/v1/recent`, { days_ago: 100 });
       } catch (e) {
         error = e;
       }
 
       if (error || result.status !== 200) throw new Error('Failed to fetch recent', { cause: error || result })
 
-      const entry = result.body;
+      const entries = result.body.entries;
 
       // only needed for local development
-      entry.previewUrl = `${origin}${entry.previewUrl}`;
-      entry.files.forEach((e) => { e.previewUrl = `${origin}${e.previewUrl}`; });
+      entries.forEach((e) => { e.previewUrl = `${origin}${e.previewUrl}`; });
 
-      return entry;
+      return entries;
     },
     async search(query) {
       let error, result;

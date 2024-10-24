@@ -24,7 +24,7 @@
         <SharesView v-show="view === VIEWS.SHARES" ref="sharesView" />
         <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
         <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
-        <RecentView v-show="view === VIEWS.RECENT" ref="recentView" />
+        <RecentView v-if="view === VIEWS.RECENT" ref="recentView" @item-activated="onOpen" />
 
         <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
           <TopBar :gap="false" :left-grow="true">
@@ -415,19 +415,17 @@ export default {
 
         that.activeResourceType = '';
 
-        console.log('----', hash)
-
         if (hash.indexOf('files/home/') === 0) {
           if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
           else window.location.hash = 'files/home/';
-        } else if (hash === 'recent') {
-          that.view = VIEWS.RECENT;
         } else if (hash.indexOf('files/shares/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
         } else if (hash.indexOf('files/groupfolders/') === 0) {
           that.loadPath(hash.slice('files'.length));
           that.view = VIEWS.MAIN;
+        } else if (hash === 'recent') {
+          that.view = VIEWS.RECENT;
         } else if (hash.indexOf('users') === 0) {
           if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.USERS;

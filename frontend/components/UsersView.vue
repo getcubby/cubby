@@ -103,7 +103,7 @@ export default {
 <style scoped>
 
 .user-table-container {
-  padding: 20px;
+  padding: 0 20px;
 }
 
 .user-count {

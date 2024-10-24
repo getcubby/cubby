@@ -160,31 +160,21 @@ async function download(req, res, next) {
 async function recent(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 3 : parseInt(req.query.days_ago, 10);
+    const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 10 : parseInt(req.query.days_ago, 10);
     const maxFiles = 100;
 
     debug(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
 
-    let result = [];
+    let entries = [];
     try {
-        result = await files.recent(req.user.username, daysAgo, maxFiles);
+        entries = await files.recent(req.user.username, daysAgo, maxFiles);
     } catch (error) {
         return next(new HttpError(500, error));
     }
 
-    const entry = new Entry({
-        id: 'recent',
-        fullFilePath: '/recent',
-        fileName: 'Recent',
-        filePath: '/',
-        owner: req.user.username,
-        isDirectory: true,
-        isFile: false,
-        mimeType: 'inode/recent',
-        files: result
-    });
+    entries = entries.map((e) => e.withoutPrivate());
 
-    next(new HttpSuccess(200, entry.withoutPrivate()));
+    next(new HttpSuccess(200, { entries }));
 }
 
 async function search(req, res, next) {

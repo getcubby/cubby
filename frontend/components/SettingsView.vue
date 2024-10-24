@@ -315,7 +315,7 @@ export default {
 <style scoped>
 
 .settings-container {
-  padding: 20px;
+  padding: 0 20px;
 }
 
 h2 {

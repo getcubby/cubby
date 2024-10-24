@@ -118,7 +118,7 @@ export default {
 <style scoped>
 
 .shares {
-  padding: 20px;
+  padding: 0 20px;
 }
 
 .share-count {

@@ -1,15 +1,19 @@
 {
   "name": "Cubby",
-  "icons": [
-    {
+  "icons": [{
+      "purpose": "any",
+      "sizes": "512x512",
+      "src": "/logo.png",
+      "type": "image/png"
+    }, {
+      "purpose": "any",
       "src": "/logo.svg",
       "type": "image/svg+xml",
       "sizes": "512x512"
     }
   ],
   "start_url": "/",
-  "background_color": "#0071e3",
+  "background_color": "#ffffff",
   "display": "standalone",
-  "scope": "/",
   "theme_color": "#0071e3"
 }

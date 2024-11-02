@@ -386,16 +386,6 @@ export default {
           action: () => this.onUploadFolder()
         }],
         newAndUploadMenu: [{
-          label: 'New File',
-          icon: 'fa-solid fa-file-circle-plus',
-          action: () => this.onNewFile()
-        }, {
-          label: 'New Folder',
-          icon: 'fa-solid fa-folder-plus',
-          action: () => this.onNewFolder()
-        }, {
-          separator:true
-        }, {
           label: 'Upload File',
           icon: 'fa-solid fa-file-arrow-up',
           action: () => this.onUploadFile()
@@ -403,6 +393,16 @@ export default {
           label: 'Upload Folder',
           icon: 'fa-regular fa-folder-open',
           action: () => this.onUploadFolder()
+        }, {
+          separator:true
+        }, {
+          label: 'New File',
+          icon: 'fa-solid fa-file-circle-plus',
+          action: () => this.onNewFile()
+        }, {
+          label: 'New Folder',
+          icon: 'fa-solid fa-folder-plus',
+          action: () => this.onNewFolder()
         }]
       };
     },

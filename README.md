@@ -15,7 +15,7 @@ Report any issues or feature request at https://forum.cloudron.io/category/132/c
 
 Download and build the app:
 ```
-curl -L https://git.cloudron.io/cloudron/cubby/-/archive/master/cubby-master.tar | tar x
+curl -L https://git.cloudron.io/cubby/cubby/-/archive/master/cubby-master.tar | tar x
 cd cubby-master
 npm install
 cd frontend

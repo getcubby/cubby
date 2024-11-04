@@ -12,7 +12,6 @@ const assert = require('assert'),
     archiver = require('archiver'),
     config = require('../config.js'),
     debug = require('debug')('cubby:routes:misc'),
-    Entry = require('../entry.js'),
     files = require('../files.js'),
     groupFolders = require('../groupfolders.js'),
     MainError = require('../mainerror.js'),
@@ -122,9 +121,9 @@ async function download(req, res, next) {
                 if (!share) return next(new HttpError(404, 'no such share'));
 
                 // actual path is without shares/<shareId>/
-                const actualFilePath = filePath.split('/').slice(2).join('/');
+                const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
 
-                file = await files.get(share.owner, path.join(share.filePath, actualFilePath));
+                file = await files.get(share.ownerUsername, path.join(share.filePath, actualFilePath));
             } else if (resource === 'groupfolders') {
                 const groupFolderSlug = filePath.split('/')[1];
                 if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
@@ -133,7 +132,7 @@ async function download(req, res, next) {
                 if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
 
                 // actual path is without groupfolders/<slug>/
-                const actualFilePath = filePath.split('/').slice(2).join('/');
+                const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
 
                 file = await files.get('groupfolder-' + groupFolderSlug, actualFilePath);
             } else {

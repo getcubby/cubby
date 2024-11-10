@@ -19,6 +19,10 @@
   position: relative;
 }
 
+.ProseMirror img {
+  max-width: 100%;
+}
+
 .ProseMirror-hideselection *::selection { background: transparent; }
 .ProseMirror-hideselection *::-moz-selection { background: transparent; }
 .ProseMirror-hideselection { caret-color: transparent; }

@@ -22,6 +22,10 @@
       <p>Size</p>
       <span>{{ prettyFileSize(combinedSize) }}</span>
     </div>
+    <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
+      <p>Shared With</p>
+      <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
+    </div>
   </div>
 </template>
 
@@ -118,6 +122,10 @@ export default {
 .detail {
     margin-bottom: 5px;
     padding-left: 10px;
+}
+
+.detail-shared-width {
+  margin: 2px 0;
 }
 
 @media only screen and (max-width: 767px)  {

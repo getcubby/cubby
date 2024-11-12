@@ -68,13 +68,17 @@ if [[ ! -d "frontend-dist" ]]; then
     cd ..
 fi
 
-echo "========================================================================================="
 echo ""
-echo "To run the vite dev server as below in a second terminal on the side for live-reload"
+echo "┌────────────────────────────────────────────────────────────┐"
+echo "│ Frontend development                                       │"
+echo "├────────────────────────────────────────────────────────────┤"
+echo "│ Run a second terminal for hot reload frontend server:      │"
+echo "│                                                            │"
+echo "│ > cd frontend/                                             │"
+echo "│ > VITE_API_ORIGIN=http://localhost:3000 npm run dev        │"
+echo "│                                                            │"
+echo "└────────────────────────────────────────────────────────────┘"
 echo ""
-echo "cd frontend && VITE_API_ORIGIN=http://localhost:3000 npm run dev"
-echo ""
-echo "========================================================================================="
 
 # for up/down testing
 # DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up

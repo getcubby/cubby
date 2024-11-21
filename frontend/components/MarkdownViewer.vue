@@ -1,5 +1,11 @@
 <template>
   <MainLayout :gap="false" class="main-layout">
+    <template #dialogs>
+      <InputDialog ref="inputDialog" />
+      <div ref="selectionOverlay" class="selection-overlay">
+        <Button icon="fa-solid fa-pen" tool @click="onEditImage()"/>
+      </div>
+    </template>
     <template #header>
       <div class="tool-bar">
         <div class="tool-bar-left">
@@ -15,6 +21,8 @@
 
           <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!tools.lift.available" @click="onToolbutton(tools.lift)" />
           <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!tools.sink.available" @click="onToolbutton(tools.sink)" />
+
+          <Button icon="fa-solid fa-image" secondary outline tool @click="onToolbutton(tools.image)" style="margin-left: 40px; margin-right: 40px;" />
 
           <Button icon="fa-solid fa-minus" secondary outline tool @click="onToolbutton(tools.hr)" style="margin-left: 40px; margin-right: 40px;" />
 
@@ -38,7 +46,7 @@
 <script>
 
 import { toRaw } from 'vue';
-import { MainLayout, Button, Dropdown, utils } from 'pankow';
+import { MainLayout, Button, Dropdown, InputDialog, utils } from 'pankow';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -52,10 +60,17 @@ import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-comman
 import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemirror-markdown";
 import { wrapInList, liftListItem, sinkListItem } from "prosemirror-schema-list"
 import { exampleSetup } from "prosemirror-example-setup"
+import { Schema } from "prosemirror-model";
 
 import "prosemirror-gapcursor/style/gapcursor.css";
-
 import './MarkdownViewer.css';
+
+const cubbySchema = schema;
+// Start with schema below to add custom nodes and marks
+// const cubbySchema = new Schema({
+//   nodes: schema.spec.nodes, // Include existing nodes
+//   marks: schema.spec.marks, // Retain existing marks
+// });
 
 // cannot be reactive
 let view, provider;
@@ -96,11 +111,56 @@ function menuPlugin(app, tools) {
   })
 }
 
+// https://prosemirror.net/examples/tooltip/
+// plugin for controls overlay when selection
+// currently only shows if image is selected as example use-case
+function selectionOverlayPlugin(app, element) {
+  function updatePosOnScroll(view) {
+    const { from, to } = view.state.selection;
+
+    // These are in screen coordinates
+    const start = view.coordsAtPos(from);
+    const end = view.coordsAtPos(to);
+
+    element.style.display = 'block';
+
+    // The box in which the tooltip is positioned, to use as base
+    let box = element.offsetParent.getBoundingClientRect();
+
+    element.style.left = (end.left - 40) + 'px';
+    element.style.bottom = (box.bottom - start.top) + 'px';
+  }
+
+  return new Plugin({
+    view (editorView) {
+      return {
+        update(view, lastState) {
+          const state = view.state;
+
+          // Don't do anything if the document/selection didn't change
+          if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) return;
+
+          // only do something if an image is selected
+          if (state.selection.empty || !state.selection.node || state.selection.node.type.name !== 'image') {
+            element.style.display = 'none';
+            document.removeEventListener('scroll', updatePosOnScroll.bind(this, view), true);
+            return;
+          }
+
+          document.addEventListener('scroll', updatePosOnScroll.bind(this, view), true);
+          updatePosOnScroll(view);
+        }
+      }
+    }
+  });
+}
+
 export default {
   name: 'MarkdownViewer',
   components: {
     Button,
     Dropdown,
+    InputDialog,
     MainLayout
   },
   props: {
@@ -154,51 +214,59 @@ export default {
         strong: {
           active: false,
           available: false,
-          mark: schema.marks.strong,
-          cmd: toggleMark(schema.marks.strong)
+          mark: cubbySchema.marks.strong,
+          cmd: toggleMark(cubbySchema.marks.strong)
         },
         em: {
           active: false,
           available: false,
-          mark: schema.marks.em,
-          cmd: toggleMark(schema.marks.em)
+          mark: cubbySchema.marks.em,
+          cmd: toggleMark(cubbySchema.marks.em)
         },
         code: {
           active: false,
           available: false,
-          mark: schema.marks.code,
-          cmd: toggleMark(schema.marks.code)
+          mark: cubbySchema.marks.code,
+          cmd: toggleMark(cubbySchema.marks.code)
         },
         ul: {
           active: false,
           available: false,
           mark: null,
-          cmd: wrapInList(schema.nodes.bullet_list, {})
+          cmd: wrapInList(cubbySchema.nodes.bullet_list, {})
         },
         ol: {
           active: false,
           available: false,
           mark: null,
-          cmd: wrapInList(schema.nodes.ordered_list, { order: 1 })
+          cmd: wrapInList(cubbySchema.nodes.ordered_list, { order: 1 })
         },
         lift: {
           active: false,
           available: false,
           mark: null,
-          cmd: liftListItem(schema.nodes.list_item)
+          cmd: liftListItem(cubbySchema.nodes.list_item)
         },
         sink: {
           active: false,
           available: false,
           mark: null,
-          cmd: sinkListItem(schema.nodes.list_item)
+          cmd: sinkListItem(cubbySchema.nodes.list_item)
         },
         hr: {
           active: false,
           available: false,
           mark: null,
           cmd: (state, dispatch, view) => {
-            if (dispatch) dispatch(state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create()));
+            if (dispatch) dispatch(state.tr.replaceSelectionWith(cubbySchema.nodes.horizontal_rule.create()));
+          }
+        },
+        image: {
+          active: false,
+          available: false,
+          mark: null,
+          cmd: async (state, dispatch, view) => {
+            if (dispatch) this.addOrEditImage(state);
           }
         },
         undo: {
@@ -226,13 +294,13 @@ export default {
 
       let cmd = null;
       if (this.paragraphType === 'p') {
-        cmd = setBlockType(schema.nodes.paragraph, {});
+        cmd = setBlockType(cubbySchema.nodes.paragraph, {});
       } else if (this.paragraphType === 'h1') {
-        cmd = setBlockType(schema.nodes.heading, { level: 1 });
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 1 });
       } else if (this.paragraphType === 'h2') {
-        cmd = setBlockType(schema.nodes.heading, { level: 2 });
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 2 });
       } else if (this.paragraphType === 'code') {
-        cmd = setBlockType(schema.nodes.code_block, {});
+        cmd = setBlockType(cubbySchema.nodes.code_block, {});
       }
 
       view.focus();
@@ -246,6 +314,27 @@ export default {
     this.paragraphType = this.paragraphTypes[0].slug;
   },
   methods: {
+    onEditImage() {
+      this.addOrEditImage(view.state);
+    },
+    async addOrEditImage(state) {
+      let src = '';
+
+      // if we have a image node selected we are editing
+      if (!state.selection.empty && state.selection.node && state.selection.node.type.name === 'image') src = state.selection.node.attrs.src;
+
+      const imageUrl = await this.$refs.inputDialog.prompt({
+        message: 'Image URL',
+        modal: false,
+        value: src,
+        confirmStyle: 'success',
+        confirmLabel: 'Add',
+        rejectLabel: 'Close'
+      });
+      if (!imageUrl) return;
+
+      view.dispatch(state.tr.replaceSelectionWith(cubbySchema.nodes.image.create({ title: 'Image title', alt: 'Image alt text', src: imageUrl})));
+    },
     canHandle(entry) {
       return entry.fileName.endsWith('md');
     },
@@ -283,12 +372,12 @@ export default {
         fragment = prosemirrorToYXmlFragment(markdownDoc, fragment);
       }
 
-      const { doc, mapping } = initProseMirrorDoc(fragment, schema)
+      const { doc, mapping } = initProseMirrorDoc(fragment, cubbySchema)
 
       view = new EditorView(this.$refs.editorNode, {
         state: EditorState.create({
           doc,
-          schema,
+          cubbySchema,
           plugins: [
             ySyncPlugin(fragment, { mapping }),
             yCursorPlugin(provider.awareness),
@@ -297,7 +386,7 @@ export default {
               'Mod-z': undo,
               'Mod-y': redo,
               'Mod-Shift-z': redo
-            })].concat(exampleSetup({ schema, menuBar: false })).concat(menuPlugin(this, this.tools))
+            })].concat(exampleSetup({ schema: cubbySchema, menuBar: false })).concat(menuPlugin(this, this.tools)).concat(selectionOverlayPlugin(this, this.$refs.selectionOverlay))
           })
       });
 
@@ -369,6 +458,12 @@ export default {
   .editor {
     background-color: var(--pankow-color-background);
   }
+}
+
+.selection-overlay {
+  position: absolute;
+  display: none;
+  z-index: 20;
 }
 
 </style>

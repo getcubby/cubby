@@ -157,6 +157,11 @@ async function putFile(req, res, next) {
 
     debug(`putFile: ${handleId} ${req.body.length}`);
 
+    if (!req.body.length) {
+        debug(`putFile: ${handleId} has empty body. Strange but continuing with 200`);
+        return next(new HttpSuccess(200, {}));
+    }
+
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 

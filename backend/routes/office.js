@@ -158,7 +158,7 @@ async function putFile(req, res, next) {
     debug(`putFile: ${handleId} ${req.body.length}`);
 
     if (!req.body.length) {
-        debug(`putFile: ${handleId} has empty body. Strange but continuing with 200`);
+        debug(`putFile: ${handleId} has empty body. Probably a bug in the body parser...but continuing with 200`);
         return next(new HttpSuccess(200, {}));
     }
 

@@ -111,7 +111,7 @@ function init(callback) {
     router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
     router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);
     router.get ('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, office.getFile);
-    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw({ limit: '1gb' }), office.putFile);
+    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
     app.use('/api', express.json());

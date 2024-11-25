@@ -8,7 +8,7 @@
     </template>
     <template #header>
       <div class="tool-bar">
-        <div class="tool-bar-left">
+        <div class="tool-bar-left pankow-no-mobile">
           <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 40px;"/>
           <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
           <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
@@ -426,6 +426,8 @@ export default {
 }
 
 .tool-bar-right {
+  flex-grow: 1;
+  text-align: right;
 }
 
 .main-layout {

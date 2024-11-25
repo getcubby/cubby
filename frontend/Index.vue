@@ -56,7 +56,7 @@
                   ref="directoryView"
                   :show-owner="false"
                   :show-extract="false"
-                  :show-size="true"
+                  :show-size="showSize"
                   :show-modified="true"
                   :show-share="'isSharedWith'"
                   :editable="!isReadonly()"
@@ -303,6 +303,7 @@ export default {
         view: '',
         search: '',
         viewer: '',
+        showSize: true,
         activeResourceType: '',
         profile: {},
         config: {},
@@ -469,6 +470,9 @@ export default {
 
         handleHash(window.location.hash.slice(1));
       }, false);
+
+      // TODO make this dynamic
+      this.showSize = window.innerWidth >= 576;
 
       this.ready = true;
     },

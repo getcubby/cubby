@@ -115,7 +115,6 @@ export function createDirectoryModel(origin) {
         xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath)}&overwrite=true`);
 
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        xhr.setRequestHeader('Content-Length', file.size);
 
         xhr.send(file);
       });
@@ -155,7 +154,6 @@ export function createDirectoryModel(origin) {
         xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + newFileName)}`);
 
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        xhr.setRequestHeader('Content-Length', file.size);
 
         xhr.send(file);
       });
@@ -235,7 +233,6 @@ export function createDirectoryModel(origin) {
         xhr.open('POST', `${origin}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}`);
 
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        xhr.setRequestHeader('Content-Length', file.size);
 
         xhr.send(file);
       });

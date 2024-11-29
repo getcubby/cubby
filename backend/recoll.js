@@ -37,8 +37,26 @@ async function index() {
 //         -p *.odt -p *.pdf
 //      -K : skip previously failed files (they are retried by default)
 
-async function indexByUsername(username) {
+const scheduled = {};
+function scheduleIndexByUsername(username) {
     assert.strictEqual(typeof username, 'string');
+
+    debug(`scheduleIndexByUsername: ${username} ...`);
+
+    if (scheduled[username]) clearTimeout(scheduled[username]);
+
+    scheduled[username] = setTimeout(async () => {
+        debug(`scheduledIndex for ${username}`);
+        await indexByUsername(username);
+        delete scheduled[username];
+    }, 10000);
+}
+
+async function indexByUsername(username, schedule = false) {
+    assert.strictEqual(typeof username, 'string');
+    assert.strictEqual(typeof schedule, 'boolean');
+
+    if (schedule) return scheduleIndexByUsername(username);
 
     debug(`indexByUsername: ${username} ...`);
 
@@ -64,13 +82,14 @@ async function indexByUsername(username) {
     debug(`indexByUsername: ${username} done`);
 }
 
-async function indexByGroupFolder(groupFolder) {
+async function indexByGroupFolder(groupFolder, schedule = false) {
     assert.strictEqual(typeof groupFolder, 'string');
+    assert.strictEqual(typeof schedule, 'boolean');
 
     debug(`indexByGroupFolder: ${groupFolder} ...`);
 
     const folder = await groupFolders.get(groupFolder);
-    for (const member of folder.members) await indexByUsername(member);
+    for (const member of folder.members) await indexByUsername(member, schedule);
 
     debug(`indexByGroupFolder: ${groupFolder} done`);
 }

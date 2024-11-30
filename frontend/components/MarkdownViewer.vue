@@ -299,6 +299,14 @@ export default {
         cmd = setBlockType(cubbySchema.nodes.heading, { level: 1 });
       } else if (this.paragraphType === 'h2') {
         cmd = setBlockType(cubbySchema.nodes.heading, { level: 2 });
+      } else if (this.paragraphType === 'h3') {
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 3 });
+      } else if (this.paragraphType === 'h4') {
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 4 });
+      } else if (this.paragraphType === 'h5') {
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 5 });
+      } else if (this.paragraphType === 'h6') {
+        cmd = setBlockType(cubbySchema.nodes.heading, { level: 6 });
       } else if (this.paragraphType === 'code') {
         cmd = setBlockType(cubbySchema.nodes.code_block, {});
       }

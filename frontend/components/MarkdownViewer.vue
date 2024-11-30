@@ -3,7 +3,8 @@
     <template #dialogs>
       <InputDialog ref="inputDialog" />
       <div ref="selectionOverlay" class="selection-overlay">
-        <Button icon="fa-solid fa-pen" tool @click="onEditImage()"/>
+        <div class="overlay-button" v-show="overlay.showImageControls" @click="onEditImage()"><Icon icon="fa-solid fa-pen"/></div>
+        <div class="overlay-button" @click="onEditSelection()"><Icon icon="fa-solid fa-link"/></div>
       </div>
     </template>
     <template #header>
@@ -46,7 +47,7 @@
 <script>
 
 import { toRaw } from 'vue';
-import { MainLayout, Button, Dropdown, InputDialog, utils } from 'pankow';
+import { MainLayout, Button, Dropdown, Icon, InputDialog, utils } from 'pankow';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -128,7 +129,7 @@ function selectionOverlayPlugin(app, element) {
     let box = element.offsetParent.getBoundingClientRect();
 
     element.style.left = (end.left - 40) + 'px';
-    element.style.bottom = (box.bottom - start.top) + 'px';
+    element.style.bottom = (box.bottom - start.top + 4) + 'px';
   }
 
   return new Plugin({
@@ -140,12 +141,13 @@ function selectionOverlayPlugin(app, element) {
           // Don't do anything if the document/selection didn't change
           if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) return;
 
-          // only do something if an image is selected
-          if (state.selection.empty || !state.selection.node || state.selection.node.type.name !== 'image') {
+          if (state.selection.empty) {
             element.style.display = 'none';
             document.removeEventListener('scroll', updatePosOnScroll.bind(this, view), true);
             return;
           }
+
+          app.overlay.showImageControls = (state.selection.node && state.selection.node.type.name === 'image');
 
           document.addEventListener('scroll', updatePosOnScroll.bind(this, view), true);
           updatePosOnScroll(view);
@@ -160,6 +162,7 @@ export default {
   components: {
     Button,
     Dropdown,
+    Icon,
     InputDialog,
     MainLayout
   },
@@ -210,6 +213,9 @@ export default {
         slug: 'code',
         display: 'Code Block'
       }],
+      overlay: {
+        showImageControls: false
+      },
       tools: {
         strong: {
           active: false,
@@ -394,7 +400,10 @@ export default {
               'Mod-z': undo,
               'Mod-y': redo,
               'Mod-Shift-z': redo
-            })].concat(exampleSetup({ schema: cubbySchema, menuBar: false })).concat(menuPlugin(this, this.tools)).concat(selectionOverlayPlugin(this, this.$refs.selectionOverlay))
+            })]
+            .concat(exampleSetup({ schema: cubbySchema, menuBar: false }))
+            .concat(menuPlugin(this, this.tools))
+            .concat(selectionOverlayPlugin(this, this.$refs.selectionOverlay))
           })
       });
 
@@ -474,6 +483,23 @@ export default {
   position: absolute;
   display: none;
   z-index: 20;
+  background-color: var(--pankow-color-secondary);
+  border-radius: var(--pankow-border-radius);
+}
+
+.overlay-button {
+  min-width: 30px;
+  display: inline-block;
+  cursor: pointer;
+  text-align: center;
+  color: var(--pankow-color-light-dark);
+  border-radius: var(--pankow-border-radius);
+  padding: 5px;
+  margin: 2px;
+}
+
+.overlay-button:hover {
+  background-color: var(--pankow-color-background-hover);
 }
 
 </style>

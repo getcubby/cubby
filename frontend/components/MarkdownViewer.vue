@@ -492,13 +492,14 @@ export default {
   display: inline-block;
   cursor: pointer;
   text-align: center;
-  color: var(--pankow-color-light-dark);
+  color: var(--pankow-color-background-hover);
   border-radius: var(--pankow-border-radius);
   padding: 5px;
   margin: 2px;
 }
 
 .overlay-button:hover {
+  color: var(--pankow-color-secondary);
   background-color: var(--pankow-color-background-hover);
 }
 

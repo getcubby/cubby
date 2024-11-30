@@ -31,7 +31,8 @@
 .ProseMirror [draggable][contenteditable=false] { user-select: text }
 
 .ProseMirror-selectednode {
-  outline: 2px solid #8cf;
+  border-radius: var(--pankow-border-radius);
+  box-shadow: 0 0 0 2px var(--pankow-color-primary);
 }
 
 /* Make sure li selections wrap around markers */

@@ -14,7 +14,6 @@ exports = module.exports = {
 
 var assert = require('assert'),
     users = require('../users.js'),
-    diskusage = require('../diskusage.js'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;

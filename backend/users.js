@@ -12,9 +12,12 @@ exports = module.exports = {
 };
 
 const assert = require('assert'),
+    constants = require('./constants.js'),
     crypto = require('crypto'),
+    { cp } = require('node:fs/promises'),
     debug = require('debug')('cubby:users'),
     database = require('./database.js'),
+    path = require('path'),
     tokens = require('./tokens.js'),
     MainError = require('./mainerror.js');
 
@@ -69,6 +72,10 @@ async function add(user) {
 
         throw error;
     }
+
+    // copy skeleton folder
+    debug(`add: copy skeleton folder...`);
+    await cp(constants.SKELETON_FOLDER, path.join(constants.USER_DATA_ROOT, username), { recursive: true });
 }
 
 async function exists(username) {

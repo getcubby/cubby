@@ -59,6 +59,10 @@ done
 
 echo "=> Ensure database"
 psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
+npm run db-migrate
+
+# clear skeleton user
+psql -h ${POSTGRESQL_HOST} -p ${POSTGRESQL_PORT} -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -c "DELETE FROM users WHERE username = 'skeleton'"
 
 echo "=> Ensure frontend build"
 if [[ ! -d "frontend-dist" ]]; then

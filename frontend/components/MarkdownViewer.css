@@ -245,6 +245,14 @@ img.ProseMirror-separator {
   line-height: 2px;
 }
 
+.ProseMirror a {
+  color: var(--pankow-color-primary);
+}
+
+.ProseMirror a:hover {
+  color: var(--pankow-color-primary-hover);
+}
+
 .ProseMirror ul, .ProseMirror ol {
   padding-left: 30px;
 }

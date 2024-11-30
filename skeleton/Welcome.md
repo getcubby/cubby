@@ -22,4 +22,4 @@ Link: ![Image alt text](https://cloudron.io/img/logo128.png "Image title") Data 
 
 ## Developed by Cloudron
 
-Cloudron is a complete solution for running apps on your own server.
+[Cloudron](https://www.cloudron.io) is a complete solution for running apps on your own server.

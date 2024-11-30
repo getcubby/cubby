@@ -23,6 +23,11 @@
   max-width: 100%;
 }
 
+.ProseMirror *::selection {
+  color: white;
+  background-color: var(--pankow-color-primary);
+}
+
 .ProseMirror-hideselection *::selection { background: transparent; }
 .ProseMirror-hideselection *::-moz-selection { background: transparent; }
 .ProseMirror-hideselection { caret-color: transparent; }

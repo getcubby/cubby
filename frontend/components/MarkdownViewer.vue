@@ -116,24 +116,32 @@ function menuPlugin(app, tools) {
 // plugin for controls overlay when selection
 // currently only shows if image is selected as example use-case
 function selectionOverlayPlugin(app, element) {
-  function updatePosOnScroll(view) {
-    const { from, to } = view.state.selection;
-
-    // These are in screen coordinates
-    const start = view.coordsAtPos(from);
-    const end = view.coordsAtPos(to);
-
-    element.style.display = 'block';
-
-    // The box in which the tooltip is positioned, to use as base
-    let box = element.offsetParent.getBoundingClientRect();
-
-    element.style.left = (end.left - 40) + 'px';
-    element.style.bottom = (box.bottom - start.top + 4) + 'px';
-  }
-
   return new Plugin({
-    view (editorView) {
+    view(editorView) {
+      function updatePosOnScroll() {
+        const state = editorView.state;
+        const { from, to } = state.selection;
+
+        // These are in screen coordinates
+        const start = editorView.coordsAtPos(from);
+        const end = editorView.coordsAtPos(to);
+
+        if (state.selection.empty) {
+          element.style.display = 'none';
+          return;
+        }
+
+        element.style.display = 'block';
+
+        // The box in which the tooltip is positioned, to use as base
+        let box = element.offsetParent.getBoundingClientRect();
+
+        element.style.left = (end.left - 40) + 'px';
+        element.style.bottom = (box.bottom - start.top + 4) + 'px';
+      }
+
+      document.addEventListener('scroll', updatePosOnScroll, true);
+
       return {
         update(view, lastState) {
           const state = view.state;
@@ -141,16 +149,12 @@ function selectionOverlayPlugin(app, element) {
           // Don't do anything if the document/selection didn't change
           if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) return;
 
-          if (state.selection.empty) {
-            element.style.display = 'none';
-            document.removeEventListener('scroll', updatePosOnScroll.bind(this, view), true);
-            return;
-          }
-
           app.overlay.showImageControls = (state.selection.node && state.selection.node.type.name === 'image');
 
-          document.addEventListener('scroll', updatePosOnScroll.bind(this, view), true);
-          updatePosOnScroll(view);
+          updatePosOnScroll();
+        },
+        destroy() {
+          document.removeEventListener('scroll', updatePosOnScroll, true);
         }
       }
     }

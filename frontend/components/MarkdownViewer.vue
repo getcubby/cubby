@@ -4,7 +4,7 @@
       <InputDialog ref="inputDialog" />
       <div ref="selectionOverlay" class="selection-overlay">
         <div class="overlay-button" v-show="overlay.showImageControls" @click="onEditImage()"><Icon icon="fa-solid fa-pen"/></div>
-        <div class="overlay-button" @click="onEditSelection()"><Icon icon="fa-solid fa-link"/></div>
+        <div class="overlay-button" v-show="overlay.showLinkControls" @click="onEditSelection()"><Icon icon="fa-solid fa-link"/></div>
       </div>
     </template>
     <template #header>
@@ -126,9 +126,30 @@ function selectionOverlayPlugin(app, element) {
         const start = editorView.coordsAtPos(from);
         const end = editorView.coordsAtPos(to);
 
-        if (state.selection.empty) {
+        app.overlay.showImageControls = (state.selection.node && state.selection.node.type.name === 'image');
+
+        const tmpNode = editorView.domAtPos(state.selection.$anchor.pos);
+        const nodeAtCursor = tmpNode ? tmpNode.node : null;
+
+        if (state.selection.empty && !nodeAtCursor) {
           element.style.display = 'none';
           return;
+        }
+
+        let hasLink = false;
+
+        app.overlay.showLinkControls = false;
+
+        // text node
+        if (nodeAtCursor.nodeName === '#text') {
+          console.log('text node', nodeAtCursor.parentElement)
+          if (nodeAtCursor.parentElement.nodeName === 'A') {
+            console.log('got a link')
+            hasLink = true;
+            app.overlay.showLinkControls = true;
+          }
+        } else if (nodeAtCursor) {
+          console.log('some other node ', nodeAtCursor)
         }
 
         element.style.display = 'block';
@@ -148,8 +169,6 @@ function selectionOverlayPlugin(app, element) {
 
           // Don't do anything if the document/selection didn't change
           if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) return;
-
-          app.overlay.showImageControls = (state.selection.node && state.selection.node.type.name === 'image');
 
           updatePosOnScroll();
         },
@@ -218,7 +237,8 @@ export default {
         display: 'Code Block'
       }],
       overlay: {
-        showImageControls: false
+        showImageControls: false,
+        showLinkControls: false
       },
       tools: {
         strong: {

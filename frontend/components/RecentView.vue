@@ -14,7 +14,7 @@
         <div class="hr"></div>
         <div class="grid">
           <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
-            <img :src="entry.previewUrl" width="48" height="48" style="object-fit: cover;" />
+            <img :src="entry.previewUrl" width="48" height="48" style="object-fit: cover;" @error="iconError($event, entry)"/>
             <span>{{ entry.fileName }}</span>
             <Button small outline :href="entry.parentFolderUrl" @click.stop class="open-folder">Open Folder</Button>
           </div>
@@ -86,6 +86,17 @@ export default {
   methods: {
     onActivateItem(entry) {
       this.$emit('item-activated', entry);
+    },
+    iconError(event, entry) {
+      event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
+
+      setTimeout(() => {
+        if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
+        if (entry._previewRetries > 10) return;
+        ++entry._previewRetries
+
+        event.target.src = entry.previewUrl;
+      }, 1000);
     }
   }
 };

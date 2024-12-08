@@ -15,7 +15,7 @@
           <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
           <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
 
-          <Dropdown v-model="paragraphType" :options="paragraphTypes" option-label="display" option-key="slug" style="margin-right: 40px;" />
+          <Button secondary outline :menu="blockTypes" style="margin-right: 40px;">{{ activeBlockType.label }}</Button>
 
           <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
           <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
@@ -47,7 +47,7 @@
 <script>
 
 import { toRaw } from 'vue';
-import { MainLayout, Button, Dropdown, Icon, InputDialog, utils } from 'pankow';
+import { MainLayout, Button, Icon, InputDialog, utils } from 'pankow';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -80,27 +80,46 @@ const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API
 
 // https://github.com/ProseMirror/prosemirror-example-setup/blob/8c11be6850604081dceda8f36e08d2426875e19a/src/menu.ts#L58
 function markActive(state, markType) {
-  let { from, $from, to, empty } = state.selection
-  if (empty) return !!markType.isInSet(state.storedMarks || $from.marks())
-  else return state.doc.rangeHasMark(from, to, markType)
+  const { from, $from, to, empty } = state.selection;
+
+  if (empty) return !!markType.isInSet(state.storedMarks || $from.marks());
+  return state.doc.rangeHasMark(from, to, markType);
 }
 
-function canInsert(state, nodeType) {
-  let $from = state.selection.$from
-  for (let d = $from.depth; d >= 0; d--) {
-    let index = $from.index(d)
-    if ($from.node(d).canReplaceWith(index, index, nodeType)) return true
-  }
-  return false
+function blockTypeActive(state, nodeType, nodeTypeAttrs) {
+  const { $from, node } = state.selection;
+
+  // node would be for example an image node
+  if (node) return node.hasMarkup(nodeType, nodeTypeAttrs);
+  return $from.parent.hasMarkup(nodeType, nodeTypeAttrs);
 }
 
-// plugin to track editor changes into vuejs
+// plugin to track formatting and tools currently applied to cursor or selection
 function menuPlugin(app, tools) {
   return new Plugin({
     view(editorView) {
       return {
         update() {
+          const state = editorView.state;
+
           app.isChanged = true;
+
+          if (blockTypeActive(state, cubbySchema.nodes.paragraph, {})) {
+            app.activeBlockType = app.blockTypes[0];
+          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 1 })) {
+            app.activeBlockType = app.blockTypes[1];
+          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 2 })) {
+            app.activeBlockType = app.blockTypes[2];
+          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 3 })) {
+            app.activeBlockType = app.blockTypes[3];
+          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 4 })) {
+            app.activeBlockType = app.blockTypes[4];
+          } else if (blockTypeActive(state, cubbySchema.nodes.code_block, { params: '' })) {
+            app.activeBlockType = app.blockTypes[5];
+          } else {
+            const { $from, node } = state.selection;
+            console.log('FIXME: unkonwn block type', node, $from.parent);
+          }
 
           for (const tool in tools) {
             tools[tool].available = tools[tool].cmd(editorView.state, null, editorView);
@@ -142,14 +161,14 @@ function selectionOverlayPlugin(app, element) {
 
         // text node
         if (nodeAtCursor.nodeName === '#text') {
-          console.log('text node', nodeAtCursor.parentElement)
+          // console.log('text node', nodeAtCursor.parentElement)
           if (nodeAtCursor.parentElement.nodeName === 'A') {
             console.log('got a link')
             hasLink = true;
             app.overlay.showLinkControls = true;
           }
         } else if (nodeAtCursor) {
-          console.log('some other node ', nodeAtCursor)
+          // console.log('some other node ', nodeAtCursor)
         }
 
         element.style.display = 'block';
@@ -184,7 +203,6 @@ export default {
   name: 'MarkdownViewer',
   components: {
     Button,
-    Dropdown,
     Icon,
     InputDialog,
     MainLayout
@@ -210,31 +228,49 @@ export default {
       isChanged: false,
       entry: {},
       isStrong: false,
-      paragraphType: null,
-      paragraphTypes: [{
+      activeBlockType: {},
+      blockTypes: [{
         slug: 'p',
-        display: 'Normal'
+        label: 'Paragraph',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.paragraph, {})(view.state, view.dispatch, view);
+        }
       }, {
         slug: 'h1',
-        display: 'Header 1'
+        label: 'Header 1',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.heading, { level: 1 })(view.state, view.dispatch, view);
+        }
       }, {
         slug: 'h2',
-        display: 'Header 2'
+        label: 'Header 2',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.heading, { level: 2 })(view.state, view.dispatch, view);
+        }
       }, {
         slug: 'h3',
-        display: 'Header 3'
+        label: 'Header 3',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.heading, { level: 3 })(view.state, view.dispatch, view);
+        }
       }, {
         slug: 'h4',
-        display: 'Header 4'
-      }, {
-        slug: 'h5',
-        display: 'Header 5'
-      }, {
-        slug: 'h6',
-        display: 'Header 6'
+        label: 'Header 4',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.heading, { level: 4 })(view.state, view.dispatch, view);
+        }
       }, {
         slug: 'code',
-        display: 'Code Block'
+        label: 'Code Block',
+        action: () => {
+          view.focus();
+          setBlockType(cubbySchema.nodes.code_block, { params: '' })(view.state, view.dispatch, view);
+        }
       }],
       overlay: {
         showImageControls: false,
@@ -318,38 +354,8 @@ export default {
       }
     };
   },
-  watch: {
-    paragraphType() {
-      if (!view) return;
-
-      let cmd = null;
-      if (this.paragraphType === 'p') {
-        cmd = setBlockType(cubbySchema.nodes.paragraph, {});
-      } else if (this.paragraphType === 'h1') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 1 });
-      } else if (this.paragraphType === 'h2') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 2 });
-      } else if (this.paragraphType === 'h3') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 3 });
-      } else if (this.paragraphType === 'h4') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 4 });
-      } else if (this.paragraphType === 'h5') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 5 });
-      } else if (this.paragraphType === 'h6') {
-        cmd = setBlockType(cubbySchema.nodes.heading, { level: 6 });
-      } else if (this.paragraphType === 'code') {
-        cmd = setBlockType(cubbySchema.nodes.code_block, {});
-      }
-
-      view.focus();
-
-      if (!cmd) return;
-
-      cmd(view.state, view.dispatch, view);
-    }
-  },
   mounted() {
-    this.paragraphType = this.paragraphTypes[0].slug;
+    this.activeBlockType = this.blockTypes[0];
   },
   methods: {
     onEditImage() {

@@ -11,24 +11,33 @@
       <div class="tool-bar">
         <div class="tool-bar-left pankow-no-mobile">
           <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 40px;"/>
-          <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
-          <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
-          <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
 
-          <Button secondary outline :menu="blockTypes" style="margin-right: 40px;">{{ activeBlockType.label }}</Button>
+          <ButtonGroup>
+            <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
+            <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
+            <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
+          </ButtonGroup>
 
-          <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
-          <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
+          <Button secondary outline :menu="blockTypes" style="margin-right: 40px; min-width: 124px">{{ activeBlockTypeLabel }}</Button>
 
-          <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!tools.lift.available" @click="onToolbutton(tools.lift)" />
-          <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!tools.sink.available" @click="onToolbutton(tools.sink)" />
+          <ButtonGroup>
+            <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
+            <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
+          </ButtonGroup>
+
+          <ButtonGroup>
+            <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!tools.lift.available" @click="onToolbutton(tools.lift)" />
+            <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!tools.sink.available" @click="onToolbutton(tools.sink)" />
+          </ButtonGroup>
 
           <Button icon="fa-solid fa-image" secondary outline tool @click="onToolbutton(tools.image)" style="margin-left: 40px; margin-right: 40px;" />
 
           <Button icon="fa-solid fa-minus" secondary outline tool @click="onToolbutton(tools.hr)" style="margin-left: 40px; margin-right: 40px;" />
 
-          <Button icon="fa-solid fa-rotate-left" secondary outline tool @click="onToolbutton(tools.undo)" />
-          <Button icon="fa-solid fa-rotate-right" secondary outline tool @click="onToolbutton(tools.redo)" style="margin-right: 40px;" />
+          <ButtonGroup>
+            <Button icon="fa-solid fa-rotate-left" secondary outline tool @click="onToolbutton(tools.undo)" />
+            <Button icon="fa-solid fa-rotate-right" secondary outline tool @click="onToolbutton(tools.redo)" style="margin-right: 40px;" />
+          </ButtonGroup>
         </div>
         <div class="tool-bar-right">
           <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
@@ -47,7 +56,7 @@
 <script>
 
 import { toRaw } from 'vue';
-import { MainLayout, Button, Icon, InputDialog, utils } from 'pankow';
+import { MainLayout, Button, ButtonGroup, Icon, InputDialog, utils } from 'pankow';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -105,20 +114,21 @@ function menuPlugin(app, tools) {
           app.isChanged = true;
 
           if (blockTypeActive(state, cubbySchema.nodes.paragraph, {})) {
-            app.activeBlockType = app.blockTypes[0];
+            app.activeBlockTypeLabel = app.blockTypes[0].label;
           } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 1 })) {
-            app.activeBlockType = app.blockTypes[1];
+            app.activeBlockTypeLabel = app.blockTypes[1].label;
           } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 2 })) {
-            app.activeBlockType = app.blockTypes[2];
+            app.activeBlockTypeLabel = app.blockTypes[2].label;
           } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 3 })) {
-            app.activeBlockType = app.blockTypes[3];
+            app.activeBlockTypeLabel = app.blockTypes[3].label;
           } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 4 })) {
-            app.activeBlockType = app.blockTypes[4];
+            app.activeBlockTypeLabel = app.blockTypes[4].label;
           } else if (blockTypeActive(state, cubbySchema.nodes.code_block, { params: '' })) {
-            app.activeBlockType = app.blockTypes[5];
+            app.activeBlockTypeLabel = app.blockTypes[5].label;
           } else {
             const { $from, node } = state.selection;
             console.log('FIXME: unkonwn block type', node, $from.parent);
+            app.activeBlockTypeLabel = 'Paragraph';
           }
 
           for (const tool in tools) {
@@ -203,6 +213,7 @@ export default {
   name: 'MarkdownViewer',
   components: {
     Button,
+    ButtonGroup,
     Icon,
     InputDialog,
     MainLayout
@@ -228,7 +239,7 @@ export default {
       isChanged: false,
       entry: {},
       isStrong: false,
-      activeBlockType: {},
+      activeBlockTypeLabel: '',
       blockTypes: [{
         slug: 'p',
         label: 'Paragraph',
@@ -355,7 +366,6 @@ export default {
     };
   },
   mounted() {
-    this.activeBlockType = this.blockTypes[0];
   },
   methods: {
     onEditImage() {

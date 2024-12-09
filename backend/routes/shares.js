@@ -105,7 +105,7 @@ async function getShareLink(req, res, next) {
     file.files.forEach(function (f) { f.share = req.share; });
     file.share = req.share;
 
-    next(new HttpSuccess(200, file.asShare(req.share.filePath).withoutPrivate()));
+    next(new HttpSuccess(200, file.asShare(req.share.filePath).withoutPrivate(null)));
 }
 
 // If a share for the receiver and filepath already exists, just reuse that
@@ -174,7 +174,7 @@ async function listShares(req, res, next) {
 
         if (!file) continue;
 
-        share.file = file.withoutPrivate();
+        share.file = file.withoutPrivate(req.user.username);
         validShares.push(share);
     }
 

@@ -171,7 +171,7 @@ async function recent(req, res, next) {
         return next(new HttpError(500, error));
     }
 
-    entries = entries.map((e) => e.withoutPrivate());
+    entries = entries.map((e) => e.withoutPrivate(req.user.username));
 
     next(new HttpSuccess(200, { entries }));
 }

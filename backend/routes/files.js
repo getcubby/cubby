@@ -148,7 +148,7 @@ async function get(req, res, next) {
             return res.download(result._fullFilePath);
         }
 
-        next(new HttpSuccess(200, result.withoutPrivate()));
+        next(new HttpSuccess(200, result.withoutPrivate(req.user.username)));
     } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
         if (shareId) {
@@ -187,7 +187,7 @@ async function get(req, res, next) {
             file.files.forEach(function (f) { f.share = share; });
             file.share = share;
 
-            next(new HttpSuccess(200, file.asShare(share.filePath).withoutPrivate()));
+            next(new HttpSuccess(200, file.asShare(share.filePath).withoutPrivate(req.user ? req.user.username : null)));
         } else {
             debug('listShares');
 
@@ -230,12 +230,13 @@ async function get(req, res, next) {
                 isDirectory: true,
                 isFile: false,
                 isShare: true,
+                favorites: [],
                 owner: req.user.username,
                 mimeType: 'inode/share',
                 files: sharedFiles
             });
 
-            next(new HttpSuccess(200, entry.withoutPrivate()));
+            next(new HttpSuccess(200, entry.withoutPrivate(req.user.username)));
         }
     } else if (resource === 'groupfolders') {
         const groupFolderId = filePath.split('/')[1];
@@ -264,7 +265,7 @@ async function get(req, res, next) {
                 return res.download(file._fullFilePath);
             }
 
-            next(new HttpSuccess(200, file.asGroup().withoutPrivate()));
+            next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.username)));
         } else {
             debug('listGroupFolders');
 
@@ -302,6 +303,7 @@ async function get(req, res, next) {
                 fullFilePath: '/groupfolders',
                 fileName: 'Group Folder',
                 filePath: '/',
+                favorites: [],
                 isDirectory: true,
                 isFile: false,
                 isShare: false,
@@ -312,7 +314,7 @@ async function get(req, res, next) {
                 files: memberOfGroups
             });
 
-            next(new HttpSuccess(200, entry.withoutPrivate()));
+            next(new HttpSuccess(200, entry.withoutPrivate(req.user.username)));
         }
     } else {
         next(new HttpError(500, `Unknown resource type ${resource}`));

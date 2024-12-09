@@ -133,7 +133,7 @@ async function searchByUsername(username, query) {
             filePath,
             fileName,
             abstract,
-            entry: entry.withoutPrivate()
+            entry: entry.withoutPrivate(username)
         };
 
         if (fileName.indexOf(query) !== -1) fileNameMatch.push(result);

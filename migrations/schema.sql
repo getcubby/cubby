@@ -74,3 +74,13 @@ CREATE TABLE groupfolders_members(
     username VARCHAR(128) REFERENCES users(username),
 
     UNIQUE (groupfolder_id, username));
+
+CREATE TABLE IF NOT EXISTS favorites(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    username VARCHAR(128),
+    owner VARCHAR(128),
+    file_path VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(username) REFERENCES users(username),
+    PRIMARY KEY(id));

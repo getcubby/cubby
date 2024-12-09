@@ -55,6 +55,7 @@ export function createDirectoryModel(origin) {
       entry.fullFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=raw`;
       entry.downloadFileUrl = `${origin}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=download`;
       entry.isSharedWith = !!entry.sharedWith.length;
+      entry.favorite = entry.favorite;
 
       // this prepares the entries to be compatible with all components
       entry.files.forEach(child => {
@@ -63,6 +64,7 @@ export function createDirectoryModel(origin) {
         child.previewUrl = `${origin}${child.previewUrl}`;
         child.modified = new Date(child.mtime);
         child.icon = child.previewUrl;
+        child.favorite = child.favorite;
 
         // shares need to add the share id if we are on meta toplevel
         if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}`);

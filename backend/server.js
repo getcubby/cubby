@@ -2,6 +2,7 @@ const collab = require('./routes/collab.js'),
     constants = require('./constants.js'),
     cors = require('./cors.js'),
     express = require('express'),
+    favorites = require('./routes/favorites.js'),
     files = require('./routes/files.js'),
     fs = require('fs'),
     groupFolders = require('./routes/groupfolders.js'),
@@ -91,6 +92,11 @@ function init(callback) {
     router.post('/api/v1/files', users.optionalSessionAuth, files.add);
     router.put ('/api/v1/files', users.optionalSessionAuth, files.update);
     router.del ('/api/v1/files', users.optionalSessionAuth, files.remove);
+
+    router.post('/api/v1/favorites',     users.isAuthenticated, favorites.create);
+    router.get ('/api/v1/favorites',     users.isAuthenticated, favorites.list);
+    router.get ('/api/v1/favorites/:id', users.isAuthenticated, favorites.get);
+    router.del ('/api/v1/favorites/:id', users.isAuthenticated, favorites.remove);
 
     router.get ('/api/v1/shares', users.isAuthenticated, shares.listShares);
     router.post('/api/v1/shares', users.isAuthenticated, shares.createShare);

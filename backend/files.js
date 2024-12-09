@@ -20,6 +20,7 @@ exports = module.exports = {
 const assert = require('assert'),
     constants = require('./constants.js'),
     debug = require('debug')('cubby:files'),
+    favorites = require('./favorites.js'),
     fs = require('fs'),
     fsExtra = require('fs-extra'),
     fsPromises = require('fs/promises'),
@@ -217,6 +218,12 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         file.size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, file.filePath);
     }
 
+    // attach favorites - rest api filters later and adds favorite property
+    const favs = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, filePath);
+    for (const file of files) {
+        file.favorites = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, file.filePath);
+    }
+
     return new Entry({
         fullFilePath: fullFilePath,
         fileName: path.basename(filePath),
@@ -226,6 +233,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         isDirectory: true,
         isFile: false,
         group: group,
+        favorites: favs,
         owner: usernameOrGroupfolder,
         sharedWith: sharedWith || [],
         mimeType: 'inode/directory',
@@ -267,10 +275,14 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     // for groups attach it
     const group = ownerGroupfolder ? await groupFolders.get(ownerGroupfolder) : null;
 
+    // attach favorites - rest api filters later and adds favorite property
+    const favs = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, filePath);
+
     return new Entry({
         fullFilePath: fullFilePath,
         fileName: path.basename(fullFilePath),
         filePath: filePath,
+        favorites: favs,
         size: size,
         group: group,
         mtime: stats.mtime,

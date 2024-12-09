@@ -6,7 +6,7 @@ const assert = require('assert'),
 
 exports = module.exports = Entry;
 
-function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null }) {
+function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
     assert(fullFilePath && typeof fullFilePath === 'string');
     assert(filePath && typeof filePath === 'string');
     assert(owner && typeof owner === 'string');
@@ -21,6 +21,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     assert(Array.isArray(sharedWith));
     assert.strictEqual(typeof share, 'object');
     assert.strictEqual(typeof group, 'object');
+    assert.strictEqual(typeof favorites, 'object');
 
     // TODO check that files is an array of Entries
 
@@ -34,6 +35,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.isDirectory = isDirectory;
     this.isFile = isFile;
     this.isBinary = isFile ? isBinaryFileSync(fullFilePath) : false;
+    this.favorites = favorites;
     this.mimeType = mimeType;
     this.files = files;
     this.sharedWith = sharedWith;
@@ -92,7 +94,7 @@ Entry.prototype.getPreviewUrl = function () {
     return '/mime-types/application-octet-stream.svg';
 };
 
-Entry.prototype.withoutPrivate = function () {
+Entry.prototype.withoutPrivate = function (username = null) {
     return {
         id: this.id,
         fileName: this.fileName,
@@ -106,7 +108,8 @@ Entry.prototype.withoutPrivate = function () {
         isGroup: this.isGroup,
         isBinary: this.isBinary,
         mimeType: this.mimeType,
-        files: this.files.map(function (f) { return f.withoutPrivate(); }),
+        favorite: username ? this.favorites.find(f => f.username === username) : null,
+        files: this.files.map(function (f) { return f.withoutPrivate(username); }),
         share: this.share,
         group: this.group,
         sharedWith: this.sharedWith || [],

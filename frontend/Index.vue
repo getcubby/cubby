@@ -86,7 +86,7 @@
                 </DirectoryView>
               </div>
             </div>
-            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries"/>
+            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" @toggle-favorite="onToggleFavorite"/>
           </div>
         </div>
 
@@ -230,6 +230,7 @@ import {
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
 import { createShareModel } from './models/ShareModel.js';
+import { createFavoriteModel } from './models/FavoriteModel.js';
 
 import LoginView from './components/LoginView.vue';
 import UsersView from './components/UsersView.vue';
@@ -300,6 +301,7 @@ export default {
         mainModel: null,
         shareModel: null,
         directoryModel: null,
+        favoriteModel: null,
         view: '',
         search: '',
         viewer: '',
@@ -447,6 +449,7 @@ export default {
       this.mainModel = createMainModel(API_ORIGIN);
       this.shareModel = createShareModel(API_ORIGIN);
       this.directoryModel = createDirectoryModel(API_ORIGIN);
+      this.favoriteModel = createFavoriteModel(API_ORIGIN);
 
       try {
         this.profile = await this.mainModel.getProfile();
@@ -480,6 +483,15 @@ export default {
       prettyFileSize,
       prettyDate,
       prettyLongDate,
+      async onToggleFavorite(entry) {
+        if (entry.favorite) {
+          await this.favoriteModel.remove(entry.favorite.id);
+          entry.favorite = null;
+        } else {
+          const id = await this.favoriteModel.create({ owner: entry.owner, path: entry.filePath })
+          entry.favorite = { id, owner: entry.owner, path: entry.filePath };
+        }
+      },
       onMainMenu(event, elem) {
         this.$refs.mainMenuElement.open(event, event.target);
       },

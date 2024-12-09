@@ -8,6 +8,10 @@
       <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
     </div>
     <div class="detail" v-show="selectedEntries.length <= 1">
+      <p>Favorite</p>
+      <span @click="onToggleFavorite(selectedEntries[0] || entry)"><i class="fa-star" :class="{ 'fa-solid': selectedEntries[0] ? selectedEntries[0].favorite : entry.favorite, 'fa-regular': selectedEntries[0] ? !selectedEntries[0].favorite : !entry.favorite }"></i></span>
+    </div>
+    <div class="detail" v-show="selectedEntries.length <= 1">
       <p>Owner</p>
       <span>{{ entry.owner }}</span>
     </div>
@@ -46,7 +50,7 @@ export default {
       default: function () { return []; }
     }
   },
-  emits: [ 'close' ],
+  emits: [ 'close', 'toggle-favorite' ],
   data() {
     return {
       visible: localStorage.previewPanelVisible === 'true'
@@ -69,6 +73,9 @@ export default {
     onToggle() {
       this.visible = !this.visible;
       localStorage.previewPanelVisible = this.visible;
+    },
+    onToggleFavorite(entry) {
+      this.$emit('toggle-favorite', entry);
     }
   }
 };

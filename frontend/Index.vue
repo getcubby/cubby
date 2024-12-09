@@ -8,12 +8,18 @@
 
     <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.RECENT || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
+        <h1 style="margin-bottom: 40px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'shares'}" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'groupfolders'}" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
+
+        <hr/>
+
+        <div style="overflow: auto; display: flex; flex-direction: column;">
+          <a class="side-bar-entry" v-for="favorite in favorites" :key="favorite.id" :href="favorite.href" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> {{ favorite.fileName }}</a>
+        </div>
 
         <div style="flex-grow: 1">&nbsp;</div>
 
@@ -318,6 +324,7 @@ export default {
         currentPath: '/',
         currentResourcePath: '',
         currentShare: null,
+        favorites: [],
         breadCrumbs: [],
         breadCrumbHome: {
           icon: 'fa-solid fa-house',
@@ -457,8 +464,12 @@ export default {
         return console.error('mounted: getProfile() error', e);
       }
 
-      if (this.profile) await this.refreshConfig();
-      else this.profile = {};
+      if (this.profile) {
+        await this.refreshConfig();
+        await this.refreshFavorites();
+      } else  {
+        this.profile = {};
+      }
 
       // initial load with hash if any
       const hash = localStorage.returnTo || window.location.hash.slice(1);
@@ -491,6 +502,9 @@ export default {
           const id = await this.favoriteModel.create({ owner: entry.owner, path: entry.filePath })
           entry.favorite = { id, owner: entry.owner, path: entry.filePath };
         }
+
+        // backgrounding
+        this.refreshFavorites();
       },
       onMainMenu(event, elem) {
         this.$refs.mainMenuElement.open(event, event.target);
@@ -636,6 +650,13 @@ export default {
         }
 
         this.$refs.webDavPasswordDialog.close();
+      },
+      async refreshFavorites() {
+        try {
+          this.favorites = await this.favoriteModel.list();
+        } catch (e) {
+          console.error('Failed to list favorites.', e);
+        }
       },
       async refreshConfig() {
         try {
@@ -1146,6 +1167,7 @@ pre {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  min-height: 38px;
 }
 
 .side-bar-entry.active {

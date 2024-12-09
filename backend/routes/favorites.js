@@ -59,8 +59,7 @@ async function list(req, res, next) {
 
         if (!file) continue;
 
-        favorite.file = file.withoutPrivate();
-        validFavorites.push(favorite);
+        validFavorites.push(file.withoutPrivate(req.user.username));
     }
 
     next(new HttpSuccess(200, { favorites: validFavorites }));

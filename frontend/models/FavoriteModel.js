@@ -15,7 +15,12 @@ export function createFavoriteModel(origin) {
 
       // translate for local development
       result.body.favorites.forEach((f) => {
-        f.file.previewUrl = `${origin}${f.file.previewUrl}`;
+        f.previewUrl = `${origin}${f.previewUrl}`;
+
+        // we don't know from which resource it is yet :/
+        if (f.share) f.href = `#files/shares/${f.share.id}${f.filePath}`;
+        else if (f.group) f.href = `#files/groupfolders/${f.group.id}${f.filePath}`;
+        else f.href = `#files/home${f.filePath}`;
       });
 
       return result.body.favorites;

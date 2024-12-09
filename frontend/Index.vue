@@ -6,20 +6,16 @@
   <div v-show="ready" style="height: 100%;">
     <LoginView v-show="view === VIEWS.LOGIN"/>
 
-    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.RECENT || view === VIEWS.MAIN">
+    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.FAVORITES || view === VIEWS.RECENT || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <h1 style="margin-bottom: 40px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
+        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'shares'}" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'groupfolders'}" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
-        <hr/>
-
-        <div style="overflow: auto; display: flex; flex-direction: column;">
-          <a class="side-bar-entry" v-for="favorite in favorites" :key="favorite.id" :href="favorite.href" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> {{ favorite.fileName }}</a>
-        </div>
 
         <div style="flex-grow: 1">&nbsp;</div>
 
@@ -31,6 +27,7 @@
         <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
         <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
         <RecentView v-if="view === VIEWS.RECENT" ref="recentView" @item-activated="onOpen" />
+        <FavoriteView v-if="view === VIEWS.FAVORITES" ref="favoriteView" @item-activated="onOpen" />
 
         <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
           <TopBar :gap="false" :left-grow="true">
@@ -246,6 +243,7 @@ import PreviewPanel from './components/PreviewPanel.vue';
 import OfficeViewer from './components/OfficeViewer.vue';
 import MarkdownViewer from './components/MarkdownViewer.vue';
 import RecentView from './components/RecentView.vue';
+import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
 
 const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
@@ -254,6 +252,7 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 const VIEWS = {
   LOGIN: 'login',
   MAIN: 'main',
+  FAVORITES: 'favorites',
   USERS: 'users',
   RECENT: 'recent',
   SETTINGS: 'settings',
@@ -288,6 +287,7 @@ export default {
       PdfViewer,
       PreviewPanel,
       RecentView,
+      FavoriteView,
       SearchBar,
       SharesView,
       SideBar,
@@ -324,7 +324,6 @@ export default {
         currentPath: '/',
         currentResourcePath: '',
         currentShare: null,
-        favorites: [],
         breadCrumbs: [],
         breadCrumbHome: {
           icon: 'fa-solid fa-house',
@@ -436,6 +435,8 @@ export default {
           that.view = VIEWS.MAIN;
         } else if (hash === 'recent') {
           that.view = VIEWS.RECENT;
+        } else if (hash === 'favorites') {
+          that.view = VIEWS.FAVORITES;
         } else if (hash.indexOf('users') === 0) {
           if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
           that.view = VIEWS.USERS;
@@ -456,7 +457,6 @@ export default {
       this.mainModel = createMainModel(API_ORIGIN);
       this.shareModel = createShareModel(API_ORIGIN);
       this.directoryModel = createDirectoryModel(API_ORIGIN);
-      this.favoriteModel = createFavoriteModel(API_ORIGIN);
 
       try {
         this.profile = await this.mainModel.getProfile();
@@ -464,12 +464,8 @@ export default {
         return console.error('mounted: getProfile() error', e);
       }
 
-      if (this.profile) {
-        await this.refreshConfig();
-        await this.refreshFavorites();
-      } else  {
-        this.profile = {};
-      }
+      if (this.profile) await this.refreshConfig();
+      else this.profile = {};
 
       // initial load with hash if any
       const hash = localStorage.returnTo || window.location.hash.slice(1);
@@ -502,9 +498,6 @@ export default {
           const id = await this.favoriteModel.create({ owner: entry.owner, path: entry.filePath })
           entry.favorite = { id, owner: entry.owner, path: entry.filePath };
         }
-
-        // backgrounding
-        this.refreshFavorites();
       },
       onMainMenu(event, elem) {
         this.$refs.mainMenuElement.open(event, event.target);
@@ -650,13 +643,6 @@ export default {
         }
 
         this.$refs.webDavPasswordDialog.close();
-      },
-      async refreshFavorites() {
-        try {
-          this.favorites = await this.favoriteModel.list();
-        } catch (e) {
-          console.error('Failed to list favorites.', e);
-        }
       },
       async refreshConfig() {
         try {

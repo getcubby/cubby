@@ -8,8 +8,14 @@
 
     <h1>Favorites</h1>
 
-    <div style="overflow: auto; display: flex; flex-direction: column;">
-      <a v-for="favorite in favorites" :key="favorite.id" :href="favorite.href" @click="onCloseSidebar">{{ favorite.fileName }}</a>
+    <div class="favorite-container">
+      <a v-for="favorite in favorites" :key="favorite.id" class="favorite-item" :href="favorite.href" @click="onCloseSidebar">
+        <img :src="favorite.previewUrl || favorite.icon" ref="iconImage" @error="iconError($event)"/>
+        <div>
+          {{ favorite.fileName }}<br/>
+          <span class="favorite-item-sub">{{ favorite.filePath.slice(0, -(favorite.fileName.length)) }}</span>
+        </div>
+      </a>
     </div>
   </div>
 </template>
@@ -84,5 +90,51 @@ h1 {
   font-weight: normal;
   padding: 0 20px;
 }
+
+.favorite-container {
+  overflow: auto;
+  padding: 20px;
+}
+
+.favorite-item {
+  --background-color-hover: #ededed;
+  --background-color-selected: #dbedfb;
+  --border-color-focus: #b3cfe5;
+
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  margin-bottom: 5px;
+  overflow: hidden;
+  width: 100%;
+  border-radius: 3px;
+  transition: all 100ms;
+  border: 2px solid transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .favorite-item {
+    --background-color-hover: rgba(255, 255, 255, 0.1);
+    --background-color-selected: rgba(255, 255, 255, 0.2);
+    --border-color-focus: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.favorite-item > img {
+  margin-right: 10px;
+  width: 35px;
+  height: 35px;
+  object-fit: cover;
+}
+
+.favorite-item:hover {
+  background-color: var(--background-color-hover);
+}
+
+.favorite-item-sub {
+  opacity: 0.7;
+  font-size: 10px;
+}
+
 
 </style>

@@ -57,6 +57,7 @@
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
                   ref="directoryView"
+                  :show-star="true"
                   :show-owner="false"
                   :show-extract="false"
                   :show-size="showSize"
@@ -68,6 +69,7 @@
                   @item-activated="onOpen"
                   :delete-handler="deleteHandler"
                   :share-handler="shareHandler"
+                  :star-handler="onToggleFavorite"
                   :rename-handler="renameHandler"
                   :paste-handler="pasteHandler"
                   :download-handler="downloadHandler"
@@ -89,7 +91,7 @@
                 </DirectoryView>
               </div>
             </div>
-            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries" @toggle-favorite="onToggleFavorite"/>
+            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries"/>
           </div>
         </div>
 
@@ -457,6 +459,7 @@ export default {
       this.mainModel = createMainModel(API_ORIGIN);
       this.shareModel = createShareModel(API_ORIGIN);
       this.directoryModel = createDirectoryModel(API_ORIGIN);
+      this.favoriteModel = createFavoriteModel(API_ORIGIN);
 
       try {
         this.profile = await this.mainModel.getProfile();
@@ -494,9 +497,11 @@ export default {
         if (entry.favorite) {
           await this.favoriteModel.remove(entry.favorite.id);
           entry.favorite = null;
+          entry.star = false;
         } else {
           const id = await this.favoriteModel.create({ owner: entry.owner, path: entry.filePath })
           entry.favorite = { id, owner: entry.owner, path: entry.filePath };
+          entry.star = true;
         }
       },
       onMainMenu(event, elem) {

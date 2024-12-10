@@ -60,7 +60,11 @@ async function create(username, owner, filePath) {
 
     const id = 'fid-' + require('crypto').createHash('md5').update(`${username}${filePath}`, 'utf8').digest('hex');
 
-    await database.query('INSERT INTO favorites (id, username, owner, file_path) VALUES ($1, $2, $3, $4)', [ id, username, owner, filePath ]);
+    try {
+        await database.query('INSERT INTO favorites (id, username, owner, file_path) VALUES ($1, $2, $3, $4)', [ id, username, owner, filePath ]);
+    } catch (error) {
+        if (!error.details || error.details.constraint !== 'favorites_pkey') throw error;
+    }
 
     return id;
 }

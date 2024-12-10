@@ -9,12 +9,14 @@
     <h1>Favorites</h1>
 
     <div class="favorite-container">
-      <a v-for="favorite in favorites" :key="favorite.id" class="favorite-item" :href="favorite.href" @click="onCloseSidebar">
-        <img :src="favorite.previewUrl || favorite.icon" ref="iconImage" @error="iconError($event)"/>
+      <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
+        <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
         <div>
-          {{ favorite.fileName }}<br/>
-          <span class="favorite-item-sub">{{ favorite.filePath.slice(0, -(favorite.fileName.length)) }}</span>
+          {{ entry.fileName }}<br/>
+          <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
         </div>
+        <div style="flex-grow: 1;"></div>
+        <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
       </a>
     </div>
   </div>
@@ -29,7 +31,7 @@ import moment from 'moment';
 import { createFavoriteModel } from '../models/FavoriteModel.js';
 import SearchBar from './SearchBar.vue';
 
-import { Button, TopBar } from 'pankow';
+import { Button, Icon, TopBar } from 'pankow';
 
 const favoriteModel = createFavoriteModel(API_ORIGIN);
 
@@ -37,6 +39,7 @@ export default {
   name: 'FavoriteView',
   components: {
     Button,
+    Icon,
     SearchBar,
     TopBar
   },
@@ -51,15 +54,22 @@ export default {
     };
   },
   async mounted() {
-    try {
-      this.favorites = await favoriteModel.list();
-    } catch (e) {
-      console.error('Failed to list favorites.', e);
-    }
+    await this.refresh();
   },
   methods: {
+    async refresh() {
+      try {
+        this.favorites = await favoriteModel.list();
+      } catch (e) {
+        console.error('Failed to list favorites.', e);
+      }
+    },
     onActivateItem(entry) {
       this.$emit('item-activated', entry);
+    },
+    async onUnFavorite(entry) {
+      await favoriteModel.remove(entry.favorite.id);
+      await this.refresh();
     },
     iconError(event, entry) {
       event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
@@ -136,5 +146,14 @@ h1 {
   font-size: 10px;
 }
 
+.star-icon {
+  color: #ffff00;
+  padding: 10px;
+}
+
+.star-icon:hover {
+  transform: scale(1.5);
+  transform-origin: center center;
+}
 
 </style>

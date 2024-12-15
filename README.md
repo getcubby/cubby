@@ -77,3 +77,5 @@ The main application can be run using a helper script, which will create and ini
 ./develop.sh
 ```
 This will also print the frontend asset builder and watcher command to be run in a second terminal.
+
+During development the user directory is a list of hardcoded users to test with and provided as a mock OpenID provider.

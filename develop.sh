@@ -88,6 +88,9 @@ echo ""
 # DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
 
 export DEBUG="cubby*"
+export VITE_DEV_PORT=3000
+
+# Use 5555 if live frontend development is run in parallel
 export VITE_DEV_PORT=5555
 
 echo "=> Start cubby"

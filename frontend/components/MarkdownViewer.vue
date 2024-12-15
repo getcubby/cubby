@@ -9,9 +9,11 @@
     </template>
     <template #header>
       <div class="tool-bar">
-        <div class="tool-bar-left pankow-no-mobile">
-          <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged" style="margin-right: 40px;"/>
+        <div class="tool-bar-left" style="align-content: center;">
+          <b>{{ entry.fileName }}</b>
+        </div>
 
+        <div class="tool-bar-center pankow-no-mobile">
           <ButtonGroup>
             <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
             <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
@@ -40,8 +42,8 @@
           </ButtonGroup>
         </div>
         <div class="tool-bar-right">
-          <Button icon="fa-solid fa-download" :href="entry.downloadFileUrl" tool target="_blank" />
-          <Button icon="fa-solid fa-xmark" @click="onClose">{{ tr('main.dialog.close') }}</Button>
+          <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged"/>
+          <Button tool icon="fa-solid fa-xmark" @click="onClose"/>
         </div>
       </div>
     </template>
@@ -111,6 +113,7 @@ function menuPlugin(app, tools) {
         update() {
           const state = editorView.state;
 
+          // FIXME this should only be triggered for actual changes
           app.isChanged = true;
 
           if (blockTypeActive(state, cubbySchema.nodes.paragraph, {})) {
@@ -452,7 +455,18 @@ export default {
     focusView() {
       if (view) view.focus();
     },
-    onClose() {
+    async onClose() {
+      if (this.isChanged) {
+        const yes = await this.$refs.inputDialog.confirm({
+          message: this.tr('filemanager.textEditorCloseDialog.title'),
+          confirmStyle: 'danger',
+          confirmLabel: 'Discard changes and close',
+          rejectLabel: 'Cancel'
+        });
+
+        if (!yes) return;
+      }
+
       // stop syncing
       if (provider) provider.destroy();
       if (view) view.destroy();

@@ -1,6 +1,8 @@
 import { fetcher } from 'pankow';
 
 export function createMainModel(origin) {
+  let configCache = {};
+
   return {
     name: 'MainModel',
     async getProfile() {
@@ -24,11 +26,13 @@ export function createMainModel(origin) {
 
       if (error || result.status !== 200) throw new Error('Failed to get config', { cause: error || result })
 
-      return {
+      configCache = {
         viewers: {
           collabora: result.body.viewers.collabora || {}
         }
       };
+
+      return configCache;
     },
     async getWopiHost() {
       let error, result;
@@ -78,6 +82,14 @@ export function createMainModel(origin) {
       }
 
       if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
+    },
+    async canHandleWithOffice(entry) {
+      if (!this.configCache) return false;
+      if (!this.configCache.viewers) return false;
+      if (!this.configCache.viewers.collabora) return false;
+      if (!this.configCache.viewers.collabora.extensions) return false;
+
+      return this.configCache.viewers.collabora.extensions.find(function (e) { return entry.fileName.endsWith(e); });
     },
     async getOfficeHandle(entry) {
       let error, result;

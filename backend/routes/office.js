@@ -32,7 +32,7 @@ async function getHandle(req, res, next) {
     if (!resourcePath) return next(new HttpError(400, 'resourcePath must be a non-empty string'));
 
     const collaboraHost = config.get('collabora.host', '');
-    if (!collaboraHost) return next(new HttpError(412, 'collabora office not configured'));
+    if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
     const subject = await translateResourcePath(req.user, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
@@ -42,6 +42,7 @@ async function getHandle(req, res, next) {
         const res = await fetch(`${collaboraHost}/hosting/discovery`);
         doc = new Dom().parseFromString(await res.text());
     } catch (error) {
+        if (error && error.code === 'ENOTFOUND') return next(new HttpError(412, 'office endpoint not configured'));
         return next(new HttpError(500, error));
     }
 

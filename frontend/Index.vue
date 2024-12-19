@@ -185,11 +185,6 @@
     </div>
   </Transition>
   <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'office'">
-      <OfficeViewer ref="officeViewer" :config="config" @close="onViewerClose" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
     </div>
@@ -242,7 +237,6 @@ import UsersView from './components/UsersView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
-import OfficeViewer from './components/OfficeViewer.vue';
 import MarkdownViewer from './components/MarkdownViewer.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
@@ -284,7 +278,6 @@ export default {
       Menu,
       Notification,
       MarkdownViewer,
-      OfficeViewer,
       PasswordInput,
       PdfViewer,
       PreviewPanel,
@@ -1019,7 +1012,6 @@ export default {
           }
         }
 
-        // update the browser hash
         window.location.hash = `files${resource.resourcePath}`;
 
         if (entry.isDirectory) await this.loadMainDirectory(resource.resourcePath, entry, forceLoad);
@@ -1035,9 +1027,11 @@ export default {
           } else if (this.$refs.pdfViewer.canHandle(entry)) {
             this.$refs.pdfViewer.open(entry);
             this.viewer = 'pdf';
-          } else if (this.$refs.officeViewer.canHandle(entry)) {
-            this.$refs.officeViewer.open(entry);
-            this.viewer = 'office';
+          } else if (this.mainModel.canHandleWithOffice(entry)) {
+            window.open('/office.html#' + entry.resourcePath, '_blank');
+
+            // need to reset the hash as the original location should be the folder containing the file
+            window.location.hash = `files${resource.resourcePath}`.slice(0, -entry.name.length);
           } else if (this.$refs.markdownViewer.canHandle(entry)) {
             this.$refs.markdownViewer.open(entry, await this.directoryModel.getRawContent(resource));
             this.viewer = 'markdown';

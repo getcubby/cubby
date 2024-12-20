@@ -83,7 +83,7 @@ export function createMainModel(origin) {
 
       if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
     },
-    async canHandleWithOffice(entry) {
+    canHandleWithOffice(entry) {
       if (!this.configCache) return false;
       if (!this.configCache.viewers) return false;
       if (!this.configCache.viewers.collabora) return false;

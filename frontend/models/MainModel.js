@@ -84,12 +84,11 @@ export function createMainModel(origin) {
       if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
     },
     canHandleWithOffice(entry) {
-      if (!this.configCache) return false;
-      if (!this.configCache.viewers) return false;
-      if (!this.configCache.viewers.collabora) return false;
-      if (!this.configCache.viewers.collabora.extensions) return false;
+      if (!configCache.viewers) return false;
+      if (!configCache.viewers.collabora) return false;
+      if (!configCache.viewers.collabora.extensions) return false;
 
-      return this.configCache.viewers.collabora.extensions.find(function (e) { return entry.fileName.endsWith(e); });
+      return configCache.viewers.collabora.extensions.find(function (e) { return entry.fileName.endsWith(e); });
     },
     async getOfficeHandle(entry) {
       let error, result;

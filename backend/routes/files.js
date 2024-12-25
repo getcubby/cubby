@@ -142,7 +142,12 @@ async function get(req, res, next) {
 
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
-            return res.sendFile(result._fullFilePath);
+
+            // special treatment for json, so the clients do not parse it as json api response!
+            const headers = {};
+            if (result.mimeType === 'application/json') headers['content-type'] = 'text/plain';
+
+            return res.sendFile(result._fullFilePath, { headers });
         } else if (type === 'download') {
             if (result.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
             return res.download(result._fullFilePath);

@@ -784,6 +784,7 @@ export default {
       },
       isReadonly() {
         if (window.location.hash === '#files/shares/') return true;
+        if (window.location.hash === '#files/groupfolders/') return true;
         if (!this.currentShare) return false;
         return this.currentShare.readonly;
       },

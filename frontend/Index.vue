@@ -16,7 +16,6 @@
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'shares'}" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'groupfolders'}" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
-
         <div style="flex-grow: 1">&nbsp;</div>
 
         <Menu ref="mainMenuElement" :model="mainMenu"></Menu>
@@ -36,15 +35,17 @@
             </template>
 
             <template #right>
-              <div class="file-actions">
-                <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
-                <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
+              <div class="topbar-actions">
+                <div class="file-actions">
+                  <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
+                  <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
+                </div>
+
+                <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>
+                <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
+
+                <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
               </div>
-
-              <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>
-              <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
-
-              <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
             </template>
           </TopBar>
           <div class="container" style="overflow: hidden;">
@@ -224,8 +225,8 @@ import {
   GenericViewer,
   ImageViewer,
   PdfViewer,
-  TextViewer
-} from 'pankow-viewers';
+  TextViewer,
+} from 'pankow/viewers';
 
 import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
 import { createMainModel } from './models/MainModel.js';
@@ -1107,8 +1108,15 @@ hr {
   left: 0;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .file-actions {
   white-space: nowrap;
+  display: flex;
+  gap: 6px;
 }
 
 @media only screen and (min-width: 767px) {
@@ -1214,7 +1222,9 @@ pre {
 
 .breadcrumb-bar {
   display: flex;
+  gap: 4px;
   margin: auto 0px;
+  padding: 4px;
   align-items: center;
 }
 

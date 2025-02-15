@@ -20,8 +20,10 @@
       <label v-show="false">Disk Storage Path</label>
       <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
       <label>Members</label>
-      <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderAdd.members, member)">{{ member.username }}</Button>
-      <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
+      <div style="display: flex; gap: 6px">
+        <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderAdd.members, member)">{{ member.username }}</Button>
+        <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
+      </div>
     </Dialog>
 
     <Dialog
@@ -38,8 +40,10 @@
       <label>Name</label>
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
       <label>Members</label>
-      <Button v-for="member in groupFolderEdit.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderEdit.members, member)">{{ member.username }}</Button>
-      <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
+      <div style="display: flex; gap: 6px">
+        <Button v-for="member in groupFolderEdit.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderEdit.members, member)">{{ member.username }}</Button>
+        <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
+      </div>
     </Dialog>
 
     <h1>Settings</h1>
@@ -49,10 +53,10 @@
       <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
       <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
       <template #action="slotProps">
-        <div style="text-align: right;">
+        <ButtonGroup>
           <Button text="Edit" outline small tool @click="onEditGroupFolder(slotProps)" />
           <Button text="Remove" danger outline small tool @click="onRemoveGroupFolder(slotProps)" />
-        </div>
+        </ButtonGroup>
       </template>
     </TableView>
 
@@ -63,8 +67,10 @@
     </p>
     <form @submit="onOfficeSubmit" @submit.prevent>
       <label for="wopiHostnameInput">WOPI hostname:</label>
-      <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
-      <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy">Save</Button>
+      <InputGroup>
+        <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
+        <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy" tool>Save</Button>
+      </InputGroup>
       <br/>
       <small class="has-error" v-show="office.error">{{ office.error }}</small>
     </form>
@@ -79,7 +85,7 @@ import { DirectoryModelError } from '../models/DirectoryModel.js';
 import { createMainModel } from '../models/MainModel.js';
 import { createGroupFolderModel } from '../models/GroupFolderModel.js';
 
-import { Button, Dialog, InputDialog, TableView, TextInput } from 'pankow';
+import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from 'pankow';
 
 import slugify from '../slugify.js';
 
@@ -90,10 +96,12 @@ export default {
     name: 'SettingsView',
     components: {
       Button,
+      ButtonGroup,
       Dialog,
       InputDialog,
       TableView,
-      TextInput
+      TextInput,
+      InputGroup
     },
     props: {
       profile: {
@@ -123,6 +131,7 @@ export default {
           },
           action: {
             label: '',
+            width: '20px',
             sort: false
           }
         },

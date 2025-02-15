@@ -161,7 +161,7 @@ export default {
   border-bottom-right-radius: var(--pankow-border-radius);
   position: absolute;
   background: var(--pankow-dialog-background-color);
-  top: 45px;
+  top: 38px;
   z-index: 3000;
   box-shadow: var(--pankow-menu-shadow);
   overflow: scroll;

@@ -492,6 +492,11 @@ export default {
   display: flex;
 }
 
+.tool-bar-center {
+  display: flex;
+  gap: 6px;
+}
+
 .tool-bar-left {
   flex-grow: 1;
 }
@@ -499,6 +504,9 @@ export default {
 .tool-bar-right {
   flex-grow: 1;
   text-align: right;
+  display: flex;
+  gap: 6px;
+  justify-content: end;
 }
 
 .main-layout {

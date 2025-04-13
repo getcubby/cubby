@@ -2,7 +2,7 @@
   <div class="main">
     <div style="display: none">
       <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
-        <input name="ui_defaults" value="SavedUIState=false;TextSidebar=false" type="hidden"/>
+        <input name="ui_defaults" value="UIMode=compact;SavedUIState=false;TextSidebar=false" type="hidden"/>
         <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
         <input name="access_token" :value="wopiToken" type="hidden" id="access-token"/>
         <input type="submit" value="" />
@@ -35,27 +35,45 @@ export default {
     };
   },
   async mounted() {
-    console.log('open ', window.location);
-
     const resource = parseResourcePath(window.location.hash.slice(1));
-    console.log('resource', resource)
-
     const entry = await directoryModel.get(resource);
-
-    console.log('entry', entry)
-
     const handle = await mainModel.getOfficeHandle(entry);
-
-    console.log('handle', handle)
 
     const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
     this.wopiUrl = `${handle.url}WOPISrc=${wopiSrc}`;
     this.wopiToken = handle.token;
 
+    // https://sdk.collaboraonline.com/docs/postmessage_api.html#
+    window.addEventListener('message', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.MessageId === 'App_LoadingStatus') {
+          if (data.Values && data.Values.Status === 'Document_Loaded') {
+
+            // Example to remove buttons in the editor UI
+            // const msg = {
+            //   MessageId: 'Remove_Button',
+            //   SendTime: Date.now(),
+            //   Values: {
+            //     id: 'print'
+            //   }
+            // };
+
+            // this.$refs.officeViewer.contentWindow.postMessage(JSON.stringify(msg), event.origin);
+          }
+        } else if (data.MessageId === 'close') {
+          // cannot prompt the user here as collabora has already closed the document internally
+          window.close();
+        }
+      } catch (e) {
+        console.error('Failed to parse message from WOPI editor', e);
+      }
+    }, false);
+
     setTimeout(() => {
       this.$refs.wopiForm.submit();
     }, 500);
-  }
+  },
 };
 
 </script>

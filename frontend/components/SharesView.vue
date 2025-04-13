@@ -16,7 +16,7 @@
       </template>
       <template #createdAt="slotProps"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
       <template #action="slotProps">
-        <Button text="Delete" danger small outline tool @click="onDelete(slotProps)" style="float: right"/>
+        <Button danger small outline tool @click="onDelete(slotProps)" style="float: right">Delete</Button>
       </template>
     </TableView>
     <div class="share-count">{{ tableModel.length }} Shares</div>

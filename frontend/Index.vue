@@ -145,7 +145,7 @@
           <form @submit="onCreateShare" @submit.prevent>
             <!-- TODO optionDisabled="alreadyUsed"  -->
             <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
-            <Dropdown v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
+            <SingleSelect v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
             <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
           </form>
         </template>
@@ -210,7 +210,7 @@ import {
   Checkbox,
   Dialog,
   DirectoryView,
-  Dropdown,
+  SingleSelect,
   FileUploader,
   InputDialog,
   Menu,
@@ -269,7 +269,7 @@ export default {
       Checkbox,
       Dialog,
       DirectoryView,
-      Dropdown,
+      SingleSelect,
       FileUploader,
       GenericViewer,
       SettingsView,

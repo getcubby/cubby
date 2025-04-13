@@ -10,7 +10,7 @@
       <template #username="slotProps">{{ slotProps.username }}</template>
       <template #email="slotProps">{{ slotProps.email }}</template>
       <template #admin="slotProps"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>
-      <template #action="slotProps"><Button text="Edit" small outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right"/></template>
+      <template #action="slotProps"><Button small outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right">Edit</Button></template>
     </TableView>
     <div class="user-count">{{ tableModel.length }} Users</div>
   </div>

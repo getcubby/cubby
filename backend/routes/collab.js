@@ -8,7 +8,7 @@ const debug = require('debug')('cubby:routes:collab'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess,
     translateResourcePath = require('./files.js').translateResourcePath,
-    yUtils = require('y-websocket/bin/utils');
+    yUtils = require('@y/websocket-server/utils');
 
 const FRAGEMENT_NAME = 'cubby-markdownviewer';
 

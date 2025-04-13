@@ -17,7 +17,7 @@ const collab = require('./routes/collab.js'),
     users = require('./routes/users.js'),
     webdav = require('./routes/webdav.js'),
     ws = require('ws'),
-    yUtils = require('y-websocket/bin/utils');
+    yUtils = require('@y/websocket-server/utils');
 
 exports = module.exports = {
     init

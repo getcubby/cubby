@@ -95,7 +95,7 @@ async function getShareLink(req, res, next) {
         return;
     } else if (type === 'download') {
         if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
-        return res.download(file._fullFilePath);
+        return res.download(file._fullFilePath, { dotfiles: 'allow' });
     }
 
     // for now we only allow raw or download on publicly shared links

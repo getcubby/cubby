@@ -150,7 +150,7 @@ async function get(req, res, next) {
             return res.sendFile(result._fullFilePath, { headers, dotfiles: 'allow' });
         } else if (type === 'download') {
             if (result.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
-            return res.download(result._fullFilePath);
+            return res.download(result._fullFilePath, { dotfiles: 'allow' });
         }
 
         next(new HttpSuccess(200, result.withoutPrivate(req.user.username)));
@@ -182,7 +182,7 @@ async function get(req, res, next) {
                 return res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
-                return res.download(file._fullFilePath);
+                return res.download(file._fullFilePath, { dotfiles: 'allow' });
             }
 
             // for now we only allow raw or download on publicly shared links
@@ -267,7 +267,7 @@ async function get(req, res, next) {
                 return res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
-                return res.download(file._fullFilePath);
+                return res.download(file._fullFilePath, { dotfiles: 'allow' });
             }
 
             next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.username)));

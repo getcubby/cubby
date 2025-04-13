@@ -39,5 +39,8 @@ exports = module.exports = function (filePath) {
 
     if (!typeKey) return 'application/octet-stream';
 
+    // ubuntu globs reports application/rtf but collabora wants the correct mimetype of text/rtf
+    if (typeKey === '.rtf') return 'text/rtf';
+
     return gTypes[typeKey];
 };

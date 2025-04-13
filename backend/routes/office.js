@@ -49,10 +49,10 @@ async function getHandle(req, res, next) {
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
     const mimeType = mime(subject.filePath);
-    const nodes = xpath.select("/wopi-discovery/net-zone/app[@name='" + mimeType + "']/action", doc);
-    if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
+    debug(`getHandle: ${subject.resource} ${subject.filePath} with mimetype ${mimeType}`);
 
-    debug(`getHandle: ${subject.resource} ${subject.filePath}`);
+    const nodes = xpath.select(`/wopi-discovery/net-zone/app[@name='${mimeType}']/action`, doc);
+    if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
 
     const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
     HANDLES[handleId] = {

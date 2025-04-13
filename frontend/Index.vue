@@ -145,8 +145,10 @@
           <form @submit="onCreateShare" @submit.prevent>
             <!-- TODO optionDisabled="alreadyUsed"  -->
             <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
-            <SingleSelect v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
-            <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
+            <InputGroup>
+              <SingleSelect v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
+              <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
+            </InputGroup>
           </form>
         </template>
         <template #link>
@@ -218,6 +220,7 @@ import {
   PasswordInput,
   SideBar,
   TabView,
+  InputGroup,
   TopBar
 } from 'pankow';
 
@@ -275,6 +278,7 @@ export default {
       SettingsView,
       ImageViewer,
       InputDialog,
+      InputGroup,
       LoginView,
       Menu,
       Notification,
@@ -1212,7 +1216,7 @@ pre {
 .shared-link, .shared-link-empty {
   display: flex;
   justify-content: space-between;
-  padding-left: 10px;
+  padding: 6px;
   align-items: center;
 }
 

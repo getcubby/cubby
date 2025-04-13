@@ -15,6 +15,7 @@ export default defineConfig({
   },
   // https://vitejs.dev/guide/build.html#multi-page-app
   build: {
+    sourcemap: true,
     rollupOptions: {
       input: {
         index: resolve('index.html'),

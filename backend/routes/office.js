@@ -64,7 +64,7 @@ async function getHandle(req, res, next) {
     const token = await tokens.add(req.user.username);
     const onlineUrl = nodes[0].getAttribute('urlsrc');
 
-    res.json({
+    res.status(200).json({
         handleId,
         url: onlineUrl,
         token: token
@@ -140,7 +140,7 @@ async function getFile(req, res, next) {
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
 
-    return res.sendFile(result._fullFilePath);
+    return res.sendFile(result._fullFilePath, { dotfiles: 'allow' });
 }
 
 /* *

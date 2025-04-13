@@ -121,7 +121,7 @@ function init(callback) {
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
     app.use('/api', express.json());
-    app.use('/api', express.urlencoded({ extended: false, limit: '100mb' }));
+    app.use('/api', express.urlencoded({ limit: '100mb' }));
     app.use(webdav.express());
 
     if (process.env.OIDC_ISSUER_BASE_URL) {
@@ -183,7 +183,7 @@ function init(callback) {
 
         app.use('/api/v1/callback', (req, res) => {
             req.session.username = req.query.username;
-            res.redirect(`http://localhost:${process.env.VITE_DEV_PORT || process.env.PORT}/`);
+            res.redirect(301, `http://localhost:${process.env.VITE_DEV_PORT || process.env.PORT}/`);
         });
 
         app.use('/api/v1/logout', (req, res) => {

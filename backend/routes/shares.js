@@ -89,9 +89,9 @@ async function getShareLink(req, res, next) {
     }
 
     if (type === 'raw') {
-        if (file.isDirectory) return res.redirect(`/#files/shares/${req.share.id}/`);
+        if (file.isDirectory) return res.redirect(301, `/#files/shares/${req.share.id}/`);
         res.set('Content-Disposition', `inline; filename="${file.fileName}"`);
-        res.sendFile(file._fullFilePath);
+        res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
         return;
     } else if (type === 'download') {
         if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));

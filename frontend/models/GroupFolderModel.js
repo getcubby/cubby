@@ -34,7 +34,7 @@ export function createGroupFolderModel(origin) {
       if (result.status !== 200) throw result.body;
     },
     async remove(id, purge = true) {
-      const result = await fetcher.del(`${origin}/api/v1/settings/groupfolders/${id}`, { purge });
+      const result = await fetcher.del(`${origin}/api/v1/settings/groupfolders/${id}`, {}, { purge });
       if (result.status !== 200) throw result.body;
     }
   };

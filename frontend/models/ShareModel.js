@@ -45,7 +45,7 @@ export function createShareModel(origin) {
     async remove(shareId) {
       let error, result;
       try {
-        result = await fetcher.del(`${origin}/api/v1/shares`, { shareId });
+        result = await fetcher.del(`${origin}/api/v1/shares`, {}, { shareId });
       } catch (e) {
         error = e;
       }

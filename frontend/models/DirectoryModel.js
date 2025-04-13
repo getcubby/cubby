@@ -271,7 +271,7 @@ export function createDirectoryModel(origin) {
     },
     async remove(resource) {
       try {
-        const result = await fetcher.del(`${origin}/api/v1/files`, { path: resource.resourcePath });
+        const result = await fetcher.del(`${origin}/api/v1/files`, {}, { path: resource.resourcePath });
         if (result.status !== 200) throw result;
       } catch (error) {
         if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);

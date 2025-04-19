@@ -30,7 +30,7 @@
     "xpath": "0.0.34"
   },
   "devDependencies": {
-    "@eslint/js": "^9.24.0",
-    "eslint": "^9.24.0"
+    "@eslint/js": "^9.25.0",
+    "eslint": "^9.25.0"
   }
 }

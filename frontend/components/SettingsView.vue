@@ -51,7 +51,7 @@
     <h2>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
       <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
-      <template #members="slotProps">{{ slotProps.members.join(', ').slice(-16) }} </template>
+      <template #members="slotProps">{{ slotProps.members.join(', ') }} </template>
       <template #action="slotProps">
         <ButtonGroup>
           <Button outline small tool @click="onEditGroupFolder(slotProps)">Edit</Button>

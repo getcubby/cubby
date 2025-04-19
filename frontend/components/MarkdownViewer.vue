@@ -48,7 +48,7 @@
       </div>
     </template>
     <template #body>
-      <div class="editor-wrapper" @click="focusView()">
+      <div class="editor-wrapper">
         <div class="editor" ref="editorNode"></div>
       </div>
     </template>
@@ -449,11 +449,6 @@ export default {
             .concat(selectionOverlayPlugin(this, this.$refs.selectionOverlay))
           })
       });
-
-      view.focus();
-    },
-    focusView() {
-      if (view) view.focus();
     },
     async onClose() {
       if (this.isChanged) {

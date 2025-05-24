@@ -37,12 +37,12 @@
             <template #right>
               <div class="topbar-actions">
                 <div class="file-actions">
-                  <Button v-show="!isReadonly() && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
+                  <Button v-show="!isReadonly && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
                   <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
                 </div>
 
-                <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">Upload</span></Button>
-                <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly()" tool><span class="pankow-no-mobile">New</span></Button>
+                <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">Upload</span></Button>
+                <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
 
                 <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
               </div>
@@ -53,7 +53,7 @@
               <div class="breadcrumb-bar">
                 <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
                 <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
-                <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly()" />
+                <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly" />
               </div>
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
@@ -64,7 +64,7 @@
                   :show-size="showSize"
                   :show-modified="true"
                   :show-share="'isSharedWith'"
-                  :editable="!isReadonly()"
+                  :editable="!isReadonly"
                   :multi-download="true"
                   @selection-changed="onSelectionChanged"
                   @item-activated="onOpen"
@@ -414,6 +414,14 @@ export default {
           action: () => this.onNewFolder()
         }]
       };
+    },
+    computed: {
+      isReadonly() {
+        if (this.currentResourcePath === '/shares/') return true;
+        if (this.currentResourcePath === '/groupfolders/') return true;
+        if (!this.currentShare) return false;
+        return this.currentShare.readonly;
+      },
     },
     async mounted() {
       const that = this;
@@ -786,12 +794,6 @@ export default {
         await this.refresh();
 
         this.$refs.directoryView.highlightByName(file.name);
-      },
-      isReadonly() {
-        if (window.location.hash === '#files/shares/') return true;
-        if (window.location.hash === '#files/groupfolders/') return true;
-        if (!this.currentShare) return false;
-        return this.currentShare.readonly;
       },
       isShareable() {
         const resource = parseResourcePath(this.currentResourcePath || 'files/');

@@ -1,3 +1,61 @@
+<script setup>
+
+import { ref, onMounted } from 'vue';
+import moment from 'moment';
+import MainModel from '../models/MainModel.js';
+import SearchBar from './SearchBar.vue';
+import { Button, TopBar } from 'pankow';
+
+const emit = defineEmits(['item-activated']);
+
+const buckets = ref([]);
+
+onMounted(async () => {
+  const entries = await MainModel.recent();
+
+  // sort into time buckets
+  const today = entries.filter(e => moment(e.mtime).isSame(new Date(), 'day'));
+
+  const endYesterday = moment().subtract(1,'days').endOf('day');
+  const startYesterday = moment().subtract(1,'days').startOf('day');
+  const yesterday = entries.filter(e => moment(e.mtime).isBetween(startYesterday, endYesterday));
+
+  const endLastWeek = moment().subtract(2,'days').endOf('day');
+  const startLastWeek = moment().subtract(7,'days').startOf('day');
+  const lastWeek = entries.filter(e => moment(e.mtime).isBetween(startLastWeek, endLastWeek));
+
+  const endLastMonth = moment().subtract(8,'days').endOf('day');
+  const startLastMonth = moment().subtract(31,'days').startOf('day');
+  const lastMonth = entries.filter(e => moment(e.mtime).isBetween(startLastMonth, endLastMonth));
+
+  const endOther = moment().subtract(32,'days').endOf('day');
+  const older = entries.filter(e => moment(e.mtime).isBefore(endOther));
+
+  if (today.length) buckets.value.push({ label: 'Today', entries: today });
+  if (yesterday.length) buckets.value.push({ label: 'Yesterday', entries: yesterday });
+  if (lastWeek.length) buckets.value.push({ label: 'Last Week', entries: lastWeek });
+  if (lastMonth.length) buckets.value.push({ label: 'Last Month', entries: lastMonth });
+  if (older.length) buckets.value.push({ label: 'Older', entries: older });
+});
+
+function onActivateItem(entry) {
+  emit('item-activated', entry);
+}
+
+function iconError(event, entry) {
+  event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
+
+  setTimeout(() => {
+    if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
+    if (entry._previewRetries > 10) return;
+    ++entry._previewRetries
+
+    event.target.src = entry.previewUrl;
+  }, 1000);
+}
+
+</script>
+
 <template>
   <div class="recent">
     <TopBar :gap="false" :left-grow="true">
@@ -23,85 +81,6 @@
     </div>
   </div>
 </template>
-
-<script>
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
-
-import moment from 'moment';
-
-import { createMainModel } from '../models/MainModel.js';
-import SearchBar from './SearchBar.vue';
-
-import { Button, TopBar } from 'pankow';
-
-const mainModel = createMainModel(API_ORIGIN);
-
-export default {
-  name: 'RecentView',
-  components: {
-    Button,
-    SearchBar,
-    TopBar
-  },
-  props: {
-  },
-  emits: [
-    'item-activated'
-  ],
-  data() {
-    return {
-      buckets: []
-    };
-  },
-  async mounted() {
-    const entries = await mainModel.recent();
-
-    this.buckets = [];
-
-    // sort into time buckets
-    const today = entries.filter(e => moment(e.mtime).isSame(new Date(), 'day'));
-
-    const endYesterday = moment().subtract(1,'days').endOf('day');
-    const startYesterday = moment().subtract(1,'days').startOf('day');
-    const yesterday = entries.filter(e => moment(e.mtime).isBetween(startYesterday, endYesterday));
-
-    const endLastWeek = moment().subtract(2,'days').endOf('day');
-    const startLastWeek = moment().subtract(7,'days').startOf('day');
-    const lastWeek = entries.filter(e => moment(e.mtime).isBetween(startLastWeek, endLastWeek));
-
-    const endLastMonth = moment().subtract(8,'days').endOf('day');
-    const startLastMonth = moment().subtract(31,'days').startOf('day');
-    const lastMonth = entries.filter(e => moment(e.mtime).isBetween(startLastMonth, endLastMonth));
-
-    const endOther = moment().subtract(32,'days').endOf('day');
-    const older = entries.filter(e => moment(e.mtime).isBefore(endOther));
-
-    if (today.length) this.buckets.push({ label: 'Today', entries: today });
-    if (yesterday.length) this.buckets.push({ label: 'Yesterday', entries: yesterday });
-    if (lastWeek.length) this.buckets.push({ label: 'Last Week', entries: lastWeek });
-    if (lastMonth.length) this.buckets.push({ label: 'Last Month', entries: lastMonth });
-    if (older.length) this.buckets.push({ label: 'Older', entries: older });
-  },
-  methods: {
-    onActivateItem(entry) {
-      this.$emit('item-activated', entry);
-    },
-    iconError(event, entry) {
-      event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
-
-      setTimeout(() => {
-        if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
-        if (entry._previewRetries > 10) return;
-        ++entry._previewRetries
-
-        event.target.src = entry.previewUrl;
-      }, 1000);
-    }
-  }
-};
-
-</script>
 
 <style scoped>
 

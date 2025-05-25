@@ -1,4 +1,7 @@
 
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
+const BASE_URL = import.meta.env.BASE_URL || '/';
+
 function sanitize(path) {
     path = '/' + path;
     return path.replace(/\/+/g, '/');
@@ -131,6 +134,8 @@ function entryListSort(list, prop, desc) {
 }
 
 export {
+    API_ORIGIN,
+    BASE_URL,
     getDirectLink,
     getPreviewUrl,
     getFileTypeGroup,

@@ -1,3 +1,232 @@
+<script setup>
+
+import { ref, useTemplateRef, onMounted, inject } from 'vue';
+import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from 'pankow';
+import MainModel from '../models/MainModel.js';
+import GroupFolderModel from '../models/GroupFolderModel.js';
+import slugify from '../slugify.js';
+
+const props = defineProps({
+  profile: {
+    type: Object,
+    default: function () { return {}; }
+  },
+});
+
+const refreshConfig = inject('refreshConfig');
+
+const groupFolderTableColumns = {
+  name: {
+    label: 'Name',
+    sort: true
+  },
+  id: {
+    label: 'Slug',
+    sort: true
+  },
+  folderPath: {
+    label: 'Path',
+    sort: true
+  },
+  members: {
+    label: 'Members',
+    sort: false
+  },
+  action: {
+    label: '',
+    width: '20px',
+    sort: false
+  }
+};
+
+const addGroupFolderDialog = useTemplateRef('addGroupFolderDialog');
+const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
+const settingsInputDialog = useTemplateRef('settingsInputDialog');
+
+const users = ref([]);
+const office = ref({
+  error: '',
+  busy: false,
+  wopiHost: '',
+});
+const groupFolderTableModel = ref([]);
+const groupFolderAdd = ref({
+  error: '',
+  busy: false,
+  availableUsersMenuModel: [],
+  name: '',
+  slug: '',
+  folderPath: '',
+  members: [],
+});
+const groupFolderEdit = ref({
+  error: '',
+  busy: false,
+  availableUsersMenuModel: [],
+  name: '',
+  members: [],
+});
+
+async function refreshGroupFolders() {
+  try {
+    groupFolderTableModel.value = await GroupFolderModel.list();
+  } catch (error) {
+    console.error('Failed to list groupFolder.', error);
+  }
+}
+
+// helper for member add/edit
+function groupFolderRemoveMember(members, member) {
+  const index = members.findIndex((m) => m.username === member.username);
+  members.splice(index, 1);
+}
+
+async function onAddGroupFolder() {
+  groupFolderAdd.value.busy = false;
+  groupFolderAdd.value.error = '';
+  groupFolderAdd.value.name = '';
+  groupFolderAdd.value.slug = '';
+  groupFolderAdd.value.members = [];
+  groupFolderAdd.value.folderPath = '';
+  groupFolderAdd.value.availableUsersMenuModel = []
+  for (const user of users.value) {
+    const item = {
+      label: user.username,
+      visible: () => { return !groupFolderAdd.value.members.find((m) => m.username === user.username) },
+      action: () => { groupFolderAdd.value.members.push(user) }
+    };
+    groupFolderAdd.value.availableUsersMenuModel.push(item);
+  }
+
+  addGroupFolderDialog.value.open();
+}
+
+async function onAddGroupFolderSubmit() {
+  groupFolderAdd.value.busy = true;
+
+  try {
+    await GroupFolderModel.add({
+      name: groupFolderAdd.value.name,
+      slug: groupFolderAdd.value.slug,
+      path: groupFolderAdd.value.folderPath,
+      members: groupFolderAdd.value.members.map((m) => m.username)
+    });
+  } catch (e) {
+    console.log(e)
+    groupFolderAdd.value.error = e.message;
+    groupFolderAdd.value.busy = false;
+    return;
+  }
+
+  await refreshGroupFolders();
+
+  groupFolderAdd.value.busy = false;
+  addGroupFolderDialog.value.close();
+}
+
+function onEditGroupFolder(groupFolder) {
+  groupFolderEdit.value.busy = false;
+  groupFolderEdit.value.error = '';
+  groupFolderEdit.value.id = groupFolder.id;
+  groupFolderEdit.value.name = groupFolder.name;
+  groupFolderEdit.value.members = groupFolder.members.map((m) => users.value.find((u) => u.username === m) );
+  groupFolderEdit.value.availableUsersMenuModel = []
+  for (const user of users.value) {
+    const item = {
+      label: user.username,
+      visible: () => { return !groupFolderEdit.value.members.find((m) => m.username === user.username) },
+      action: () => { groupFolderEdit.value.members.push(user) }
+    };
+    groupFolderEdit.value.availableUsersMenuModel.push(item);
+  }
+
+  editGroupFolderDialog.value.open();
+}
+
+async function onEditGroupFolderSubmit() {
+  groupFolderEdit.value.busy = true;
+
+  try {
+    await GroupFolderModel.update(groupFolderEdit.value.id, {
+      name: groupFolderEdit.value.name,
+      members: groupFolderEdit.value.members.map((m) => m.username)
+    });
+  } catch (e) {
+    console.log(e)
+    groupFolderEdit.value.error = e.message;
+    groupFolderEdit.value.busy = false;
+    return;
+  }
+
+  await refreshGroupFolders();
+
+  groupFolderEdit.value.busy = false;
+  editGroupFolderDialog.value.close();
+}
+
+async function onRemoveGroupFolder(groupFolder) {
+  const yes = await settingsInputDialog.value.confirm({
+    message: `Really remove group folder ${groupFolder.name}?`,
+    confirmStyle: 'danger',
+    confirmLabel: 'Yes',
+    rejectLabel: 'No'
+  });
+
+  if (!yes) return;
+
+  try {
+    await GroupFolderModel.remove(groupFolder.id);
+  } catch (e) {
+    return console.error('Failed to delete groupFolder.', e);
+  }
+
+  await refreshGroupFolders();
+}
+
+async function onOfficeSubmit() {
+  office.value.busy = true;
+
+  try {
+    await MainModel.setWopiHost(office.value.wopiHost);
+  } catch (error) {
+    office.value.error = error.message;
+    office.value.busy = false;
+    return;
+  }
+
+  office.value.error = '';
+
+  try {
+    office.value.wopiHost = await MainModel.getWopiHost();
+  } catch (error) {
+    office.value.wopiHost = ''
+    office.value.error = error.message;
+  }
+
+  await refreshConfig();
+
+  office.value.busy = false;
+}
+
+onMounted(async () => {
+  users.value = await MainModel.getUsers();
+
+  await refreshGroupFolders();
+
+  office.value.error = '';
+  office.value.confirmBusy = false;
+
+  try {
+    office.value.wopiHost = await MainModel.getWopiHost();
+  } catch (error) {
+    office.value.wopiHost = ''
+    office.value.error = error.message;
+    console.log('Failed to get wopi host:', error);
+  }
+});
+
+</script>
+
 <template>
   <div class="settings-container">
     <InputDialog ref="settingsInputDialog" />
@@ -76,250 +305,6 @@
     </form>
   </div>
 </template>
-
-<script>
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
-
-import { DirectoryModelError } from '../models/DirectoryModel.js';
-import { createMainModel } from '../models/MainModel.js';
-import { createGroupFolderModel } from '../models/GroupFolderModel.js';
-
-import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from 'pankow';
-
-import slugify from '../slugify.js';
-
-const mainModel = createMainModel(API_ORIGIN);
-const groupFolderModel = createGroupFolderModel(API_ORIGIN);
-
-export default {
-    name: 'SettingsView',
-    components: {
-      Button,
-      ButtonGroup,
-      Dialog,
-      InputDialog,
-      TableView,
-      TextInput,
-      InputGroup
-    },
-    props: {
-      profile: {
-        type: Object,
-        default: function () { return {}; }
-      }
-    },
-    data() {
-      return {
-        users: [],
-        groupFolderTableColumns: {
-          name: {
-            label: 'Name',
-            sort: true
-          },
-          id: {
-            label: 'Slug',
-            sort: true
-          },
-          folderPath: {
-            label: 'Path',
-            sort: true
-          },
-          members: {
-            label: 'Members',
-            sort: false
-          },
-          action: {
-            label: '',
-            width: '20px',
-            sort: false
-          }
-        },
-        office: {
-          error: '',
-          busy: false,
-          wopiHost: ''
-        },
-        groupFolderTableModel: [],
-        groupFolderAdd: {
-          error: '',
-          busy: false,
-          availableUsersMenuModel: [],
-          name: '',
-          slug: '',
-          folderPath: '',
-          members: []
-        },
-        groupFolderEdit: {
-          error: '',
-          busy: false,
-          availableUsersMenuModel: [],
-          name: '',
-          members: []
-        }
-      };
-    },
-    async mounted() {
-    },
-    methods: {
-      slugify,
-      async open() {
-        if (!this.profile.admin) return false;
-
-        this.users = await mainModel.getUsers();
-
-        await this.refreshGroupFolders();
-
-        this.office.error = '';
-        this.office.confirmBusy = false;
-
-        try {
-          this.office.wopiHost = await mainModel.getWopiHost();
-        } catch (error) {
-          this.office.wopiHost = ''
-          this.office.error = error.message;
-          console.log('Failed to get wopi host:', error);
-        }
-
-        return true;
-      },
-      async refreshGroupFolders() {
-        try {
-          this.groupFolderTableModel = await groupFolderModel.list();
-        } catch (error) {
-          console.error('Failed to list groupFolder.', error);
-        }
-      },
-      // helper for member add/edit
-      groupFolderRemoveMember(members, member) {
-        const index = members.findIndex((m) => m.username === member.username);
-        members.splice(index, 1);
-      },
-      async onAddGroupFolder() {
-        this.groupFolderAdd.busy = false;
-        this.groupFolderAdd.error = '';
-        this.groupFolderAdd.name = '';
-        this.groupFolderAdd.slug = '';
-        this.groupFolderAdd.members = [];
-        this.groupFolderAdd.folderPath = '';
-        this.groupFolderAdd.availableUsersMenuModel = []
-        for (const user of this.users) {
-          const item = {
-            label: user.username,
-            visible: () => { return !this.groupFolderAdd.members.find((m) => m.username === user.username) },
-            action: () => { this.groupFolderAdd.members.push(user) }
-          };
-          this.groupFolderAdd.availableUsersMenuModel.push(item);
-        }
-
-        this.$refs.addGroupFolderDialog.open();
-      },
-      async onAddGroupFolderSubmit() {
-        this.groupFolderAdd.busy = true;
-
-        try {
-          await groupFolderModel.add({
-            name: this.groupFolderAdd.name,
-            slug: this.groupFolderAdd.slug,
-            path: this.groupFolderAdd.folderPath,
-            members: this.groupFolderAdd.members.map((m) => m.username)
-          });
-        } catch (e) {
-          console.log(e)
-          this.groupFolderAdd.error = e.message;
-          this.groupFolderAdd.busy = false;
-          return;
-        }
-
-        await this.refreshGroupFolders();
-
-        this.groupFolderAdd.busy = false;
-        this.$refs.addGroupFolderDialog.close();
-      },
-      onEditGroupFolder(groupFolder) {
-        this.groupFolderEdit.busy = false;
-        this.groupFolderEdit.error = '';
-        this.groupFolderEdit.id = groupFolder.id;
-        this.groupFolderEdit.name = groupFolder.name;
-        this.groupFolderEdit.members = groupFolder.members.map((m) => this.users.find((u) => u.username === m) );
-        this.groupFolderEdit.availableUsersMenuModel = []
-        for (const user of this.users) {
-          const item = {
-            label: user.username,
-            visible: () => { return !this.groupFolderEdit.members.find((m) => m.username === user.username) },
-            action: () => { this.groupFolderEdit.members.push(user) }
-          };
-          this.groupFolderEdit.availableUsersMenuModel.push(item);
-        }
-
-        this.$refs.editGroupFolderDialog.open();
-      },
-      async onEditGroupFolderSubmit() {
-        this.groupFolderEdit.busy = true;
-
-        try {
-          await groupFolderModel.update(this.groupFolderEdit.id, {
-            name: this.groupFolderEdit.name,
-            members: this.groupFolderEdit.members.map((m) => m.username)
-          });
-        } catch (e) {
-          console.log(e)
-          this.groupFolderEdit.error = e.message;
-          this.groupFolderEdit.busy = false;
-          return;
-        }
-
-        await this.refreshGroupFolders();
-
-        this.groupFolderEdit.busy = false;
-        this.$refs.editGroupFolderDialog.close();
-      },
-      async onRemoveGroupFolder(groupFolder) {
-        const yes = await this.$refs.settingsInputDialog.confirm({
-          message: `Really remove group folder ${groupFolder.name}?`,
-          confirmStyle: 'danger',
-          confirmLabel: 'Yes',
-          rejectLabel: 'No'
-        });
-
-        if (!yes) return;
-
-        try {
-          await groupFolderModel.remove(groupFolder.id);
-        } catch (e) {
-          return console.error('Failed to delete groupFolder.', e);
-        }
-
-        await this.refreshGroupFolders();
-      },
-      async onOfficeSubmit() {
-        this.office.busy = true;
-
-        try {
-          await mainModel.setWopiHost(this.office.wopiHost);
-        } catch (error) {
-          this.office.error = error.message;
-          this.office.busy = false;
-          return;
-        }
-
-        this.office.error = '';
-
-        try {
-          this.office.wopiHost = await mainModel.getWopiHost();
-        } catch (error) {
-          this.office.wopiHost = ''
-          this.office.error = error.message;
-        }
-
-        await this.$root.refreshConfig();
-
-        this.office.busy = false;
-      }
-    }
-};
-
-</script>
 
 <style scoped>
 

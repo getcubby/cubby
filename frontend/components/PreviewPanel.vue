@@ -1,3 +1,35 @@
+<script setup>
+
+import { ref, computed } from 'vue';
+import { getPreviewUrl } from '../utils.js';
+import { prettyLongDate, prettyFileSize } from 'pankow/utils';
+
+const props = defineProps({
+  parentEntry: {
+    type: Object,
+    default: function () { return {}; }
+  },
+  selectedEntries: {
+    type: Array,
+    default: function () { return []; }
+  },
+});
+
+const visible = ref(localStorage.previewPanelVisible === 'true');
+const entry = computed(() =>{
+  return props.selectedEntries.length ? props.selectedEntries[0] : props.parentEntry;
+});
+const combinedSize = computed(() => {
+  return props.selectedEntries.length ? props.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : props.parentEntry.size;
+});
+
+function onToggle() {
+  visible.value = !visible.value;
+  localStorage.previewPanelVisible = visible.value;
+}
+
+</script>
+
 <template>
   <div class="preview-container" :class="{ 'visible': visible }">
     <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
@@ -28,52 +60,6 @@
     </div>
   </div>
 </template>
-
-<script>
-
-import { getPreviewUrl } from '../utils.js';
-import { prettyLongDate, prettyFileSize } from 'pankow/utils';
-
-export default {
-  name: 'PreviewPanel',
-  props: {
-    parentEntry: {
-      type: Object,
-      default: function () { return {}; }
-    },
-    selectedEntries: {
-      type: Array,
-      default: function () { return []; }
-    }
-  },
-  emits: [ 'close' ],
-  data() {
-    return {
-      visible: localStorage.previewPanelVisible === 'true'
-    };
-  },
-  computed: {
-    entry() {
-      return this.selectedEntries.length ? this.selectedEntries[0] : this.parentEntry;
-    },
-    combinedSize() {
-      return this.selectedEntries.length ? this.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : this.parentEntry.size;
-    }
-  },
-  mounted() {
-  },
-  methods: {
-    prettyLongDate,
-    prettyFileSize,
-    getPreviewUrl,
-    onToggle() {
-      this.visible = !this.visible;
-      localStorage.previewPanelVisible = this.visible;
-    }
-  }
-};
-
-</script>
 
 <style scoped>
 

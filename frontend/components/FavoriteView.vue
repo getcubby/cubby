@@ -1,3 +1,48 @@
+<script setup>
+
+import { ref, onMounted } from 'vue';
+import moment from 'moment';
+import FavoriteModel from '../models/FavoriteModel.js';
+import SearchBar from './SearchBar.vue';
+import { Button, Icon, TopBar } from 'pankow';
+
+const emit = defineEmits(['item-activated']);
+
+const favorites = ref([]);
+
+async function refresh() {
+  try {
+    favorites.value = await FavoriteModel.list();
+  } catch (e) {
+    console.error('Failed to list favorites.', e);
+  }
+}
+
+function onActivateItem(entry) {
+  emit('item-activated', entry);
+}
+
+async function onUnFavorite(entry) {
+  await FavoriteModel.remove(entry.favorite.id);
+  await refresh();
+}
+
+function iconError(event, entry) {
+  event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
+
+  setTimeout(() => {
+    if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
+    if (entry._previewRetries > 10) return;
+    ++entry._previewRetries
+
+    event.target.src = entry.previewUrl;
+  }, 1000);
+}
+
+onMounted(refresh);
+
+</script>
+
 <template>
   <div class="favorites">
     <TopBar :gap="false" :left-grow="true">
@@ -21,71 +66,6 @@
     </div>
   </div>
 </template>
-
-<script>
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
-
-import moment from 'moment';
-
-import { createFavoriteModel } from '../models/FavoriteModel.js';
-import SearchBar from './SearchBar.vue';
-
-import { Button, Icon, TopBar } from 'pankow';
-
-const favoriteModel = createFavoriteModel(API_ORIGIN);
-
-export default {
-  name: 'FavoriteView',
-  components: {
-    Button,
-    Icon,
-    SearchBar,
-    TopBar
-  },
-  props: {
-  },
-  emits: [
-    'item-activated'
-  ],
-  data() {
-    return {
-      favorites: []
-    };
-  },
-  async mounted() {
-    await this.refresh();
-  },
-  methods: {
-    async refresh() {
-      try {
-        this.favorites = await favoriteModel.list();
-      } catch (e) {
-        console.error('Failed to list favorites.', e);
-      }
-    },
-    onActivateItem(entry) {
-      this.$emit('item-activated', entry);
-    },
-    async onUnFavorite(entry) {
-      await favoriteModel.remove(entry.favorite.id);
-      await this.refresh();
-    },
-    iconError(event, entry) {
-      event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
-
-      setTimeout(() => {
-        if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
-        if (entry._previewRetries > 10) return;
-        ++entry._previewRetries
-
-        event.target.src = entry.previewUrl;
-      }, 1000);
-    }
-  }
-};
-
-</script>
 
 <style scoped>
 

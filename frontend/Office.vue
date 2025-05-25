@@ -1,3 +1,59 @@
+<script setup>
+
+import { ref, onMounted, useTemplateRef } from 'vue';
+import { utils } from 'pankow';
+import { parseResourcePath } from './utils.js';
+import MainModel from './models/MainModel.js';
+import DirectoryModel from './models/DirectoryModel.js';
+
+const wopiForm = useTemplateRef('wopiForm');
+
+const wopiToken = ref('');
+const wopiUrl = ref('');
+
+onMounted(async () => {
+  const resource = parseResourcePath(window.location.hash.slice(1));
+  const entry = await directoryModel.get(resource);
+  const handle = await MainModel.getOfficeHandle(entry);
+
+  const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
+  wopiUrl.value = `${handle.url}WOPISrc=${wopiSrc}`;
+  wopiToken.value = handle.token;
+
+  // https://sdk.collaboraonline.com/docs/postmessage_api.html#
+  window.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.MessageId === 'App_LoadingStatus') {
+        if (data.Values && data.Values.Status === 'Document_Loaded') {
+
+          // Example to remove buttons in the editor UI
+          // const msg = {
+          //   MessageId: 'Remove_Button',
+          //   SendTime: Date.now(),
+          //   Values: {
+          //     id: 'print'
+          //   }
+          // };
+
+          // this.$refs.officeViewer.contentWindow.postMessage(JSON.stringify(msg), event.origin);
+        }
+      } else if (data.MessageId === 'close') {
+        // cannot prompt the user here as collabora has already closed the document internally
+        window.close();
+      }
+    } catch (e) {
+      console.error('Failed to parse message from WOPI editor', e);
+    }
+  }, false);
+
+  setTimeout(() => {
+    wopiForm.value.submit();
+  }, 500);
+});
+
+</script>
+
 <template>
   <div class="main">
     <div style="display: none">
@@ -12,71 +68,6 @@
     <iframe ref="officeViewer" name="document-viewer" class="viewer" allow="clipboard-read *; clipboard-write *"></iframe>
   </div>
 </template>
-
-<script>
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
-
-import { utils } from 'pankow';
-
-import { parseResourcePath } from './utils.js';
-import { createMainModel } from './models/MainModel.js';
-import { createDirectoryModel } from './models/DirectoryModel.js';
-
-const mainModel = createMainModel(API_ORIGIN);
-const directoryModel = createDirectoryModel(API_ORIGIN);
-
-export default {
-  name: 'Office',
-  data() {
-    return {
-      wopiToken: '',
-      wopiUrl: ''
-    };
-  },
-  async mounted() {
-    const resource = parseResourcePath(window.location.hash.slice(1));
-    const entry = await directoryModel.get(resource);
-    const handle = await mainModel.getOfficeHandle(entry);
-
-    const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
-    this.wopiUrl = `${handle.url}WOPISrc=${wopiSrc}`;
-    this.wopiToken = handle.token;
-
-    // https://sdk.collaboraonline.com/docs/postmessage_api.html#
-    window.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.MessageId === 'App_LoadingStatus') {
-          if (data.Values && data.Values.Status === 'Document_Loaded') {
-
-            // Example to remove buttons in the editor UI
-            // const msg = {
-            //   MessageId: 'Remove_Button',
-            //   SendTime: Date.now(),
-            //   Values: {
-            //     id: 'print'
-            //   }
-            // };
-
-            // this.$refs.officeViewer.contentWindow.postMessage(JSON.stringify(msg), event.origin);
-          }
-        } else if (data.MessageId === 'close') {
-          // cannot prompt the user here as collabora has already closed the document internally
-          window.close();
-        }
-      } catch (e) {
-        console.error('Failed to parse message from WOPI editor', e);
-      }
-    }, false);
-
-    setTimeout(() => {
-      this.$refs.wopiForm.submit();
-    }, 500);
-  },
-};
-
-</script>
 
 <style scoped>
 

@@ -1,3 +1,859 @@
+<script setup>
+
+import { ref, onMounted, useTemplateRef, computed, provide } from 'vue';
+import { API_ORIGIN, BASE_URL, parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
+import { prettyDate } from 'pankow/utils';
+import {
+  Breadcrumb,
+  Button,
+  Checkbox,
+  Dialog,
+  DirectoryView,
+  SingleSelect,
+  FileUploader,
+  InputDialog,
+  Menu,
+  Notification,
+  PasswordInput,
+  SideBar,
+  TabView,
+  InputGroup,
+  TopBar
+} from 'pankow';
+import { GenericViewer, ImageViewer, PdfViewer, TextViewer } from 'pankow/viewers';
+import DirectoryModel from './models/DirectoryModel.js';
+import MainModel from './models/MainModel.js';
+import ShareModel from './models/ShareModel.js';
+import FavoriteModel from './models/FavoriteModel.js';
+import LoginView from './components/LoginView.vue';
+import UsersView from './components/UsersView.vue';
+import SharesView from './components/SharesView.vue';
+import SettingsView from './components/SettingsView.vue';
+import PreviewPanel from './components/PreviewPanel.vue';
+import MarkdownViewer from './components/MarkdownViewer.vue';
+import RecentView from './components/RecentView.vue';
+import FavoriteView from './components/FavoriteView.vue';
+import SearchBar from './components/SearchBar.vue';
+
+const DirectoryModelError = DirectoryModel.DirectoryModelError;
+
+const VIEWS = {
+  LOGIN: 'login',
+  MAIN: 'main',
+  FAVORITES: 'favorites',
+  USERS: 'users',
+  RECENT: 'recent',
+  SETTINGS: 'settings',
+  SHARES: 'shares'
+};
+
+const beforeUnloadListener = (event) => {
+  event.preventDefault();
+  return window.confirm('File operation still in progress. Really close?');
+};
+
+const aboutDialog = useTemplateRef('aboutDialog');
+
+const ready = ref(false);
+const view = ref('');
+const viewer = ref('');
+const showSize = ref(true);
+const activeResourceType = ref('');
+const profile = ref({});
+const config = ref({});
+const currentHash = ref('');
+const uiError = ref('');
+const entry = ref({});
+const entries = ref([]);
+const selectedEntries = ref([]);
+const currentPath = ref('/');
+const currentResourcePath = ref('');
+const currentShare = ref(null);
+const breadCrumbs = ref([]);
+const breadCrumbHome = ref({
+  icon: 'fa-solid fa-house',
+  route: '#files'
+});
+const webDavPasswordDialog = ref({
+  error: '',
+  password: ''
+});
+const shareDialog = ref({
+  visible: false,
+  error: '',
+  receiverUsername: '',
+  readonly: false,
+  users: [],
+  sharedWith: [],
+  sharedLinks: [],
+  entry: {},
+  shareLink: {
+    expires: false,
+    expiresAt: 0
+  },
+});
+
+const mainMenu = [{
+  label: 'Users',
+  icon: 'fa-solid fa-users',
+  visible: () => profile.value.admin,
+  action: () => window.location.href = '#users'
+}, {
+  label: 'Settings',
+  icon: 'fa-solid fa-cog',
+  visible: () => profile.value.admin,
+  action: () => window.location.href = '#settings'
+}, {
+  label: 'Shared by You',
+  icon: 'fa-solid fa-share-from-square',
+  action: () => window.location.href = '#shares'
+}, {
+  label: 'WebDAV',
+  icon: 'fa-solid fa-globe',
+  action: onWebDavSettings
+}, {
+  label: 'About',
+  icon: 'fa-solid fa-circle-info',
+  action: () => aboutDialog.value.open()
+}, {
+  separator:true
+}, {
+  label: 'Logout',
+  icon: 'fa-solid fa-right-from-bracket',
+  action: onLogout
+}];
+
+const newMenu = [{
+  label: 'New File',
+  icon: 'fa-solid fa-file-circle-plus',
+  action: onNewFile
+}, {
+  label: 'New Folder',
+  icon: 'fa-solid fa-folder-plus',
+  action: onNewFolder
+}];
+
+const uploadMenu = [{
+  label: 'Upload File',
+  icon: 'fa-solid fa-file-arrow-up',
+  action: onUploadFile
+}, {
+  label: 'Upload Folder',
+  icon: 'fa-regular fa-folder-open',
+  action: onUploadFolder
+}];
+
+const newAndUploadMenu = [{
+  label: 'Upload File',
+  icon: 'fa-solid fa-file-arrow-up',
+  action: onUploadFile
+}, {
+  label: 'Upload Folder',
+  icon: 'fa-regular fa-folder-open',
+  action: onUploadFolder
+}, {
+  separator:true
+}, {
+  label: 'New File',
+  icon: 'fa-solid fa-file-circle-plus',
+  action: onNewFile
+}, {
+  label: 'New Folder',
+  icon: 'fa-solid fa-folder-plus',
+  action: onNewFolder
+}];
+
+const isReadonly = computed(() => {
+  if (currentResourcePath.value === '/shares/') return true;
+  if (currentResourcePath.value === '/groupfolders/') return true;
+  if (!currentShare.value) return false;
+  return currentShare.value.readonly;
+});
+
+async function onToggleFavorite(entry) {
+  if (entry.favorite) {
+    await FavoriteModel.remove(entry.favorite.id);
+    entry.favorite = null;
+    entry.star = false;
+  } else {
+    const id = await FavoriteModel.create({ owner: entry.owner, path: entry.filePath })
+    entry.favorite = { id, owner: entry.owner, path: entry.filePath };
+    entry.star = true;
+  }
+}
+
+const mainMenuElement = useTemplateRef('mainMenuElement');
+function onMainMenu(event) {
+  mainMenuElement.value.open(event, event.target);
+}
+
+async function uploadJobPreFlightCheckHandler(job) {
+  // abort if target folder already exists
+  if (job.folder && await DirectoryModel.exists(parseResourcePath(job.targetFolder), job.folder)) {
+    window.pankow.notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
+    return false;
+  }
+
+  return true;
+}
+
+async function uploadHandler(targetDir, file, progressHandler) {
+  const resource = parseResourcePath(targetDir);
+
+  await DirectoryModel.upload(resource, file, progressHandler);
+
+  refresh();
+}
+
+const sideBar = useTemplateRef('sideBar');
+function onCloseSidebar() {
+  sideBar.value.close();
+}
+
+async function onLogin() {
+  view.value = VIEWS.LOGIN;
+}
+
+async function onLogout() {
+  await MainModel.logout();
+  window.location.href = '/';
+}
+
+function onInvalidSession() {
+  // stash for use later after re-login
+  localStorage.returnTo = window.location.hash.slice(1);
+
+  profile.value.username = '';
+  profile.value.email = '';
+  profile.value.displayName = '';
+
+  onLogin();
+}
+
+function onViewerEntryChanged(entry) {
+  // prevent to reload image
+  currentHash.value = `#files${entry.resourcePath}`
+  window.location.hash = `files${entry.resourcePath}`;
+}
+
+function onUploadFinished() {
+  refresh();
+}
+
+const fileUploader = useTemplateRef('fileUploader');
+function onUploadFile() {
+  const resource = parseResourcePath(currentResourcePath.value || 'files/');
+  fileUploader.value.onUploadFile(resource.resourcePath);
+}
+
+function onUploadFolder() {
+  const resource = parseResourcePath(currentResourcePath.value || 'files/');
+  fileUploader.value.onUploadFolder(resource.resourcePath);
+}
+
+const inputDialog = useTemplateRef('inputDialog');
+const directoryView = useTemplateRef('directoryView');
+async function onNewFile() {
+  const newFileName = await inputDialog.value.prompt({
+    message: 'New Filename',
+    value: '',
+    confirmStyle: 'success',
+    confirmLabel: 'Save',
+    rejectLabel: 'Close'
+  });
+
+  if (!newFileName) return;
+
+  const resource = parseResourcePath(currentResourcePath.value || 'files/');
+
+  try {
+    await DirectoryModel.newFile(resource, newFileName);
+  } catch (error) {
+    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
+    else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('File name not allowed');
+    else if (error.reason === DirectoryModelError.CONFLICT) console.error('File already exists');
+    else console.error('Failed to add file, unknown error:', error)
+    return;
+  }
+
+  await refresh();
+
+  directoryView.value.highlightByName(newFileName);
+}
+
+async function onNewFolder() {
+  const newFolderName = await inputDialog.value.prompt({
+    message: 'New Foldername',
+    value: '',
+    confirmStyle: 'success',
+    confirmLabel: 'Save',
+    rejectLabel: 'Close'
+  });
+
+  if (!newFolderName) return;
+
+  const resource = parseResourcePath(currentResourcePath.value || 'files/');
+
+  try {
+    await DirectoryModel.newFolder(resource, newFolderName);
+  } catch (error) {
+    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
+    else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('Folder name not allowed');
+    else if (error.reason === DirectoryModelError.CONFLICT) console.error('Folder already exists');
+    else console.error('Failed to add folder, unknown error:', error)
+    return;
+  }
+
+  await refresh();
+
+  directoryView.value.highlightByName(newFolderName);
+}
+
+async function pasteHandler(action, files, target) {
+  if (!files || !files.length) return;
+
+  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+  pasteInProgress.value = true;
+
+  const resource = parseResourcePath((target && target.isDirectory) ? sanitize(currentResourcePath.value + '/' + target.fileName) : currentResourcePath.value);
+  await DirectoryModel.paste(resource, action, files);
+  await refresh();
+
+  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+  pasteInProgress.value = false;
+}
+
+const webDavPasswordDialogElement = useTemplateRef('webDavPasswordDialog');
+async function onWebDavSettings() {
+  webDavPasswordDialog.value.error = '';
+  webDavPasswordDialog.value.password = '';
+  webDavPasswordDialogElement.value.open();
+}
+
+async function onWebDavSettingsSubmit() {
+  try {
+    await MainModel.setWebDavPassword(webDavPasswordDialog.value.password);
+  } catch (error) {
+    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
+    else {
+      webDavPasswordDialog.value.error = 'Unkown error, check logs';
+      console.error('Failed to set webdav password:', error)
+    }
+
+    return;
+  }
+
+  webDavPasswordDialogElement.value.close();
+}
+
+async function refreshConfig() {
+  try {
+    config.value = await MainModel.getConfig();
+  } catch (e) {
+    if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
+  }
+}
+
+provide('refreshConfig', refreshConfig);
+
+function clearSelection() {
+  selectedEntries.value = [];
+}
+
+function onSelectionChanged(selectedEntries) {
+  selectedEntries.value = selectedEntries;
+}
+
+async function onFileSaved(entry, content, done) {
+  try {
+    await DirectoryModel.saveFile(entry.resource, content);
+  } catch (error) {
+    console.error(`Failed to save file ${entry.resourcePath}`, error);
+  }
+
+  if (typeof done === 'function') done();
+}
+
+// if entries is provided download those, otherwise selected entries, otherwise all entries
+async function downloadHandler(entries) {
+  // in case we got a single entry
+  if (entries && !Array.isArray(entries)) entries = [ entries ];
+  if (!entries) entries = selectedEntries.value;
+  if (entries.length === 0) entries = entries.value;
+
+  const resource = parseResourcePath(currentResourcePath.value);
+  await DirectoryModel.download(resource, entries);
+}
+
+// either dataTransfer (external drop) or files (internal drag)
+async function onDrop(targetFolder, dataTransfer, files) {
+  const fullTargetFolder = sanitize(`${currentResourcePath.value}/${targetFolder}`);
+
+  if (dataTransfer) {
+    async function getFile(entry) {
+      return new Promise((resolve, reject) => {
+        entry.file(resolve, reject);
+      });
+    }
+
+    const fileList = [];
+    async function traverseFileTree(item, path) {
+      return new Promise(async (resolve, reject) => {
+        if (item.isFile) {
+          fileList.push(await getFile(item));
+          resolve();
+        } else if (item.isDirectory) {
+          // Get folder contents
+          const dirReader = item.createReader();
+          const entries = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
+
+          for (let i in entries) {
+            await traverseFileTree(entries[i], item.name);
+          }
+
+          resolve();
+        } else {
+          console.log('Skipping uknown file type', item);
+          resolve();
+        }
+      });
+    }
+
+    for (const item of dataTransfer.items) {
+      const entry = item.webkitGetAsEntry();
+      if (!entry) {
+        console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
+        continue;
+      }
+
+      if (entry.isFile) {
+        fileList.push(await getFile(entry));
+      } else if (entry.isDirectory) {
+        await traverseFileTree(entry, sanitize(`${currentResourcePath.value}/${targetFolder}`));
+      }
+    }
+    fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));
+  } else {
+    if (!files.length) return;
+
+    window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+
+    // check ctrl for cut/copy
+    await DirectoryModel.paste(parseResourcePath(fullTargetFolder), 'cut', files);
+    await refresh();
+
+    window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+  }
+}
+
+async function deleteHandler(entries) {
+  if (!entries) return;
+
+  const confirmed = await inputDialog.value.confirm({
+    message: `Really delete ${entries.length} item${ entries.length === 1 ? '' : 's' }?`,
+    confirmStyle: 'danger',
+    confirmLabel: 'Yes',
+    rejectLabel: 'Cancel'
+  });
+
+  if (!confirmed) return;
+
+  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+
+  for (let i in entries) {
+    try {
+      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + entries[i].fileName));
+      await DirectoryModel.remove(resource);
+    } catch (e) {
+      console.error(`Failed to remove file ${entries[i].name}:`, e);
+    }
+  }
+
+  await refresh();
+
+  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+}
+
+async function renameHandler(file, newName) {
+  // this will make the change immediate for the UI even if not yet committed
+  file.name = newName;
+
+  const fromResource = file.resource;
+  const toResource = parseResourcePath(sanitize(currentResourcePath.value + '/' + newName));
+
+  if (fromResource.resourcePath === toResource.resourcePath) return;
+
+  await DirectoryModel.rename(fromResource, toResource);
+  await refresh();
+
+  directoryView.value.highlightByName(file.name);
+}
+
+async function refreshShareDialogEntry(entry = null) {
+  shareDialog.value.entry = await DirectoryModel.get(entry || shareDialog.value.entry);
+
+  shareDialog.value.sharedWith = shareDialog.value.entry.sharedWith.filter((s) => s.receiverUsername);
+  shareDialog.value.sharedLinks = shareDialog.value.entry.sharedWith.filter((s) => !s.receiverUsername);
+
+  shareDialog.value.users.forEach((user) => {
+    user.alreadyUsed = shareDialog.value.entry.sharedWith.find((share) => { return share.receiverUsername === user.username; });
+  });
+
+  await refresh(shareDialog.value.entry);
+}
+
+const shareDialogElement = useTemplateRef('shareDialogElement');
+async function shareHandler(entry) {
+  shareDialog.value.error = '';
+  shareDialog.value.receiverUsername = '';
+  shareDialog.value.readonly = false;
+  shareDialog.value.shareLink.expires = false;
+  shareDialog.value.shareLink.expiresAt = new Date()
+
+  // start with tomorrow
+  shareDialog.value.shareLink.expiresAt.setDate(shareDialog.value.shareLink.expiresAt.getDate() + 1);
+
+  // prepare available users for sharing
+  const users = await MainModel.getUsers();
+  shareDialog.value.users = users.filter((u) => { return u.username !== profile.value.username; });
+  shareDialog.value.users.forEach((u) => { u.userAndDisplayName = u.displayName + ' ( ' + u.username + ' )'; });
+
+  await refreshShareDialogEntry(entry);
+
+  shareDialogElement.value.open();
+}
+
+function copyShareIdLinkToClipboard(shareId) {
+  copyToClipboard(ShareModel.getLink(shareId));
+  window.pankow.notify('Share link copied to clipboard');
+}
+
+async function onCreateShareLink() {
+  const path = shareDialog.value.entry.filePath;
+  const readonly = true; // always readonly for now
+  const expiresAt = shareDialog.value.shareLink.expires ? shareDialog.value.shareLink.expiresAt : 0;
+  const ownerUsername = shareDialog.value.entry.group ? null : shareDialog.value.entry.owner;
+  const ownerGroupfolder = shareDialog.value.entry.group ? shareDialog.value.entry.group.id : null;
+
+  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, expiresAt });
+
+  copyShareIdLinkToClipboard(shareId);
+
+  await refreshShareDialogEntry();
+}
+
+async function onCreateShare() {
+  const path = shareDialog.value.entry.filePath;
+  const readonly = shareDialog.value.readonly;
+  const receiverUsername = shareDialog.value.receiverUsername;
+  const ownerUsername = shareDialog.value.entry.group ? null : shareDialog.value.entry.owner;
+  const ownerGroupfolder = shareDialog.value.entry.group ? shareDialog.value.entry.group.id : null;
+
+  await ShareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, receiverUsername });
+
+  // reset the form
+  shareDialog.value.error = '';
+  shareDialog.value.receiverUsername = '';
+  shareDialog.value.readonly = false;
+
+  // refresh the entry
+  shareDialog.value.entry = await DirectoryModel.get(shareDialog.value.entry);
+  await refreshShareDialogEntry();
+}
+
+async function onDeleteShare(share) {
+  await ShareModel.remove(share.id);
+  refreshShareDialogEntry();
+}
+
+async function refresh(entry = null) {
+  if (entry) {
+    try {
+      entry = await DirectoryModel.get(entry.resource, entry.resource.path);
+    } catch (error) {
+      if (error.status === 401) return onInvalidSession();
+      else if (error.status === 404) uiError.value = 'Does not exist';
+      else console.error(error);
+      return;
+    }
+
+    // this will replace the entry to keep bindings alive
+    const idx = entries.value.findIndex((e) => e.id === entry.id );
+    if (idx !== -1) entries.value.splice(idx, 1, entry);
+  } else {
+    const resource = parseResourcePath(currentResourcePath.value);
+
+    try {
+      entry = await DirectoryModel.get(resource, resource.path);
+    } catch (error) {
+      if (error.status === 401) return onInvalidSession();
+      else if (error.status === 404) uiError.value = 'Does not exist';
+      else console.error(error);
+      return;
+    }
+
+    entry.files.forEach(function (e) {
+      e.extension = getExtension(e);
+      e.filePathNew = e.fileName;
+    });
+
+    entry.value = entry;
+    entries.value = entry.files;
+  }
+}
+
+async function loadMainDirectory(path, entry, forceLoad = false) {
+  // path is files/filepath or shares/shareid/filepath
+  const resource = parseResourcePath(path);
+
+  // nothing new
+  if (!forceLoad && currentResourcePath.value === resource.resourcePath) return;
+
+  if (!entry) {
+    try {
+      entry = await DirectoryModel.get(resource, resource.path);
+    } catch (error) {
+      entries.value = [];
+      entry = {};
+
+      if (error.status === 401) return onInvalidSession();
+      else if (error.status === 404) uiError.value = 'Does not exist';
+      else console.error(error);
+    }
+  }
+
+  activeResourceType.value = resource.type;
+  currentPath.value = resource.path;
+  currentResourcePath.value = resource.resourcePath;
+  currentShare.value = entry.share || null;
+
+  if (resource.type === 'home') {
+    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
+      return {
+        label: decodeURIComponent(e),
+        route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
+      };
+    });
+    breadCrumbHome.value = {
+      icon: 'fa-solid fa-house',
+      route: '#files/home/'
+    };
+  } else if (resource.type === 'shares') {
+    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
+      return {
+        label: decodeURIComponent(e),
+        route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
+      };
+    });
+    breadCrumbHome.value = {
+      icon: 'fa-solid fa-share-nodes',
+      route: '#files/shares/'
+    };
+
+    // if we are not toplevel, add the share information
+    if (entry.share) {
+      breadCrumbs.value.unshift({
+        label: entry.share.filePath.slice(1), // remove slash at the beginning
+        route: '#files/shares/' + resource.shareId + '/'
+      });
+    }
+  } else if (resource.type === 'groupfolders') {
+    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
+      return {
+        label: decodeURIComponent(e),
+        route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
+      };
+    });
+    breadCrumbHome.value = {
+      icon: 'fa-solid fa-user-group',
+      route: '#files/groupfolders/'
+    };
+
+    // if we are not toplevel, add the groupfolder information
+    if (entry.group) {
+      breadCrumbs.value.unshift({
+        label: entry.group.name,
+        route: '#files/groupfolders/' + entry.group.id + '/'
+      });
+    }
+  } else {
+    console.error('FIXME breadcrumbs for resource type', resource.type);
+  }
+
+  entry.files.forEach(function (e) {
+    e.extension = getExtension(e);
+    e.filePathNew = e.fileName;
+  });
+
+  entry.value = entry;
+  entries.value = entry.files;
+  viewer.value = '';
+}
+
+const imageViewer = useTemplateRef('imageViewer');
+const pdfViewer = useTemplateRef('pdfViewer');
+const markdownViewer = useTemplateRef('markdownViewer');
+const textViewer = useTemplateRef('textViewer');
+const genericViewer = useTemplateRef('genericViewer');
+
+// return false/true on fail/success
+async function loadPath(path, forceLoad = false) {
+  const resource = parseResourcePath(path || currentResourcePath.value);
+
+  // clear potential viewer first
+  if (viewer.value) viewer.value = '';
+
+  if (!forceLoad && currentResourcePath.value === resource.resourcePath) return true;
+
+  let entry;
+  try {
+    entry = await DirectoryModel.get(resource);
+  } catch (error) {
+    entries.value = [];
+    entry = {};
+
+    if (error.status === 401 || error.status === 403) {
+      onInvalidSession();
+      return false;
+    } else if (error.status === 404) {
+      console.error('Failed to load entry', resource, error);
+      window.pankow.notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
+      return false;
+    } else {
+      console.error(error);
+      return false;
+    }
+  }
+
+  window.location.hash = `files${resource.resourcePath}`;
+
+  if (entry.isDirectory) await loadMainDirectory(resource.resourcePath, entry, forceLoad);
+  else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
+
+  // if we don't have a folder load the viewer
+  if (!entry.isDirectory) {
+    if (imageViewer.value.canHandle(entry)) {
+      const otherSupportedEntries = entries.value.filter((e) => imageViewer.value.canHandle(e));
+
+      imageViewer.value.open(entry, otherSupportedEntries);
+      viewer.value = 'image';
+    } else if (pdfViewer.value.canHandle(entry)) {
+      pdfViewer.value.open(entry);
+      viewer.value = 'pdf';
+    } else if (MainModel.canHandleWithOffice(entry)) {
+      window.open('/office.html#' + entry.resourcePath, '_blank');
+
+      // need to reset the hash as the original location should be the folder containing the file
+      window.location.hash = `files${resource.resourcePath}`.slice(0, -entry.name.length);
+    } else if (markdownViewer.value.canHandle(entry)) {
+      markdownViewer.value.open(entry, await DirectoryModel.getRawContent(resource));
+      viewer.value = 'markdown';
+    } else if (textViewer.value.canHandle(entry)) {
+      textViewer.value.open(entry, await DirectoryModel.getRawContent(resource));
+      viewer.value = 'text';
+    } else {
+      viewer.value = 'generic';
+      genericViewer.value.open(entry);
+    }
+  } else {
+    clearSelection();
+  }
+
+  return true;
+}
+
+function onOpen(entry) {
+  if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
+  else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
+  else window.location.hash = `files/home${entry.filePath}`;
+}
+
+function onViewerClose() {
+  viewer.value = '';
+
+  // update the browser hash
+  const resource = parseResourcePath(currentResourcePath.value || '/home/');
+  window.location.hash = `files${resource.resourcePath}`;
+}
+
+function onUp() {
+  if (window.location.hash.indexOf('#shares/') === 0) {
+    const hash = window.location.hash.slice('#shares/'.length);
+
+    // if we are first level of that share, go back to all shares
+    if (!hash.split('/')[1]) window.location.hash = 'shares/';
+    else window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
+  } else {
+    const hash = window.location.hash.slice(1);
+    window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
+  }
+}
+
+onMounted(async () => {
+  async function handleHash(hash) {
+    // we handle decoded paths internally
+    hash = decodeURIComponent(hash);
+
+    activeResourceType.value = '';
+
+    if (hash.indexOf('files/home/') === 0) {
+      if (await loadPath(hash.slice('files'.length))) view.value = VIEWS.MAIN;
+      else window.location.hash = 'files/home/';
+    } else if (hash.indexOf('files/shares/') === 0) {
+      loadPath(hash.slice('files'.length));
+      view.value = VIEWS.MAIN;
+    } else if (hash.indexOf('files/groupfolders/') === 0) {
+      loadPath(hash.slice('files'.length));
+      view.value = VIEWS.MAIN;
+    } else if (hash === 'recent') {
+      view.value = VIEWS.RECENT;
+    } else if (hash === 'favorites') {
+      view.value = VIEWS.FAVORITES;
+    } else if (hash.indexOf('users') === 0 && profile.value.admin) {
+      view.value = VIEWS.USERS;
+      onCloseSidebar();
+    } else if (hash.indexOf('shares') === 0) {
+      view.value = VIEWS.SHARES;
+      onCloseSidebar();
+    } else if (hash.indexOf('settings') === 0 && profile.value.admin) {
+      view.value = VIEWS.SETTINGS;
+      onCloseSidebar();
+    } else {
+      window.location.hash = 'files/home/';
+    }
+  }
+
+  try {
+    profile.value = await MainModel.getProfile();
+  } catch (e) {
+    return console.error('mounted: getProfile() error', e);
+  }
+
+  if (profile.value) await refreshConfig();
+  else profile.value = {};
+
+  // initial load with hash if any
+  const hash = localStorage.returnTo || window.location.hash.slice(1);
+  localStorage.returnTo = '';
+
+  await handleHash(hash);
+
+  window.addEventListener('hashchange', () => {
+    // allows us to not reload but only change the hash
+    if (currentHash.value === decodeURIComponent(window.location.hash)) return;
+    currentHash.value = window.location.hash;
+
+    handleHash(window.location.hash.slice(1));
+  }, false);
+
+  // TODO make this dynamic
+  showSize.value = window.innerWidth >= 576;
+
+  ready.value = true;
+});
+
+</script>
+
 <template>
   <!-- This is re-used and thus global -->
   <InputDialog ref="inputDialog" />
@@ -22,11 +878,11 @@
         <div class="side-bar-entry side-bar-entry-button" id="profileMenuDropdown" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
-        <SharesView v-show="view === VIEWS.SHARES" ref="sharesView" />
-        <UsersView v-show="view === VIEWS.USERS" ref="usersView" :profile="profile" />
-        <SettingsView v-show="view === VIEWS.SETTINGS" ref="settingsView" :profile="profile" />
-        <RecentView v-if="view === VIEWS.RECENT" ref="recentView" @item-activated="onOpen" />
-        <FavoriteView v-if="view === VIEWS.FAVORITES" ref="favoriteView" @item-activated="onOpen" />
+        <SharesView v-if="view === VIEWS.SHARES" />
+        <UsersView v-if="view === VIEWS.USERS" :profile="profile" />
+        <SettingsView v-if="view === VIEWS.SETTINGS" :profile="profile" />
+        <RecentView v-if="view === VIEWS.RECENT" @item-activated="onOpen" />
+        <FavoriteView v-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
 
         <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
           <TopBar :gap="false" :left-grow="true">
@@ -128,7 +984,7 @@
   </Dialog>
 
   <!-- Share Dialog -->
-  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialog" :show-x="true">
+  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialogElement" :show-x="true">
     <div>
       <TabView :tabs="{ user: 'with a User', link: 'via Link' }" default-active="user">
         <template #user>
@@ -198,892 +1054,6 @@
     </div>
   </Transition>
 </template>
-
-<script>
-
-'use strict';
-
-import { parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
-import { prettyFileSize, prettyDate, prettyLongDate } from 'pankow/utils';
-
-import {
-  Breadcrumb,
-  Button,
-  Checkbox,
-  Dialog,
-  DirectoryView,
-  SingleSelect,
-  FileUploader,
-  InputDialog,
-  Menu,
-  Notification,
-  PasswordInput,
-  SideBar,
-  TabView,
-  InputGroup,
-  TopBar
-} from 'pankow';
-
-import {
-  GenericViewer,
-  ImageViewer,
-  PdfViewer,
-  TextViewer,
-} from 'pankow/viewers';
-
-import { createDirectoryModel, DirectoryModelError } from './models/DirectoryModel.js';
-import { createMainModel } from './models/MainModel.js';
-import { createShareModel } from './models/ShareModel.js';
-import { createFavoriteModel } from './models/FavoriteModel.js';
-
-import LoginView from './components/LoginView.vue';
-import UsersView from './components/UsersView.vue';
-import SharesView from './components/SharesView.vue';
-import SettingsView from './components/SettingsView.vue';
-import PreviewPanel from './components/PreviewPanel.vue';
-import MarkdownViewer from './components/MarkdownViewer.vue';
-import RecentView from './components/RecentView.vue';
-import FavoriteView from './components/FavoriteView.vue';
-import SearchBar from './components/SearchBar.vue';
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : location.origin;
-const BASE_URL = import.meta.env.BASE_URL || '/';
-
-const VIEWS = {
-  LOGIN: 'login',
-  MAIN: 'main',
-  FAVORITES: 'favorites',
-  USERS: 'users',
-  RECENT: 'recent',
-  SETTINGS: 'settings',
-  SHARES: 'shares'
-};
-
-const beforeUnloadListener = (event) => {
-  event.preventDefault();
-  return window.confirm('File operation still in progress. Really close?');
-};
-
-export default {
-    name: 'IndexView',
-    components: {
-      Breadcrumb,
-      Button,
-      Checkbox,
-      Dialog,
-      DirectoryView,
-      SingleSelect,
-      FileUploader,
-      GenericViewer,
-      SettingsView,
-      ImageViewer,
-      InputDialog,
-      InputGroup,
-      LoginView,
-      Menu,
-      Notification,
-      MarkdownViewer,
-      PasswordInput,
-      PdfViewer,
-      PreviewPanel,
-      RecentView,
-      FavoriteView,
-      SearchBar,
-      SharesView,
-      SideBar,
-      TabView,
-      TextViewer,
-      TopBar,
-      UsersView
-    },
-    data() {
-      return {
-        VIEWS,
-        API_ORIGIN,
-        BASE_URL,
-        ready: false,
-        busy: true,
-        showLogin: false,
-        mainModel: null,
-        shareModel: null,
-        directoryModel: null,
-        favoriteModel: null,
-        view: '',
-        search: '',
-        viewer: '',
-        showSize: true,
-        activeResourceType: '',
-        profile: {},
-        config: {},
-        viewers: [],
-        currentHash: '',
-        error: '',
-        entry: {},
-        entries: [],
-        selectedEntries: [],
-        currentPath: '/',
-        currentResourcePath: '',
-        currentShare: null,
-        breadCrumbs: [],
-        breadCrumbHome: {
-          icon: 'fa-solid fa-house',
-          route: '#files'
-        },
-        webDavPasswordDialog: {
-          error: '',
-          password: ''
-        },
-        shareDialog: {
-          visible: false,
-          error: '',
-          receiverUsername: '',
-          readonly: false,
-          users: [],
-          sharedWith: [],
-          sharedLinks: [],
-          entry: {},
-          shareLink: {
-            expire: false,
-            expiresAt: 0
-          }
-        },
-        mainMenu: [{
-          label: 'Users',
-          icon: 'fa-solid fa-users',
-          visible: () => this.profile.admin,
-          action: () => window.location.href = '#users'
-        }, {
-          label: 'Settings',
-          icon: 'fa-solid fa-cog',
-          visible: () => this.profile.admin,
-          action: () => window.location.href = '#settings'
-        }, {
-          label: 'Shared by You',
-          icon: 'fa-solid fa-share-from-square',
-          action: () => window.location.href = '#shares'
-        }, {
-          label: 'WebDAV',
-          icon: 'fa-solid fa-globe',
-          action: this.onWebDavSettings
-        }, {
-          label: 'About',
-          icon: 'fa-solid fa-circle-info',
-          action: () => this.$refs.aboutDialog.open()
-        }, {
-          separator:true
-        }, {
-          label: 'Logout',
-          icon: 'fa-solid fa-right-from-bracket',
-          action: this.onLogout
-        }],
-        newMenu: [{
-          label: 'New File',
-          icon: 'fa-solid fa-file-circle-plus',
-          action: () => this.onNewFile()
-        }, {
-          label: 'New Folder',
-          icon: 'fa-solid fa-folder-plus',
-          action: () => this.onNewFolder()
-        }],
-        uploadMenu: [{
-          label: 'Upload File',
-          icon: 'fa-solid fa-file-arrow-up',
-          action: () => this.onUploadFile()
-        }, {
-          label: 'Upload Folder',
-          icon: 'fa-regular fa-folder-open',
-          action: () => this.onUploadFolder()
-        }],
-        newAndUploadMenu: [{
-          label: 'Upload File',
-          icon: 'fa-solid fa-file-arrow-up',
-          action: () => this.onUploadFile()
-        }, {
-          label: 'Upload Folder',
-          icon: 'fa-regular fa-folder-open',
-          action: () => this.onUploadFolder()
-        }, {
-          separator:true
-        }, {
-          label: 'New File',
-          icon: 'fa-solid fa-file-circle-plus',
-          action: () => this.onNewFile()
-        }, {
-          label: 'New Folder',
-          icon: 'fa-solid fa-folder-plus',
-          action: () => this.onNewFolder()
-        }]
-      };
-    },
-    computed: {
-      isReadonly() {
-        if (this.currentResourcePath === '/shares/') return true;
-        if (this.currentResourcePath === '/groupfolders/') return true;
-        if (!this.currentShare) return false;
-        return this.currentShare.readonly;
-      },
-    },
-    async mounted() {
-      const that = this;
-
-      async function handleHash(hash) {
-        // we handle decoded paths internally
-        hash = decodeURIComponent(hash);
-
-        that.activeResourceType = '';
-
-        if (hash.indexOf('files/home/') === 0) {
-          if (await that.loadPath(hash.slice('files'.length))) that.view = VIEWS.MAIN;
-          else window.location.hash = 'files/home/';
-        } else if (hash.indexOf('files/shares/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash.indexOf('files/groupfolders/') === 0) {
-          that.loadPath(hash.slice('files'.length));
-          that.view = VIEWS.MAIN;
-        } else if (hash === 'recent') {
-          that.view = VIEWS.RECENT;
-        } else if (hash === 'favorites') {
-          that.view = VIEWS.FAVORITES;
-        } else if (hash.indexOf('users') === 0) {
-          if (! await that.$refs.usersView.open()) return window.location.hash = 'files/home/';
-          that.view = VIEWS.USERS;
-          that.onCloseSidebar();
-        } else if (hash.indexOf('shares') === 0) {
-          if (! await that.$refs.sharesView.open()) return window.location.hash = 'files/home/';
-          that.view = VIEWS.SHARES;
-          that.onCloseSidebar();
-        } else if (hash.indexOf('settings') === 0) {
-          if (! await that.$refs.settingsView.open()) return window.location.hash = 'files/home/';
-          that.view = VIEWS.SETTINGS;
-          that.onCloseSidebar();
-        } else {
-          window.location.hash = 'files/home/';
-        }
-      }
-
-      this.mainModel = createMainModel(API_ORIGIN);
-      this.shareModel = createShareModel(API_ORIGIN);
-      this.directoryModel = createDirectoryModel(API_ORIGIN);
-      this.favoriteModel = createFavoriteModel(API_ORIGIN);
-
-      try {
-        this.profile = await this.mainModel.getProfile();
-      } catch (e) {
-        return console.error('mounted: getProfile() error', e);
-      }
-
-      if (this.profile) await this.refreshConfig();
-      else this.profile = {};
-
-      // initial load with hash if any
-      const hash = localStorage.returnTo || window.location.hash.slice(1);
-      localStorage.returnTo = '';
-
-      await handleHash(hash);
-
-      window.addEventListener('hashchange', () => {
-        // allows us to not reload but only change the hash
-        if (this.currentHash === decodeURIComponent(window.location.hash)) return;
-        this.currentHash = window.location.hash;
-
-        handleHash(window.location.hash.slice(1));
-      }, false);
-
-      // TODO make this dynamic
-      this.showSize = window.innerWidth >= 576;
-
-      this.ready = true;
-    },
-    methods: {
-      prettyFileSize,
-      prettyDate,
-      prettyLongDate,
-      async onToggleFavorite(entry) {
-        if (entry.favorite) {
-          await this.favoriteModel.remove(entry.favorite.id);
-          entry.favorite = null;
-          entry.star = false;
-        } else {
-          const id = await this.favoriteModel.create({ owner: entry.owner, path: entry.filePath })
-          entry.favorite = { id, owner: entry.owner, path: entry.filePath };
-          entry.star = true;
-        }
-      },
-      onMainMenu(event, elem) {
-        this.$refs.mainMenuElement.open(event, event.target);
-      },
-      showAllFiles() {
-        window.location.hash = 'files/home/';
-      },
-      async uploadJobPreFlightCheckHandler(job) {
-        // abort if target folder already exists
-        if (job.folder && await this.directoryModel.exists(parseResourcePath(job.targetFolder), job.folder)) {
-          window.pankow.notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
-          return false;
-        }
-
-        return true;
-      },
-      async uploadHandler(targetDir, file, progressHandler) {
-        const resource = parseResourcePath(targetDir);
-
-        await this.directoryModel.upload(resource, file, progressHandler);
-
-        this.refresh();
-      },
-      onCloseSidebar() {
-        this.$refs.sideBar.close();
-      },
-      async onLogin() {
-        this.view = VIEWS.LOGIN;
-      },
-      async onLogout() {
-        await this.mainModel.logout();
-        window.location.href = '/';
-      },
-      onInvalidSession() {
-        // stash for use later after re-login
-        localStorage.returnTo = window.location.hash.slice(1);
-
-        this.profile.username = '';
-        this.profile.email = '';
-        this.profile.displayName = '';
-
-        this.onLogin();
-      },
-      onViewerEntryChanged(entry) {
-        // prevent to reload image
-        this.currentHash = `#files${entry.resourcePath}`
-        window.location.hash = `files${entry.resourcePath}`;
-      },
-      onUploadFinished() {
-        this.refresh();
-      },
-      onUploadFile() {
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-        this.$refs.fileUploader.onUploadFile(resource.resourcePath);
-      },
-      onUploadFolder() {
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-        this.$refs.fileUploader.onUploadFolder(resource.resourcePath);
-      },
-      async onNewFile() {
-        const newFileName = await this.$refs.inputDialog.prompt({
-          message: 'New Filename',
-          value: '',
-          confirmStyle: 'success',
-          confirmLabel: 'Save',
-          rejectLabel: 'Close'
-        });
-
-        if (!newFileName) return;
-
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-
-        try {
-          await this.directoryModel.newFile(resource, newFileName);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
-          else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('File name not allowed');
-          else if (error.reason === DirectoryModelError.CONFLICT) console.error('File already exists');
-          else console.error('Failed to add file, unknown error:', error)
-          return;
-        }
-
-        await this.refresh();
-
-        this.$refs.directoryView.highlightByName(newFileName);
-      },
-      async onNewFolder() {
-        const newFolderName = await this.$refs.inputDialog.prompt({
-          message: 'New Foldername',
-          value: '',
-          confirmStyle: 'success',
-          confirmLabel: 'Save',
-          rejectLabel: 'Close'
-        });
-
-        if (!newFolderName) return;
-
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-
-        try {
-          await this.directoryModel.newFolder(resource, newFolderName);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
-          else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('Folder name not allowed');
-          else if (error.reason === DirectoryModelError.CONFLICT) console.error('Folder already exists');
-          else console.error('Failed to add folder, unknown error:', error)
-          return;
-        }
-
-        await this.refresh();
-
-        this.$refs.directoryView.highlightByName(newFolderName);
-      },
-      async pasteHandler(action, files, target) {
-        if (!files || !files.length) return;
-
-        window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-        this.pasteInProgress = true;
-
-        const resource = parseResourcePath((target && target.isDirectory) ? sanitize(this.currentResourcePath + '/' + target.fileName) : this.currentResourcePath);
-        await this.directoryModel.paste(resource, action, files);
-        await this.refresh();
-
-        window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-        this.pasteInProgress = false;
-      },
-      async onWebDavSettings() {
-        this.webDavPasswordDialog.error = '';
-        this.webDavPasswordDialog.password = '';
-        this.$refs.webDavPasswordDialog.open();
-      },
-      async onWebDavSettingsSubmit() {
-        try {
-          await this.mainModel.setWebDavPassword(this.webDavPasswordDialog.password);
-        } catch (error) {
-          if (error.reason === DirectoryModelError.NO_AUTH) this.onInvalidSession();
-          else {
-            this.webDavPasswordDialog.error = 'Unkown error, check logs';
-            console.error('Failed to set webdav password:', error)
-          }
-
-          return;
-        }
-
-        this.$refs.webDavPasswordDialog.close();
-      },
-      async refreshConfig() {
-        try {
-          this.config = await this.mainModel.getConfig();
-        } catch (e) {
-          if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
-        }
-      },
-      clearSelection() {
-        this.selectedEntries = [];
-      },
-      onSelectionChanged(selectedEntries) {
-        this.selectedEntries = selectedEntries;
-      },
-      async onFileSaved(entry, content, done) {
-        try {
-          await this.directoryModel.saveFile(entry.resource, content);
-        } catch (error) {
-          console.error(`Failed to save file ${entry.resourcePath}`, error);
-        }
-
-        if (typeof done === 'function') done();
-      },
-      // if entries is provided download those, otherwise selected entries, otherwise all entries
-      async downloadHandler(entries) {
-        // in case we got a single entry
-        if (entries && !Array.isArray(entries)) entries = [ entries ];
-        if (!entries) entries = this.selectedEntries;
-        if (entries.length === 0) entries = this.entries;
-
-        const resource = parseResourcePath(this.currentResourcePath);
-        await this.directoryModel.download(resource, entries);
-      },
-      // either dataTransfer (external drop) or files (internal drag)
-      async onDrop(targetFolder, dataTransfer, files) {
-        const fullTargetFolder = sanitize(`${this.currentResourcePath}/${targetFolder}`);
-
-        if (dataTransfer) {
-          async function getFile(entry) {
-            return new Promise((resolve, reject) => {
-              entry.file(resolve, reject);
-            });
-          }
-
-          const fileList = [];
-          async function traverseFileTree(item, path) {
-            return new Promise(async (resolve, reject) => {
-              if (item.isFile) {
-                fileList.push(await getFile(item));
-                resolve();
-              } else if (item.isDirectory) {
-                // Get folder contents
-                const dirReader = item.createReader();
-                const entries = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
-
-                for (let i in entries) {
-                  await traverseFileTree(entries[i], item.name);
-                }
-
-                resolve();
-              } else {
-                console.log('Skipping uknown file type', item);
-                resolve();
-              }
-            });
-          }
-
-          for (const item of dataTransfer.items) {
-            const entry = item.webkitGetAsEntry();
-            if (!entry) {
-              console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
-              continue;
-            }
-
-            if (entry.isFile) {
-              fileList.push(await getFile(entry));
-            } else if (entry.isDirectory) {
-              await traverseFileTree(entry, sanitize(`${this.currentResourcePath}/${targetFolder}`));
-            }
-          }
-          this.$refs.fileUploader.addFiles(fileList, sanitize(`${this.currentResourcePath}/${targetFolder}`));
-        } else {
-          if (!files.length) return;
-
-          window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-          // check ctrl for cut/copy
-          await this.directoryModel.paste(parseResourcePath(fullTargetFolder), 'cut', files);
-          await this.refresh();
-
-          window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-        }
-      },
-      async deleteHandler(entries) {
-        if (!entries) return;
-
-        function start_and_end(str) {
-          if (str.length > 100) {
-            return str.substr(0, 45) + ' ... ' + str.substr(str.length-45, str.length);
-          }
-          return str;
-        }
-
-        const confirmed = await this.$refs.inputDialog.confirm({
-          message: `Really delete ${entries.length} item${ entries.length === 1 ? '' : 's' }?`,
-          confirmStyle: 'danger',
-          confirmLabel: 'Yes',
-          rejectLabel: 'Cancel'
-        });
-
-        if (!confirmed) return;
-
-        window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-        for (let i in entries) {
-          try {
-            const resource = parseResourcePath(sanitize(this.currentResourcePath + '/' + entries[i].fileName));
-            await this.directoryModel.remove(resource);
-          } catch (e) {
-            console.error(`Failed to remove file ${entries[i].name}:`, e);
-          }
-        }
-        
-        await this.refresh();
-
-        window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-      },
-      async renameHandler(file, newName) {
-        // this will make the change immediate for the UI even if not yet committed
-        file.name = newName;
-
-        const fromResource = file.resource;
-        const toResource = parseResourcePath(sanitize(this.currentResourcePath + '/' + newName));
-
-        if (fromResource.resourcePath === toResource.resourcePath) return;
-
-        await this.directoryModel.rename(fromResource, toResource);
-        await this.refresh();
-
-        this.$refs.directoryView.highlightByName(file.name);
-      },
-      isShareable() {
-        const resource = parseResourcePath(this.currentResourcePath || 'files/');
-        return resource.type !== 'shares';
-      },
-      async refreshShareDialogEntry(entry = null) {
-        this.shareDialog.entry = await this.directoryModel.get(entry || this.shareDialog.entry);
-
-        this.shareDialog.sharedWith = this.shareDialog.entry.sharedWith.filter((s) => s.receiverUsername);
-        this.shareDialog.sharedLinks = this.shareDialog.entry.sharedWith.filter((s) => !s.receiverUsername);
-
-        this.shareDialog.users.forEach((user) => {
-          user.alreadyUsed = this.shareDialog.entry.sharedWith.find((share) => { return share.receiverUsername === user.username; });
-        });
-
-        this.refresh(this.shareDialog.entry);
-      },
-      async shareHandler(entry) {
-        this.shareDialog.error = '';
-        this.shareDialog.receiverUsername = '';
-        this.shareDialog.readonly = false;
-        this.shareDialog.shareLink.expires = false;
-        this.shareDialog.shareLink.expiresAt = new Date()
-
-        // start with tomorrow
-        this.shareDialog.shareLink.expiresAt.setDate(this.shareDialog.shareLink.expiresAt.getDate() + 1);
-
-        // prepare available users for sharing
-        const users = await this.mainModel.getUsers();
-        this.shareDialog.users = users.filter((u) => { return u.username !== this.profile.username; });
-        this.shareDialog.users.forEach((u) => { u.userAndDisplayName = u.displayName + ' ( ' + u.username + ' )'; });
-
-        this.refreshShareDialogEntry(entry);
-
-        this.$refs.shareDialog.open();
-      },
-      copyShareIdLinkToClipboard(shareId) {
-        copyToClipboard(this.shareModel.getLink(shareId));
-        window.pankow.notify('Share link copied to clipboard');
-      },
-      async onCreateShareLink() {
-        const path = this.shareDialog.entry.filePath;
-        const readonly = true; // always readonly for now
-        const expiresAt = this.shareDialog.shareLink.expires ? this.shareDialog.shareLink.expiresAt : 0;
-        const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
-        const ownerGroupfolder = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
-
-        const shareId = await this.shareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, expiresAt });
-
-        this.copyShareIdLinkToClipboard(shareId);
-
-        this.refreshShareDialogEntry();
-      },
-      async onCreateShare() {
-        const path = this.shareDialog.entry.filePath;
-        const readonly = this.shareDialog.readonly;
-        const receiverUsername = this.shareDialog.receiverUsername;
-        const ownerUsername = this.shareDialog.entry.group ? null : this.shareDialog.entry.owner;
-        const ownerGroupfolder = this.shareDialog.entry.group ? this.shareDialog.entry.group.id : null;
-
-        await this.shareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, receiverUsername });
-
-        // reset the form
-        this.shareDialog.error = '';
-        this.shareDialog.receiverUsername = '';
-        this.shareDialog.readonly = false;
-
-        // refresh the entry
-        this.shareDialog.entry = await this.directoryModel.get(this.shareDialog.entry);
-        this.refreshShareDialogEntry();
-      },
-      async onDeleteShare(share) {
-        await this.shareModel.remove(share.id);
-        this.refreshShareDialogEntry();
-      },
-      async refresh(entry = null) {
-        if (entry) {
-          try {
-            entry = await this.directoryModel.get(entry.resource, entry.resource.path);
-          } catch (error) {
-            if (error.status === 401) return this.onInvalidSession();
-            else if (error.status === 404) this.error = 'Does not exist';
-            else console.error(error);
-            return;
-          }
-
-          // this will replace the entry to keep bindings alive
-          const idx = this.entries.findIndex((e) => e.id === entry.id );
-          if (idx !== -1) this.entries.splice(idx, 1, entry);
-        } else {
-          const resource = parseResourcePath(this.currentResourcePath);
-
-          try {
-            entry = await this.directoryModel.get(resource, resource.path);
-          } catch (error) {
-            if (error.status === 401) return this.onInvalidSession();
-            else if (error.status === 404) this.error = 'Does not exist';
-            else console.error(error);
-            return;
-          }
-
-          entry.files.forEach(function (e) {
-            e.extension = getExtension(e);
-            e.filePathNew = e.fileName;
-          });
-
-          this.entry = entry;
-          this.entries = entry.files;
-        }
-      },
-      async loadMainDirectory(path, entry, forceLoad = false) {
-        // path is files/filepath or shares/shareid/filepath
-        const resource = parseResourcePath(path);
-
-        // nothing new
-        if (!forceLoad && this.currentResourcePath === resource.resourcePath) return;
-
-        if (!entry) {
-          try {
-            entry = await this.directoryModel.get(resource, resource.path);
-          } catch (error) {
-            this.entries = [];
-            entry = {};
-
-            if (error.status === 401) return this.onInvalidSession();
-            else if (error.status === 404) this.error = 'Does not exist';
-            else console.error(error);
-          }
-        }
-
-        this.activeResourceType = resource.type;
-        this.currentPath = resource.path;
-        this.currentResourcePath = resource.resourcePath;
-        this.currentShare = entry.share || null;
-
-        if (resource.type === 'home') {
-          this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-            return {
-              label: decodeURIComponent(e),
-              route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-            };
-          });
-          this.breadCrumbHome = {
-            icon: 'fa-solid fa-house',
-            route: '#files/home/'
-          };
-        } else if (resource.type === 'shares') {
-          this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-            return {
-              label: decodeURIComponent(e),
-              route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-            };
-          });
-          this.breadCrumbHome = {
-            icon: 'fa-solid fa-share-nodes',
-            route: '#files/shares/'
-          };
-
-          // if we are not toplevel, add the share information
-          if (entry.share) {
-            this.breadCrumbs.unshift({
-              label: entry.share.filePath.slice(1), // remove slash at the beginning
-              route: '#files/shares/' + resource.shareId + '/'
-            });
-          }
-        } else if (resource.type === 'groupfolders') {
-          this.breadCrumbs = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-            return {
-              label: decodeURIComponent(e),
-              route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-            };
-          });
-          this.breadCrumbHome = {
-            icon: 'fa-solid fa-user-group',
-            route: '#files/groupfolders/'
-          };
-
-          // if we are not toplevel, add the groupfolder information
-          if (entry.group) {
-            this.breadCrumbs.unshift({
-              label: entry.group.name,
-              route: '#files/groupfolders/' + entry.group.id + '/'
-            });
-          }
-        } else {
-          console.error('FIXME breadcrumbs for resource type', resource.type);
-        }
-
-        entry.files.forEach(function (e) {
-          e.extension = getExtension(e);
-          e.filePathNew = e.fileName;
-        });
-
-        this.entry = entry;
-        this.entries = entry.files;
-        this.viewer = '';
-      },
-      // return false/true on fail/success
-      async loadPath(path, forceLoad = false) {
-        const resource = parseResourcePath(path || this.currentResourcePath);
-
-        // clear potential viewer first
-        if (this.viewer) this.viewer = '';
-
-        if (!forceLoad && this.currentResourcePath === resource.resourcePath) return true;
-
-        let entry;
-        try {
-          entry = await this.directoryModel.get(resource);
-        } catch (error) {
-          this.entries = [];
-          entry = {};
-
-          if (error.status === 401 || error.status === 403) {
-            this.onInvalidSession();
-            return false;
-          } else if (error.status === 404) {
-            console.error('Failed to load entry', resource, error);
-            window.pankow.notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
-            return false;
-          } else {
-            console.error(error);
-            return false;
-          }
-        }
-
-        window.location.hash = `files${resource.resourcePath}`;
-
-        if (entry.isDirectory) await this.loadMainDirectory(resource.resourcePath, entry, forceLoad);
-        else await this.loadMainDirectory(resource.parentResourcePath, null, forceLoad);
-
-        // if we don't have a folder load the viewer
-        if (!entry.isDirectory) {
-          if (this.$refs.imageViewer.canHandle(entry)) {
-            const otherSupportedEntries = this.entries.filter((e) => this.$refs.imageViewer.canHandle(e));
-
-            this.$refs.imageViewer.open(entry, otherSupportedEntries);
-            this.viewer = 'image';
-          } else if (this.$refs.pdfViewer.canHandle(entry)) {
-            this.$refs.pdfViewer.open(entry);
-            this.viewer = 'pdf';
-          } else if (this.mainModel.canHandleWithOffice(entry)) {
-            window.open('/office.html#' + entry.resourcePath, '_blank');
-
-            // need to reset the hash as the original location should be the folder containing the file
-            window.location.hash = `files${resource.resourcePath}`.slice(0, -entry.name.length);
-          } else if (this.$refs.markdownViewer.canHandle(entry)) {
-            this.$refs.markdownViewer.open(entry, await this.directoryModel.getRawContent(resource));
-            this.viewer = 'markdown';
-          } else if (this.$refs.textViewer.canHandle(entry)) {
-            this.$refs.textViewer.open(entry, await this.directoryModel.getRawContent(resource));
-            this.viewer = 'text';
-          } else {
-            this.viewer = 'generic';
-            this.$refs.genericViewer.open(entry);
-          }
-        } else {
-          this.clearSelection();
-        }
-
-        return true;
-      },
-      onOpen(entry) {
-        if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
-        else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
-        else window.location.hash = `files/home${entry.filePath}`;
-      },
-      onViewerClose() {
-        this.viewer = '';
-
-        // update the browser hash
-        const resource = parseResourcePath(this.currentResourcePath || '/home/');
-        window.location.hash = `files${resource.resourcePath}`;
-      },
-      onUp() {
-        if (window.location.hash.indexOf('#shares/') === 0) {
-          const hash = window.location.hash.slice('#shares/'.length);
-
-          // if we are first level of that share, go back to all shares
-          if (!hash.split('/')[1]) window.location.hash = 'shares/';
-          else window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
-        } else {
-          const hash = window.location.hash.slice(1);
-          window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
-        }
-      },
-    }
-};
-
-</script>
 
 <style scoped>
 

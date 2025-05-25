@@ -1,3 +1,58 @@
+<script setup>
+
+import { ref, useTemplateRef } from 'vue';
+import { Spinner, TextInput } from 'pankow';
+import MainModel from '../models/MainModel.js';
+
+const emit = defineEmits(['item-activated']);
+
+const searchResultsPanel = useTemplateRef('searchResultsPanel');
+const searchBar = useTemplateRef('searchBar');
+
+const searchBusy = ref(false);
+const dismissed = ref(false);
+const searchQuery = ref('');
+const searchResults = ref([]);
+const resultsOpen = ref(false);
+const open = ref(false);
+
+async function onSearch() {
+  if (!searchQuery.value) return;
+
+  searchBusy.value = true;
+  const results = await MainModel.search(searchQuery.value);
+  searchBusy.value = false;
+
+  if (dismissed.value) return;
+
+  searchResults.value = results;
+  resultsOpen.value = true;
+}
+
+function onDismiss() {
+  open.value = false;
+  resultsOpen.value = false;
+
+  searchQuery.value = '';
+  searchBusy.value = false;
+  dismissed.value = true;
+
+  setTimeout(() => { searchResults.value = []; }, 1000);
+}
+
+function onFocus() {
+  open.value = true;
+  dismissed.value = false;
+  searchResultsPanel.value.style.width = searchBar.value.offsetWidth + 'px';
+}
+
+function onOpenEntryFromSearch(entry) {
+  emit('item-activated', entry);
+  onDismiss();
+}
+
+</script>
+
 <template>
   <div class="search-bar-container" @keydown.esc="onDismiss" tabindex="1">
     <Transition name="pankow-fade">
@@ -6,10 +61,10 @@
     <div class="search-bar" ref="searchBar" :class="{'open': open,'results-open': resultsOpen}">
       <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
       <Spinner v-show="searchBusy" />
-      <TextInput v-model="searchQuery" ref="searchInput" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
+      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
     </div>
     <Transition name="pankow-roll-down">
-      <div v-show="resultsOpen" ref="searchResults" class="search-result-panel">
+      <div v-show="resultsOpen" ref="searchResultsPanel" class="search-result-panel">
         <div v-show="searchResults.length === 0" class="no-search-results">
           Nothing found
         </div>
@@ -24,79 +79,6 @@
     </Transition>
   </div>
 </template>
-
-<script>
-
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN : '';
-
-import { createMainModel } from '../models/MainModel.js';
-
-import { Spinner, TextInput } from 'pankow';
-
-export default {
-  name: 'SearchBar',
-  components: {
-    Spinner,
-    TextInput
-  },
-  emits: [
-    'item-activated'
-  ],
-  data() {
-    return {
-      mainModel: null,
-      searchBusy: false,
-      dismissed: false,
-      searchQuery: '',
-      searchResults: [],
-      resultsOpen: false,
-      open: false
-    };
-  },
-  async mounted() {
-    this.mainModel = createMainModel(API_ORIGIN);
-  },
-  methods: {
-    async onSearch() {
-      if (!this.searchQuery) return;
-
-      this.searchBusy = true;
-      const results = await this.mainModel.search(this.searchQuery);
-      this.searchBusy = false;
-
-      if (this.dismissed) return;
-
-      this.searchResults = results;
-      this.resultsOpen = true;
-
-      // maintain focus
-      setTimeout(() => { this.$refs.searchInput.$el.focus(); }, 0);
-    },
-    onDismiss() {
-      this.open = false;
-      this.resultsOpen = false;
-
-      this.searchQuery = '';
-      this.searchBusy = false;
-      this.dismissed = true;
-
-      setTimeout(() => {
-        this.searchResults = [];
-      }, 1000);
-    },
-    onFocus() {
-      this.open = true;
-      this.dismissed = false;
-      this.$refs.searchResults.style.width = this.$refs.searchBar.offsetWidth + 'px';
-    },
-    onOpenEntryFromSearch(entry) {
-      this.$emit('item-activated', entry);
-      this.onDismiss();
-    }
-  }
-};
-
-</script>
 
 <style scoped>
 

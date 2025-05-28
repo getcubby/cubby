@@ -940,9 +940,12 @@ onMounted(async () => {
                 >
                   <template #empty>
                     <div v-show="!entries.length" class="no-entries-placeholder">
-                      <p v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</p>
-                      <p v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">Not part of any group folder yet</p>
-                      <p v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</p>
+                      <div v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</div>
+                      <div v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">
+                        <span v-if="profile.admin"><Button href="#settings" icon="fa-solid fa-plus">Add Group Folder</Button></span>
+                        <span v-else>Not part of any group folder yet</span>
+                      </div>
+                      <div v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</div>
                     </div>
                   </template>
                 </DirectoryView>

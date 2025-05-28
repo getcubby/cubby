@@ -16,6 +16,8 @@ onMounted(async () => {
   const entry = await directoryModel.get(resource);
   const handle = await MainModel.getOfficeHandle(entry);
 
+  // TODO set window title
+
   const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
   wopiUrl.value = `${handle.url}WOPISrc=${wopiSrc}`;
   wopiToken.value = handle.token;

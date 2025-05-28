@@ -196,6 +196,7 @@ async function onOfficeSubmit() {
   } catch (error) {
     office.value.error = error.message;
     office.value.busy = false;
+    isOfficeWorking.value = false;
     return;
   }
 

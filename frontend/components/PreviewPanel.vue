@@ -35,28 +35,31 @@ function onToggle() {
     <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
 
     <div class="header" style="padding-bottom: 10px;">Details</div>
-    <div class="preview-icon-container">
-      <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
-      <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
-    </div>
-    <div class="detail" v-show="selectedEntries.length <= 1">
-      <p>Owner</p>
-      <span>{{ entry.owner }}</span>
-    </div>
-    <div class="detail" v-show="selectedEntries.length <= 1">
-      <p>Updated</p>
-      <span>{{ prettyLongDate(entry.mtime) }}</span>
-    </div>
-    <div class="detail" v-show="selectedEntries.length > 1">
-      <p>{{ selectedEntries.length }} files selected</p>
-    </div>
-    <div class="detail">
-      <p>Size</p>
-      <span>{{ prettyFileSize(combinedSize) }}</span>
-    </div>
-    <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
-      <p>Shared With</p>
-      <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
+
+    <div v-if="selectedEntries.length || Object.keys(parentEntry).length !== 0">
+      <div class="preview-icon-container">
+        <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
+        <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
+      </div>
+      <div class="detail" v-show="selectedEntries.length <= 1">
+        <p>Owner</p>
+        <span>{{ entry.owner }}</span>
+      </div>
+      <div class="detail" v-show="selectedEntries.length <= 1">
+        <p>Updated</p>
+        <span>{{ prettyLongDate(entry.mtime) }}</span>
+      </div>
+      <div class="detail" v-show="selectedEntries.length > 1">
+        <p>{{ selectedEntries.length }} files selected</p>
+      </div>
+      <div class="detail">
+        <p>Size</p>
+        <span>{{ prettyFileSize(combinedSize) }}</span>
+      </div>
+      <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
+        <p>Shared With</p>
+        <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
+      </div>
     </div>
   </div>
 </template>

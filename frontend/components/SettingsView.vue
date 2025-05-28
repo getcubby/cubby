@@ -51,6 +51,7 @@ const office = ref({
   busy: false,
   wopiHost: '',
 });
+const isOfficeWorking = ref(false);
 const groupFolderTableModel = ref([]);
 const groupFolderAdd = ref({
   error: '',
@@ -209,6 +210,8 @@ async function onOfficeSubmit() {
 
   await refreshConfig();
 
+  isOfficeWorking.value = MainModel.isOfficeWorking();
+
   office.value.busy = false;
 }
 
@@ -222,6 +225,7 @@ onMounted(async () => {
 
   try {
     office.value.wopiHost = await MainModel.getWopiHost();
+    isOfficeWorking.value = MainModel.isOfficeWorking();
   } catch (error) {
     office.value.wopiHost = ''
     office.value.error = error.message;
@@ -307,6 +311,7 @@ onMounted(async () => {
       <br/>
       <small class="has-error" v-show="office.error">{{ office.error }}</small>
     </form>
+    <div v-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</div>
   </div>
 </template>
 

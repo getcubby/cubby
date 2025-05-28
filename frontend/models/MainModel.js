@@ -96,6 +96,10 @@ function canHandleWithOffice(entry) {
   return configCache.viewers.collabora.extensions.find(function (e) { return entry.fileName.endsWith(e); });
 }
 
+function isOfficeWorking() {
+  return canHandleWithOffice({ fileName: '.rtf'} );
+}
+
 async function getOfficeHandle(entry) {
   let result;
   try {
@@ -179,6 +183,7 @@ export default {
   setWebDavPassword,
   setAdmin,
   canHandleWithOffice,
+  isOfficeWorking,
   getOfficeHandle,
   getCollabHandle,
   recent,

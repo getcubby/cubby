@@ -309,10 +309,9 @@ onMounted(async () => {
         <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
         <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy" tool>Save</Button>
       </InputGroup>
-      <br/>
-      <small class="has-error" v-show="office.error">{{ office.error }}</small>
+      <small v-if="office.error" class="has-error"><i class="fa-solid fa-xmark"></i> {{ office.error }}</small>
+      <small v-else-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</small>
     </form>
-    <div v-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</div>
   </div>
 </template>
 

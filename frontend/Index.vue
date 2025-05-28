@@ -696,6 +696,10 @@ const markdownViewer = useTemplateRef('markdownViewer');
 const textViewer = useTemplateRef('textViewer');
 const genericViewer = useTemplateRef('genericViewer');
 
+async function onGroupFoldersChanged() {
+  await loadMainDirectory(currentResourcePath.value, null, true);
+}
+
 // return false/true on fail/success
 async function loadPath(path, forceLoad = false) {
   const resource = parseResourcePath(path || currentResourcePath.value);
@@ -880,7 +884,7 @@ onMounted(async () => {
       <div class="content">
         <SharesView v-if="view === VIEWS.SHARES" />
         <UsersView v-if="view === VIEWS.USERS" :profile="profile" />
-        <SettingsView v-if="view === VIEWS.SETTINGS" :profile="profile" />
+        <SettingsView v-if="view === VIEWS.SETTINGS" :profile="profile" @groupfolders-changed="onGroupFoldersChanged()"/>
         <RecentView v-if="view === VIEWS.RECENT" @item-activated="onOpen" />
         <FavoriteView v-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
 

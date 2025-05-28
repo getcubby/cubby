@@ -13,6 +13,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(['groupfolders-changed']);
+
 const refreshConfig = inject('refreshConfig');
 
 const groupFolderTableColumns = {
@@ -73,6 +75,8 @@ async function refreshGroupFolders() {
   } catch (error) {
     console.error('Failed to list groupFolder.', error);
   }
+
+  emit('groupfolders-changed');
 }
 
 // helper for member add/edit

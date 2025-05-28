@@ -617,8 +617,8 @@ async function loadMainDirectory(path, entry, forceLoad = false) {
       entry = {};
 
       if (error.status === 401) return onInvalidSession();
-      else if (error.status === 404) uiError.value = 'Does not exist';
-      else console.error(error);
+      else if (error.status === 404) return uiError.value = 'Does not exist';
+      else return console.error(error);
     }
   }
 

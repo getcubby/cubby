@@ -97,16 +97,16 @@ function canHandleWithOffice(entry) {
 }
 
 async function getOfficeHandle(entry) {
-  let error, result;
+  let result;
   try {
     result = await fetcher.get(`${API_ORIGIN}/api/v1/office/handle`, { resourcePath: entry.resourcePath });
   } catch (e) {
-    error = e;
+    return [e];
   }
 
-  if (error || result.status !== 200) throw new Error('Failed to get office handle', { cause: error || result })
+  if (result.status !== 200) return [result];
 
-  return result.body;
+  return [null, result.body];
 }
 
 async function getCollabHandle(entry) {

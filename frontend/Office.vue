@@ -13,10 +13,11 @@ const wopiUrl = ref('');
 
 onMounted(async () => {
   const resource = parseResourcePath(window.location.hash.slice(1));
-  const entry = await directoryModel.get(resource);
-  const handle = await MainModel.getOfficeHandle(entry);
+  const entry = await DirectoryModel.get(resource);
+  const [error, handle] = await MainModel.getOfficeHandle(entry);
+  if (error) return console.error(error);
 
-  // TODO set window title
+  window.document.title = entry.fileName + ' - Cubby';
 
   const wopiSrc = `${window.location.origin}/api/v1/office/wopi/files/${handle.handleId}`;
   wopiUrl.value = `${handle.url}WOPISrc=${wopiSrc}`;

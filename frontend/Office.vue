@@ -26,7 +26,11 @@ onMounted(async () => {
   // https://sdk.collaboraonline.com/docs/postmessage_api.html#
   window.addEventListener('message', (event) => {
     try {
-      const data = JSON.parse(event.data);
+      let data = event.data;
+      if (!data) return;
+
+      if (typeof data === 'string') data = JSON.parse(data);
+
       if (data.MessageId === 'App_LoadingStatus') {
         if (data.Values && data.Values.Status === 'Document_Loaded') {
 

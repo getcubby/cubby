@@ -54,7 +54,7 @@ async function remove(shareId) {
 }
 
 function getLink(shareId) {
-  return `${window.location.API_ORIGIN}/api/v1/shares/${shareId}?type=raw`;
+  return `${window.location.origin}/api/v1/shares/${shareId}?type=raw`;
 }
 
 export default {

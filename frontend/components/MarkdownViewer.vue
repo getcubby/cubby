@@ -77,6 +77,8 @@ import { Schema } from "prosemirror-model";
 import "prosemirror-gapcursor/style/gapcursor.css";
 import './MarkdownViewer.css';
 
+import MainModel from '../models/MainModel.js';
+
 const cubbySchema = schema;
 // Start with schema below to add custom nodes and marks
 // const cubbySchema = new Schema({
@@ -414,7 +416,7 @@ export default {
       this.entry = entry;
 
       // starts the ydoc if not exists
-      const collabHandle = await this.$root.mainModel.getCollabHandle(entry);
+      const collabHandle = await MainModel.getCollabHandle(entry);
 
       const ydoc = new Y.Doc();
 

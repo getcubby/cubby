@@ -29,6 +29,13 @@ async function isAuthenticated(req, res, next) {
     }
 
     if (user) {
+        // keep the internal database in-sync with the open id provider info
+        if (user.displayName !== req.oidc.user.name || user.email !== req.oidc.user.email) {
+            await users.update(user.username, { displayName: req.oidc.user.name, email: req.oidc.user.email });
+            user.displayName = req.oidc.user.name;
+            user.email = req.oidc.user.email;
+        }
+
         req.user = user;
         return next();
     }

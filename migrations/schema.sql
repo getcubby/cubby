@@ -16,7 +16,7 @@
 
 CREATE TABLE IF NOT EXISTS users(
     username VARCHAR(128) NOT NULL UNIQUE,
-    email VARCHAR(254) NOT NULL UNIQUE,
+    email VARCHAR(254) NOT NULL,
     display_name VARCHAR(512) DEFAULT '',
     password VARCHAR(1024) NOT NULL,
     salt VARCHAR(512) NOT NULL,

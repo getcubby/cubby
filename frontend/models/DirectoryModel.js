@@ -1,5 +1,5 @@
-import { fetcher } from 'pankow';
-import { sanitize, pathJoin } from 'pankow/utils';
+import { fetcher } from '@cloudron/pankow';
+import { sanitize, pathJoin } from '@cloudron/pankow/utils';
 import { parseResourcePath } from '../utils.js';
 import { API_ORIGIN } from '../utils.js';
 

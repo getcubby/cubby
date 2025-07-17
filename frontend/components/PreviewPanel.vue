@@ -2,7 +2,7 @@
 
 import { ref, computed } from 'vue';
 import { getPreviewUrl } from '../utils.js';
-import { prettyLongDate, prettyFileSize } from 'pankow/utils';
+import { prettyLongDate, prettyFileSize } from '@cloudron/pankow/utils';
 
 const props = defineProps({
   parentEntry: {

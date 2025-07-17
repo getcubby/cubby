@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, useTemplateRef, onMounted, inject } from 'vue';
-import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from 'pankow';
+import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 import GroupFolderModel from '../models/GroupFolderModel.js';
 import slugify from '../slugify.js';

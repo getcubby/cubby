@@ -1,4 +1,4 @@
-import { fetcher } from 'pankow';
+import { fetcher } from '@cloudron/pankow';
 import { API_ORIGIN } from '../utils';
 
 let configCache = {};

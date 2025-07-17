@@ -4,7 +4,7 @@ import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import FavoriteModel from '../models/FavoriteModel.js';
 import SearchBar from './SearchBar.vue';
-import { Button, Icon, TopBar } from 'pankow';
+import { Button, Icon, TopBar } from '@cloudron/pankow';
 
 const emit = defineEmits(['item-activated']);
 

@@ -4,7 +4,7 @@ import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
 import SearchBar from './SearchBar.vue';
-import { Button, TopBar } from 'pankow';
+import { Button, TopBar } from '@cloudron/pankow';
 
 const emit = defineEmits(['item-activated']);
 

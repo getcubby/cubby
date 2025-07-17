@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef } from 'vue';
-import { utils } from 'pankow';
+import { utils } from '@cloudron/pankow';
 import { parseResourcePath } from './utils.js';
 import MainModel from './models/MainModel.js';
 import DirectoryModel from './models/DirectoryModel.js';

@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, useTemplateRef } from 'vue';
-import { Spinner, TextInput } from 'pankow';
+import { Spinner, TextInput } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 
 const emit = defineEmits(['item-activated']);

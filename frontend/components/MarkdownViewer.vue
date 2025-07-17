@@ -58,7 +58,7 @@
 <script>
 
 import { toRaw } from 'vue';
-import { MainLayout, Button, ButtonGroup, Icon, InputDialog, utils } from 'pankow';
+import { MainLayout, Button, ButtonGroup, Icon, InputDialog, utils } from '@cloudron/pankow';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';

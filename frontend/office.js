@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 
 // this is only for local dev where the origins differ
-import { fetcher, tooltip } from 'pankow';
+import { fetcher, tooltip } from '@cloudron/pankow';
 if (import.meta.env.DEV) fetcher.globalOptions.credentials = 'include';
 
 import '@fontsource/inter';

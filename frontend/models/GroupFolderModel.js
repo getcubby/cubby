@@ -1,4 +1,4 @@
-import { fetcher } from 'pankow';
+import { fetcher } from '@cloudron/pankow';
 import { API_ORIGIN } from '../utils';
 
 // This is for the groupFolder settings API normal user requests go via the DirectoryModel

@@ -1,7 +1,7 @@
 <script setup>
 
 import { API_ORIGIN } from '../utils.js';
-import { Button } from 'pankow';
+import { Button } from '@cloudron/pankow';
 
 </script>
 

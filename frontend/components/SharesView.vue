@@ -2,8 +2,8 @@
 
 import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
-import { Button, Icon, InputDialog, TableView } from 'pankow';
-import { prettyDate, prettyLongDate } from 'pankow/utils';
+import { Button, Icon, InputDialog, TableView } from '@cloudron/pankow';
+import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
 
 const props = defineProps({

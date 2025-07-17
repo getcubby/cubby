@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef } from 'vue';
-import { Button, Checkbox, Dialog, TableView } from 'pankow';
+import { Button, Checkbox, Dialog, TableView } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 
 const props = defineProps({

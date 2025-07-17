@@ -2,7 +2,7 @@
 
 import { ref, onMounted, useTemplateRef, computed, provide } from 'vue';
 import { API_ORIGIN, BASE_URL, parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
-import { prettyDate } from 'pankow/utils';
+import { prettyDate } from '@cloudron/pankow/utils';
 import {
   Breadcrumb,
   Button,
@@ -19,8 +19,8 @@ import {
   TabView,
   InputGroup,
   TopBar
-} from 'pankow';
-import { GenericViewer, ImageViewer, PdfViewer, TextViewer } from 'pankow/viewers';
+} from '@cloudron/pankow';
+import { GenericViewer, ImageViewer, PdfViewer, TextViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from './models/DirectoryModel.js';
 import MainModel from './models/MainModel.js';
 import ShareModel from './models/ShareModel.js';

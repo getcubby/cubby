@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef, computed, provide } from 'vue';
-import { API_ORIGIN, BASE_URL, parseResourcePath, getExtension, copyToClipboard, sanitize } from './utils.js';
+import { API_ORIGIN, BASE_URL, parseResourcePath, copyToClipboard, sanitize } from './utils.js';
 import { prettyDate } from '@cloudron/pankow/utils';
 import {
   Breadcrumb,
@@ -591,7 +591,6 @@ async function refresh(item = null) {
     }
 
     entry.value.files.forEach(function (e) {
-      e.extension = getExtension(e);
       e.filePathNew = e.fileName;
     });
 
@@ -628,7 +627,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   if (resource.type === 'home') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e),
+        label: decodeURIComponent(e.replaceAll('%', '%25')),
         route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -639,7 +638,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   } else if (resource.type === 'shares') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e),
+        label: decodeURIComponent(e.replaceAll('%', '%25')),
         route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -658,7 +657,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   } else if (resource.type === 'groupfolders') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e),
+        label: decodeURIComponent(e.replaceAll('%', '%25')),
         route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -679,7 +678,6 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   }
 
   item.files.forEach(function (e) {
-    e.extension = getExtension(e);
     e.filePathNew = e.fileName;
   });
 
@@ -796,7 +794,7 @@ function onUp() {
 onMounted(async () => {
   async function handleHash(hash) {
     // we handle decoded paths internally
-    hash = decodeURIComponent(hash);
+    hash = decodeURIComponent(hash.replaceAll('%', '%25'));
 
     activeResourceType.value = '';
 
@@ -844,7 +842,7 @@ onMounted(async () => {
 
   window.addEventListener('hashchange', () => {
     // allows us to not reload but only change the hash
-    if (currentHash.value === decodeURIComponent(window.location.hash)) return;
+    if (currentHash.value === decodeURIComponent(window.location.hash.replaceAll('%', '%25'))) return;
     currentHash.value = window.location.hash;
 
     handleHash(window.location.hash.slice(1));

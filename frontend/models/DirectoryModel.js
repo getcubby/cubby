@@ -1,6 +1,6 @@
 import { fetcher } from '@cloudron/pankow';
 import { sanitize, pathJoin } from '@cloudron/pankow/utils';
-import { parseResourcePath } from '../utils.js';
+import { parseResourcePath, getExtension } from '../utils.js';
 import { API_ORIGIN } from '../utils.js';
 
 class DirectoryModelError {
@@ -56,6 +56,7 @@ async function get(resource) {
   entry.isSharedWith = !!entry.sharedWith.length;
   entry.favorite = entry.favorite || null;
   entry.star = !!entry.favorite;
+  entry.extension = getExtension(entry);
 
   // this prepares the entries to be compatible with all components
   entry.files.forEach(child => {
@@ -66,6 +67,7 @@ async function get(resource) {
     child.icon = child.previewUrl;
     child.favorite = child.favorite || null;
     child.star = !!child.favorite;
+    child.extension = getExtension(child);
 
     // shares need to add the share id if we are on meta toplevel
     if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}`);
@@ -198,7 +200,7 @@ async function upload(resource, file, progressHandler) {
   const relativefilePath = (file.webkitRelativePath ? file.webkitRelativePath : file.name);
 
   // does not work with double extensions
-  const extension = relativefilePath.slice(relativefilePath.lastIndexOf('.') + 1)
+  const extension = relativefilePath.slice(relativefilePath.lastIndexOf('.') + 1);
 
   // find unique path
   let uniqueRelativeFilePath = sanitize(relativefilePath);

@@ -384,12 +384,8 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
         // TODO add option for overwrite
         await fsExtra.move(fullFilePath, fullNewFilePath, { overwrite: false });
     } catch (error) {
-        if (error.code === 'ERR_FS_CP_EINVAL') {
-            if (error.info?.message === 'src and dest cannot be the same') throw new MainError(MainError.CONFLICT);
-            else throw new MainError(MainError.BAD_FIELD);
-        } else {
-            throw new MainError(MainError.FS_ERROR, error);
-        }
+        if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
+        throw new MainError(MainError.FS_ERROR, error);
     }
 
     // TODO maybe be smart to check if folders are within the same parent folder
@@ -413,11 +409,13 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     try {
         // TODO add option for overwrite
-        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: false, recursive: true });
+        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: false, recursive: true, errorOnExist: true });
     } catch (error) {
         if (error.code === 'ERR_FS_CP_EINVAL') {
             if (error.info?.message === 'src and dest cannot be the same') throw new MainError(MainError.CONFLICT);
             else throw new MainError(MainError.BAD_FIELD);
+        } else if (error.code === 'ERR_FS_CP_EEXIST') {
+            throw new MainError(MainError.CONFLICT);
         } else {
             throw new MainError(MainError.FS_ERROR, error);
         }

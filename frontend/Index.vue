@@ -313,14 +313,12 @@ async function pasteHandler(action, files, target) {
   if (!files || !files.length) return;
 
   window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-  pasteInProgress.value = true;
 
   const resource = parseResourcePath((target && target.isDirectory) ? sanitize(currentResourcePath.value + '/' + target.fileName) : currentResourcePath.value);
   await DirectoryModel.paste(resource, action, files);
   await refresh();
 
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-  pasteInProgress.value = false;
 }
 
 const webDavPasswordDialogElement = useTemplateRef('webDavPasswordDialog');
@@ -360,29 +358,29 @@ function clearSelection() {
   selectedEntries.value = [];
 }
 
-function onSelectionChanged(selectedEntries) {
-  selectedEntries.value = selectedEntries;
+function onSelectionChanged(selectedItems) {
+  selectedEntries.value = selectedItems;
 }
 
-async function onFileSaved(entry, content, done) {
+async function onFileSaved(item, content, done) {
   try {
-    await DirectoryModel.saveFile(entry.resource, content);
+    await DirectoryModel.saveFile(item.resource, content);
   } catch (error) {
-    console.error(`Failed to save file ${entry.resourcePath}`, error);
+    console.error(`Failed to save file ${item.resourcePath}`, error);
   }
 
   if (typeof done === 'function') done();
 }
 
 // if entries is provided download those, otherwise selected entries, otherwise all entries
-async function downloadHandler(entries) {
+async function downloadHandler(items) {
   // in case we got a single entry
-  if (entries && !Array.isArray(entries)) entries = [ entries ];
-  if (!entries) entries = selectedEntries.value;
-  if (entries.length === 0) entries = entries.value;
+  if (items && !Array.isArray(items)) items = [ items ];
+  if (!items) items = selectedEntries.value;
+  if (items.length === 0) items = entries.value;
 
   const resource = parseResourcePath(currentResourcePath.value);
-  await DirectoryModel.download(resource, entries);
+  await DirectoryModel.download(resource, items);
 }
 
 // either dataTransfer (external drop) or files (internal drag)
@@ -390,9 +388,9 @@ async function onDrop(targetFolder, dataTransfer, files) {
   const fullTargetFolder = sanitize(`${currentResourcePath.value}/${targetFolder}`);
 
   if (dataTransfer) {
-    async function getFile(entry) {
+    async function getFile(e) {
       return new Promise((resolve, reject) => {
-        entry.file(resolve, reject);
+        e.file(resolve, reject);
       });
     }
 
@@ -405,10 +403,10 @@ async function onDrop(targetFolder, dataTransfer, files) {
         } else if (item.isDirectory) {
           // Get folder contents
           const dirReader = item.createReader();
-          const entries = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
+          const items = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
 
-          for (let i in entries) {
-            await traverseFileTree(entries[i], item.name);
+          for (let i in items) {
+            await traverseFileTree(items[i], item.name);
           }
 
           resolve();
@@ -420,16 +418,16 @@ async function onDrop(targetFolder, dataTransfer, files) {
     }
 
     for (const item of dataTransfer.items) {
-      const entry = item.webkitGetAsEntry();
-      if (!entry) {
+      const tmp = item.webkitGetAsEntry();
+      if (!tmp) {
         console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
         continue;
       }
 
-      if (entry.isFile) {
-        fileList.push(await getFile(entry));
-      } else if (entry.isDirectory) {
-        await traverseFileTree(entry, sanitize(`${currentResourcePath.value}/${targetFolder}`));
+      if (tmp.isFile) {
+        fileList.push(await getFile(tmp));
+      } else if (tmp.isDirectory) {
+        await traverseFileTree(tmp, sanitize(`${currentResourcePath.value}/${targetFolder}`));
       }
     }
     fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));
@@ -446,11 +444,11 @@ async function onDrop(targetFolder, dataTransfer, files) {
   }
 }
 
-async function deleteHandler(entries) {
-  if (!entries) return;
+async function deleteHandler(items) {
+  if (!items || items.length === 0) return;
 
   const confirmed = await inputDialog.value.confirm({
-    message: `Really delete ${entries.length} item${ entries.length === 1 ? '' : 's' }?`,
+    message: `Really delete ${items.length} item${ items.length === 1 ? '' : 's' }?`,
     confirmStyle: 'danger',
     confirmLabel: 'Yes',
     rejectLabel: 'Cancel'
@@ -460,12 +458,12 @@ async function deleteHandler(entries) {
 
   window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
 
-  for (let i in entries) {
+  for (let i of items) {
     try {
-      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + entries[i].fileName));
+      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + i.fileName));
       await DirectoryModel.remove(resource);
     } catch (e) {
-      console.error(`Failed to remove file ${entries[i].name}:`, e);
+      console.error(`Failed to remove file ${i.name}:`, e);
     }
   }
 
@@ -474,11 +472,11 @@ async function deleteHandler(entries) {
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
 }
 
-async function renameHandler(file, newName) {
+async function renameHandler(item, newName) {
   // this will make the change immediate for the UI even if not yet committed
-  file.name = newName;
+  item.name = newName;
 
-  const fromResource = file.resource;
+  const fromResource = item.resource;
   const toResource = parseResourcePath(sanitize(currentResourcePath.value + '/' + newName));
 
   if (fromResource.resourcePath === toResource.resourcePath) return;
@@ -486,11 +484,11 @@ async function renameHandler(file, newName) {
   await DirectoryModel.rename(fromResource, toResource);
   await refresh();
 
-  directoryView.value.highlightByName(file.name);
+  directoryView.value.highlightByName(item.name);
 }
 
-async function refreshShareDialogEntry(entry = null) {
-  shareDialog.value.entry = await DirectoryModel.get(entry || shareDialog.value.entry);
+async function refreshShareDialogEntry(item = null) {
+  shareDialog.value.entry = await DirectoryModel.get(item || shareDialog.value.entry);
 
   shareDialog.value.sharedWith = shareDialog.value.entry.sharedWith.filter((s) => s.receiverUsername);
   shareDialog.value.sharedLinks = shareDialog.value.entry.sharedWith.filter((s) => !s.receiverUsername);
@@ -503,7 +501,7 @@ async function refreshShareDialogEntry(entry = null) {
 }
 
 const shareDialogElement = useTemplateRef('shareDialogElement');
-async function shareHandler(entry) {
+async function shareHandler(item) {
   shareDialog.value.error = '';
   shareDialog.value.receiverUsername = '';
   shareDialog.value.readonly = false;
@@ -518,7 +516,7 @@ async function shareHandler(entry) {
   shareDialog.value.users = users.filter((u) => { return u.username !== profile.value.username; });
   shareDialog.value.users.forEach((u) => { u.userAndDisplayName = u.displayName + ' ( ' + u.username + ' )'; });
 
-  await refreshShareDialogEntry(entry);
+  await refreshShareDialogEntry(item);
 
   shareDialogElement.value.open();
 }
@@ -566,10 +564,10 @@ async function onDeleteShare(share) {
   refreshShareDialogEntry();
 }
 
-async function refresh(entry = null) {
-  if (entry) {
+async function refresh(item = null) {
+  if (item) {
     try {
-      entry = await DirectoryModel.get(entry.resource, entry.resource.path);
+      item = await DirectoryModel.get(item.resource, item.resource.path);
     } catch (error) {
       if (error.status === 401) return onInvalidSession();
       else if (error.status === 404) uiError.value = 'Does not exist';
@@ -578,13 +576,13 @@ async function refresh(entry = null) {
     }
 
     // this will replace the entry to keep bindings alive
-    const idx = entries.value.findIndex((e) => e.id === entry.id );
-    if (idx !== -1) entries.value.splice(idx, 1, entry);
+    const idx = entries.value.findIndex((e) => e.id === item.id );
+    if (idx !== -1) entries.value.splice(idx, 1, item);
   } else {
     const resource = parseResourcePath(currentResourcePath.value);
 
     try {
-      entry = await DirectoryModel.get(resource, resource.path);
+      item = await DirectoryModel.get(resource, resource.path);
     } catch (error) {
       if (error.status === 401) return onInvalidSession();
       else if (error.status === 404) uiError.value = 'Does not exist';
@@ -592,29 +590,29 @@ async function refresh(entry = null) {
       return;
     }
 
-    entry.files.forEach(function (e) {
+    entry.value.files.forEach(function (e) {
       e.extension = getExtension(e);
       e.filePathNew = e.fileName;
     });
 
-    entry.value = entry;
-    entries.value = entry.files;
+    entry.value = item;
+    entries.value = item.files;
   }
 }
 
-async function loadMainDirectory(path, entry, forceLoad = false) {
+async function loadMainDirectory(path, item, forceLoad = false) {
   // path is files/filepath or shares/shareid/filepath
   const resource = parseResourcePath(path);
 
   // nothing new
   if (!forceLoad && currentResourcePath.value === resource.resourcePath) return;
 
-  if (!entry) {
+  if (!item) {
     try {
-      entry = await DirectoryModel.get(resource, resource.path);
+      item = await DirectoryModel.get(resource, resource.path);
     } catch (error) {
       entries.value = [];
-      entry = {};
+      item = {};
 
       if (error.status === 401) return onInvalidSession();
       else if (error.status === 404) return uiError.value = 'Does not exist';
@@ -625,7 +623,7 @@ async function loadMainDirectory(path, entry, forceLoad = false) {
   activeResourceType.value = resource.type;
   currentPath.value = resource.path;
   currentResourcePath.value = resource.resourcePath;
-  currentShare.value = entry.share || null;
+  currentShare.value = item.share || null;
 
   if (resource.type === 'home') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
@@ -651,9 +649,9 @@ async function loadMainDirectory(path, entry, forceLoad = false) {
     };
 
     // if we are not toplevel, add the share information
-    if (entry.share) {
+    if (item.share) {
       breadCrumbs.value.unshift({
-        label: entry.share.filePath.slice(1), // remove slash at the beginning
+        label: item.share.filePath.slice(1), // remove slash at the beginning
         route: '#files/shares/' + resource.shareId + '/'
       });
     }
@@ -670,23 +668,23 @@ async function loadMainDirectory(path, entry, forceLoad = false) {
     };
 
     // if we are not toplevel, add the groupfolder information
-    if (entry.group) {
+    if (item.group) {
       breadCrumbs.value.unshift({
-        label: entry.group.name,
-        route: '#files/groupfolders/' + entry.group.id + '/'
+        label: item.group.name,
+        route: '#files/groupfolders/' + item.group.id + '/'
       });
     }
   } else {
     console.error('FIXME breadcrumbs for resource type', resource.type);
   }
 
-  entry.files.forEach(function (e) {
+  item.files.forEach(function (e) {
     e.extension = getExtension(e);
     e.filePathNew = e.fileName;
   });
 
-  entry.value = entry;
-  entries.value = entry.files;
+  entry.value = item;
+  entries.value = item.files;
   viewer.value = '';
 }
 
@@ -709,12 +707,12 @@ async function loadPath(path, forceLoad = false) {
 
   if (!forceLoad && currentResourcePath.value === resource.resourcePath) return true;
 
-  let entry;
+  let item;
   try {
-    entry = await DirectoryModel.get(resource);
+    item = await DirectoryModel.get(resource);
   } catch (error) {
     entries.value = [];
-    entry = {};
+    entry.value = {};
 
     if (error.status === 401 || error.status === 403) {
       onInvalidSession();
@@ -731,45 +729,47 @@ async function loadPath(path, forceLoad = false) {
 
   window.location.hash = `files${resource.resourcePath}`;
 
-  if (entry.isDirectory) await loadMainDirectory(resource.resourcePath, entry, forceLoad);
+  if (item.isDirectory) await loadMainDirectory(resource.resourcePath, item, forceLoad);
   else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
 
   // if we don't have a folder load the viewer
-  if (!entry.isDirectory) {
-    if (imageViewer.value.canHandle(entry)) {
+  if (!item.isDirectory) {
+    if (imageViewer.value.canHandle(item)) {
       const otherSupportedEntries = entries.value.filter((e) => imageViewer.value.canHandle(e));
 
-      imageViewer.value.open(entry, otherSupportedEntries);
+      imageViewer.value.open(item, otherSupportedEntries);
       viewer.value = 'image';
-    } else if (pdfViewer.value.canHandle(entry)) {
-      pdfViewer.value.open(entry);
+    } else if (pdfViewer.value.canHandle(item)) {
+      pdfViewer.value.open(item);
       viewer.value = 'pdf';
-    } else if (MainModel.canHandleWithOffice(entry)) {
-      window.open('/office.html#' + entry.resourcePath, '_blank');
+    } else if (MainModel.canHandleWithOffice(item)) {
+      window.open('/office.html#' + item.resourcePath, '_blank');
 
       // need to reset the hash as the original location should be the folder containing the file
-      window.location.hash = `files${resource.resourcePath}`.slice(0, -entry.name.length);
-    } else if (markdownViewer.value.canHandle(entry)) {
-      markdownViewer.value.open(entry, await DirectoryModel.getRawContent(resource));
+      window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
+    } else if (markdownViewer.value.canHandle(item)) {
+      markdownViewer.value.open(item, await DirectoryModel.getRawContent(resource));
       viewer.value = 'markdown';
-    } else if (textViewer.value.canHandle(entry)) {
-      textViewer.value.open(entry, await DirectoryModel.getRawContent(resource));
+    } else if (textViewer.value.canHandle(item)) {
+      textViewer.value.open(item, await DirectoryModel.getRawContent(resource));
       viewer.value = 'text';
     } else {
       viewer.value = 'generic';
-      genericViewer.value.open(entry);
+      genericViewer.value.open(item);
     }
   } else {
     clearSelection();
   }
 
+  entry.value = item;
+
   return true;
 }
 
-function onOpen(entry) {
-  if (entry.share && entry.share.id) window.location.hash = `files/shares/${entry.share.id}${entry.filePath}`;
-  else if (entry.group && entry.group.id) window.location.hash = `files/groupfolders/${entry.group.id}${entry.filePath}`;
-  else window.location.hash = `files/home${entry.filePath}`;
+function onOpen(item) {
+  if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
+  else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
+  else window.location.hash = `files/home${item.filePath}`;
 }
 
 function onViewerClose() {

@@ -203,8 +203,8 @@ async function upload(resource, file, progressHandler) {
   // find unique path
   let uniqueRelativeFilePath = sanitize(relativefilePath);
   while (true) {
-    const exists = await this.exists(resource, uniqueRelativeFilePath);
-    if (!exists) break;
+    const filePathExists = await exists(resource, uniqueRelativeFilePath);
+    if (!filePathExists) break;
 
     uniqueRelativeFilePath = insertFilenameModifier(uniqueRelativeFilePath, extension, '-new');
   }
@@ -299,16 +299,16 @@ async function copy(fromResource, toResource) {
 }
 
 async function paste(resource, action, files) {
-  // this will not overwrite but tries to find a new unique name to past to
-  for (let f in files) {
+  // this will not overwrite but tries to find a new unique name to paste to
+  for (let file of files) {
     let done = false;
-    let targetPath = pathJoin(resource.resourcePath, files[f].name);
-    const extension = files[f].extension;
+    let targetPath = pathJoin(resource.resourcePath, file.name);
+    const extension = file.extension;
     while (!done) {
       const targetResource = parseResourcePath(targetPath);
       try {
-        if (action === 'cut') await this.rename(files[f].resource, targetResource);
-        if (action === 'copy') await this.copy(files[f].resource, targetResource);
+        if (action === 'cut') await rename(file.resource, targetResource);
+        if (action === 'copy') await copy(file.resource, targetResource);
         done = true;
       } catch (error) {
         if (error.reason === DirectoryModelError.CONFLICT) {

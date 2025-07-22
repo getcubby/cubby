@@ -627,7 +627,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   if (resource.type === 'home') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e.replaceAll('%', '%25')),
+        label: decodeURIComponent(e),
         route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -638,7 +638,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   } else if (resource.type === 'shares') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e.replaceAll('%', '%25')),
+        label: decodeURIComponent(e),
         route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -657,7 +657,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   } else if (resource.type === 'groupfolders') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
       return {
-        label: decodeURIComponent(e.replaceAll('%', '%25')),
+        label: decodeURIComponent(e),
         route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
       };
     });
@@ -794,7 +794,7 @@ function onUp() {
 onMounted(async () => {
   async function handleHash(hash) {
     // we handle decoded paths internally
-    hash = decodeURIComponent(hash.replaceAll('%', '%25'));
+    hash = decodeURIComponent(hash);
 
     activeResourceType.value = '';
 
@@ -842,7 +842,7 @@ onMounted(async () => {
 
   window.addEventListener('hashchange', () => {
     // allows us to not reload but only change the hash
-    if (currentHash.value === decodeURIComponent(window.location.hash.replaceAll('%', '%25'))) return;
+    if (currentHash.value === decodeURIComponent(window.location.hash)) return;
     currentHash.value = window.location.hash;
 
     handleHash(window.location.hash.slice(1));

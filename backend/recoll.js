@@ -106,8 +106,7 @@ async function searchByUsername(username, query) {
 
     const out = await exec('recoll', [ '-t', '-F', 'url filename abstract', '-c', configPath, query ]);
 
-    const fileNameMatch = [];
-    const fileContentMatch = [];
+    const results = [];
 
     // first two lines and last are info
     for (const line of out.split('\n').slice(2).slice(0, -1)) {
@@ -118,6 +117,13 @@ async function searchByUsername(username, query) {
 
         // skip archives
         if (!filePath.endsWith(fileName)) continue;
+
+        const existingEntry = results.find(r => r.filePath === filePath);
+        if (existingEntry) {
+            console.log('found same filename')
+            existingEntry.matches++;
+            continue;
+        }
 
         let entry;
         try {
@@ -133,12 +139,12 @@ async function searchByUsername(username, query) {
             filePath,
             fileName,
             abstract,
-            entry: entry.withoutPrivate(username)
+            entry: entry.withoutPrivate(username),
+            matches: 1,
         };
 
-        if (fileName.indexOf(query) !== -1) fileNameMatch.push(result);
-        else fileContentMatch.push(result);
+        results.push(result);
     }
 
-    return fileNameMatch.concat(fileContentMatch);
+    return results;
 }

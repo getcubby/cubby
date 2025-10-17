@@ -120,7 +120,6 @@ async function searchByUsername(username, query) {
 
         const existingEntry = results.find(r => r.filePath === filePath);
         if (existingEntry) {
-            console.log('found same filename')
             existingEntry.matches++;
             continue;
         }

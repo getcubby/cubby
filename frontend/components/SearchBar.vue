@@ -143,7 +143,7 @@ function onOpenEntryFromSearch(entry) {
   border-bottom-right-radius: var(--pankow-border-radius);
   position: absolute;
   background: var(--pankow-dialog-background-color);
-  top: 38px;
+  top: 35px;
   z-index: 3000;
   box-shadow: var(--pankow-menu-shadow);
   overflow: scroll;

@@ -889,7 +889,7 @@ onMounted(async () => {
         <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
           <TopBar :gap="false" :left-grow="true">
             <template #left>
-              <SearchBar @item-activated="onOpen"/>
+              <SearchBar />
             </template>
 
             <template #right>

@@ -118,12 +118,6 @@ async function searchByUsername(username, query) {
         // skip archives
         if (!filePath.endsWith(fileName)) continue;
 
-        const existingEntry = results.find(r => r.filePath === filePath);
-        if (existingEntry) {
-            existingEntry.matches++;
-            continue;
-        }
-
         let entry;
         try {
             entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
@@ -139,7 +133,6 @@ async function searchByUsername(username, query) {
             fileName,
             abstract,
             entry: entry.withoutPrivate(username),
-            matches: 1,
         };
 
         results.push(result);

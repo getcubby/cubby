@@ -1,10 +1,8 @@
 <script setup>
 
 import { ref, useTemplateRef } from 'vue';
-import { Spinner, TextInput } from '@cloudron/pankow';
+import { Spinner, TextInput, Button } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
-
-const emit = defineEmits(['item-activated']);
 
 const searchResultsPanel = useTemplateRef('searchResultsPanel');
 const searchBar = useTemplateRef('searchBar');
@@ -46,9 +44,14 @@ function onFocus() {
   searchResultsPanel.value.style.width = searchBar.value.offsetWidth + 'px';
 }
 
-function onOpenEntryFromSearch(entry) {
-  emit('item-activated', entry);
-  onDismiss();
+// only personal files supported for now
+function getEntryHref(entry) {
+  return `/#files/home${entry.filePath}`;
+}
+
+function getDirectoryHref(entry) {
+  const folderPath = entry.isDirectory ? entry.filePath : entry.filePath.slice(0, -entry.fileName.length);
+  return `/#files/home${folderPath}`;
 }
 
 </script>
@@ -68,13 +71,16 @@ function onOpenEntryFromSearch(entry) {
         <div v-show="searchResults.length === 0" class="no-search-results">
           Nothing found
         </div>
-        <div v-for="result in searchResults" :key="result.filepath" class="search-result-entry" @click="onOpenEntryFromSearch(result.entry)">
+        <a v-for="result in searchResults" :key="result.filepath" class="search-result-entry" :href="getEntryHref(result.entry)" @click.stop="onDismiss()">
           <img :src="result.entry.previewUrl"/>
-          <div style="margin-left: 10px;">
-            <b>{{ result.fileName }}</b><br/>
-            <small>{{ result.abstract }}</small>
+          <div style="margin-left: 10px; flex-grow: 1;">
+            <div style="margin-bottom: 10px"><b>{{ result.fileName }}</b></div>
+            <div style="font-size: 12px">{{ result.entry.filePath.slice(0, -result.fileName.length) }}</div>
           </div>
-        </div>
+          <div class="search-result-entry-actions">
+            <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onDismiss()">Open Folder</Button>
+          </div>
+        </a>
       </div>
     </Transition>
   </div>
@@ -126,6 +132,7 @@ function onOpenEntryFromSearch(entry) {
   align-items: start;
   cursor: pointer;
   padding: 10px 5px;
+  align-items: center;
 }
 
 .search-result-entry:hover {
@@ -133,9 +140,18 @@ function onOpenEntryFromSearch(entry) {
 }
 
 .search-result-entry > img {
-  height: 75px;
-  width: 75px;
+  height: 60px;
+  width: 60px;
   object-fit: cover;
+}
+
+.search-result-entry-actions {
+  visibility: hidden;
+  margin-right: 20px;
+}
+
+.search-result-entry:hover .search-result-entry-actions {
+  visibility: visible;
 }
 
 .search-result-panel {

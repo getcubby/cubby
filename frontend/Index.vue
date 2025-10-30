@@ -866,7 +866,7 @@ onMounted(async () => {
 
     <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.FAVORITES || view === VIEWS.RECENT || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <div style="margin: 20px; text-align: center;"><img src="/logo-transparent.svg" height="70" width="70"/></div>
+        <div style="margin-top: 30px; margin-bottom: 50px; text-align: center; font-size: 28px; font-weight: bold;"><img src="/logo-transparent.svg" height="70" width="70"/><br/>Cubby</div>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>

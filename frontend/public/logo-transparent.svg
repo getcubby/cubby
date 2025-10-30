@@ -70,8 +70,8 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:export-bgcolor="#87878700"
      inkscape:zoom="0.77810388"
-     inkscape:cx="87.39193"
-     inkscape:cy="172.8561"
+     inkscape:cx="88.034518"
+     inkscape:cy="174.14127"
      inkscape:window-width="1920"
      inkscape:window-height="1014"
      inkscape:window-x="0"
@@ -85,7 +85,7 @@
        transform="matrix(1.0727856,0,0,1.0727856,-16.458309,-79.92458)"><g
          id="shape-3379d6d5-d382-80fe-8003-52ec4fe37bbb-5"
          style="opacity:0.297287;fill:#f9f9f9;fill-opacity:1"
-         transform="rotate(-0.02340234,51472.496,-2833.3419)"><penpot:shape
+         transform="rotate(-0.02340234,51477.216,-25951.614)"><penpot:shape
            penpot:name="File"
            penpot:type="path"
            penpot:transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
@@ -109,7 +109,7 @@
              id="path1-6" /></g></g><g
          id="shape-3379d6d5-d382-80fe-8003-52ec4fe37bbb"
          style="fill:#cccccc;fill-opacity:1"
-         transform="rotate(-0.02340234,24192.208,11533.041)"><penpot:shape
+         transform="rotate(-0.02340234,24196.928,-11585.525)"><penpot:shape
            penpot:name="File"
            penpot:type="path"
            penpot:transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
@@ -133,7 +133,7 @@
              id="path1" /></g></g><g
          id="shape-63d8ddae-017c-80b2-8003-538c8d85f944-7"
          style="opacity:0.297287;fill:#f9f9f9;fill-opacity:1"
-         transform="translate(-4.6385481,11.674788)"><penpot:shape
+         transform="translate(4.8042869,11.674788)"><penpot:shape
            penpot:name="Exclude"
            penpot:type="bool"
            penpot:center-x="281.57605276372016"
@@ -238,7 +238,7 @@
                    d="M174.076,1012.327L174.076,1135.761C174.076,1146.103,174.609,1146.733,185.772,1146.733L377.592,1146.733C388.755,1146.733,389.017,1146.103,389.017,1135.761L389.017,1012.327" /></g></g></g></penpot:bool></g><g
          id="shape-63d8ddae-017c-80b2-8003-538bfc9ad436-2"
          style="opacity:0.297287;fill:#f9f9f9;fill-opacity:1"
-         transform="rotate(-26.46161,422.87429,946.49093)"><penpot:shape
+         transform="rotate(-26.46161,427.59569,926.40963)"><penpot:shape
            penpot:name="File"
            penpot:type="path"
            penpot:transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
@@ -263,7 +263,7 @@
              id="path2-2" /></g></g><g
          id="shape-63d8ddae-017c-80b2-8003-538bfc9ad436"
          style="fill:#e6e6e6;fill-opacity:1"
-         transform="rotate(-26.46161,412.5274,940.85768)"><penpot:shape
+         transform="rotate(-26.46161,417.2488,920.77638)"><penpot:shape
            penpot:name="File"
            penpot:type="path"
            penpot:transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
@@ -288,7 +288,7 @@
              id="path2" /></g></g><g
          id="shape-63d8ddae-017c-80b2-8003-538c8d85f944"
          style="fill:#0078f1;fill-opacity:1"
-         transform="translate(-8.6210874,4.3105438)"><penpot:shape
+         transform="translate(0.82174758,4.3105438)"><penpot:shape
            penpot:name="Exclude"
            penpot:type="bool"
            penpot:center-x="281.57605276372016"

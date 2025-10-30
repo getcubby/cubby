@@ -60,7 +60,7 @@ import { Button } from '@cloudron/pankow';
 }
 
 .left {
-  background: linear-gradient(90deg, rgb(168, 85, 247) 0%, var(--pankow-color-primary) 100%);
+  background: linear-gradient(90deg, rgb(0, 120, 241) 0%, var(--pankow-color-primary) 100%);
   flex-grow: 1;
   display: flex;
   max-width: 40%;

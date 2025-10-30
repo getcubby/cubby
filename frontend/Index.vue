@@ -866,7 +866,7 @@ onMounted(async () => {
 
     <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.FAVORITES || view === VIEWS.RECENT || view === VIEWS.MAIN">
       <SideBar class="side-bar" ref="sideBar">
-        <h1 style="margin-bottom: 50px; text-align: center;"><img src="/logo-transparent.svg" height="60" width="60"/><br/>Cubby</h1>
+        <div style="margin: 20px; text-align: center;"><img src="/logo-transparent.svg" height="70" width="70"/></div>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
@@ -1126,7 +1126,7 @@ pre {
     display: flex;
     height: 100%;
     min-width: 250px;
-    background: linear-gradient(90deg, rgb(168, 85, 247) 0%, var(--pankow-color-primary) 100%);
+    background: linear-gradient(90deg, rgb(0, 120, 241) 0%, var(--pankow-color-primary) 100%);
     color: white;
     padding: 10px;
     flex-direction: column;

@@ -1164,7 +1164,7 @@ pre {
 
 .side-bar-entry-button:hover {
   background-color: rgba(255,255,255,0.7);
-  color: var(--pankow-text-color);
+  color: #333;
 }
 
 .content {

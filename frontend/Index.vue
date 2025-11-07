@@ -39,7 +39,9 @@ const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
 const VIEWS = {
   LOGIN: 'login',
-  MAIN: 'main',
+  FILES_HOME: 'files-home',
+  FILES_SHARES: 'files-shares',
+  FILES_GROUPFOLDERS: 'files-groupfolders',
   FAVORITES: 'favorites',
   USERS: 'users',
   RECENT: 'recent',
@@ -799,14 +801,14 @@ onMounted(async () => {
     activeResourceType.value = '';
 
     if (hash.indexOf('files/home/') === 0) {
-      if (await loadPath(hash.slice('files'.length))) view.value = VIEWS.MAIN;
+      if (await loadPath(hash.slice('files'.length))) view.value = VIEWS.FILES_HOME;
       else window.location.hash = 'files/home/';
     } else if (hash.indexOf('files/shares/') === 0) {
       loadPath(hash.slice('files'.length));
-      view.value = VIEWS.MAIN;
+      view.value = VIEWS.FILES_SHARES;
     } else if (hash.indexOf('files/groupfolders/') === 0) {
       loadPath(hash.slice('files'.length));
-      view.value = VIEWS.MAIN;
+      view.value = VIEWS.FILES_GROUPFOLDERS;
     } else if (hash === 'recent') {
       view.value = VIEWS.RECENT;
     } else if (hash === 'favorites') {
@@ -862,17 +864,16 @@ onMounted(async () => {
   <Notification/>
 
   <div v-show="ready" style="height: 100%;">
-    <LoginView v-show="view === VIEWS.LOGIN"/>
-
-    <div class="container" v-show="view === VIEWS.USERS || view === VIEWS.SHARES || view === VIEWS.SETTINGS || view === VIEWS.FAVORITES || view === VIEWS.RECENT || view === VIEWS.MAIN">
+    <LoginView v-if="view === VIEWS.LOGIN"/>
+    <div class="container" v-else>
       <SideBar class="side-bar" ref="sideBar">
         <div style="margin-top: 30px; margin-bottom: 50px; text-align: center; font-size: 28px; font-weight: bold;"><img src="/logo-transparent.svg" height="70" width="70"/><br/>Cubby</div>
 
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'home'}" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'shares'}" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': activeResourceType === 'groupfolders'}" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
 
@@ -881,12 +882,11 @@ onMounted(async () => {
       </SideBar>
       <div class="content">
         <SharesView v-if="view === VIEWS.SHARES" />
-        <UsersView v-if="view === VIEWS.USERS" :profile="profile" />
-        <SettingsView v-if="view === VIEWS.SETTINGS" :profile="profile" @groupfolders-changed="onGroupFoldersChanged()"/>
-        <RecentView v-if="view === VIEWS.RECENT" @item-activated="onOpen" />
-        <FavoriteView v-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
-
-        <div class="container" style="flex-direction: column; overflow: hidden;" v-show="view === VIEWS.MAIN">
+        <UsersView v-else-if="view === VIEWS.USERS" :profile="profile" />
+        <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" @groupfolders-changed="onGroupFoldersChanged()"/>
+        <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
+        <FavoriteView v-else-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
+        <div v-else class="container" style="flex-direction: column; overflow: hidden;">
           <TopBar :gap="false" :left-grow="true">
             <template #left>
               <SearchBar />

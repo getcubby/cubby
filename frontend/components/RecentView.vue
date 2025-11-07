@@ -109,7 +109,7 @@ h1 {
   height: 2px;
   width: 100%;
   margin-bottom: 10px;
-  background: linear-gradient(90deg, var(--pankow-color-primary) 0%, rgb(168, 85, 247) 60%, transparent 80%);
+  background: linear-gradient(90deg, var(--pankow-color-primary) 0%, rgb(0, 120, 241) 60%, transparent 80%);
 }
 
 .buckets {

@@ -801,13 +801,13 @@ onMounted(async () => {
     activeResourceType.value = '';
 
     if (hash.indexOf('files/home/') === 0) {
-      if (await loadPath(hash.slice('files'.length))) view.value = VIEWS.FILES_HOME;
+      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
       else window.location.hash = 'files/home/';
     } else if (hash.indexOf('files/shares/') === 0) {
-      loadPath(hash.slice('files'.length));
+      loadPath(hash.slice('files'.length), true);
       view.value = VIEWS.FILES_SHARES;
     } else if (hash.indexOf('files/groupfolders/') === 0) {
-      loadPath(hash.slice('files'.length));
+      loadPath(hash.slice('files'.length), true);
       view.value = VIEWS.FILES_GROUPFOLDERS;
     } else if (hash === 'recent') {
       view.value = VIEWS.RECENT;

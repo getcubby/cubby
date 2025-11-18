@@ -112,11 +112,10 @@ function menuPlugin(app, tools) {
   return new Plugin({
     view(editorView) {
       return {
-        update() {
+        update(view, lastState) {
           const state = editorView.state;
 
-          // FIXME this should only be triggered for actual changes
-          app.isChanged = true;
+          if (lastState && !lastState.doc.eq(state.doc) && !app.isChanged) app.isChanged = true;
 
           if (blockTypeActive(state, cubbySchema.nodes.paragraph, {})) {
             app.activeBlockTypeLabel = app.blockTypes[0].label;

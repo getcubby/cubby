@@ -6,7 +6,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^3.5.6",
+    "@cloudron/pankow": "^3.5.9",
     "@vitejs/plugin-vue": "^6.0.1",
     "eslint": "^9.39.1",
     "eslint-plugin-vue": "^10.5.1",
@@ -14,7 +14,7 @@
     "prosemirror-commands": "^1.7.1",
     "prosemirror-example-setup": "^1.2.3",
     "prosemirror-gapcursor": "^1.4.0",
-    "prosemirror-history": "^1.4.1",
+    "prosemirror-history": "^1.5.0",
     "prosemirror-keymap": "^1.2.3",
     "prosemirror-markdown": "^1.13.2",
     "prosemirror-schema-basic": "^1.2.4",

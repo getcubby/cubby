@@ -23,6 +23,11 @@ async function onSearch() {
 
   if (dismissed.value) return;
 
+  // order by recently modified
+  results.sort((a,b) => {
+    return new Date(b.entry.mtime).getTime() - new Date(a.entry.mtime).getTime();
+  });
+
   searchResults.value = results;
   resultsOpen.value = true;
 }

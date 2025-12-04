@@ -113,6 +113,15 @@ async function head(req, res, next) {
     next(new HttpSuccess(200, result));
 }
 
+// wrapper to handle json content type
+function sendFile(res, file) {
+    // special treatment for json, so the clients do not parse it as json api response!
+    const headers = {};
+    if (file.mimeType === 'application/json') headers['content-type'] = 'text/plain';
+
+    res.sendFile(file._fullFilePath, { headers, dotfiles: 'allow' });
+}
+
 async function get(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
@@ -142,12 +151,7 @@ async function get(req, res, next) {
 
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
-
-            // special treatment for json, so the clients do not parse it as json api response!
-            const headers = {};
-            if (result.mimeType === 'application/json') headers['content-type'] = 'text/plain';
-
-            return res.sendFile(result._fullFilePath, { headers, dotfiles: 'allow' });
+            return sendFile(res, result);
         } else if (type === 'download') {
             if (result.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
             return res.download(result._fullFilePath, { dotfiles: 'allow' });
@@ -179,7 +183,7 @@ async function get(req, res, next) {
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
-                return res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
+                return sendFile(res, file);
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
                 return res.download(file._fullFilePath, { dotfiles: 'allow' });
@@ -264,7 +268,7 @@ async function get(req, res, next) {
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
-                return res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
+                return sendFile(res, file);
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
                 return res.download(file._fullFilePath, { dotfiles: 'allow' });

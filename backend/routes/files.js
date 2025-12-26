@@ -353,11 +353,14 @@ async function update(req, res, next) {
     try {
         if (action === 'move') await files.move(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else if (action === 'copy') await files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
+        else if (action === 'extract') await files.extract(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));
     } catch (error) {
         if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
         if (error.reason === MainError.BAD_FIELD) return next(new HttpError(400, 'invalid paths'));
         if (error.reason === MainError.CONFLICT) return next(new HttpError(409, 'already exists'));
+        if (error.reason === MainError.BAD_STATE) return next(new HttpError(422, error.message));
+        if (error.reason === MainError.EXTERNAL_ERROR) return next(new HttpError(422, error.message));
         return next(new HttpError(500, error));
     }
 

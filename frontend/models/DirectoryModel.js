@@ -30,6 +30,7 @@ DirectoryModelError.NO_AUTH = 'Not authorized';
 DirectoryModelError.NOT_ALLOWED = 'not allowed';
 DirectoryModelError.CONFLICT = 'conflict';
 DirectoryModelError.GENERIC = 'generic';
+DirectoryModelError.PROCESSING_ERROR = 'processing error';
 
 function insertFilenameModifier(filePath, extension, modifier) {
   return filePath.substring(0, filePath.length-extension.length-1) + modifier + '.' + extension;
@@ -279,6 +280,17 @@ async function rename(fromResource, toResource) {
   }
 }
 
+async function extract(resource) {
+  try {
+    const result = await fetcher.put(`${API_ORIGIN}/api/v1/files`, {}, { action: 'extract', path: resource.resourcePath, new_path: resource.parentResourcePath });
+    if (result.status !== 200) throw result;
+  } catch (error) {
+    if (error.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH, error);
+    if (error.status === 422) throw new DirectoryModelError(DirectoryModelError.PROCESSING_ERROR, error.body.message);
+    throw new DirectoryModelError(DirectoryModelError.GENERIC, error);
+  }
+}
+
 async function remove(resource) {
   try {
     const result = await fetcher.del(`${API_ORIGIN}/api/v1/files`, {}, { path: resource.resourcePath });
@@ -334,6 +346,7 @@ export default {
   upload,
   download,
   rename,
+  extract,
   remove,
   copy,
   paste,

@@ -13,6 +13,7 @@ exports = module.exports = {
     head,
     move,
     copy,
+    extract,
     remove,
     recent
 };
@@ -419,6 +420,45 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
         } else {
             throw new MainError(MainError.FS_ERROR, error);
         }
+    }
+
+    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));
+}
+
+async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof newUsernameOrGroupfolder, 'string');
+    assert.strictEqual(typeof newFilePath, 'string');
+
+    const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
+    if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
+
+    const fullNewFilePath = getAbsolutePath(newUsernameOrGroupfolder, newFilePath);
+    if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
+
+    debug(`extract ${fullFilePath} -> ${fullNewFilePath}`);
+
+    const tarFormats = ['.tar', '.tgz', '.tar.gz', '.tar.xz', '.tar.bz2'];
+
+    let cmd, args;
+    if (fullFilePath.endsWith('.zip')) {
+        cmd = '/usr/bin/unzip';
+        args = [ '-n', '-d', path.dirname(fullFilePath), fullFilePath ];
+    } else if (tarFormats.findIndex(function (t) { return fullFilePath.endsWith(t); }) !== -1) {
+        cmd = '/bin/tar';
+        args = [ '-x', '-C', path.dirname(fullFilePath), '-f', fullFilePath ];
+    } else if (fullFilePath.endsWith('.7z')) {
+        cmd = '/usr/bin/7z';
+        args = [ 'x', '-y', fullFilePath, `-o${path.dirname(fullFilePath)}` ];
+    } else {
+        throw new MainError(MainError.BAD_STATE, 'file is not an archive');
+    }
+
+    try {
+        await exec(cmd, args);
+    } catch (error) {
+        throw new MainError(MainError.EXTERNAL_ERROR, error.stderr);
     }
 
     await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));

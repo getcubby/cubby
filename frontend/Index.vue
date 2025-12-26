@@ -311,6 +311,28 @@ async function onNewFolder() {
   directoryView.value.highlightByName(newFolderName);
 }
 
+async function extractHandler(item) {
+  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+
+  try {
+    await DirectoryModel.extract(item.resource);
+  } catch (error) {
+    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
+    else if (error.reason === DirectoryModelError.PROCESSING_ERROR) {
+      console.log(error)
+      window.pankow.notify({ text: 'Failed to extract file: ' + error.message, persistent: true, type: 'danger' });
+    } else {
+      window.pankow.notify('Unknown error, check logs.');
+    }
+
+    window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+    return;
+  }
+  await refresh();
+
+  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+}
+
 async function pasteHandler(action, files, target) {
   if (!files || !files.length) return;
 
@@ -918,7 +940,7 @@ onMounted(async () => {
                   ref="directoryView"
                   :show-star="true"
                   :show-owner="false"
-                  :show-extract="false"
+                  :show-extract="true"
                   :show-size="showSize"
                   :show-modified="true"
                   :show-share="'isSharedWith'"
@@ -932,6 +954,7 @@ onMounted(async () => {
                   :rename-handler="renameHandler"
                   :paste-handler="pasteHandler"
                   :download-handler="downloadHandler"
+                  :extract-handler="extractHandler"
                   :new-file-handler="onNewFile"
                   :new-folder-handler="onNewFolder"
                   :upload-file-handler="onUploadFile"

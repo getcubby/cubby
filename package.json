@@ -17,10 +17,10 @@
     "express": "^5.2.1",
     "express-openid-connect": "^2.19.3",
     "express-session": "^1.18.2",
-    "fs-extra": "^11.3.2",
+    "fs-extra": "^11.3.3",
     "handlebars": "^4.7.8",
-    "isbinaryfile": "^5.0.7",
-    "nodemailer": "^7.0.11",
+    "isbinaryfile": "^6.0.0",
+    "nodemailer": "^7.0.12",
     "nodemailer-smtp-transport": "^2.7.4",
     "safetydance": "^2.5.1",
     "session-file-store": "^1.5.0",
@@ -30,7 +30,7 @@
     "xpath": "0.0.34"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "eslint": "^9.39.1"
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2"
   }
 }

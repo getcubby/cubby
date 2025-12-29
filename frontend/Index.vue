@@ -20,7 +20,7 @@ import {
   InputGroup,
   TopBar
 } from '@cloudron/pankow';
-import { GenericViewer, ImageViewer, PdfViewer, TextViewer } from '@cloudron/pankow/viewers';
+import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from './models/DirectoryModel.js';
 import MainModel from './models/MainModel.js';
 import ShareModel from './models/ShareModel.js';
@@ -714,6 +714,7 @@ const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
 const markdownViewer = useTemplateRef('markdownViewer');
 const textViewer = useTemplateRef('textViewer');
+const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
 
 async function onGroupFoldersChanged() {
@@ -764,6 +765,9 @@ async function loadPath(path, forceLoad = false) {
     } else if (pdfViewer.value.canHandle(item)) {
       pdfViewer.value.open(item);
       viewer.value = 'pdf';
+    } else if (threeDViewer.value.canHandle(item)) {
+      threeDViewer.value.open(item, await DirectoryModel.getRawContent(resource));
+      viewer.value = 'threed';
     } else if (MainModel.canHandleWithOffice(item)) {
       window.open('/office.html#' + item.resourcePath, '_blank');
 
@@ -1074,6 +1078,11 @@ onMounted(async () => {
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
+    </div>
+  </Transition>
+  <Transition name="pankow-fade">
+    <div class="viewer-container" v-show="viewer === 'threed'">
+      <ThreeDViewer ref="threeDViewer" @close="onViewerClose" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

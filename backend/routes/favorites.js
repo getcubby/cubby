@@ -19,8 +19,8 @@ async function create(req, res, next) {
 
     if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const owner = req.body.owner || null;
     const filePath = req.body.path.replace(/\/+/g, '/');
+    const owner = req.body.owner || req.user.username; // user can favorite a filePath owned by another (when shared)
 
     debug(`create: owner:${owner} ${filePath}`);
 

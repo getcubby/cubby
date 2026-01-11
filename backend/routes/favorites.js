@@ -7,12 +7,13 @@ exports = module.exports = {
     remove
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     debug = require('debug')('cubby:routes:favorites'),
     favorites = require('../favorites.js'),
     files = require('../files.js'),
     HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+    HttpSuccess = require('connect-lastmile').HttpSuccess,
+    safe = require('safetydance');
 
 async function create(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
@@ -24,12 +25,8 @@ async function create(req, res, next) {
 
     debug(`create: owner:${owner} ${filePath}`);
 
-    let id;
-    try {
-        id = await favorites.create(req.user.username, owner, filePath);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error, id] = await safe(favorites.create(req.user.username, owner, filePath));
+    if (error) return next(new HttpError(500, error));
 
     next(new HttpSuccess(200, { id }));
 }
@@ -39,24 +36,14 @@ async function list(req, res, next) {
 
     debug(`list: for ${req.user.username}`);
 
-    let result = [];
-
-    try {
-        result = await favorites.list(req.user.username);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(favorites.list(req.user.username));
+    if (error) return next(new HttpError(500, error));
 
     const validFavorites = [];
     // Collect all file entries from favorites
     for (const favorite of result) {
-        let file;
-        try {
-            file = await files.get(favorite.owner, favorite.filePath);
-        } catch (error) {
-            console.error('Favorite does not map to a file or folder', favorite, error);
-        }
-
+        const [error, file] = await safe(files.get(favorite.owner, favorite.filePath));
+        if (error) debug('Favorite does not map to a file or folder', favorite, error);
         if (!file) continue;
 
         validFavorites.push(file.withoutPrivate(req.user.username));
@@ -70,22 +57,12 @@ async function get(req, res, next) {
 
     debug(`get: ${req.params.id}`);
 
-    let result;
-    try {
-        result = await favorites.get(req.params.id);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
-
+    const [error, result] = await safe(favorites.get(req.params.id));
+    if (error) return next(new HttpError(500, error));
     if (!result) return next(new HttpError(404, 'favorite does not exist'));
 
-    let file;
-    try {
-        file = await files.get(result.owner, result.filePath);
-    } catch (error) {
-        console.error('Favorite does not map to a file or folder', result, error);
-    }
-
+    const [fileError, file] = await safe(files.get(result.owner, result.filePath));
+    if (fileError) debug('Favorite does not map to a file or folder', result, fileError);
     if (!file) return next(new HttpError(409, 'favorite does not map to a file'));
 
     next(new HttpSuccess(200, {}));
@@ -96,11 +73,8 @@ async function remove(req, res, next) {
 
     debug(`remove: ${req.params.id}`);
 
-    try {
-        await favorites.remove(req.params.id);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error] = await safe(favorites.remove(req.params.id));
+    if (error) return next(new HttpError(500, error));
 
     next(new HttpSuccess(200, {}));
 }

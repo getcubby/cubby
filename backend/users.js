@@ -149,7 +149,7 @@ async function ensureUser(data) {
     // make first user admin
     const all = await list();
     if (all.length === 1) {
-        console.log(`First user created. Making ${username} the admin.`);
+        debug(`ensureUser: first user created. Making ${username} the admin.`);
         await setAdmin(username, true);
     }
 

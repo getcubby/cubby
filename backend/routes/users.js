@@ -111,7 +111,15 @@ async function optionalSessionAuth(req, res, next) {
 }
 
 async function tokenAuth(req, res, next) {
-    var accessToken = req.query.access_token || req.body.accessToken || '';
+    let accessToken = req.query.access_token || req.body?.accessToken || '';
+    if (req.headers?.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length == 2) {
+            const [scheme, credentials] = parts;
+
+            if (/^Bearer$/i.test(scheme)) accessToken = credentials;
+        }
+    }
 
     try {
         req.user = await users.getByAccessToken(accessToken);

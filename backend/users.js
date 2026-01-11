@@ -8,7 +8,8 @@ exports = module.exports = {
     setWebdavPassword,
     update,
     setAdmin,
-    remove
+    remove,
+    ensureUser
 };
 
 const assert = require('assert'),
@@ -152,4 +153,25 @@ async function remove(username) {
     assert.strictEqual(typeof username, 'string');
 
     await database.query('DELETE FROM users WHERE username = $1', [ username ]);
+}
+
+async function ensureUser(data) {
+    const { username, password, email, displayName } = data;
+
+    try {
+        debug(`ensureUser: ${username}`);
+        await add({ username, password, email, displayName });
+    } catch (e) {
+        if (e.reason !== MainError.ALREADY_EXISTS) throw e;
+    }
+
+
+    // make first user admin
+    const all = await list();
+    if (all.length === 1) {
+        console.log(`First user created. Making ${username} the admin.`);
+        await setAdmin(username, true);
+    }
+
+    return await get(username);
 }

@@ -63,33 +63,14 @@ async function isAuthenticated(req, res, next) {
         }
 
         req.user = user;
-        return next();
-    }
-
-    try {
-        console.log('New user found. Adding to database.', req.oidc.user.sub);
-
-        await users.add({
+    } else {
+        req.user = await users.ensureUser({
             username: req.oidc.user.sub,
             password: '',
             email: req.oidc.user.email,
             displayName: req.oidc.user.name
         });
-    } catch (e) {
-        if (e.reason !== MainError.ALREADY_EXISTS) return next(new HttpError(500, 'internal error'));
     }
-
-    user = await users.get(req.oidc.user.sub);
-
-    // make first user admin
-    const all = await users.list();
-    if (all.length === 1) {
-        console.log(`First user created. Making ${user.username} the admin.`);
-        await users.setAdmin(user.username, true);
-        user.admin = true;
-    }
-
-    req.user = user;
 
     next();
 }

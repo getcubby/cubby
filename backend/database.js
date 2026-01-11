@@ -9,7 +9,7 @@ const assert = require('assert'),
     debug = require('debug')('cubby:database'),
     pg = require('pg');
 
-var gConnectionPool = null;
+let gConnectionPool = null;
 
 const gDatabase = {
     hostname: process.env.POSTGRESQL_HOST || '127.0.0.1',

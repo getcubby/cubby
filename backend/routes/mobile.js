@@ -13,7 +13,7 @@ const crypto = require('crypto'),
     HttpSuccess = require('connect-lastmile').HttpSuccess,
     HttpError = require('connect-lastmile').HttpError,
     tokens = require('../tokens.js'),
-    users = require('../tokens.js');
+    users = require('../users.js');
 
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;

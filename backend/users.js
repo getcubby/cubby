@@ -20,7 +20,8 @@ const assert = require('assert'),
     database = require('./database.js'),
     path = require('path'),
     tokens = require('./tokens.js'),
-    MainError = require('./mainerror.js');
+    MainError = require('./mainerror.js'),
+    safe = require('safetydance');
 
 const CRYPTO_SALT_SIZE = 64; // 512-bit salt
 const CRYPTO_ITERATIONS = 10000; // iterations
@@ -64,41 +65,28 @@ async function add(user) {
     const salt = '';
     const admin = false;
 
-    try {
-        const result = await database.query('INSERT INTO users (username, email, display_name, password, salt, admin) VALUES ($1, $2, $3, $4, $5, $6)', [ username, email, displayName, password, salt, admin ]);
-        if (result.rowCount !== 1) throw new MainError(MainError.DATABASE_ERROR, 'failed to insert');
-    } catch (error) {
-        if (error.nestedError && error.nestedError.detail && error.nestedError.detail.indexOf('already exists') !== -1 && error.nestedError.detail.indexOf('username') !== -1) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
-
-        throw error;
-    }
+    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name, password, salt, admin) VALUES ($1, $2, $3, $4, $5, $6)', [ username, email, displayName, password, salt, admin ]));
+    if (error?.nestedError?.detail?.indexOf('already exists') !== -1 && error?.nestedError?.detail?.indexOf('username') !== -1) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
+    if (error) throw error;
 
     // copy skeleton folder
     debug(`add: copy skeleton folder...`);
     await cp(constants.SKELETON_FOLDER, path.join(constants.USER_DATA_ROOT, username), { recursive: true });
 }
 
-async function exists(username) {
-    assert.strictEqual(typeof username, 'string');
-
-    let res = false;
-    try {
-        await get(username);
-        res = true;
-    } catch (error) {
-        if (error.reason !== MainError.NOT_FOUND) console.error(`exists ${username} error:`, error);
-    }
-
-    return res;
-}
-
 async function get(username) {
     assert.strictEqual(typeof username, 'string');
 
     const result = await database.query('SELECT * FROM users WHERE username = $1', [ username ]);
-    if (result.rows.length === 0) throw new MainError(MainError.NOT_FOUND, 'user not found');
+    if (result.rows.length === 0) return null;
 
     return postProcess(result.rows[0]);
+}
+
+async function exists(username) {
+    assert.strictEqual(typeof username, 'string');
+
+    return await get(username) !== null;
 }
 
 async function getByAccessToken(accessToken) {
@@ -136,17 +124,13 @@ async function setWebdavPassword(username, password) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof password, 'string');
 
-    try {
-        const rawSalt = crypto.randomBytes(CRYPTO_SALT_SIZE);
-        const derivedKey = crypto.pbkdf2Sync(password, rawSalt, CRYPTO_ITERATIONS, CRYPTO_KEY_LENGTH, CRYPTO_DIGEST);
+    const rawSalt = crypto.randomBytes(CRYPTO_SALT_SIZE);
+    const derivedKey = crypto.pbkdf2Sync(password, rawSalt, CRYPTO_ITERATIONS, CRYPTO_KEY_LENGTH, CRYPTO_DIGEST);
 
-        const salt = rawSalt.toString('hex');
-        const saltedPassword = Buffer.from(derivedKey, 'binary').toString('hex');
+    const salt = rawSalt.toString('hex');
+    const saltedPassword = Buffer.from(derivedKey, 'binary').toString('hex');
 
-        await database.query('UPDATE users SET password = $1, salt = $2 WHERE username = $3', [ saltedPassword, salt, username ]);
-    } catch (error) {
-        throw new MainError(MainError.CRYPTO_ERROR, error);
-    }
+    await database.query('UPDATE users SET password = $1, salt = $2 WHERE username = $3', [ saltedPassword, salt, username ]);
 }
 
 async function remove(username) {
@@ -158,13 +142,9 @@ async function remove(username) {
 async function ensureUser(data) {
     const { username, password, email, displayName } = data;
 
-    try {
-        debug(`ensureUser: ${username}`);
-        await add({ username, password, email, displayName });
-    } catch (e) {
-        if (e.reason !== MainError.ALREADY_EXISTS) throw e;
-    }
-
+    debug(`ensureUser: ${username}`);
+    const [error] = await safe(add({ username, password, email, displayName }));
+    if (error?.reason !== MainError.ALREADY_EXISTS) throw error;
 
     // make first user admin
     const all = await list();

@@ -15,18 +15,14 @@ const assert = require('assert'),
     users = require('../users.js'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+    HttpSuccess = require('connect-lastmile').HttpSuccess,
+    safe = require('safetydance');
 
 async function getUserFromSession(req) {
     if (!req.oidc?.isAuthenticated()) return null;
     if (!req.oidc.user || !req.oidc.user.sub) return null;
 
-    try {
-        return await users.get(req.oidc.user.sub);
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) return null;
-        throw e;
-    }
+    return await users.get(req.oidc.user.sub);
 }
 
 async function getUserFromToken(req) {
@@ -42,12 +38,7 @@ async function getUserFromToken(req) {
 
     if (!accessToken) return null;
 
-    try {
-        return await users.getByAccessToken(accessToken);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return null;
-        throw error;
-    }
+    return await users.getByAccessToken(accessToken);
 }
 
 async function isAuthenticated(req, res, next) {
@@ -92,11 +83,8 @@ async function setAdmin(req, res, next) {
     if (!users.exists(req.params.username)) return next(new HttpError(409, 'user does not exist'));
     if (req.user.username === req.params.username) return next(new HttpError(403, 'cannot set admin status on own user'));
 
-    try {
-        await users.setAdmin(req.params.username, req.body.admin);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error] = await safe(users.setAdmin(req.params.username, req.body.admin));
+    if (error) return next(new HttpError(500, error));
 
     next(new HttpSuccess(200, {}));
 }
@@ -109,12 +97,11 @@ async function optionalAuth(req, res, next) {
 }
 
 async function tokenAuth(req, res, next) {
-    try {
-        req.user = await getUserFromToken(req);
-        if (!req.user) return next(new HttpError(401, 'Invalid Access Token'));
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error, user] = await safe(getUserFromToken(req));
+    if (error) return next(new HttpError(500, error));
+    if (!user) return next(new HttpError(401, 'Invalid Access Token'));
+
+    req.user = user;
 
     next();
 }
@@ -129,12 +116,10 @@ async function profile(req, res, next) {
 async function list(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    try {
-        const result = await users.list();
-        return next(new HttpSuccess(200, { users: result }));
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(users.list());
+    if (error) return next(new HttpError(500, error));
+
+    return next(new HttpSuccess(200, { users: result }));
 }
 
 async function update(req, res, next) {
@@ -142,11 +127,8 @@ async function update(req, res, next) {
 
     if (typeof req.body.password !== 'string' || !req.body.password) return next(new HttpError(400, 'password must be a non-empty string'));
 
-    try {
-        await users.setWebdavPassword(req.user.username, req.body.password);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error] = await safe(users.setWebdavPassword(req.user.username, req.body.password));
+    if (error) return next(new HttpError(500, error));
 
     next(new HttpSuccess(200, {}));
 }

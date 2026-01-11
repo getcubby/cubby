@@ -11,21 +11,26 @@ exports = module.exports = {
     list
 };
 
-var assert = require('assert'),
+const assert = require('assert'),
     users = require('../users.js'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess;
 
-async function isAuthenticated(req, res, next) {
-    if (!req.oidc.isAuthenticated()) return next(new HttpError(401, 'Unauthorized'));
+async function getUserFromSession(req) {
+    if (!req.oidc?.isAuthenticated()) return null;
+    if (!req.oidc.user || !req.oidc.user.sub) return null;
 
-    let user;
     try {
-        user = await users.get(req.oidc.user.sub);
+        return await users.get(req.oidc.user.sub);
     } catch (e) {
-        if (e.reason !== MainError.NOT_FOUND) return next(new HttpError(500, 'internal error'));
+        if (e.reason === MainError.NOT_FOUND) return null;
+        throw e;
     }
+}
+
+async function isAuthenticated(req, res, next) {
+    let user = await getUserFromSession(req);
 
     if (user) {
         // keep the internal database in-sync with the open id provider info
@@ -95,22 +100,11 @@ async function setAdmin(req, res, next) {
 
 // following middlewares have to check req.user if needed, like public share links
 async function optionalSessionAuth(req, res, next) {
-    if (!req.oidc.user || !req.oidc.user.sub) {
-        req.user = null;
-        return next();
-    }
-
-    try {
-        req.user = await users.get(req.oidc.user.sub);
-        if (!req.user) return next(new HttpError(401, 'Invalid login session'));
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
-
+    req.user = await getUserFromSession(req);
     next();
 }
 
-async function tokenAuth(req, res, next) {
+async function getUserFromToken(req) {
     let accessToken = req.query.access_token || req.body?.accessToken || '';
     if (req.headers?.authorization) {
         const parts = req.headers.authorization.split(' ');
@@ -121,8 +115,19 @@ async function tokenAuth(req, res, next) {
         }
     }
 
+    if (!accessToken) return null;
+
     try {
-        req.user = await users.getByAccessToken(accessToken);
+        return await users.getByAccessToken(accessToken);
+    } catch (error) {
+        if (error.reason === MainError.NOT_FOUND) return null;
+        throw error;
+    }
+}
+
+async function tokenAuth(req, res, next) {
+    try {
+        req.user = await getUserFromToken(req);
         if (!req.user) return next(new HttpError(401, 'Invalid Access Token'));
     } catch (error) {
         return next(new HttpError(500, error));

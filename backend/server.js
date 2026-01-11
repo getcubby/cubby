@@ -121,7 +121,10 @@ function init(callback) {
     router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
 
     // Mobile auth endpoints (no session/OIDC middleware required)
-    router.get('/api/v1/mobile/config', mobile.getConfig);
+    router.get('/api/v1/mobile/config', mobile.getConfig); // get this to show the auth form
+    router.get('/api/v1/mobile/start', mobile.mobileStart); // on oidc login click, will redirect user this
+
+    router.get('/.well-known/assetlinks.json', mobile.assetLinks); // App Links verification for Android
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
     app.use('/api', express.json());

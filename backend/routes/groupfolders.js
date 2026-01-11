@@ -87,8 +87,8 @@ async function remove(req, res, next) {
 
     debug(`remove: ${id}`);
 
-    const [error] = await safe(groupFolders.remove(id););
-    if (error) return next(new HttpError(500, e));
+    const [error] = await safe(groupFolders.remove(id));
+    if (error) return next(new HttpError(500, error));
 
     return next(new HttpSuccess(200, {}));
 }

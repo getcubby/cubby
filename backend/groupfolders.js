@@ -16,7 +16,8 @@ const assert = require('assert'),
     fs = require('fs-extra'),
     path = require('path'),
     MainError = require('./mainerror.js'),
-    recoll = require('./recoll.js');
+    recoll = require('./recoll.js'),
+    safe = require('safetydance');
 
 function postProcess(data) {
     data.folderPath = data.folder_path;
@@ -51,13 +52,10 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
         });
     }
 
-    try {
-        await database.transaction(queries);
-    } catch (error) {
-        if (error.nestedError && error.nestedError.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
-        if (error.nestedError && error.nestedError.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
-        throw error;
-    }
+    const [error] = await safe(database.transaction(queries));
+    if (error?.nestedError?.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
+    if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
+    if (error) throw error;
 
     // ensure folder
     if (!folderPath) folderPath = path.join(constants.GROUPS_DATA_ROOT, idOrSlug);
@@ -134,13 +132,10 @@ async function update(id, name, members) {
         });
     }
 
-    try {
-        await database.transaction(queries);
-    } catch (error) {
-        if (error.nestedError && error.nestedError.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
-        if (error.nestedError && error.nestedError.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
-        throw error;
-    }
+    const [error] = await safe(database.transaction(queries));
+    if (error?.nestedError?.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
+    if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
+    if (error) throw error;
 
     // FIXME reindex for all for the moment until we know who got removed!
     recoll.index();

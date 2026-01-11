@@ -5,7 +5,6 @@ exports = module.exports = {
     isAdmin,
     setAdmin,
     tokenAuth,
-    sessionAuth,
     optionalSessionAuth,
     profile,
     update,
@@ -92,19 +91,6 @@ async function setAdmin(req, res, next) {
     }
 
     next(new HttpSuccess(200, {}));
-}
-
-async function sessionAuth(req, res, next) {
-    if (!req.session || !req.session.username) return next(new HttpError(401, 'No login session'));
-
-    try {
-        req.user = await users.get(req.session.username);
-        if (!req.user) return next(new HttpError(401, 'Invalid login session'));
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
-
-    next();
 }
 
 // following middlewares have to check req.user if needed, like public share links

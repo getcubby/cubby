@@ -3,6 +3,7 @@
 exports = module.exports = {
     getConfig,
     mobileStart,
+    callbackLandingFallback,
     assetLinks
 };
 
@@ -39,6 +40,12 @@ function mobileStart(req, res) {
     authUrl.searchParams.set('state', state);
 
     res.redirect(authUrl.toString());
+}
+
+// Serves landing page for when app is not installed (App Link should intercept this) . this can happen if someone manually
+// started the auth flow
+function callbackLandingFallback(req, res) {
+    res.send('Please install the mobile app - https://play.google.com/store/apps/details?id=org.getcubby.app');
 }
 
 function assetLinks(req, res) {

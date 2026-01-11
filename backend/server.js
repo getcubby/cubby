@@ -123,6 +123,7 @@ function init(callback) {
     // Mobile auth endpoints (no session/OIDC middleware required)
     router.get('/api/v1/mobile/config', mobile.getConfig); // get this to show the auth form
     router.get('/api/v1/mobile/start', mobile.mobileStart); // on oidc login click, will redirect user this
+    router.get('/api/v1/mobile/callback', mobile.callbackLandingFallback); // only when app is not installed
 
     router.get('/.well-known/assetlinks.json', mobile.assetLinks); // App Links verification for Android
 

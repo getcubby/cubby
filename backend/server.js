@@ -9,6 +9,7 @@ const collab = require('./routes/collab.js'),
     http = require('http'),
     lastMile = require('connect-lastmile'),
     misc = require('./routes/misc.js'),
+    mobile = require('./routes/mobile.js'),
     office = require('./routes/office.js'),
     oidc = require('express-openid-connect'),
     path = require('path'),
@@ -118,6 +119,9 @@ function init(callback) {
     router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);
     router.get ('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, office.getFile);
     router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
+
+    // Mobile auth endpoints (no session/OIDC middleware required)
+    router.get('/api/v1/mobile/config', mobile.getConfig);
 
     app.use('/api/healthcheck', function (req, res) { res.status(200).send(); });
     app.use('/api', express.json());

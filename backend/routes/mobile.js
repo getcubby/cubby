@@ -6,7 +6,8 @@ exports = module.exports = {
     assetLinks
 };
 
-const debug = require('debug')('cubby:routes:mobile'),
+const crypto = require('crypto'),
+    debug = require('debug')('cubby:routes:mobile'),
     HttpSuccess = require('connect-lastmile').HttpSuccess;
 
 const PORT = process.env.PORT || 3000;

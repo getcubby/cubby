@@ -5,7 +5,7 @@ exports = module.exports = {
     isAdmin,
     setAdmin,
     tokenAuth,
-    optionalSessionAuth,
+    optionalAuth,
     profile,
     update,
     list
@@ -29,8 +29,30 @@ async function getUserFromSession(req) {
     }
 }
 
+async function getUserFromToken(req) {
+    let accessToken = req.query.access_token || req.body?.accessToken || '';
+    if (req.headers?.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length == 2) {
+            const [scheme, credentials] = parts;
+
+            if (/^Bearer$/i.test(scheme)) accessToken = credentials;
+        }
+    }
+
+    if (!accessToken) return null;
+
+    try {
+        return await users.getByAccessToken(accessToken);
+    } catch (error) {
+        if (error.reason === MainError.NOT_FOUND) return null;
+        throw error;
+    }
+}
+
 async function isAuthenticated(req, res, next) {
-    let user = await getUserFromSession(req);
+    let user = await getUserFromToken(req);
+    if (!user) user = await getUserFromSession(req);
 
     if (user) {
         // keep the internal database in-sync with the open id provider info
@@ -99,30 +121,10 @@ async function setAdmin(req, res, next) {
 }
 
 // following middlewares have to check req.user if needed, like public share links
-async function optionalSessionAuth(req, res, next) {
-    req.user = await getUserFromSession(req);
+async function optionalAuth(req, res, next) {
+    req.user = await getUserFromToken(req);
+    if (!req.user) req.user = await getUserFromSession(req);
     next();
-}
-
-async function getUserFromToken(req) {
-    let accessToken = req.query.access_token || req.body?.accessToken || '';
-    if (req.headers?.authorization) {
-        const parts = req.headers.authorization.split(' ');
-        if (parts.length == 2) {
-            const [scheme, credentials] = parts;
-
-            if (/^Bearer$/i.test(scheme)) accessToken = credentials;
-        }
-    }
-
-    if (!accessToken) return null;
-
-    try {
-        return await users.getByAccessToken(accessToken);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return null;
-        throw error;
-    }
 }
 
 async function tokenAuth(req, res, next) {

@@ -87,11 +87,11 @@ function init(callback) {
     // user edit for admins
     router.put ('/api/v1/users/:username/admin', users.isAuthenticated, users.isAdmin, users.setAdmin);
 
-    router.head('/api/v1/files', users.optionalSessionAuth, files.head);
-    router.get ('/api/v1/files', users.optionalSessionAuth, files.get);
-    router.post('/api/v1/files', users.optionalSessionAuth, files.add);
-    router.put ('/api/v1/files', users.optionalSessionAuth, files.update);
-    router.del ('/api/v1/files', users.optionalSessionAuth, files.remove);
+    router.head('/api/v1/files', users.optionalAuth, files.head);
+    router.get ('/api/v1/files', users.optionalAuth, files.get);
+    router.post('/api/v1/files', users.optionalAuth, files.add);
+    router.put ('/api/v1/files', users.optionalAuth, files.update);
+    router.del ('/api/v1/files', users.optionalAuth, files.remove);
 
     router.post('/api/v1/favorites',     users.isAuthenticated, favorites.create);
     router.get ('/api/v1/favorites',     users.isAuthenticated, favorites.list);
@@ -103,9 +103,9 @@ function init(callback) {
     router.del ('/api/v1/shares', users.isAuthenticated, shares.removeShare);
 
     // this is for share links
-    router.get ('/api/v1/shares/:id', users.optionalSessionAuth, shares.attachReceiver, shares.getShareLink);
+    router.get ('/api/v1/shares/:id', users.optionalAuth, shares.attachReceiver, shares.getShareLink);
 
-    router.get ('/api/v1/preview/:type/:id/:hash', users.optionalSessionAuth, shares.optionalAttachReceiver, misc.getPreview);
+    router.get ('/api/v1/preview/:type/:id/:hash', users.optionalAuth, shares.optionalAttachReceiver, misc.getPreview);
 
     router.get ('/api/v1/recent', users.isAuthenticated, misc.recent);
     router.get ('/api/v1/download', users.isAuthenticated, misc.download);

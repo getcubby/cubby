@@ -66,7 +66,7 @@ async function add(user) {
     const admin = false;
 
     const [error] = await safe(database.query('INSERT INTO users (username, email, display_name, password, salt, admin) VALUES ($1, $2, $3, $4, $5, $6)', [ username, email, displayName, password, salt, admin ]));
-    if (error?.nestedError?.detail?.indexOf('already exists') !== -1 && error?.nestedError?.detail?.indexOf('username') !== -1) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
+    if (error?.nestedError?.detail?.includes('already exists') && error?.nestedError?.detail?.includes('username')) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
     if (error) throw error;
 
     // copy skeleton folder
@@ -144,7 +144,7 @@ async function ensureUser(data) {
 
     debug(`ensureUser: ${username}`);
     const [error] = await safe(add({ username, password, email, displayName }));
-    if (error?.reason !== MainError.ALREADY_EXISTS) throw error;
+    if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
 
     // make first user admin
     const all = await list();

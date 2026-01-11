@@ -44,8 +44,16 @@ async function isAuthenticated(req, res, next) {
     let user = await getUserFromToken(req);
     if (!user) user = await getUserFromSession(req);
 
-    if (user) {
-        // keep the internal database in-sync with the open id provider info
+    if (!user) {
+        if (!req.oidc?.isAuthenticated()) return next(new HttpError(401, 'Unauthorized'));
+
+        req.user = await users.ensureUser({
+            username: req.oidc.user.sub,
+            password: '',
+            email: req.oidc.user.email,
+            displayName: req.oidc.user.name
+        });
+    } else { // keep the internal database in-sync with the open id provider info
         if (user.displayName !== req.oidc.user.name || user.email !== req.oidc.user.email) {
             await users.update(user.username, { displayName: req.oidc.user.name, email: req.oidc.user.email });
             user.displayName = req.oidc.user.name;
@@ -53,13 +61,6 @@ async function isAuthenticated(req, res, next) {
         }
 
         req.user = user;
-    } else {
-        req.user = await users.ensureUser({
-            username: req.oidc.user.sub,
-            password: '',
-            email: req.oidc.user.email,
-            displayName: req.oidc.user.name
-        });
     }
 
     next();

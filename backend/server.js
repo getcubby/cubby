@@ -124,6 +124,7 @@ function init(callback) {
     router.get('/api/v1/mobile/config', mobile.getConfig); // get this to show the auth form
     router.get('/api/v1/mobile/start', mobile.mobileStart); // on oidc login click, will redirect user this
     router.get('/api/v1/mobile/callback', mobile.callbackLandingFallback); // only when app is not installed
+    router.post('/api/v1/mobile/code-to-token', express.json(), mobile.codeToToken); // exchange oidc code with cubby API token
 
     router.get('/.well-known/assetlinks.json', mobile.assetLinks); // App Links verification for Android
 

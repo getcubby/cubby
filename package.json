@@ -15,7 +15,7 @@
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.4.3",
     "express": "^5.2.1",
-    "express-openid-connect": "^2.19.3",
+    "express-openid-connect": "^2.19.4",
     "express-session": "^1.18.2",
     "fs-extra": "^11.3.3",
     "handlebars": "^4.7.8",
@@ -25,7 +25,7 @@
     "safetydance": "^2.5.1",
     "session-file-store": "^1.5.0",
     "webdav-server": "^2.6.2",
-    "ws": "^8.18.3",
+    "ws": "^8.19.0",
     "xmldom": "^0.6.0",
     "xpath": "0.0.34"
   },

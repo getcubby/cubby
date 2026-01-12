@@ -6,13 +6,14 @@ const assert = require('assert'),
 
 exports = module.exports = Entry;
 
-function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
+function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
     assert(fullFilePath && typeof fullFilePath === 'string');
     assert(filePath && typeof filePath === 'string');
     assert(owner && typeof owner === 'string');
     assert(typeof fileName === 'string');
     assert.strictEqual(typeof size, 'number');
     assert(mtime instanceof Date && !isNaN(mtime.valueOf()));
+    assert(atime instanceof Date && !isNaN(atime.valueOf()));
     assert.strictEqual(typeof isFile, 'boolean');
     assert.strictEqual(typeof isDirectory, 'boolean');
     assert.strictEqual(typeof isShare, 'boolean');
@@ -32,6 +33,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.owner = owner;
     this.size = size;
     this.mtime = mtime;
+    this.atime = atime;
     this.isDirectory = isDirectory;
     this.isFile = isFile;
     this.isBinary = isFile ? isBinaryFileSync(fullFilePath) : false;
@@ -102,6 +104,7 @@ Entry.prototype.withoutPrivate = function (username = null) {
         owner: this.owner,
         size: this.size,
         mtime: this.mtime,
+        atime: this.atime,
         isDirectory: this.isDirectory,
         isFile: this.isFile,
         isShare: this.isShare,

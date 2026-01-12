@@ -90,10 +90,12 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
 
                 const file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath));
                 file.share = share;
+                file.atime = new Date(recent.ts);
 
                 result.push(file.asShare(share.filePath).withoutPrivate(username));
             } else {
                 const file = await files.get(subject.usernameOrGroupfolder, subject.filePath);
+                file.atime = new Date(recent.ts);
                 result.push(file.withoutPrivate(username));
             }
 

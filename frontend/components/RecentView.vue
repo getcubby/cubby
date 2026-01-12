@@ -14,22 +14,22 @@ onMounted(async () => {
   const entries = await MainModel.recent();
 
   // sort into time buckets
-  const today = entries.filter(e => moment(e.mtime).isSame(new Date(), 'day'));
+  const today = entries.filter(e => moment(e.atime).isSame(new Date(), 'day'));
 
   const endYesterday = moment().subtract(1,'days').endOf('day');
   const startYesterday = moment().subtract(1,'days').startOf('day');
-  const yesterday = entries.filter(e => moment(e.mtime).isBetween(startYesterday, endYesterday));
+  const yesterday = entries.filter(e => moment(e.atime).isBetween(startYesterday, endYesterday));
 
   const endLastWeek = moment().subtract(2,'days').endOf('day');
   const startLastWeek = moment().subtract(7,'days').startOf('day');
-  const lastWeek = entries.filter(e => moment(e.mtime).isBetween(startLastWeek, endLastWeek));
+  const lastWeek = entries.filter(e => moment(e.atime).isBetween(startLastWeek, endLastWeek));
 
   const endLastMonth = moment().subtract(8,'days').endOf('day');
   const startLastMonth = moment().subtract(31,'days').startOf('day');
-  const lastMonth = entries.filter(e => moment(e.mtime).isBetween(startLastMonth, endLastMonth));
+  const lastMonth = entries.filter(e => moment(e.atime).isBetween(startLastMonth, endLastMonth));
 
   const endOther = moment().subtract(32,'days').endOf('day');
-  const older = entries.filter(e => moment(e.mtime).isBefore(endOther));
+  const older = entries.filter(e => moment(e.atime).isBefore(endOther));
 
   if (today.length) buckets.value.push({ label: 'Today', entries: today });
   if (yesterday.length) buckets.value.push({ label: 'Yesterday', entries: yesterday });

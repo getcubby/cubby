@@ -111,7 +111,7 @@ defineExpose({
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedWith" class="shared-link" :key="link.id">
               <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
-              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+              <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
             </div>
             <div v-show="sharedWith.length === 0" class="shared-link-empty">
               Not shared with anyone yet
@@ -131,8 +131,10 @@ defineExpose({
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedLinks" class="shared-link" :key="link.id">
               <div>Created {{ prettyDate(link.createdAt) }}</div>
-              <Button small outline tool @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
-              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+              <div style="display: flex; gap: 5px">
+                <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyShareIdLinkToClipboard(link.id)"/>
+                <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
+              </div>
             </div>
             <div v-show="sharedLinks.length === 0" class="shared-link-empty">
               No shared links yet

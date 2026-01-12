@@ -16,6 +16,7 @@ var assert = require('assert'),
     Entry = require('../entry.js'),
     util = require('util'),
     path = require('path'),
+    recent = require('../recent.js'),
     shares = require('../shares.js'),
     groupFolders = require('../groupfolders.js'),
     MainError = require('../mainerror.js'),
@@ -83,8 +84,12 @@ async function add(req, res, next) {
     debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
    try {
-        if (directory) await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
-        else await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
+        if (directory) {
+            await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
+        } else {
+            await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
+            await recent.add(subject.usernameOrGroupfolder, subject.filePath);
+        }
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
         return next(new HttpError(500, error));
@@ -151,6 +156,9 @@ async function get(req, res, next) {
 
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
+
+            await recent.add(req.user.username, filePath);
+
             return sendFile(res, result);
         } else if (type === 'download') {
             if (result.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
@@ -381,6 +389,8 @@ async function remove(req, res, next) {
     } catch (error) {
         return next(new HttpError(500, error));
     }
+
+    await recent.remove(subject.usernameOrGroupfolder, subject.filePath);
 
     next(new HttpSuccess(200, {}));
 }

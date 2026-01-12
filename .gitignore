@@ -9,6 +9,7 @@ frontend-dist/
 config.json
 .secret
 .recoll/
+.recents.json
 
 # local env files
 .env.local

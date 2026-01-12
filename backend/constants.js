@@ -8,4 +8,5 @@ exports = module.exports = {
     SESSION_PATH: process.env.SESSION_PATH ? path.resolve(process.env.SESSION_PATH) : path.resolve(__dirname, '../.sessions'),
     SEARCH_INDEX_PATH: process.env.SEARCH_INDEX_PATH ? path.resolve(process.env.SEARCH_INDEX_PATH) : path.resolve(__dirname, '../.recoll'),
     SKELETON_FOLDER: process.env.SKELETON_FOLDER ? path.resolve(process.env.SKELETON_FOLDER) : path.resolve(__dirname, '../skeleton'),
+    RECENTS_CACHE_PATH: process.env.RECENTS_CACHE_PATH ? path.resolve(process.env.RECENTS_CACHE_PATH) : path.resolve(__dirname, '../.recents.json'),
 };

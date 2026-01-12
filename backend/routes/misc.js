@@ -4,7 +4,7 @@ exports = module.exports = {
     getConfig,
     getPreview,
     download,
-    recent,
+    getRecent,
     search
 };
 
@@ -19,6 +19,7 @@ const assert = require('assert'),
     path = require('path'),
     preview = require('../preview.js'),
     recoll = require('../recoll.js'),
+    recent = require('../recent.js'),
     safe = require('safetydance'),
     shares = require('../shares.js'),
     HttpError = require('connect-lastmile').HttpError,
@@ -156,7 +157,7 @@ async function download(req, res, next) {
     archive.finalize();
 }
 
-async function recent(req, res, next) {
+async function getRecent(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
     const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 10 : parseInt(req.query.days_ago, 10);
@@ -166,7 +167,7 @@ async function recent(req, res, next) {
 
     let entries = [];
     try {
-        entries = await files.recent(req.user.username, daysAgo, maxFiles);
+        entries = await recent.get(req.user.username, daysAgo, maxFiles);
     } catch (error) {
         return next(new HttpError(500, error));
     }

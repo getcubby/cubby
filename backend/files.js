@@ -15,7 +15,6 @@ exports = module.exports = {
     copy,
     extract,
     remove,
-    recent
 };
 
 const assert = require('assert'),
@@ -114,8 +113,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    // kick off in background
-    runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
+    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
 
     if (!mtime) return;
 
@@ -480,38 +478,4 @@ async function remove(usernameOrGroupfolder, filePath) {
     }
 
     await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
-}
-
-async function recent(usernameOrGroupfolder, daysAgo = 3, maxFiles = 100) {
-    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
-    assert.strictEqual(typeof daysAgo, 'number');
-
-    const fullFilePath = getAbsolutePath(usernameOrGroupfolder, '/');
-    if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
-
-    let filePaths = [];
-    try {
-        // -mtime 3 == 3 days ago
-        const stdout = await exec('find', [ fullFilePath, '-type', 'f', '-mtime', `-${daysAgo}` ]);
-        filePaths = stdout.toString().split('\n').map(function (f) { return f.trim(); }).filter(function (f) { return !!f; });
-    } catch (error) {
-        throw new MainError(MainError.INTERNAL_ERROR, error);
-    }
-
-    const result = [];
-
-    const localResolvedPrefix = path.join(constants.USER_DATA_ROOT, usernameOrGroupfolder);
-
-    // we limit files to maxFiles
-    for (const filePath of filePaths.slice(0, maxFiles)) {
-        try {
-            const stat = await fsPromises.stat(filePath);
-            if (!stat.isFile()) throw new MainError(MainError.FS_ERROR, 'recent should only list files');
-            result.push(await getFile(usernameOrGroupfolder, filePath, filePath.slice(localResolvedPrefix.length), stat));
-        } catch (error) {
-            console.error(`Error in getting recent file ${filePath}`, error);
-        }
-    }
-
-    return result;
 }

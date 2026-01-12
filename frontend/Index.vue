@@ -1,29 +1,23 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef, computed, provide } from 'vue';
-import { API_ORIGIN, BASE_URL, parseResourcePath, copyToClipboard, sanitize } from './utils.js';
-import { prettyDate } from '@cloudron/pankow/utils';
+import { API_ORIGIN, BASE_URL, parseResourcePath, sanitize } from './utils.js';
 import {
   Breadcrumb,
   Button,
-  Checkbox,
   Dialog,
   DirectoryView,
-  SingleSelect,
   FileUploader,
   InputDialog,
   Menu,
   Notification,
   PasswordInput,
   SideBar,
-  TabView,
-  InputGroup,
   TopBar
 } from '@cloudron/pankow';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from './models/DirectoryModel.js';
 import MainModel from './models/MainModel.js';
-import ShareModel from './models/ShareModel.js';
 import FavoriteModel from './models/FavoriteModel.js';
 import LoginView from './components/LoginView.vue';
 import UsersView from './components/UsersView.vue';
@@ -34,6 +28,7 @@ import MarkdownViewer from './components/MarkdownViewer.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
+import ShareDialog from './components/ShareDialog.vue';
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
@@ -55,6 +50,7 @@ const beforeUnloadListener = (event) => {
 };
 
 const aboutDialog = useTemplateRef('aboutDialog');
+const shareDialog = useTemplateRef('shareDialog');
 
 const ready = ref(false);
 const view = ref('');
@@ -79,20 +75,6 @@ const breadCrumbHome = ref({
 const webDavPasswordDialog = ref({
   error: '',
   password: ''
-});
-const shareDialog = ref({
-  visible: false,
-  error: '',
-  receiverUsername: '',
-  readonly: false,
-  users: [],
-  sharedWith: [],
-  sharedLinks: [],
-  entry: {},
-  shareLink: {
-    expires: false,
-    expiresAt: 0
-  },
 });
 
 const mainMenu = [{
@@ -377,6 +359,7 @@ async function refreshConfig() {
 }
 
 provide('refreshConfig', refreshConfig);
+provide('profile', profile);
 
 function clearSelection() {
   selectedEntries.value = [];
@@ -511,81 +494,8 @@ async function renameHandler(item, newName) {
   directoryView.value.highlightByName(item.name);
 }
 
-async function refreshShareDialogEntry(item = null) {
-  shareDialog.value.entry = await DirectoryModel.get(item || shareDialog.value.entry);
-
-  shareDialog.value.sharedWith = shareDialog.value.entry.sharedWith.filter((s) => s.receiverUsername);
-  shareDialog.value.sharedLinks = shareDialog.value.entry.sharedWith.filter((s) => !s.receiverUsername);
-
-  shareDialog.value.users.forEach((user) => {
-    user.alreadyUsed = shareDialog.value.entry.sharedWith.find((share) => { return share.receiverUsername === user.username; });
-  });
-
-  await refresh(shareDialog.value.entry);
-}
-
-const shareDialogElement = useTemplateRef('shareDialogElement');
 async function shareHandler(item) {
-  shareDialog.value.error = '';
-  shareDialog.value.receiverUsername = '';
-  shareDialog.value.readonly = false;
-  shareDialog.value.shareLink.expires = false;
-  shareDialog.value.shareLink.expiresAt = new Date()
-
-  // start with tomorrow
-  shareDialog.value.shareLink.expiresAt.setDate(shareDialog.value.shareLink.expiresAt.getDate() + 1);
-
-  // prepare available users for sharing
-  const users = await MainModel.getUsers();
-  shareDialog.value.users = users.filter((u) => { return u.username !== profile.value.username; });
-  shareDialog.value.users.forEach((u) => { u.userAndDisplayName = u.displayName + ' ( ' + u.username + ' )'; });
-
-  await refreshShareDialogEntry(item);
-
-  shareDialogElement.value.open();
-}
-
-function copyShareIdLinkToClipboard(shareId) {
-  copyToClipboard(ShareModel.getLink(shareId));
-  window.pankow.notify('Share link copied to clipboard');
-}
-
-async function onCreateShareLink() {
-  const path = shareDialog.value.entry.filePath;
-  const readonly = true; // always readonly for now
-  const expiresAt = shareDialog.value.shareLink.expires ? shareDialog.value.shareLink.expiresAt : 0;
-  const ownerUsername = shareDialog.value.entry.group ? null : shareDialog.value.entry.owner;
-  const ownerGroupfolder = shareDialog.value.entry.group ? shareDialog.value.entry.group.id : null;
-
-  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, expiresAt });
-
-  copyShareIdLinkToClipboard(shareId);
-
-  await refreshShareDialogEntry();
-}
-
-async function onCreateShare() {
-  const path = shareDialog.value.entry.filePath;
-  const readonly = shareDialog.value.readonly;
-  const receiverUsername = shareDialog.value.receiverUsername;
-  const ownerUsername = shareDialog.value.entry.group ? null : shareDialog.value.entry.owner;
-  const ownerGroupfolder = shareDialog.value.entry.group ? shareDialog.value.entry.group.id : null;
-
-  await ShareModel.create({ ownerUsername, ownerGroupfolder, path, readonly, receiverUsername });
-
-  // reset the form
-  shareDialog.value.error = '';
-  shareDialog.value.receiverUsername = '';
-  shareDialog.value.readonly = false;
-
-  // refresh the entry
-  shareDialog.value.entry = await DirectoryModel.get(shareDialog.value.entry);
-  await refreshShareDialogEntry();
-}
-
-async function onDeleteShare(share) {
-  await ShareModel.remove(share.id);
-  refreshShareDialogEntry();
+  shareDialog.value.open(item);
 }
 
 async function refresh(item = null) {
@@ -1021,50 +931,7 @@ onMounted(async () => {
     </form>
   </Dialog>
 
-  <!-- Share Dialog -->
-  <Dialog :title="'Sharing ' + shareDialog.entry.fileName" ref="shareDialogElement" :show-x="true">
-    <div>
-      <TabView :tabs="{ user: 'with a User', link: 'via Link' }" default-active="user">
-        <template #user>
-          <div style="margin-bottom: 10px;">
-            <div v-for="link in shareDialog.sharedWith" class="shared-link" :key="link.id">
-              <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
-              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-            </div>
-            <div v-show="shareDialog.sharedWith.length === 0" class="shared-link-empty">
-              Not shared with anyone yet
-            </div>
-          </div>
-
-          <form @submit="onCreateShare" @submit.prevent>
-            <!-- TODO optionDisabled="alreadyUsed"  -->
-            <small v-show="shareDialog.error">{{ shareDialog.error }}</small>
-            <InputGroup>
-              <SingleSelect v-model="shareDialog.receiverUsername" :options="shareDialog.users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
-              <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!shareDialog.receiverUsername">Create share</Button>
-            </InputGroup>
-          </form>
-        </template>
-        <template #link>
-          <div style="margin-bottom: 10px;">
-            <div v-for="link in shareDialog.sharedLinks" class="shared-link" :key="link.id">
-              <div>Created {{ prettyDate(link.createdAt) }}</div>
-              <Button small outline tool @click="copyShareIdLinkToClipboard(link.id)">Copy Link to Clipboard</Button>
-              <Button small danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-            </div>
-            <div v-show="shareDialog.sharedLinks.length === 0" class="shared-link-empty">
-              No shared links yet
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareDialog.shareLink.expire" />
-            <input type="date" v-model="shareDialog.shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareDialog.shareLink.expire"/>
-            <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
-          </div>
-        </template>
-      </TabView>
-    </div>
-  </Dialog>
+  <ShareDialog ref="shareDialog"/>
 
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'image'">
@@ -1226,17 +1093,6 @@ pre {
   position: relative;
   overflow: hidden;
   flex-grow: 1;
-}
-
-.shared-link, .shared-link-empty {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px;
-  align-items: center;
-}
-
-.shared-link:hover {
-  background-color: var(--pankow-color-background-hover);
 }
 
 .breadcrumb-bar {

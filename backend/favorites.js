@@ -61,8 +61,8 @@ async function create(username, owner, filePath) {
 
     const id = 'fid-' + require('crypto').createHash('md5').update(`${username}${filePath}`, 'utf8').digest('hex');
 
-    const [error] = await safe(database.query('INSERT INTO favorites (id, username, owner, file_path) VALUES ($1, $2, $3, $4)', [ id, username, owner, filePath ]));
-    if (!error.details || error.details.constraint !== 'favorites_pkey') throw new MainError(MainError.BAD_STATE, error);
+    const [error] = await safe(database.query('INSERT INTO favorites (id, username, owner, file_path) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT favorites_pkey DO NOTHING', [ id, username, owner, filePath ]));
+    if (error) throw new MainError(MainError.BAD_STATE, error);
 
     return id;
 }

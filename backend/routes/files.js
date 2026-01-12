@@ -1,8 +1,6 @@
 'use strict';
 
 exports = module.exports = {
-    translateResourcePath,
-
     add,
     head,
     get,
@@ -31,42 +29,6 @@ function boolLike(arg) {
     return true;
 }
 
-async function translateResourcePath(user, filePath) {
-    const resource = filePath.split('/')[1];
-    filePath = filePath.slice(resource.length+1);
-
-    // only shares may have optional auth
-    if (resource !== 'shares' && !user) return null;
-
-    if (resource === 'home') {
-        return { resource, usernameOrGroupfolder: user.username, filePath };
-    } else if (resource === 'shares') {
-        const shareId = filePath.split('/')[1];
-        if (!shareId) return null;
-
-        const share = await shares.get(shareId);
-
-        // check if this share is a public link or only for a specific user
-        if (user && share.receiverUsername && share.receiverUsername !== user.username) return null;
-
-        // actual path is without shares/<shareId>/
-        return { resource, usernameOrGroupfolder: share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
-    } else if (resource === 'groupfolders') {
-        const groupId = filePath.split('/')[1];
-        if (!groupId) return null;
-
-        const group = await groupFolders.get(groupId);
-
-        // check if the user is part of the group
-        if (!groupFolders.isPartOf(group, user.username)) return null;
-
-        // actual path is without groupfolder/<groupId>/
-        return { resource, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: filePath.split('/').slice(2).join('/') };
-    } else {
-        return null;
-    }
-}
-
 async function add(req, res, next) {
     // only allowed for authenticated users until we check for !read-only shares
     if (!req.user) return next(new HttpError(401, 'not allowed'));
@@ -78,7 +40,7 @@ async function add(req, res, next) {
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await translateResourcePath(req.user, filePath);
+    const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
@@ -88,7 +50,7 @@ async function add(req, res, next) {
             await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
         } else {
             await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
-            await recent.add(subject.usernameOrGroupfolder, subject.filePath);
+            await recent.add(subject.usernameOrGroupfolder, subject.resourcePath);
         }
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
@@ -102,7 +64,7 @@ async function head(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await translateResourcePath(req.user, filePath);
+    const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     debug(`head: ${subject.resource} ${subject.filePath}`);
@@ -157,7 +119,7 @@ async function get(req, res, next) {
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
 
-            await recent.add(req.user.username, filePath);
+            await recent.add(req.user.username, req.query.path);
 
             return sendFile(res, result);
         } else if (type === 'download') {
@@ -191,6 +153,9 @@ async function get(req, res, next) {
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
+
+                await recent.add(req.user.username, req.query.path);
+
                 return sendFile(res, file);
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
@@ -276,6 +241,9 @@ async function get(req, res, next) {
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
+
+                await recent.add(req.user.username, req.query.path);
+
                 return sendFile(res, file);
             } else if (type === 'download') {
                 if (file.isDirectory) return next(new HttpError(417, 'type "download" is not supported for directories'));
@@ -348,11 +316,11 @@ async function update(req, res, next) {
     if (!newFilePath) return next(new HttpError(400, 'action requires new_path argument'));
 
     // from
-    const subject = await translateResourcePath(req.user, filePath);
+    const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     // target - if we support actions without target, this needs to move into the ifs
-    const newSubject =  await translateResourcePath(req.user, newFilePath);
+    const newSubject =  await files.translateResourcePath(req.user.username, newFilePath);
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
     debug(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
@@ -379,7 +347,7 @@ async function remove(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await translateResourcePath(req.user, filePath);
+    const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     debug(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
@@ -390,7 +358,7 @@ async function remove(req, res, next) {
         return next(new HttpError(500, error));
     }
 
-    await recent.remove(subject.usernameOrGroupfolder, subject.filePath);
+    await recent.remove(req.user.username, subject.resourcePath);
 
     next(new HttpSuccess(200, {}));
 }

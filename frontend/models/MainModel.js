@@ -144,7 +144,15 @@ async function recent() {
   // only needed for local development
   entries.forEach((e) => {
     e.previewUrl = `${API_ORIGIN}${e.previewUrl}`;
-    e.parentFolderUrl = '#files/home' + e.filePath.slice(0, -e.fileName.length);
+    if (e.share) {
+      // check for direct file share, where we have no parent
+      if (e.filePath === '/') e.parentFolderUrl = null;
+      else e.parentFolderUrl = `#files/shares/${e.share.id}${e.filePath.slice(0, -e.fileName.length)}`;
+    } else if (e.group) {
+      e.parentFolderUrl = `#files/groupfolders/${e.group.id}${e.filePath.slice(0, -e.fileName.length)}`;
+    } else {
+      e.parentFolderUrl = `#files/home${e.filePath.slice(0, -e.fileName.length)}`;
+    }
   });
 
   return entries;

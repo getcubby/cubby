@@ -8,6 +8,8 @@ exports = module.exports = {
 const assert = require('assert'),
     debug = require('debug')('cubby:recent'),
     constants = require('./constants.js'),
+    shares = require('./shares.js'),
+    path = require('path'),
     fsPromises = require('fs/promises'),
     files = require('./files.js');
 
@@ -21,34 +23,34 @@ try {
     console.log('No recent file cache found. Starting fresh.');
 }
 
-async function add(username, filePath) {
+async function add(username, resourcePath) {
     assert.strictEqual(typeof username, 'string');
-    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof resourcePath, 'string');
 
-    debug(`add: ${username} ${filePath}`);
+    debug(`add: ${username} ${resourcePath}`);
 
     if (!recentsCache[username]) recentsCache[username] = [];
 
-    const index = recentsCache[username].findIndex(e => { return e.filePath === filePath; });
+    const index = recentsCache[username].findIndex(e => { return e.resourcePath === resourcePath; });
     if (index !== -1) recentsCache[username].splice(index, 1);
 
     recentsCache[username].unshift({
-        filePath,
+        resourcePath,
         ts: Date.now()
     });
 
     await fsPromises.writeFile(constants.RECENTS_CACHE_PATH, JSON.stringify(recentsCache));
 }
 
-async function remove(username, filePath) {
+async function remove(username, resourcePath) {
     assert.strictEqual(typeof username, 'string');
-    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof resourcePath, 'string');
 
-    debug(`remove: ${username} ${filePath}`);
+    debug(`remove: ${username} ${resourcePath}`);
 
     if (!recentsCache[username]) return;
 
-    const index = recentsCache[username].findIndex(e => { return e.filePath === filePath; });
+    const index = recentsCache[username].findIndex(e => { return e.resourcePath === resourcePath; });
     if (index === -1) return;
 
     recentsCache[username].splice(index, 1);
@@ -70,11 +72,35 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
         if (now - recent.ts > MAX_AGE) break;
 
         try {
-            result.push(await files.get(username, recent.filePath));
+            const subject = await files.translateResourcePath(username, recent.resourcePath);
+            if (!subject) {
+                recentsCache[username].splice(i, 1);
+                continue;
+            }
+
+            if (subject.resource === 'shares') {
+                const shareId = subject.resourcePath.slice(1).split('/')[1];
+                const share = await shares.get(shareId);
+                if (!share) {
+                    recentsCache[username].splice(i, 1);
+                    continue;
+                }
+
+                const shareFilePath = subject.resourcePath.slice(1).split('/').slice(2).join('/');
+
+                const file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath));
+                file.share = share;
+
+                result.push(file.asShare(share.filePath).withoutPrivate(username));
+            } else {
+                const file = await files.get(subject.usernameOrGroupfolder, subject.filePath);
+                result.push(file.withoutPrivate(username));
+            }
+
             i++;
         // eslint-disable-next-line no-unused-vars
         } catch (error) {
-            console.error(`File not found ${username} ${recent.filePath}. Removing from recents.`);
+            console.error(`File not found ${username} ${recent.resourcePath}. Removing from recents.`);
             recentsCache[username].splice(i, 1);
         }
     }

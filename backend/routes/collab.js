@@ -7,7 +7,6 @@ const debug = require('debug')('cubby:routes:collab'),
     MainError = require('../mainerror.js'),
     HttpError = require('connect-lastmile').HttpError,
     HttpSuccess = require('connect-lastmile').HttpSuccess,
-    translateResourcePath = require('./files.js').translateResourcePath,
     yUtils = require('@y/websocket-server/utils');
 
 const FRAGEMENT_NAME = 'cubby-markdownviewer';
@@ -24,7 +23,7 @@ async function getHandle(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await translateResourcePath(req.user, filePath);
+    const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     debug(`getHandle: ${subject.resource} ${subject.filePath}`);

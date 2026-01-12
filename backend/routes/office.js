@@ -22,7 +22,6 @@ var assert = require('assert'),
     office = require('../office.js'),
     safe = require('safetydance'),
     tokens = require('../tokens.js'),
-    translateResourcePath = require('./files.js').translateResourcePath,
     xpath = require('xpath');
 
 const HANDLES = {};
@@ -34,7 +33,7 @@ async function getHandle(req, res, next) {
     const collaboraHost = config.get('collabora.host', '');
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
-    const subject = await translateResourcePath(req.user, resourcePath);
+    const subject = await files.translateResourcePath(req.user.username, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     let doc;

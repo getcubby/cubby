@@ -2,7 +2,7 @@ exports = module.exports = {
     HOME: 'home',
 
     isGroupfolder,
-
+    translateResourcePath,
     getAbsolutePath,
 
     addDirectory,
@@ -38,6 +38,42 @@ function isGroupfolder(usernameOrGroupfolder) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
 
     return usernameOrGroupfolder.indexOf('groupfolder-') === 0;
+}
+
+async function translateResourcePath(username, resourcePath) {
+    const resource = resourcePath.split('/')[1];
+    const filePath = resourcePath.slice(resource.length+1);
+
+    // only shares may have optional auth
+    if (resource !== 'shares' && !username) return null;
+
+    if (resource === 'home') {
+        return { resource, resourcePath, usernameOrGroupfolder: username, filePath };
+    } else if (resource === 'shares') {
+        const shareId = filePath.split('/')[1];
+        if (!shareId) return null;
+
+        const share = await shares.get(shareId);
+
+        // check if this share is a public link or only for a specific user
+        if (share.receiverUsername && share.receiverUsername !== username) return null;
+
+        // actual path is without shares/<shareId>/
+        return { resource, resourcePath, usernameOrGroupfolder: share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+    } else if (resource === 'groupfolders') {
+        const groupId = filePath.split('/')[1];
+        if (!groupId) return null;
+
+        const group = await groupFolders.get(groupId);
+
+        // check if the user is part of the group
+        if (!groupFolders.isPartOf(group, username)) return null;
+
+        // actual path is without groupfolder/<groupId>/
+        return { resource, resourcePath, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: '/' + filePath.split('/').slice(2).join('/') };
+    } else {
+        return null;
+    }
 }
 
 function getAbsolutePath(usernameOrGroupfolder, filePath) {

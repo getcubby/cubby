@@ -20,6 +20,8 @@ const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 const USE_APP_LINKS = !!process.env.ANDROID_CERT_SHA256;
 const REDIRECT_URI = USE_APP_LINKS ? `${APP_ORIGIN}/api/v1/mobile/callback` : 'org.getcubby://auth/callback';
 
+const pendingStates = new Map(); // oidc state -> timestamp
+
 function getConfig(req, res, next) {
     const config = {
         methods: [ 'oidc' ],
@@ -31,6 +33,10 @@ function getConfig(req, res, next) {
 
 function mobileStart(req, res) {
     const state = crypto.randomBytes(16).toString('hex');
+    pendingStates.set(state, Date.now());
+    for (const [s, ts] of pendingStates) {
+        if ((Date.now() - ts) > 10 * 60 * 1000) pendingStates.delete(s); // state cleanup
+    }
 
     debug(`mobileStart: auth starting with redirect_uri: ${REDIRECT_URI} (USE_APP_LINKS: ${USE_APP_LINKS})`);
 
@@ -84,8 +90,12 @@ async function getOidcProfile(accessToken) {
 }
 
 async function codeToToken(req, res, next) {
-    const { code } = req.body;
+    const { code, state } = req.body;
     if (!code) return next(new HttpError(400, 'code is required'));
+    if (!state) return next(new HttpError(400, 'state is required'));
+
+    if (!pendingStates.has(state)) return next(new HttpError(400, 'invalid or expired state'));
+    pendingStates.delete(state);
 
     try {
         const idpTokens = await exchangeCodeWithIdp(code, REDIRECT_URI);

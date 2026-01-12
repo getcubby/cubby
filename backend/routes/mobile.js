@@ -40,6 +40,7 @@ function mobileStart(req, res) {
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', 'openid profile email');
     authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('prompt', 'login'); // on mobile, the session is cached in browser. this forces IDP to prompt
 
     res.redirect(authUrl.toString());
 }

@@ -22,6 +22,7 @@ No email configuration found. Set the following environment variables:
     MAIL_SMTP_USERNAME
     MAIL_SMTP_PASSWORD
     MAIL_FROM
+    MAIL_FROM_DISPLAY_NAME
     `);
 }
 
@@ -67,7 +68,7 @@ async function newShare(emailAddress, shareId) {
     }));
 
     const mail = {
-        from: `Cubby <${process.env.MAIL_FROM}>`,
+        from: `${process.env.MAIL_FROM_DISPLAY_NAME || 'Cubby'} <${process.env.MAIL_FROM}>`,
         to: emailAddress,
         subject: emailSubject,
         text: emailBodyText,

@@ -2,10 +2,6 @@
   <MainLayout :gap="false" class="main-layout">
     <template #dialogs>
       <InputDialog ref="inputDialog" />
-      <div ref="selectionOverlay" class="selection-overlay">
-        <div class="overlay-button" v-show="overlay.showImageControls" @click="onEditImage()"><Icon icon="fa-solid fa-pen"/></div>
-        <div class="overlay-button" v-show="overlay.showLinkControls" @click="onEditSelection()"><Icon icon="fa-solid fa-link"/></div>
-      </div>
     </template>
     <template #header>
       <div class="tool-bar">
@@ -13,32 +9,32 @@
           <b>{{ entry.fileName }}</b>
         </div>
 
-        <div class="tool-bar-center pankow-no-mobile">
+        <div class="tool-bar-center pankow-no-mobile" v-if="editor">
           <ButtonGroup>
-            <Button icon="fa-solid fa-bold" secondary :outline="!tools.strong.active ? true : null" :disabled="!tools.strong.available" tool @click="onToolbutton(tools.strong)" />
-            <Button icon="fa-solid fa-italic" secondary :outline="!tools.em.active ? true : null" :disabled="!tools.em.available" tool @click="onToolbutton(tools.em)" />
-            <Button icon="fa-solid fa-code" secondary :outline="!tools.code.active ? true : null" :disabled="!tools.code.available" tool @click="onToolbutton(tools.code)" />
+            <Button icon="fa-solid fa-bold" secondary :outline="!editor.isActive('bold') ? true : null" :disabled="!editor.can().toggleBold()" tool @click="editor.chain().focus().toggleBold().run()" />
+            <Button icon="fa-solid fa-italic" secondary :outline="!editor.isActive('italic') ? true : null" :disabled="!editor.can().toggleItalic()" tool @click="editor.chain().focus().toggleItalic().run()" />
+            <Button icon="fa-solid fa-code" secondary :outline="!editor.isActive('code') ? true : null" :disabled="!editor.can().toggleCode()" tool @click="editor.chain().focus().toggleCode().run()" />
           </ButtonGroup>
 
           <Button secondary outline :menu="blockTypes" style="margin-right: 40px; min-width: 124px">{{ activeBlockTypeLabel }}</Button>
 
           <ButtonGroup>
-            <Button icon="fa-solid fa-list-ul" secondary outline tool @click="onToolbutton(tools.ul)" />
-            <Button icon="fa-solid fa-list-ol" secondary outline tool @click="onToolbutton(tools.ol)" />
+            <Button icon="fa-solid fa-list-ul" secondary outline tool @click="editor.chain().focus().toggleBulletList().run()" />
+            <Button icon="fa-solid fa-list-ol" secondary outline tool @click="editor.chain().focus().toggleOrderedList().run()" />
           </ButtonGroup>
 
           <ButtonGroup>
-            <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!tools.lift.available" @click="onToolbutton(tools.lift)" />
-            <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!tools.sink.available" @click="onToolbutton(tools.sink)" />
+            <Button icon="fa-solid fa-outdent" secondary outline tool :disabled="!editor.can().liftListItem('listItem')" @click="editor.chain().focus().liftListItem('listItem').run()" />
+            <Button icon="fa-solid fa-indent" secondary outline tool :disabled="!editor.can().sinkListItem('listItem')" @click="editor.chain().focus().sinkListItem('listItem').run()" />
           </ButtonGroup>
 
-          <Button icon="fa-solid fa-image" secondary outline tool @click="onToolbutton(tools.image)" style="margin-left: 40px; margin-right: 40px;" />
+          <Button icon="fa-solid fa-image" secondary outline tool @click="onAddImage()" style="margin-left: 40px; margin-right: 40px;" />
 
-          <Button icon="fa-solid fa-minus" secondary outline tool @click="onToolbutton(tools.hr)" style="margin-left: 40px; margin-right: 40px;" />
+          <Button icon="fa-solid fa-minus" secondary outline tool @click="editor.chain().focus().setHorizontalRule().run()" style="margin-left: 40px; margin-right: 40px;" />
 
           <ButtonGroup>
-            <Button icon="fa-solid fa-rotate-left" secondary outline tool @click="onToolbutton(tools.undo)" />
-            <Button icon="fa-solid fa-rotate-right" secondary outline tool @click="onToolbutton(tools.redo)" style="margin-right: 40px;" />
+            <Button icon="fa-solid fa-rotate-left" secondary outline tool @click="editor.chain().focus().undo().run()" />
+            <Button icon="fa-solid fa-rotate-right" secondary outline tool @click="editor.chain().focus().redo().run()" style="margin-right: 40px;" />
           </ButtonGroup>
         </div>
         <div class="tool-bar-right">
@@ -49,7 +45,7 @@
     </template>
     <template #body>
       <div class="editor-wrapper">
-        <div class="editor" ref="editorNode"></div>
+        <EditorContent v-if="editor" :editor="editor" class="editor" />
       </div>
     </template>
   </MainLayout>
@@ -57,167 +53,49 @@
 
 <script>
 
-import { toRaw } from 'vue';
+import { markRaw } from 'vue';
 import { MainLayout, Button, ButtonGroup, Icon, InputDialog, utils } from '@cloudron/pankow';
+
+import { Editor, EditorContent, Extension } from '@tiptap/vue-3';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import Collaboration from '@tiptap/extension-collaboration';
+import { Markdown } from '@tiptap/markdown';
+import { yCursorPlugin, prosemirrorToYXmlFragment } from '@tiptap/y-tiptap';
 
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { ySyncPlugin, yCursorPlugin, yUndoPlugin, undo, redo, initProseMirrorDoc, prosemirrorToYXmlFragment } from 'y-prosemirror';
 
-import { EditorState, Plugin } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
-// import { undo, redo, history } from "prosemirror-history";
-import { keymap } from "prosemirror-keymap";
-import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
-import { schema, defaultMarkdownParser, defaultMarkdownSerializer} from "prosemirror-markdown";
-import { wrapInList, liftListItem, sinkListItem } from "prosemirror-schema-list"
-import { exampleSetup } from "prosemirror-example-setup"
-import { Schema } from "prosemirror-model";
+// Custom extension wrapping @tiptap/y-tiptap's cursor plugin,
+// since @tiptap/extension-collaboration-cursor still uses the old y-prosemirror plugin keys
+const CollaborationCursor = Extension.create({
+  name: 'collaborationCursor',
+  addOptions() {
+    return { provider: null, user: { name: 'Anonymous', color: '#cccccc' } };
+  },
+  addProseMirrorPlugins() {
+    const { provider, user } = this.options;
+    if (!provider) return [];
+    provider.awareness.setLocalStateField('user', user);
+    return [yCursorPlugin(provider.awareness)];
+  },
+});
 
-import "prosemirror-gapcursor/style/gapcursor.css";
 import './MarkdownViewer.css';
 
 import MainModel from '../models/MainModel.js';
 
-const cubbySchema = schema;
-// Start with schema below to add custom nodes and marks
-// const cubbySchema = new Schema({
-//   nodes: schema.spec.nodes, // Include existing nodes
-//   marks: schema.spec.marks, // Retain existing marks
-// });
-
 // cannot be reactive
-let view, provider;
+let provider;
 
 const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
-
-// https://github.com/ProseMirror/prosemirror-example-setup/blob/8c11be6850604081dceda8f36e08d2426875e19a/src/menu.ts#L58
-function markActive(state, markType) {
-  const { from, $from, to, empty } = state.selection;
-
-  if (empty) return !!markType.isInSet(state.storedMarks || $from.marks());
-  return state.doc.rangeHasMark(from, to, markType);
-}
-
-function blockTypeActive(state, nodeType, nodeTypeAttrs) {
-  const { $from, node } = state.selection;
-
-  // node would be for example an image node
-  if (node) return node.hasMarkup(nodeType, nodeTypeAttrs);
-  return $from.parent.hasMarkup(nodeType, nodeTypeAttrs);
-}
-
-// plugin to track formatting and tools currently applied to cursor or selection
-function menuPlugin(app, tools) {
-  return new Plugin({
-    view(editorView) {
-      return {
-        update(view, lastState) {
-          const state = editorView.state;
-
-          if (lastState && !lastState.doc.eq(state.doc) && !app.isChanged) app.isChanged = true;
-
-          if (blockTypeActive(state, cubbySchema.nodes.paragraph, {})) {
-            app.activeBlockTypeLabel = app.blockTypes[0].label;
-          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 1 })) {
-            app.activeBlockTypeLabel = app.blockTypes[1].label;
-          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 2 })) {
-            app.activeBlockTypeLabel = app.blockTypes[2].label;
-          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 3 })) {
-            app.activeBlockTypeLabel = app.blockTypes[3].label;
-          } else if (blockTypeActive(state, cubbySchema.nodes.heading, { level: 4 })) {
-            app.activeBlockTypeLabel = app.blockTypes[4].label;
-          } else if (blockTypeActive(state, cubbySchema.nodes.code_block, { params: '' })) {
-            app.activeBlockTypeLabel = app.blockTypes[5].label;
-          } else {
-            const { $from, node } = state.selection;
-            console.log('FIXME: unkonwn block type', node, $from.parent);
-            app.activeBlockTypeLabel = 'Paragraph';
-          }
-
-          for (const tool in tools) {
-            tools[tool].available = tools[tool].cmd(editorView.state, null, editorView);
-            if (tools[tool].mark) tools[tool].active = markActive(editorView.state, toRaw(tools[tool].mark));
-          }
-        }
-      };
-    }
-  })
-}
-
-// https://prosemirror.net/examples/tooltip/
-// plugin for controls overlay when selection
-// currently only shows if image is selected as example use-case
-function selectionOverlayPlugin(app, element) {
-  return new Plugin({
-    view(editorView) {
-      function updatePosOnScroll() {
-        const state = editorView.state;
-        const { from, to } = state.selection;
-
-        // These are in screen coordinates
-        const start = editorView.coordsAtPos(from);
-        const end = editorView.coordsAtPos(to);
-
-        app.overlay.showImageControls = (state.selection.node && state.selection.node.type.name === 'image');
-
-        const tmpNode = editorView.domAtPos(state.selection.$anchor.pos);
-        const nodeAtCursor = tmpNode ? tmpNode.node : null;
-
-        if (state.selection.empty && !nodeAtCursor) {
-          element.style.display = 'none';
-          return;
-        }
-
-        let hasLink = false;
-
-        app.overlay.showLinkControls = false;
-
-        // text node
-        if (nodeAtCursor.nodeName === '#text') {
-          // console.log('text node', nodeAtCursor.parentElement)
-          if (nodeAtCursor.parentElement.nodeName === 'A') {
-            console.log('got a link')
-            hasLink = true;
-            app.overlay.showLinkControls = true;
-          }
-        } else if (nodeAtCursor) {
-          // console.log('some other node ', nodeAtCursor)
-        }
-
-        element.style.display = 'block';
-
-        // The box in which the tooltip is positioned, to use as base
-        let box = element.offsetParent.getBoundingClientRect();
-
-        element.style.left = (end.left - 40) + 'px';
-        element.style.bottom = (box.bottom - start.top + 4) + 'px';
-      }
-
-      document.addEventListener('scroll', updatePosOnScroll, true);
-
-      return {
-        update(view, lastState) {
-          const state = view.state;
-
-          // Don't do anything if the document/selection didn't change
-          if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) return;
-
-          updatePosOnScroll();
-        },
-        destroy() {
-          document.removeEventListener('scroll', updatePosOnScroll, true);
-        }
-      }
-    }
-  });
-}
 
 export default {
   name: 'MarkdownViewer',
   components: {
     Button,
     ButtonGroup,
+    EditorContent,
     Icon,
     InputDialog,
     MainLayout
@@ -242,144 +120,63 @@ export default {
       busySave: false,
       isChanged: false,
       entry: {},
-      isStrong: false,
-      activeBlockTypeLabel: '',
+      editor: null,
+      activeBlockTypeLabel: 'Paragraph',
       blockTypes: [{
         slug: 'p',
         label: 'Paragraph',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.paragraph, {})(view.state, view.dispatch, view);
-        }
+        action: () => this.editor?.chain().focus().setParagraph().run()
       }, {
         slug: 'h1',
         label: 'Header 1',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.heading, { level: 1 })(view.state, view.dispatch, view);
-        }
+        action: () => this.editor?.chain().focus().toggleHeading({ level: 1 }).run()
       }, {
         slug: 'h2',
         label: 'Header 2',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.heading, { level: 2 })(view.state, view.dispatch, view);
-        }
+        action: () => this.editor?.chain().focus().toggleHeading({ level: 2 }).run()
       }, {
         slug: 'h3',
         label: 'Header 3',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.heading, { level: 3 })(view.state, view.dispatch, view);
-        }
+        action: () => this.editor?.chain().focus().toggleHeading({ level: 3 }).run()
       }, {
         slug: 'h4',
         label: 'Header 4',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.heading, { level: 4 })(view.state, view.dispatch, view);
-        }
+        action: () => this.editor?.chain().focus().toggleHeading({ level: 4 }).run()
       }, {
         slug: 'code',
         label: 'Code Block',
-        action: () => {
-          view.focus();
-          setBlockType(cubbySchema.nodes.code_block, { params: '' })(view.state, view.dispatch, view);
-        }
-      }],
-      overlay: {
-        showImageControls: false,
-        showLinkControls: false
-      },
-      tools: {
-        strong: {
-          active: false,
-          available: false,
-          mark: cubbySchema.marks.strong,
-          cmd: toggleMark(cubbySchema.marks.strong)
-        },
-        em: {
-          active: false,
-          available: false,
-          mark: cubbySchema.marks.em,
-          cmd: toggleMark(cubbySchema.marks.em)
-        },
-        code: {
-          active: false,
-          available: false,
-          mark: cubbySchema.marks.code,
-          cmd: toggleMark(cubbySchema.marks.code)
-        },
-        ul: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: wrapInList(cubbySchema.nodes.bullet_list, {})
-        },
-        ol: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: wrapInList(cubbySchema.nodes.ordered_list, { order: 1 })
-        },
-        lift: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: liftListItem(cubbySchema.nodes.list_item)
-        },
-        sink: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: sinkListItem(cubbySchema.nodes.list_item)
-        },
-        hr: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: (state, dispatch, view) => {
-            if (dispatch) dispatch(state.tr.replaceSelectionWith(cubbySchema.nodes.horizontal_rule.create()));
-          }
-        },
-        image: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: async (state, dispatch, view) => {
-            if (dispatch) this.addOrEditImage(state);
-          }
-        },
-        undo: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: (state, dispatch, view) => {
-            if (dispatch) undo(state);
-          }
-        },
-        redo: {
-          active: false,
-          available: false,
-          mark: null,
-          cmd: (state, dispatch, view) => {
-            if (dispatch) redo(state);
-          }
-        }
-      }
+        action: () => this.editor?.chain().focus().toggleCodeBlock().run()
+      }]
     };
   },
-  mounted() {
-  },
   methods: {
-    onEditImage() {
-      this.addOrEditImage(view.state);
+    updateActiveBlockTypeLabel() {
+      if (!this.editor) return;
+
+      if (this.editor.isActive('heading', { level: 1 })) {
+        this.activeBlockTypeLabel = 'Header 1';
+      } else if (this.editor.isActive('heading', { level: 2 })) {
+        this.activeBlockTypeLabel = 'Header 2';
+      } else if (this.editor.isActive('heading', { level: 3 })) {
+        this.activeBlockTypeLabel = 'Header 3';
+      } else if (this.editor.isActive('heading', { level: 4 })) {
+        this.activeBlockTypeLabel = 'Header 4';
+      } else if (this.editor.isActive('codeBlock')) {
+        this.activeBlockTypeLabel = 'Code Block';
+      } else {
+        this.activeBlockTypeLabel = 'Paragraph';
+      }
     },
-    async addOrEditImage(state) {
+    async onAddImage() {
+      if (!this.editor) return;
+
       let src = '';
 
-      // if we have a image node selected we are editing
-      if (!state.selection.empty && state.selection.node && state.selection.node.type.name === 'image') src = state.selection.node.attrs.src;
+      // if an image node is selected, pre-fill with its current src for editing
+      const { state } = this.editor;
+      if (state.selection.node?.type.name === 'image') {
+        src = state.selection.node.attrs.src;
+      }
 
       const imageUrl = await this.$refs.inputDialog.prompt({
         message: 'Image URL',
@@ -391,20 +188,17 @@ export default {
       });
       if (!imageUrl) return;
 
-      view.dispatch(state.tr.replaceSelectionWith(cubbySchema.nodes.image.create({ title: 'Image title', alt: 'Image alt text', src: imageUrl})));
+      this.editor.chain().focus().setImage({ src: imageUrl, alt: 'Image alt text', title: 'Image title' }).run();
     },
     canHandle(entry) {
       return entry.fileName.endsWith('md');
     },
-    onToolbutton(tool) {
-      view.focus();
-      tool.cmd(view.state, view.dispatch, view);
-    },
     async onSave() {
+      if (!this.editor) return;
+
       this.busySave = true;
 
-      // console.log(defaultMarkdownSerializer.serialize(view.state.doc));
-      await this.saveHandler(this.entry, defaultMarkdownSerializer.serialize(view.state.doc));
+      await this.saveHandler(this.entry, this.editor.getMarkdown());
 
       this.isChanged = false;
       this.busySave = false;
@@ -413,6 +207,7 @@ export default {
       if (!entry || entry.isDirectory || !this.canHandle(entry)) return;
 
       this.entry = entry;
+      this.isChanged = false;
 
       // starts the ydoc if not exists
       const collabHandle = await MainModel.getCollabHandle(entry);
@@ -420,36 +215,45 @@ export default {
       const ydoc = new Y.Doc();
 
       provider = new WebsocketProvider(WEBSOCKET_URI, collabHandle.id, ydoc);
-      provider.awareness.setLocalStateField('user', { color: '#27ce65', name: this.profile.displayName })
-
-      let fragment = ydoc.getXmlFragment(collabHandle.fragmentName);
+      provider.awareness.setLocalStateField('user', { color: '#27ce65', name: this.profile.displayName });
 
       // see if we have to init the fragment with the markdown content
       if (collabHandle.isNew) {
-        const markdownDoc = defaultMarkdownParser.parse(content);
-        fragment = prosemirrorToYXmlFragment(markdownDoc, fragment);
+        const fragment = ydoc.getXmlFragment(collabHandle.fragmentName);
+
+        // Use a temporary headless editor to parse markdown with the tiptap schema,
+        // ensuring node names (camelCase) match what the real editor expects
+        const tmpEditor = new Editor({
+          extensions: [StarterKit, Image, Markdown],
+          content: content,
+          contentType: 'markdown',
+        });
+        prosemirrorToYXmlFragment(tmpEditor.state.doc, fragment);
+        tmpEditor.destroy();
       }
 
-      const { doc, mapping } = initProseMirrorDoc(fragment, cubbySchema)
-
-      view = new EditorView(this.$refs.editorNode, {
-        state: EditorState.create({
-          doc,
-          cubbySchema,
-          plugins: [
-            ySyncPlugin(fragment, { mapping }),
-            yCursorPlugin(provider.awareness),
-            yUndoPlugin(),
-            keymap({
-              'Mod-z': undo,
-              'Mod-y': redo,
-              'Mod-Shift-z': redo
-            })]
-            .concat(exampleSetup({ schema: cubbySchema, menuBar: false }))
-            .concat(menuPlugin(this, this.tools))
-            .concat(selectionOverlayPlugin(this, this.$refs.selectionOverlay))
-          })
-      });
+      this.editor = markRaw(new Editor({
+        extensions: [
+          StarterKit.configure({ history: false }),
+          Image,
+          Markdown,
+          Collaboration.configure({
+            document: ydoc,
+            field: collabHandle.fragmentName,
+          }),
+          CollaborationCursor.configure({
+            provider,
+            user: { name: this.profile.displayName, color: '#27ce65' },
+          }),
+        ],
+        onTransaction: () => {
+          this.updateActiveBlockTypeLabel();
+          this.$forceUpdate();
+        },
+        onUpdate: () => {
+          this.isChanged = true;
+        },
+      }));
     },
     async onClose() {
       if (this.isChanged) {
@@ -465,7 +269,10 @@ export default {
 
       // stop syncing
       if (provider) provider.destroy();
-      if (view) view.destroy();
+      if (this.editor) {
+        this.editor.destroy();
+        this.editor = null;
+      }
 
       this.$emit('close');
     }
@@ -475,12 +282,6 @@ export default {
 </script>
 
 <style scoped>
-
-.viewer {
-  height: 100%;
-  width: 100%;
-  border: none;
-}
 
 .tool-bar {
   padding: 5px 10px;
@@ -535,30 +336,6 @@ export default {
   .editor {
     background-color: var(--pankow-color-background);
   }
-}
-
-.selection-overlay {
-  position: absolute;
-  display: none;
-  z-index: 20;
-  background-color: var(--pankow-color-secondary);
-  border-radius: var(--pankow-border-radius);
-}
-
-.overlay-button {
-  min-width: 30px;
-  display: inline-block;
-  cursor: pointer;
-  text-align: center;
-  color: var(--pankow-color-background-hover);
-  border-radius: var(--pankow-border-radius);
-  padding: 5px;
-  margin: 2px;
-}
-
-.overlay-button:hover {
-  color: var(--pankow-color-secondary);
-  background-color: var(--pankow-color-background-hover);
 }
 
 </style>

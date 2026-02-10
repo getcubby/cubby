@@ -203,6 +203,30 @@ export default {
       this.isChanged = false;
       this.busySave = false;
     },
+    createEditor(ydoc, fragmentName) {
+      this.editor = markRaw(new Editor({
+        extensions: [
+          StarterKit.configure({ history: false }),
+          Image,
+          Markdown,
+          Collaboration.configure({
+            document: ydoc,
+            field: fragmentName,
+          }),
+          CollaborationCursor.configure({
+            provider,
+            user: { name: this.profile.displayName, color: '#27ce65' },
+          }),
+        ],
+        onTransaction: () => {
+          this.updateActiveBlockTypeLabel();
+          this.$forceUpdate();
+        },
+        onUpdate: () => {
+          this.isChanged = true;
+        },
+      }));
+    },
     async open(entry, content) {
       if (!entry || entry.isDirectory || !this.canHandle(entry)) return;
 
@@ -230,30 +254,16 @@ export default {
         });
         prosemirrorToYXmlFragment(tmpEditor.state.doc, fragment);
         tmpEditor.destroy();
-      }
 
-      this.editor = markRaw(new Editor({
-        extensions: [
-          StarterKit.configure({ history: false }),
-          Image,
-          Markdown,
-          Collaboration.configure({
-            document: ydoc,
-            field: collabHandle.fragmentName,
-          }),
-          CollaborationCursor.configure({
-            provider,
-            user: { name: this.profile.displayName, color: '#27ce65' },
-          }),
-        ],
-        onTransaction: () => {
-          this.updateActiveBlockTypeLabel();
-          this.$forceUpdate();
-        },
-        onUpdate: () => {
-          this.isChanged = true;
-        },
-      }));
+        // Create editor immediately for new documents (no sync needed)
+        this.createEditor(ydoc, collabHandle.fragmentName);
+      } else {
+        // Wait for sync before creating editor for existing documents
+        // This prevents duplication caused by merging empty local state with synced content
+        provider.once('synced', () => {
+          this.createEditor(ydoc, collabHandle.fragmentName);
+        });
+      }
     },
     async onClose() {
       if (this.isChanged) {

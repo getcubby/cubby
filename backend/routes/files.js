@@ -12,7 +12,6 @@ var assert = require('assert'),
     debug = require('debug')('cubby:routes:files'),
     files = require('../files.js'),
     Entry = require('../entry.js'),
-    util = require('util'),
     path = require('path'),
     recent = require('../recent.js'),
     shares = require('../shares.js'),
@@ -23,8 +22,8 @@ var assert = require('assert'),
 
 function boolLike(arg) {
     if (!arg) return false;
-    if (util.isNumber(arg)) return !!arg;
-    if (util.isString(arg) && arg.toLowerCase() === 'false') return false;
+    if (typeof arg === 'number') return !!arg;
+    if (typeof arg === 'string' && arg.toLowerCase() === 'false') return false;
 
     return true;
 }

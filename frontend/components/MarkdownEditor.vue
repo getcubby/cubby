@@ -50,8 +50,20 @@
       </div>
     </template>
     <template #body>
-      <div class="editor-wrapper" @contextmenu.prevent="onContextMenu($event)">
-        <EditorContent v-if="editor" :editor="editor" class="editor" />
+      <div class="editor-container">
+        <aside class="outline-panel" v-if="editor && outline.length > 0">
+          <nav class="outline-nav">
+            <a v-for="(heading, index) in outline"
+               :key="index"
+               :class="['outline-item', `outline-level-${heading.level}`]"
+               @click.prevent="scrollToHeading(heading.pos)">
+              {{ heading.text || '(empty heading)' }}
+            </a>
+          </nav>
+        </aside>
+        <div class="editor-wrapper" @contextmenu.prevent="onContextMenu($event)">
+          <EditorContent v-if="editor" :editor="editor" class="editor" />
+        </div>
       </div>
       <Menu ref="contextMenu" :model="contextMenuModel" />
     </template>
@@ -193,6 +205,7 @@ export default {
         label: 'Code Block',
         action: () => this.editor?.chain().focus().toggleCodeBlock().run()
       }],
+      outline: [], // Array of { level: number, text: string, pos: number }
       contextMenuModel: [{
         label: 'Bold',
         icon: 'fa-solid fa-bold',
@@ -250,6 +263,34 @@ export default {
     onContextMenu(event) {
       if (!this.editor) return;
       this.$refs.contextMenu.open(event);
+    },
+    updateOutline() {
+      if (!this.editor) {
+        this.outline = [];
+        return;
+      }
+
+      const headings = [];
+      this.editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'heading') {
+          headings.push({
+            level: node.attrs.level,
+            text: node.textContent,
+            pos: pos
+          });
+        }
+      });
+      this.outline = headings;
+    },
+    scrollToHeading(pos) {
+      if (!this.editor) return;
+
+      // Set cursor position and scroll into view
+      this.editor.chain().focus().setTextSelection(pos).run();
+
+      // Get the DOM element and scroll it into view
+      const { node } = this.editor.view.domAtPos(pos);
+      node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     updateActiveBlockTypeLabel() {
       if (!this.editor) return;
@@ -325,6 +366,7 @@ export default {
         ],
         onTransaction: () => {
           this.updateActiveBlockTypeLabel();
+          this.updateOutline();
           this.$forceUpdate();
         },
         onUpdate: () => {
@@ -333,6 +375,7 @@ export default {
           this.saveDebounceTimeout = setTimeout(() => this.onSave(), SAVE_DEBOUNCE_MS);
         },
       }));
+      this.updateOutline();
     },
     async open(entry, content) {
       if (!entry || entry.isDirectory || !this.canHandle(entry)) return;
@@ -476,6 +519,58 @@ export default {
 
 .save-indicator .saved {
   color: var(--pankow-color-success);
+}
+
+.editor-container {
+  display: flex;
+  min-height: 100%;
+  width: 100%;
+}
+
+.outline-panel {
+  width: 200px;
+  min-width: 200px;
+  padding: 20px 10px;
+  border-right: 1px solid var(--pankow-color-border);
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+}
+
+.outline-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.outline-item {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--pankow-text-color);
+  text-decoration: none;
+  font-size: 0.9em;
+  border-radius: var(--pankow-border-radius);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outline-item:hover {
+  background-color: var(--pankow-color-background-hover);
+}
+
+/* Indentation based on heading level */
+.outline-level-1 { padding-left: 8px; font-weight: 600; }
+.outline-level-2 { padding-left: 16px; }
+.outline-level-3 { padding-left: 24px; }
+.outline-level-4 { padding-left: 32px; }
+.outline-level-5 { padding-left: 40px; }
+.outline-level-6 { padding-left: 48px; }
+
+@media (max-width: 768px) {
+  .outline-panel {
+    display: none;
+  }
 }
 
 </style>

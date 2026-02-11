@@ -272,7 +272,7 @@ export default {
     createEditor(ydoc, fragmentName) {
       this.editor = markRaw(new Editor({
         extensions: [
-          StarterKit.configure({ history: false, codeBlock: false }),
+          StarterKit.configure({ undoRedo: false, codeBlock: false }),
           Image,
           CodeBlockLowlight.configure({
             lowlight: createLowlight(common),

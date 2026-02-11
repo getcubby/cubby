@@ -40,7 +40,11 @@
           </ButtonGroup>
         </div>
         <div class="tool-bar-right">
-          <Button :loading="busySave" icon="fa-solid fa-floppy-disk" success tool @click="onSave" :disabled="busySave || !isChanged"/>
+          <span class="save-indicator">
+            <Icon v-if="busySave" icon="fa-solid fa-spinner fa-spin" />
+            <Icon v-else-if="isChanged" icon="fa-solid fa-circle" class="unsaved" />
+            <Icon v-else icon="fa-solid fa-check" class="saved" />
+          </span>
           <Button tool icon="fa-solid fa-xmark" @click="onClose"/>
         </div>
       </div>
@@ -93,6 +97,8 @@ import MainModel from '../models/MainModel.js';
 // cannot be reactive
 let provider;
 
+const SAVE_DEBOUNCE_MS = 2000;
+
 const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
 
 export default {
@@ -125,6 +131,7 @@ export default {
     return {
       busySave: false,
       isChanged: false,
+      saveDebounceTimeout: null,
       entry: {},
       editor: null,
       activeBlockTypeLabel: 'Paragraph',
@@ -288,6 +295,8 @@ export default {
         },
         onUpdate: () => {
           this.isChanged = true;
+          if (this.saveDebounceTimeout) clearTimeout(this.saveDebounceTimeout);
+          this.saveDebounceTimeout = setTimeout(() => this.onSave(), SAVE_DEBOUNCE_MS);
         },
       }));
     },
@@ -345,6 +354,9 @@ export default {
 
         if (!yes) return;
       }
+
+      // clear pending auto-save
+      if (this.saveDebounceTimeout) clearTimeout(this.saveDebounceTimeout);
 
       // stop syncing
       if (provider) provider.destroy();
@@ -415,6 +427,21 @@ export default {
   .editor {
     background-color: var(--pankow-color-background);
   }
+}
+
+.save-indicator {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.save-indicator .unsaved {
+  color: var(--pankow-color-warning);
+  font-size: 0.5em;
+}
+
+.save-indicator .saved {
+  color: var(--pankow-color-success);
 }
 
 </style>

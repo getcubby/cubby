@@ -285,12 +285,19 @@ export default {
     scrollToHeading(pos) {
       if (!this.editor) return;
 
-      // Set cursor position and scroll into view
-      this.editor.chain().focus().setTextSelection(pos).run();
+      // Get the DOM node for the heading element
+      const node = this.editor.view.nodeDOM(pos);
 
-      // Get the DOM element and scroll it into view
-      const { node } = this.editor.view.domAtPos(pos);
-      node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (node && node.nodeType === Node.ELEMENT_NODE) {
+        // Scroll first, then set cursor position after a brief delay
+        // to prevent the focus scroll from overriding our scroll
+        node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Set cursor position after scroll completes
+        setTimeout(() => {
+          this.editor.chain().setTextSelection(pos + 1).run();
+        }, 300);
+      }
     },
     updateActiveBlockTypeLabel() {
       if (!this.editor) return;

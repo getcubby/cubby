@@ -13,7 +13,9 @@
           <ButtonGroup>
             <Button icon="fa-solid fa-bold" secondary :outline="!editor.isActive('bold') ? true : null" :disabled="!editor.can().toggleBold()" tool @click="editor.chain().focus().toggleBold().run()" />
             <Button icon="fa-solid fa-italic" secondary :outline="!editor.isActive('italic') ? true : null" :disabled="!editor.can().toggleItalic()" tool @click="editor.chain().focus().toggleItalic().run()" />
+            <Button icon="fa-solid fa-strikethrough" secondary :outline="!editor.isActive('strike') ? true : null" :disabled="!editor.can().toggleStrike()" tool @click="editor.chain().focus().toggleStrike().run()" />
             <Button icon="fa-solid fa-code" secondary :outline="!editor.isActive('code') ? true : null" :disabled="!editor.can().toggleCode()" tool @click="editor.chain().focus().toggleCode().run()" />
+            <Button icon="fa-solid fa-file-code" secondary :outline="!editor.isActive('codeBlock') ? true : null" tool @click="editor.chain().focus().toggleCodeBlock().run()" />
           </ButtonGroup>
 
           <Button secondary outline :menu="blockTypes" style="margin-right: 40px; min-width: 124px">{{ activeBlockTypeLabel }}</Button>
@@ -44,9 +46,10 @@
       </div>
     </template>
     <template #body>
-      <div class="editor-wrapper">
+      <div class="editor-wrapper" @contextmenu.prevent="onContextMenu($event)">
         <EditorContent v-if="editor" :editor="editor" class="editor" />
       </div>
+      <Menu ref="contextMenu" :model="contextMenuModel" />
     </template>
   </MainLayout>
 </template>
@@ -54,11 +57,13 @@
 <script>
 
 import { markRaw } from 'vue';
-import { MainLayout, Button, ButtonGroup, Icon, InputDialog, utils } from '@cloudron/pankow';
+import { MainLayout, Button, ButtonGroup, Icon, InputDialog, Menu, utils } from '@cloudron/pankow';
 
 import { Editor, EditorContent, Extension } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
 import Collaboration from '@tiptap/extension-collaboration';
 import { Markdown } from '@tiptap/markdown';
 import { yCursorPlugin, prosemirrorToYXmlFragment } from '@tiptap/y-tiptap';
@@ -98,7 +103,8 @@ export default {
     EditorContent,
     Icon,
     InputDialog,
-    MainLayout
+    MainLayout,
+    Menu
   },
   props: {
     saveHandler: {
@@ -146,10 +152,65 @@ export default {
         slug: 'code',
         label: 'Code Block',
         action: () => this.editor?.chain().focus().toggleCodeBlock().run()
+      }],
+      contextMenuModel: [{
+        label: 'Bold',
+        icon: 'fa-solid fa-bold',
+        action: () => this.editor?.chain().focus().toggleBold().run(),
+        disabled: () => !this.editor?.can().toggleBold()
+      }, {
+        label: 'Italic',
+        icon: 'fa-solid fa-italic',
+        action: () => this.editor?.chain().focus().toggleItalic().run(),
+        disabled: () => !this.editor?.can().toggleItalic()
+      }, {
+        label: 'Code',
+        icon: 'fa-solid fa-code',
+        action: () => this.editor?.chain().focus().toggleCode().run(),
+        disabled: () => !this.editor?.can().toggleCode()
+      }, {
+        label: 'Strikethrough',
+        icon: 'fa-solid fa-strikethrough',
+        action: () => this.editor?.chain().focus().toggleStrike().run(),
+        disabled: () => !this.editor?.can().toggleStrike()
+      }, {
+        separator: true
+      }, {
+        label: 'Bullet List',
+        icon: 'fa-solid fa-list-ul',
+        action: () => this.editor?.chain().focus().toggleBulletList().run()
+      }, {
+        label: 'Ordered List',
+        icon: 'fa-solid fa-list-ol',
+        action: () => this.editor?.chain().focus().toggleOrderedList().run()
+      }, {
+        separator: true
+      }, {
+        label: 'Horizontal Rule',
+        icon: 'fa-solid fa-minus',
+        action: () => this.editor?.chain().focus().setHorizontalRule().run()
+      }, {
+        label: 'Add Image',
+        icon: 'fa-solid fa-image',
+        action: () => this.onAddImage()
+      }, {
+        separator: true
+      }, {
+        label: 'Undo',
+        icon: 'fa-solid fa-rotate-left',
+        action: () => this.editor?.chain().focus().undo().run()
+      }, {
+        label: 'Redo',
+        icon: 'fa-solid fa-rotate-right',
+        action: () => this.editor?.chain().focus().redo().run()
       }]
     };
   },
   methods: {
+    onContextMenu(event) {
+      if (!this.editor) return;
+      this.$refs.contextMenu.open(event);
+    },
     updateActiveBlockTypeLabel() {
       if (!this.editor) return;
 
@@ -206,8 +267,11 @@ export default {
     createEditor(ydoc, fragmentName) {
       this.editor = markRaw(new Editor({
         extensions: [
-          StarterKit.configure({ history: false }),
+          StarterKit.configure({ history: false, codeBlock: false }),
           Image,
+          CodeBlockLowlight.configure({
+            lowlight: createLowlight(common),
+          }),
           Markdown,
           Collaboration.configure({
             document: ydoc,
@@ -248,7 +312,12 @@ export default {
         // Use a temporary headless editor to parse markdown with the tiptap schema,
         // ensuring node names (camelCase) match what the real editor expects
         const tmpEditor = new Editor({
-          extensions: [StarterKit, Image, Markdown],
+          extensions: [
+            StarterKit.configure({ codeBlock: false }),
+            Image,
+            CodeBlockLowlight.configure({ lowlight: createLowlight(common) }),
+            Markdown
+          ],
           content: content,
           contentType: 'markdown',
         });

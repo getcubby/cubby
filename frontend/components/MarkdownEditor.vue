@@ -85,6 +85,228 @@ import Collaboration from '@tiptap/extension-collaboration';
 import { Markdown } from '@tiptap/markdown';
 import { yCursorPlugin, prosemirrorToYXmlFragment } from '@tiptap/y-tiptap';
 
+// Custom Image extension with Kramdown-style markdown support for image dimensions
+// Supports syntax: ![alt](url){width=X height=Y}
+// Also adds drag-to-resize functionality on image edges
+const ImageWithResize = Image.extend({
+  // Custom tokenizer to parse {width=X height=Y} after image markdown
+  markdownTokenizer: {
+    name: 'image',
+    level: 'inline',
+    start: '![',
+    tokenize(src, tokens, helpers) {
+      const match = src.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)(?:\{([^}]+)\})?/);
+      if (!match) return null;
+
+      const [raw, alt, href, title, attrsStr] = match;
+      let width = null;
+      let height = null;
+      if (attrsStr) {
+        const widthMatch = attrsStr.match(/width=(\d+)/);
+        const heightMatch = attrsStr.match(/height=(\d+)/);
+        if (widthMatch) width = parseInt(widthMatch[1], 10);
+        if (heightMatch) height = parseInt(heightMatch[1], 10);
+      }
+
+      return {
+        type: 'image',
+        raw,
+        href,
+        text: alt,
+        title: title || null,
+        width,
+        height,
+      };
+    },
+  },
+
+  parseMarkdown: (token, helpers) => {
+    return helpers.createNode('image', {
+      src: token.href,
+      title: token.title,
+      alt: token.text,
+      width: token.width || null,
+      height: token.height || null,
+    });
+  },
+
+  renderMarkdown: (node, helpers, ctx) => {
+    const attrs = node.attrs || {};
+    const src = attrs.src ?? '';
+    const alt = attrs.alt ?? '';
+    const title = attrs.title ?? '';
+    const width = attrs.width;
+    const height = attrs.height;
+
+    let md = title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`;
+
+    const dimensions = [];
+    if (width) dimensions.push(`width=${width}`);
+    if (height) dimensions.push(`height=${height}`);
+    if (dimensions.length > 0) {
+      md += `{${dimensions.join(' ')}}`;
+    }
+
+    return md;
+  },
+
+  addOptions() {
+    return {
+      ...this.parent?.(),
+      allowBase64: true,
+    };
+  },
+
+  // Custom node view for drag-to-resize functionality from any edge or corner
+  addNodeView() {
+    return ({ node, getPos, editor }) => {
+      // Create wrapper container
+      const container = document.createElement('div');
+      container.classList.add('image-resizer');
+
+      // Create the image element
+      const img = document.createElement('img');
+      img.src = node.attrs.src;
+      if (node.attrs.alt) img.alt = node.attrs.alt;
+      if (node.attrs.title) img.title = node.attrs.title;
+      if (node.attrs.width) img.style.width = `${node.attrs.width}px`;
+      if (node.attrs.height) img.style.height = `${node.attrs.height}px`;
+      img.draggable = false;
+
+      container.appendChild(img);
+
+      // Create resize handles for all edges and corners
+      const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+      const handleElements = {};
+      
+      handles.forEach(direction => {
+        const handle = document.createElement('div');
+        handle.classList.add('image-resize-handle', `handle-${direction}`);
+        handle.dataset.direction = direction;
+        container.appendChild(handle);
+        handleElements[direction] = handle;
+      });
+
+      let isResizing = false;
+      let currentDirection = null;
+      let startX = 0;
+      let startY = 0;
+      let startWidth = 0;
+      let startHeight = 0;
+      let aspectRatio = 1;
+
+      const onMouseDown = (e) => {
+        if (!e.target.dataset.direction) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        isResizing = true;
+        currentDirection = e.target.dataset.direction;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = img.offsetWidth;
+        startHeight = img.offsetHeight;
+        aspectRatio = startWidth / startHeight;
+        container.classList.add('resizing');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      };
+
+      const onMouseMove = (e) => {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        
+        // Calculate new dimensions based on which handle is being dragged
+        const dir = currentDirection;
+        
+        // Horizontal resizing
+        if (dir.includes('e')) {
+          newWidth = Math.max(50, startWidth + deltaX);
+        } else if (dir.includes('w')) {
+          newWidth = Math.max(50, startWidth - deltaX);
+        }
+        
+        // Vertical resizing
+        if (dir.includes('s')) {
+          newHeight = Math.max(50, startHeight + deltaY);
+        } else if (dir.includes('n')) {
+          newHeight = Math.max(50, startHeight - deltaY);
+        }
+        
+        // For corner handles, maintain aspect ratio
+        if (dir.length === 2) {
+          // Use the dimension that changed more to determine the other
+          const widthRatio = newWidth / startWidth;
+          const heightRatio = newHeight / startHeight;
+          
+          if (Math.abs(widthRatio - 1) > Math.abs(heightRatio - 1)) {
+            newHeight = Math.round(newWidth / aspectRatio);
+          } else {
+            newWidth = Math.round(newHeight * aspectRatio);
+          }
+        }
+        
+        // For edge handles (single direction), adjust to maintain aspect ratio
+        if (dir === 'e' || dir === 'w') {
+          newHeight = Math.round(newWidth / aspectRatio);
+        } else if (dir === 'n' || dir === 's') {
+          newWidth = Math.round(newHeight * aspectRatio);
+        }
+
+        img.style.width = `${newWidth}px`;
+        img.style.height = `${newHeight}px`;
+      };
+
+      const onMouseUp = () => {
+        if (!isResizing) return;
+        isResizing = false;
+        currentDirection = null;
+        container.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        // Commit the new size to the document
+        const pos = getPos();
+        if (pos !== undefined) {
+          const newWidth = img.offsetWidth;
+          const newHeight = img.offsetHeight;
+          editor.chain().setNodeSelection(pos).updateAttributes('image', {
+            width: newWidth,
+            height: newHeight,
+          }).run();
+        }
+      };
+
+      container.addEventListener('mousedown', onMouseDown);
+
+      return {
+        dom: container,
+        update: (updatedNode) => {
+          if (updatedNode.type.name !== 'image') return false;
+          
+          img.src = updatedNode.attrs.src;
+          if (updatedNode.attrs.alt) img.alt = updatedNode.attrs.alt;
+          if (updatedNode.attrs.title) img.title = updatedNode.attrs.title;
+          if (updatedNode.attrs.width) img.style.width = `${updatedNode.attrs.width}px`;
+          if (updatedNode.attrs.height) img.style.height = `${updatedNode.attrs.height}px`;
+          
+          return true;
+        },
+        destroy: () => {
+          container.removeEventListener('mousedown', onMouseDown);
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        },
+      };
+    };
+  },
+});
+
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
@@ -356,7 +578,7 @@ export default {
       this.editor = markRaw(new Editor({
         extensions: [
           StarterKit.configure({ undoRedo: false, codeBlock: false }),
-          Image,
+          ImageWithResize,
           CodeBlockLowlight.configure({
             lowlight: createLowlight(common),
           }),
@@ -407,7 +629,7 @@ export default {
         const tmpEditor = new Editor({
           extensions: [
             StarterKit.configure({ codeBlock: false }),
-            Image,
+            ImageWithResize,
             CodeBlockLowlight.configure({ lowlight: createLowlight(common) }),
             Markdown
           ],
@@ -706,6 +928,114 @@ export default {
 
 .ProseMirror img {
   max-width: 100%;
+}
+
+/* Resizable image styles */
+.ProseMirror .image-resizer {
+  display: inline-block;
+  position: relative;
+  line-height: 0;
+}
+
+.ProseMirror .image-resizer img {
+  display: block;
+  max-width: 100%;
+}
+
+.ProseMirror .image-resizer .image-resize-handle {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.ProseMirror .image-resizer:hover .image-resize-handle,
+.ProseMirror .image-resizer.resizing .image-resize-handle {
+  opacity: 1;
+}
+
+/* Corner handles */
+.ProseMirror .image-resizer .handle-nw,
+.ProseMirror .image-resizer .handle-ne,
+.ProseMirror .image-resizer .handle-se,
+.ProseMirror .image-resizer .handle-sw {
+  width: 12px;
+  height: 12px;
+  background-color: var(--pankow-color-primary);
+  border: 2px solid white;
+  border-radius: 3px;
+}
+
+.ProseMirror .image-resizer .handle-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.ProseMirror .image-resizer .handle-ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.ProseMirror .image-resizer .handle-se {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.ProseMirror .image-resizer .handle-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+/* Edge handles */
+.ProseMirror .image-resizer .handle-n,
+.ProseMirror .image-resizer .handle-s {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 6px;
+  background-color: var(--pankow-color-primary);
+  border-radius: 3px;
+  cursor: ns-resize;
+}
+
+.ProseMirror .image-resizer .handle-n {
+  top: -3px;
+}
+
+.ProseMirror .image-resizer .handle-s {
+  bottom: -3px;
+}
+
+.ProseMirror .image-resizer .handle-e,
+.ProseMirror .image-resizer .handle-w {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 30px;
+  background-color: var(--pankow-color-primary);
+  border-radius: 3px;
+  cursor: ew-resize;
+}
+
+.ProseMirror .image-resizer .handle-e {
+  right: -3px;
+}
+
+.ProseMirror .image-resizer .handle-w {
+  left: -3px;
+}
+
+.ProseMirror .image-resizer.resizing {
+  outline: 2px solid var(--pankow-color-primary);
+  outline-offset: 2px;
+}
+
+.ProseMirror .image-resizer.resizing img {
+  pointer-events: none;
 }
 
 .ProseMirror *::selection {

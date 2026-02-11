@@ -24,7 +24,7 @@ import UsersView from './components/UsersView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
-import MarkdownViewer from './components/MarkdownViewer.vue';
+import MarkdownEditor from './components/MarkdownEditor.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
@@ -622,7 +622,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
 
 const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
-const markdownViewer = useTemplateRef('markdownViewer');
+const markdownEditor = useTemplateRef('markdownEditor');
 const textViewer = useTemplateRef('textViewer');
 const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
@@ -683,8 +683,8 @@ async function loadPath(path, forceLoad = false) {
 
       // need to reset the hash as the original location should be the folder containing the file
       window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
-    } else if (markdownViewer.value.canHandle(item)) {
-      markdownViewer.value.open(item, await DirectoryModel.getRawContent(resource));
+    } else if (markdownEditor.value.canHandle(item)) {
+      markdownEditor.value.open(item, await DirectoryModel.getRawContent(resource));
       viewer.value = 'markdown';
     } else if (textViewer.value.canHandle(item)) {
       textViewer.value.open(item, await DirectoryModel.getRawContent(resource));
@@ -951,7 +951,7 @@ onMounted(async () => {
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
-      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
+      <MarkdownEditor ref="markdownEditor" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

@@ -64,6 +64,7 @@ import { markRaw } from 'vue';
 import { MainLayout, Button, ButtonGroup, Icon, InputDialog, Menu, utils } from '@cloudron/pankow';
 
 import { Editor, EditorContent, Extension } from '@tiptap/vue-3';
+import { Plugin } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -88,6 +89,40 @@ const CollaborationCursor = Extension.create({
     provider.awareness.setLocalStateField('user', user);
     return [yCursorPlugin(provider.awareness)];
   },
+});
+
+// Custom extension to handle pasting images from clipboard as base64
+const ImagePaste = Extension.create({
+  name: 'imagePaste',
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    return [
+      new Plugin({
+        props: {
+          handlePaste(view, event) {
+            const items = event.clipboardData?.items;
+            if (!items) return false;
+
+            for (const item of items) {
+              if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (!file) continue;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const dataUrl = e.target.result;
+                  editor.chain().focus().setImage({ src: dataUrl }).run();
+                };
+                reader.readAsDataURL(file);
+                return true; // Prevent default paste
+              }
+            }
+            return false; // Let other paste handlers run
+          }
+        }
+      })
+    ];
+  }
 });
 
 import MainModel from '../models/MainModel.js';
@@ -286,6 +321,7 @@ export default {
             provider,
             user: { name: this.profile.displayName, color: '#27ce65' },
           }),
+          ImagePaste,
         ],
         onTransaction: () => {
           this.updateActiveBlockTypeLabel();

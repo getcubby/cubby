@@ -72,6 +72,19 @@ if [[ ! -d "frontend-dist" ]]; then
     cd ..
 fi
 
+if [[ ! -f .env.sh ]]; then
+    echo "=> Creating empty .env.sh create a new OIDC client on your Cloudron and fill the env vars"
+cat << 'EOF' > .env.sh
+export OIDC_ISSUER_BASE_URL=""
+export OIDC_CLIENT_ID=""
+export OIDC_CLIENT_SECRET=""
+EOF
+fi
+
+echo "=> Using the following env"
+cat .env.sh
+source .env.sh
+
 echo ""
 echo "┌────────────────────────────────────────────────────────────┐"
 echo "│ Frontend development                                       │"
@@ -89,6 +102,7 @@ echo ""
 
 export DEBUG="cubby*"
 export VITE_DEV_PORT=3000
+export APP_ORIGIN="http://localhost:3000"
 
 # Use 5555 if live frontend development is run in parallel
 export VITE_DEV_PORT=5555

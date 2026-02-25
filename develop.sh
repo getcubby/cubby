@@ -59,7 +59,7 @@ done
 
 echo "=> Ensure database"
 psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
-npm run db-migrate
+DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" node ./node_modules/.bin/db-migrate up
 
 # clear skeleton user
 psql -h ${POSTGRESQL_HOST} -p ${POSTGRESQL_PORT} -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -c "DELETE FROM users WHERE username = 'skeleton'"
@@ -98,7 +98,7 @@ echo "└───────────────────────�
 echo ""
 
 # for up/down testing
-# DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
+# DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate down
 
 export DEBUG="cubby*"
 export VITE_DEV_PORT=3000
@@ -108,4 +108,4 @@ export APP_ORIGIN="http://localhost:3000"
 export VITE_DEV_PORT=5555
 
 echo "=> Start cubby"
-npm start
+./app.js

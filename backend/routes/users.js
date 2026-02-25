@@ -1,21 +1,7 @@
-'use strict';
-
-exports = module.exports = {
-    isAuthenticated,
-    isAdmin,
-    setAdmin,
-    tokenAuth,
-    optionalAuth,
-    profile,
-    update,
-    list
-};
-
-const assert = require('assert'),
-    users = require('../users.js'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess,
-    safe = require('safetydance');
+import assert from 'assert';
+import users from '../users.js';
+import { HttpError, HttpSuccess } from 'connect-lastmile';
+import safe from 'safetydance';
 
 async function getUserFromSession(req) {
     if (!req.oidc?.isAuthenticated()) return null;
@@ -132,3 +118,14 @@ async function update(req, res, next) {
 
     next(new HttpSuccess(200, {}));
 }
+
+export default {
+    isAuthenticated,
+    isAdmin,
+    setAdmin,
+    tokenAuth,
+    optionalAuth,
+    profile,
+    update,
+    list
+};

@@ -1,15 +1,17 @@
-const assert = require('assert'),
-    child_process = require('child_process'),
-    debug = require('debug')('cubby:exec');
+import assert from 'assert';
+import child_process from 'child_process';
+import debug from 'debug';
 
-exports = module.exports = function exec(command, args, options) {
+const debugLog = debug('cubby:exec');
+
+export default function exec(command, args, options) {
     assert.strictEqual(typeof command, 'string');
     assert(Array.isArray(args));
 
     if (options) assert.strictEqual(typeof options, 'object');
     else options = {};
 
-    debug(`${command} ${JSON.stringify(args)}`);
+    debugLog(`${command} ${JSON.stringify(args)}`);
 
     options = Object.assign({ encoding: 'utf8', shell: false }, options);
 
@@ -39,13 +41,13 @@ exports = module.exports = function exec(command, args, options) {
             e.stderr = stderr; // when promisified, this is the way to get stderr
             e.code = code;
 
-            debug(`${command} with args ${args.join(' ')} exited with error`, e);
+            debugLog(`${command} with args ${args.join(' ')} exited with error`, e);
 
             reject(e);
         });
 
         p.on('error', function (error) { // when the command itself could not be started
-            debug(`${command} with args ${args.join(' ')} errored`, error);
+            debugLog(`${command} with args ${args.join(' ')} errored`, error);
         });
     });
-};
+}

@@ -1,27 +1,15 @@
-exports = module.exports = {
-    webdavLogin,
-    add,
-    exists,
-    get,
-    getByAccessToken,
-    list,
-    setWebdavPassword,
-    update,
-    setAdmin,
-    remove,
-    ensureUser
-};
+import assert from 'assert';
+import constants from './constants.js';
+import crypto from 'crypto';
+import { cp } from 'node:fs/promises';
+import debug from 'debug';
+import database from './database.js';
+import path from 'path';
+import tokens from './tokens.js';
+import MainError from './mainerror.js';
+import safe from 'safetydance';
 
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    crypto = require('crypto'),
-    { cp } = require('node:fs/promises'),
-    debug = require('debug')('cubby:users'),
-    database = require('./database.js'),
-    path = require('path'),
-    tokens = require('./tokens.js'),
-    MainError = require('./mainerror.js'),
-    safe = require('safetydance');
+const debugLog = debug('cubby:users');
 
 const CRYPTO_SALT_SIZE = 64; // 512-bit salt
 const CRYPTO_ITERATIONS = 10000; // iterations
@@ -41,7 +29,7 @@ async function webdavLogin(username, password) {
 
     if (username === '' || password === '') return null;
 
-    debug('webdavLogin: ', username);
+    debugLog('webdavLogin: ', username);
 
     const user = await get(username);
     if (!user) return null;
@@ -70,7 +58,7 @@ async function add(user) {
     if (error) throw error;
 
     // copy skeleton folder
-    debug(`add: copy skeleton folder...`);
+    debugLog(`add: copy skeleton folder...`);
     await cp(constants.SKELETON_FOLDER, path.join(constants.USER_DATA_ROOT, username), { recursive: true });
 }
 
@@ -142,16 +130,30 @@ async function remove(username) {
 async function ensureUser(data) {
     const { username, password, email, displayName } = data;
 
-    debug(`ensureUser: ${username}`);
+    debugLog(`ensureUser: ${username}`);
     const [error] = await safe(add({ username, password, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
 
     // make first user admin
     const all = await list();
     if (all.length === 1) {
-        debug(`ensureUser: first user created. Making ${username} the admin.`);
+        debugLog(`ensureUser: first user created. Making ${username} the admin.`);
         await setAdmin(username, true);
     }
 
     return await get(username);
 }
+
+export default {
+    webdavLogin,
+    add,
+    exists,
+    get,
+    getByAccessToken,
+    list,
+    setWebdavPassword,
+    update,
+    setAdmin,
+    remove,
+    ensureUser
+};

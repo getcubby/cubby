@@ -1,7 +1,4 @@
-// This file is a copy of https://raw.githubusercontent.com/sindresorhus/df/v3.1.1/index.js since v4 only supports es modules via import statement
-
-'use strict';
-const execSync = require('child_process').execSync;
+import { execSync } from 'child_process';
 
 const getColumnBoundaries = async header => {
 	// Regex captures each individual column
@@ -93,10 +90,4 @@ df.file = async file => {
 	return data[0];
 };
 
-module.exports = df;
-// TODO: remove this in the next major version
-module.exports.default = df;
-
-if (process.env.NODE_ENV === 'test') {
-	module.exports._parseOutput = parseOutput;
-}
+export default df;

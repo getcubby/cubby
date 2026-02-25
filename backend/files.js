@@ -1,38 +1,22 @@
-exports = module.exports = {
-    HOME: 'home',
+import assert from 'assert';
+import constants from './constants.js';
+import debug from 'debug';
+import favorites from './favorites.js';
+import fs from 'fs';
+import fsExtra from 'fs-extra';
+import fsPromises from 'fs/promises';
+import groupFolders from './groupfolders.js';
+import path from 'path';
+import exec from './exec.js';
+import mime from './mime.js';
+import Entry from './entry.js';
+import shares from './shares.js';
+import recoll from './recoll.js';
+import diskusage from './diskusage.js';
+import MainError from './mainerror.js';
+import { pipeline } from 'node:stream/promises';
 
-    isGroupfolder,
-    translateResourcePath,
-    getAbsolutePath,
-
-    addDirectory,
-    addOrOverwriteFile,
-    addOrOverwriteFileContents,
-    getByAbsolutePath,
-    get,
-    head,
-    move,
-    copy,
-    extract,
-    remove,
-};
-
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    debug = require('debug')('cubby:files'),
-    favorites = require('./favorites.js'),
-    fs = require('fs'),
-    fsExtra = require('fs-extra'),
-    fsPromises = require('fs/promises'),
-    groupFolders = require('./groupfolders.js'),
-    path = require('path'),
-    exec = require('./exec.js'),
-    mime = require('./mime.js'),
-    Entry = require('./entry.js'),
-    shares = require('./shares.js'),
-    recoll = require('./recoll.js'),
-    diskusage = require('./diskusage.js'),
-    MainError = require('./mainerror.js');
+const debugLog = debug('cubby:files');
 
 function isGroupfolder(usernameOrGroupfolder) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
@@ -109,7 +93,7 @@ async function addDirectory(usernameOrGroupfolder, filePath) {
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug('addDirectory:', fullFilePath);
+    debugLog('addDirectory:', fullFilePath);
 
     if (fs.existsSync(fullFilePath)) throw new MainError(MainError.ALREADY_EXISTS);
 
@@ -130,7 +114,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`addOrOverwriteFile: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
+    debugLog(`addOrOverwriteFile: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
     if (fs.existsSync(fullFilePath) && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
@@ -138,9 +122,8 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     const fullFilePathPart = fullFilePath + '.part';
 
     try {
-        const pipeline = require('node:stream/promises').pipeline;
         await fsExtra.ensureDir(path.dirname(fullFilePath));
-        const writeStream = require('fs').createWriteStream(fullFilePathPart);
+        const writeStream = fs.createWriteStream(fullFilePathPart);
         await pipeline(stream, writeStream);
 
         // rename .part after upload pipeline finished
@@ -173,7 +156,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`addOrOverwriteFileContents: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
+    debugLog(`addOrOverwriteFileContents: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
     if (fs.existsSync(fullFilePath) && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
@@ -202,7 +185,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof stats, 'object');
 
-    debug(`getDirectory: from ${usernameOrGroupfolder} at ${fullFilePath} filePath:${filePath}`);
+    debugLog(`getDirectory: from ${usernameOrGroupfolder} at ${fullFilePath} filePath:${filePath}`);
 
     let files;
 
@@ -219,7 +202,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
                 const stat = fs.statSync(path.join(fullFilePath, file));
                 return { name: file, stat: stat, fullFilePath: path.join(fullFilePath, file) };
             } catch (e) {
-                debug(`getDirectory: cannot stat ${path.join(fullFilePath, file)}`, e);
+                debugLog(`getDirectory: cannot stat ${path.join(fullFilePath, file)}`, e);
                 return null;
             }
         }).filter(function (file) { return file && (file.stat.isDirectory() || file.stat.isFile()); }).map(function (file) {
@@ -285,7 +268,7 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof stats, 'object');
 
-    debug(`getFile: ${usernameOrGroupfolder} ${fullFilePath}`);
+    debugLog(`getFile: ${usernameOrGroupfolder} ${fullFilePath}`);
 
     const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
     const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
@@ -359,7 +342,7 @@ async function get(usernameOrGroupfolder, filePath) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`get: ${usernameOrGroupfolder} ${filePath}`);
+    debugLog(`get: ${usernameOrGroupfolder} ${filePath}`);
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -381,7 +364,7 @@ async function head(usernameOrGroupfolder, filePath) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    debug(`head: ${usernameOrGroupfolder} ${filePath}`);
+    debugLog(`head: ${usernameOrGroupfolder} ${filePath}`);
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -417,7 +400,7 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     const fullNewFilePath = getAbsolutePath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`move ${fullFilePath} -> ${fullNewFilePath}`);
+    debugLog(`move ${fullFilePath} -> ${fullNewFilePath}`);
 
     try {
         // TODO add option for overwrite
@@ -444,7 +427,7 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     const fullNewFilePath = getAbsolutePath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`copy ${fullFilePath} -> ${fullNewFilePath}`);
+    debugLog(`copy ${fullFilePath} -> ${fullNewFilePath}`);
 
     try {
         // TODO add option for overwrite
@@ -475,7 +458,7 @@ async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder
     const fullNewFilePath = getAbsolutePath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`extract ${fullFilePath} -> ${fullNewFilePath}`);
+    debugLog(`extract ${fullFilePath} -> ${fullNewFilePath}`);
 
     const tarFormats = ['.tar', '.tgz', '.tar.gz', '.tar.xz', '.tar.bz2'];
 
@@ -509,7 +492,7 @@ async function remove(usernameOrGroupfolder, filePath) {
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debug(`remove ${fullFilePath}`);
+    debugLog(`remove ${fullFilePath}`);
 
     try {
         await fsPromises.rm(fullFilePath, { recursive: true });
@@ -519,3 +502,22 @@ async function remove(usernameOrGroupfolder, filePath) {
 
     await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
 }
+
+export default {
+    HOME: 'home',
+
+    isGroupfolder,
+    translateResourcePath,
+    getAbsolutePath,
+
+    addDirectory,
+    addOrOverwriteFile,
+    addOrOverwriteFileContents,
+    getByAbsolutePath,
+    get,
+    head,
+    move,
+    copy,
+    extract,
+    remove,
+};

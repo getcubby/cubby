@@ -1,13 +1,10 @@
-exports = module.exports = {
-    getHandle
-};
+import debug from 'debug';
+import files from '../files.js';
+import MainError from '../mainerror.js';
+import { HttpError, HttpSuccess } from 'connect-lastmile';
+import * as yUtils from '@y/websocket-server/utils';
 
-const debug = require('debug')('cubby:routes:collab'),
-    files = require('../files.js'),
-    MainError = require('../mainerror.js'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess,
-    yUtils = require('@y/websocket-server/utils');
+const debugLog = debug('cubby:routes:collab');
 
 const FRAGEMENT_NAME = 'cubby-markdownviewer';
 
@@ -26,7 +23,7 @@ async function getHandle(req, res, next) {
     const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`getHandle: ${subject.resource} ${subject.filePath}`);
+    debugLog(`getHandle: ${subject.resource} ${subject.filePath}`);
 
     const entry = files.get(subject.usernameOrGroupfolder, subject.filePath);
     if (!entry) return next(new HttpError(400, 'invalid '));
@@ -44,10 +41,14 @@ async function getHandle(req, res, next) {
     const doc = yUtils.getYDoc(result.id);
 
     if (doc.share.has(FRAGEMENT_NAME)) {
-        debug(`getHandle: existing ydoc reused ${result.id}`);
+        debugLog(`getHandle: existing ydoc reused ${result.id}`);
         next(new HttpSuccess(200, { id: result.id, fragmentName: FRAGEMENT_NAME }));
     } else {
-        debug(`getHandle: new ydoc created ${result.id}`);
+        debugLog(`getHandle: new ydoc created ${result.id}`);
         next(new HttpSuccess(201, { id: result.id, fragmentName: FRAGEMENT_NAME }));
     }
 }
+
+export default {
+    getHandle
+};

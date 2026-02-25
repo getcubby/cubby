@@ -1,14 +1,10 @@
-'use strict';
+import users from '../users.js';
+import constants from '../constants.js';
+import webdavServer from 'webdav-server';
 
-exports = module.exports = {
-    express
-};
-
-var users = require('../users.js'),
-    constants = require('../constants.js'),
-    webdav = require('webdav-server').v2,
-    PrivilegeManager = require('webdav-server').v2.PrivilegeManager,
-    webdavErrors = require('webdav-server').v2.Errors;
+const webdav = webdavServer.v2;
+const PrivilegeManager = webdavServer.v2.PrivilegeManager;
+const webdavErrors = webdavServer.v2.Errors;
 
 class WebdavPrivilegeManager extends PrivilegeManager
 {
@@ -61,16 +57,20 @@ WebdavUserManager.prototype.getUserByNamePassword = async function (username, pa
     callback(null, user);
 };
 
-function express() {
-    var webdavServer = new webdav.WebDAVServer({
+function expressMiddleware() {
+    var webdavSrv = new webdav.WebDAVServer({
         requireAuthentification: true,
         privilegeManager: new WebdavPrivilegeManager(),
         httpAuthentication: new webdav.HTTPBasicAuthentication(new WebdavUserManager(), 'Cubby')
     });
 
-    webdavServer.setFileSystem('/', new webdav.PhysicalFileSystem(constants.USER_DATA_ROOT), function (success) {
+    webdavSrv.setFileSystem('/', new webdav.PhysicalFileSystem(constants.USER_DATA_ROOT), function (success) {
         if (!success) console.error('Failed to setup webdav server!');
     });
 
-    return webdav.extensions.express('/webdav', webdavServer);
+    return webdav.extensions.express('/webdav', webdavSrv);
 }
+
+export default {
+    express: expressMiddleware
+};

@@ -1,10 +1,8 @@
-const assert = require('assert'),
-    mimeIcons = require('./mimeicons.js'),
-    crypto = require('crypto'),
-    isBinaryFileSync = require('isbinaryfile').isBinaryFileSync,
-    preview = require('./preview.js');
-
-exports = module.exports = Entry;
+import assert from 'assert';
+import mimeIcons from './mimeicons.js';
+import crypto from 'crypto';
+import { isBinaryFileSync } from 'isbinaryfile';
+import preview from './preview.js';
 
 function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
     assert(fullFilePath && typeof fullFilePath === 'string');
@@ -119,3 +117,5 @@ Entry.prototype.withoutPrivate = function (username = null) {
         previewUrl: this.getPreviewUrl()
     };
 };
+
+export default Entry;

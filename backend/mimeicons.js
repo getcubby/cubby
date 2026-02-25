@@ -1,6 +1,6 @@
 // supported mimetype icons
 // keep in sync with frontend/public/mime-types
-exports = module.exports = {
+export default {
     'android-package-archive': 'android-package-archive.svg',
     'application-atom+xml': 'application-atom+xml.svg',
     'application-certificate': 'application-certificate.svg',

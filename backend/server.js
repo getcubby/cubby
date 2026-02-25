@@ -1,28 +1,30 @@
-const collab = require('./routes/collab.js'),
-    constants = require('./constants.js'),
-    cors = require('./cors.js'),
-    express = require('express'),
-    favorites = require('./routes/favorites.js'),
-    files = require('./routes/files.js'),
-    fs = require('fs'),
-    groupFolders = require('./routes/groupfolders.js'),
-    http = require('http'),
-    lastMile = require('connect-lastmile'),
-    misc = require('./routes/misc.js'),
-    mobile = require('./routes/mobile.js'),
-    office = require('./routes/office.js'),
-    oidc = require('express-openid-connect'),
-    path = require('path'),
-    session = require('express-session'),
-    shares = require('./routes/shares.js'),
-    users = require('./routes/users.js'),
-    webdav = require('./routes/webdav.js'),
-    ws = require('ws'),
-    yUtils = require('@y/websocket-server/utils');
+import collab from './routes/collab.js';
+import constants from './constants.js';
+import cors from './cors.js';
+import express from 'express';
+import favorites from './routes/favorites.js';
+import files from './routes/files.js';
+import fs from 'fs';
+import groupFolders from './routes/groupfolders.js';
+import http from 'http';
+import lastMile from 'connect-lastmile';
+import misc from './routes/misc.js';
+import mobile from './routes/mobile.js';
+import office from './routes/office.js';
+import oidc from 'express-openid-connect';
+import path from 'path';
+import session from 'express-session';
+import shares from './routes/shares.js';
+import users from './routes/users.js';
+import webdav from './routes/webdav.js';
+import { WebSocketServer } from 'ws';
+import * as yUtils from '@y/websocket-server/utils';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
-exports = module.exports = {
-    init
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
@@ -162,7 +164,7 @@ function init(callback) {
             res.oidc = {
                 login(options) {
                     res.writeHead(200, { 'Content-Type': 'text/html' });
-                    res.write(require('fs').readFileSync(__dirname + '/oidc_develop_user_select.html', 'utf8').replaceAll('REDIRECT_URI', options.authorizationParams.redirect_uri));
+                    res.write(fs.readFileSync(__dirname + '/oidc_develop_user_select.html', 'utf8').replaceAll('REDIRECT_URI', options.authorizationParams.redirect_uri));
                     res.end();
                 }
             };
@@ -207,7 +209,7 @@ function init(callback) {
     app.use(lastMile());
 
     const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, app);
-    const wsServer = new ws.Server({ noServer: true });
+    const wsServer = new WebSocketServer({ noServer: true });
 
     wsServer.on('connection', yUtils.setupWSConnection);
 
@@ -232,3 +234,7 @@ function init(callback) {
         callback(null);
     });
 }
+
+export default {
+    init
+};

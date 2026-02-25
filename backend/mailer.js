@@ -1,15 +1,17 @@
-exports = module.exports = {
-    newShare
-};
+import assert from 'assert';
+import debug from 'debug';
+import fs from 'fs';
+import handlebars from 'handlebars';
+import nodemailer from 'nodemailer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import smtpTransport from 'nodemailer-smtp-transport';
+import shares from './shares.js';
 
-const assert = require('assert'),
-    debug = require('debug')('cubby:mailer'),
-    fs = require('fs'),
-    handlebars = require('handlebars'),
-    nodemailer = require('nodemailer'),
-    path = require('path'),
-    smtpTransport = require('nodemailer-smtp-transport'),
-    shares = require('./shares.js');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const debugLog = debug('cubby:mailer');
 
 const CAN_SEND_EMAIL = (process.env.MAIL_SMTP_SERVER && process.env.MAIL_SMTP_PORT && process.env.MAIL_FROM);
 if (CAN_SEND_EMAIL) {
@@ -34,7 +36,7 @@ async function newShare(emailAddress, shareId) {
     assert.strictEqual(typeof emailAddress, 'string');
     assert.strictEqual(typeof shareId, 'string');
 
-    debug(`newShare: to:${emailAddress} shareId:${shareId}`);
+    debugLog(`newShare: to:${emailAddress} shareId:${shareId}`);
 
     const share = await shares.get(shareId);
     assert.ok(share, `Failed to get share ${shareId}`);
@@ -77,3 +79,7 @@ async function newShare(emailAddress, shareId) {
 
     await transport.sendMail(mail);
 }
+
+export default {
+    newShare
+};

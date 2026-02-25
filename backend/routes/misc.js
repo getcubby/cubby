@@ -1,29 +1,20 @@
-'use strict';
+import assert from 'assert';
+import archiver from 'archiver';
+import config from '../config.js';
+import debug from 'debug';
+import files from '../files.js';
+import groupFolders from '../groupfolders.js';
+import MainError from '../mainerror.js';
+import office from '../office.js';
+import path from 'path';
+import preview from '../preview.js';
+import recoll from '../recoll.js';
+import recent from '../recent.js';
+import safe from 'safetydance';
+import shares from '../shares.js';
+import { HttpError, HttpSuccess } from 'connect-lastmile';
 
-exports = module.exports = {
-    getConfig,
-    getPreview,
-    download,
-    getRecent,
-    search
-};
-
-const assert = require('assert'),
-    archiver = require('archiver'),
-    config = require('../config.js'),
-    debug = require('debug')('cubby:routes:misc'),
-    files = require('../files.js'),
-    groupFolders = require('../groupfolders.js'),
-    MainError = require('../mainerror.js'),
-    office = require('../office.js'),
-    path = require('path'),
-    preview = require('../preview.js'),
-    recoll = require('../recoll.js'),
-    recent = require('../recent.js'),
-    safe = require('safetydance'),
-    shares = require('../shares.js'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+const debugLog = debug('cubby:routes:misc');
 
 async function getConfig(req, res, next) {
     // currently we only send configs for collabora
@@ -49,7 +40,7 @@ async function getPreview(req, res, next) {
     const id = req.params.id; // id depends on type (either username or shareId)
     const hash = req.params.hash;
 
-    debug(`getPreview: type=${type} id=${id} hash=${hash}`);
+    debugLog(`getPreview: type=${type} id=${id} hash=${hash}`);
 
     if (type === 'files') {
         if (!req.user || id !== req.user.username) return next(new HttpError(404, 'not found')); // do not leak if username or hash should exist
@@ -87,14 +78,14 @@ async function download(req, res, next) {
 
     if (!Array.isArray(entries)) return next(new HttpError(400, 'entries must be a non-empty stringified array'));
 
-    debug(`download: type=zip skipPath=${skipPath}`, entries);
+    debugLog(`download: type=zip skipPath=${skipPath}`, entries);
 
     const archive = archiver('zip', {
         zlib: { level: 9 }
     });
 
     archive.on('warning', function (error) {
-        debug('download: archiver warning:', error);
+        debugLog('download: archiver warning:', error);
     });
 
     // good practice to catch this error explicitly
@@ -140,7 +131,7 @@ async function download(req, res, next) {
                 return next(new HttpError(404, `resource ${resource} not supported for download`));
             }
 
-            debug(`download: add ${file.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
+            debugLog(`download: add ${file.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
 
             if (file.isDirectory) archive.directory(file._fullFilePath, file.filePath.slice(skipPath.length));
             else archive.file(file._fullFilePath, { name: file.filePath.slice(skipPath.length) });
@@ -163,7 +154,7 @@ async function getRecent(req, res, next) {
     const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 10 : parseInt(req.query.days_ago, 10);
     const maxFiles = 100;
 
-    debug(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
+    debugLog(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
 
     let entries = [];
     try {
@@ -181,7 +172,7 @@ async function search(req, res, next) {
     const query = req.query.query || '';
     if (!query) return next(new HttpError(400, 'non-empty query arg required'));
 
-    debug(`search: ${req.user.username} ${query}`);
+    debugLog(`search: ${req.user.username} ${query}`);
 
     let results;
     try {
@@ -193,3 +184,11 @@ async function search(req, res, next) {
 
     next(new HttpSuccess(200, { results }));
 }
+
+export default {
+    getConfig,
+    getPreview,
+    download,
+    getRecent,
+    search
+};

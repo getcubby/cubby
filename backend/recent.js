@@ -1,23 +1,19 @@
-exports = module.exports = {
-    add,
-    remove,
-    get,
-    purge,
-};
+import assert from 'assert';
+import debug from 'debug';
+import constants from './constants.js';
+import shares from './shares.js';
+import path from 'path';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
+import files from './files.js';
 
-const assert = require('assert'),
-    debug = require('debug')('cubby:recent'),
-    constants = require('./constants.js'),
-    shares = require('./shares.js'),
-    path = require('path'),
-    fsPromises = require('fs/promises'),
-    files = require('./files.js');
+const debugLog = debug('cubby:recent');
 
 const MAX_AGE = 60 * 24 * 60 * 60 * 1000; // ~2 months
 
 let recentsCache = {};
 try {
-    recentsCache = require(constants.RECENTS_CACHE_PATH);
+    recentsCache = JSON.parse(fs.readFileSync(constants.RECENTS_CACHE_PATH, 'utf8'));
 // eslint-disable-next-line no-unused-vars
 } catch (e) {
     console.log('No recent file cache found. Starting fresh.');
@@ -27,7 +23,7 @@ async function add(username, resourcePath) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof resourcePath, 'string');
 
-    debug(`add: ${username} ${resourcePath}`);
+    debugLog(`add: ${username} ${resourcePath}`);
 
     if (!recentsCache[username]) recentsCache[username] = [];
 
@@ -46,7 +42,7 @@ async function remove(username, resourcePath) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof resourcePath, 'string');
 
-    debug(`remove: ${username} ${resourcePath}`);
+    debugLog(`remove: ${username} ${resourcePath}`);
 
     if (!recentsCache[username]) return;
 
@@ -113,3 +109,10 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
 async function purge() {
     // TODO
 }
+
+export default {
+    add,
+    remove,
+    get,
+    purge,
+};

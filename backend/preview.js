@@ -1,15 +1,12 @@
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    crypto = require('crypto'),
-    debug = require('debug')('cubby:preview'),
-    exec = require('./exec.js'),
-    fs = require('fs-extra'),
-    path = require('path');
+import assert from 'assert';
+import constants from './constants.js';
+import crypto from 'crypto';
+import debug from 'debug';
+import exec from './exec.js';
+import fs from 'fs-extra';
+import path from 'path';
 
-exports = module.exports = {
-    getHash,
-    getLocalPath
-};
+const debugLog = debug('cubby:preview');
 
 const queue = [];
 let taskActive = false;
@@ -20,7 +17,7 @@ async function process() {
     taskActive = true;
     const task = queue.shift();
 
-    debug(`process: hash=${task.hash} fullFilePath:${task.fullFilePath}`);
+    debugLog(`process: hash=${task.hash} fullFilePath:${task.fullFilePath}`);
 
     await task.generator(task.hash, task.fullFilePath);
     taskActive = false;
@@ -32,7 +29,7 @@ async function process() {
 function enqueue(hash, fullFilePath, generator) {
     if (queue.find(function (t) { return t.hash === hash; })) return;
 
-    debug(`enqueue: hash=${hash} fullFilePath:${fullFilePath}`);
+    debugLog(`enqueue: hash=${hash} fullFilePath:${fullFilePath}`);
 
     queue.push({ hash, fullFilePath, generator });
     process();
@@ -51,7 +48,7 @@ const generators = [{
         async function generate(hash, fullFilePath) {
             const targetPath = path.join(constants.THUMBNAIL_ROOT, hash);
 
-            debug(`generateImageMagick: hash=${hash} fullFilePath=${fullFilePath}`);
+            debugLog(`generateImageMagick: hash=${hash} fullFilePath=${fullFilePath}`);
 
             try {
                 await fs.ensureDir(constants.THUMBNAIL_ROOT);
@@ -86,3 +83,8 @@ function getLocalPath(hash) {
 
     return targetPath;
 }
+
+export default {
+    getHash,
+    getLocalPath
+};

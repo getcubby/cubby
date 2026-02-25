@@ -1,14 +1,10 @@
-exports = module.exports = {
-    init,
-    get,
-    set
-};
+import assert from 'assert';
+import debug from 'debug';
+import fs from 'fs';
+import path from 'path';
+import safe from 'safetydance';
 
-const assert = require('assert'),
-    debug = require('debug')('cubby:config'),
-    fs = require('fs'),
-    path = require('path'),
-    safe = require('safetydance');
+const debugLog = debug('cubby:config');
 
 let gConfig = {
     collabora: {
@@ -24,21 +20,21 @@ function init(configFilePath) {
     gConfigFilePath = path.resolve(configFilePath);
 
     try {
-        gConfig = require(gConfigFilePath);
+        gConfig = JSON.parse(fs.readFileSync(gConfigFilePath, 'utf8'));
     } catch (e) { // eslint-disable-line
-        debug(`Unable to load config file at ${gConfigFilePath}. Using defaults.`);
+        debugLog(`Unable to load config file at ${gConfigFilePath}. Using defaults.`);
     }
 
-    debug('loaded config:', gConfig);
+    debugLog('loaded config:', gConfig);
 }
 
 function commit() {
-    debug('commit settings', gConfig);
+    debugLog('commit settings', gConfig);
 
     try {
         fs.writeFileSync(gConfigFilePath, JSON.stringify(gConfig, null, 4));
     } catch (e) {
-        debug(`Unable to safe config file at ${gConfigFilePath}.`, e);
+        debugLog(`Unable to safe config file at ${gConfigFilePath}.`, e);
         throw e;
     }
 }
@@ -58,3 +54,9 @@ function set(key, value) {
 
     commit();
 }
+
+export default {
+    init,
+    get,
+    set
+};

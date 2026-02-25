@@ -1,9 +1,5 @@
-exports = module.exports = {
-    getSupportedExtensions
-};
-
-const Dom = require('xmldom').DOMParser,
-    xpath = require('xpath');
+import { DOMParser as Dom } from 'xmldom';
+import xpath from 'xpath';
 
 async function getSupportedExtensions(wopiHost) {
     const res = await fetch(`${wopiHost}/hosting/discovery`);
@@ -24,3 +20,7 @@ async function getSupportedExtensions(wopiHost) {
 
     return extensions;
 }
+
+export default {
+    getSupportedExtensions
+};

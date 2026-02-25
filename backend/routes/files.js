@@ -1,24 +1,15 @@
-'use strict';
+import assert from 'assert';
+import debug from 'debug';
+import files from '../files.js';
+import Entry from '../entry.js';
+import path from 'path';
+import recent from '../recent.js';
+import shares from '../shares.js';
+import groupFolders from '../groupfolders.js';
+import MainError from '../mainerror.js';
+import { HttpError, HttpSuccess } from 'connect-lastmile';
 
-exports = module.exports = {
-    add,
-    head,
-    get,
-    update,
-    remove,
-};
-
-var assert = require('assert'),
-    debug = require('debug')('cubby:routes:files'),
-    files = require('../files.js'),
-    Entry = require('../entry.js'),
-    path = require('path'),
-    recent = require('../recent.js'),
-    shares = require('../shares.js'),
-    groupFolders = require('../groupfolders.js'),
-    MainError = require('../mainerror.js'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess;
+const debugLog = debug('cubby:routes:files');
 
 function boolLike(arg) {
     if (!arg) return false;
@@ -42,7 +33,7 @@ async function add(req, res, next) {
     const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
+    debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
    try {
         if (directory) {
@@ -66,7 +57,7 @@ async function head(req, res, next) {
     const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`head: ${subject.resource} ${subject.filePath}`);
+    debugLog(`head: ${subject.resource} ${subject.filePath}`);
 
     let result;
     try {
@@ -101,7 +92,7 @@ async function get(req, res, next) {
     if (!resource) return next(new HttpError(400, 'invalid resource'));
     filePath = filePath.slice(resource.length+1);
 
-    debug(`get: ${resource} ${filePath} type:${type || 'json'}`);
+    debugLog(`get: ${resource} ${filePath} type:${type || 'json'}`);
 
     // only shares may have optional auth
     if (resource !== 'shares' && !req.user) return next(new HttpError(401, 'Unauthorized'));
@@ -170,7 +161,7 @@ async function get(req, res, next) {
 
             next(new HttpSuccess(200, file.asShare(share.filePath).withoutPrivate(req.user ? req.user.username : null)));
         } else {
-            debug('listShares');
+            debugLog('listShares');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
@@ -251,7 +242,7 @@ async function get(req, res, next) {
 
             next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.username)));
         } else {
-            debug('listGroupFolders');
+            debugLog('listGroupFolders');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
@@ -322,7 +313,7 @@ async function update(req, res, next) {
     const newSubject =  await files.translateResourcePath(req.user.username, newFilePath);
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
+    debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
 
     // TODO support shares
     try {
@@ -349,7 +340,7 @@ async function remove(req, res, next) {
     const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    debug(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
+    debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 
     try {
         await files.remove(subject.usernameOrGroupfolder, subject.filePath);
@@ -361,3 +352,11 @@ async function remove(req, res, next) {
 
     next(new HttpSuccess(200, {}));
 }
+
+export default {
+    add,
+    head,
+    get,
+    update,
+    remove,
+};

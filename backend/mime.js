@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 
 const GLOBS2_FILE = '/usr/share/mime/globs2';
 
@@ -30,7 +30,7 @@ function init() {
     });
 }
 
-exports = module.exports = function (filePath) {
+export default function (filePath) {
     if (!gTypes) init();
 
     const typeKey = Object.keys(gTypes).find(function (type) {
@@ -43,4 +43,4 @@ exports = module.exports = function (filePath) {
     if (typeKey === '.rtf') return 'text/rtf';
 
     return gTypes[typeKey];
-};
+}

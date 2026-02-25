@@ -1,13 +1,9 @@
-exports = module.exports = {
-    init,
-    query,
-    transaction
-};
+import assert from 'assert';
+import MainError from './mainerror.js';
+import debug from 'debug';
+import pg from 'pg';
 
-const assert = require('assert'),
-    MainError = require('./mainerror.js'),
-    debug = require('debug')('cubby:database'),
-    pg = require('pg');
+const debugLog = debug('cubby:database');
 
 let gConnectionPool = null;
 
@@ -22,7 +18,7 @@ const gDatabase = {
 function init() {
     if (gConnectionPool !== null) return;
 
-    debug(`init: connecting to database ${gDatabase.name} on ${gDatabase.hostname}:${gDatabase.port}`);
+    debugLog(`init: connecting to database ${gDatabase.name} on ${gDatabase.hostname}:${gDatabase.port}`);
 
     gConnectionPool = new pg.Pool({
         host: gDatabase.hostname,
@@ -68,3 +64,9 @@ async function transaction(queries) {
         throw new MainError(MainError.DATABASE_ERROR, error);
     }
 }
+
+export default {
+    init,
+    query,
+    transaction
+};

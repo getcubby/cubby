@@ -1,23 +1,15 @@
-exports = module.exports = {
-    add,
-    get,
-    list,
-    update,
-    remove,
+import assert from 'assert';
+import constants from './constants.js';
+import crypto from 'crypto';
+import debug from 'debug';
+import database from './database.js';
+import fs from 'fs-extra';
+import path from 'path';
+import MainError from './mainerror.js';
+import recoll from './recoll.js';
+import safe from 'safetydance';
 
-    isPartOf
-};
-
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    crypto = require('crypto'),
-    debug = require('debug')('cubby:groupfolders'),
-    database = require('./database.js'),
-    fs = require('fs-extra'),
-    path = require('path'),
-    MainError = require('./mainerror.js'),
-    recoll = require('./recoll.js'),
-    safe = require('safetydance');
+const debugLog = debug('cubby:groupfolders');
 
 function postProcess(data) {
     data.folderPath = data.folder_path;
@@ -38,7 +30,7 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    debug(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${members}`);
+    debugLog(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${members}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name, folder_path) VALUES ($1, $2, $3)',
@@ -70,7 +62,7 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
 async function get(id) {
     assert.strictEqual(typeof id, 'string');
 
-    debug(`get: ${id}`);
+    debugLog(`get: ${id}`);
 
     let result = await database.query('SELECT * FROM groupfolders WHERE id = $1', [ id ]);
     if (result.rows.length === 0) return null;
@@ -113,7 +105,7 @@ async function update(id, name, members) {
     assert.strictEqual(typeof name, 'string');
     assert(Array.isArray(members));
 
-    debug(`update: ${id} by name ${name} with members ${members}`);
+    debugLog(`update: ${id} by name ${name} with members ${members}`);
 
     const queries = [{
         query: 'UPDATE groupfolders set name=$1 WHERE id=$2',
@@ -146,7 +138,7 @@ async function remove(id) {
 
     const groupFolderPath = path.join(constants.GROUPS_DATA_ROOT, id);
 
-    debug(`remove: ${id} and folder at ${groupFolderPath}`);
+    debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
 
     try {
         await fs.remove(groupFolderPath);
@@ -174,3 +166,13 @@ function isPartOf(groupFolder, username) {
 
     return !!groupFolder.members.find((u) => u === username);
 }
+
+export default {
+    add,
+    get,
+    list,
+    update,
+    remove,
+
+    isPartOf
+};

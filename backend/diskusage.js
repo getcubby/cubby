@@ -1,19 +1,14 @@
-exports = module.exports = {
-    getByUsername,
-    getByUsernameAndDirectory,
-    calculateByUsernameAndDirectory,
-    calculate
-};
+import assert from 'assert';
+import constants from './constants.js';
+import debug from 'debug';
+import exec from './exec.js';
+import files from './files.js';
+import groupFolders from './groupfolders.js';
+import users from './users.js';
+import path from 'path';
+import df from './df.js';
 
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    debug = require('debug')('cubby:diskusage'),
-    exec = require('./exec.js'),
-    files = require('./files.js'),
-    groupFolders = require('./groupfolders.js'),
-    users = require('./users.js'),
-    path = require('path'),
-    df = require('./df.js');
+const debugLog = debug('cubby:diskusage');
 
 // { username: { used: int, directories: { filepath: size }}
 const gCache = {};
@@ -22,7 +17,7 @@ const gCache = {};
 async function getByUsername(usernameOrGroupFolder) {
     assert.strictEqual(typeof usernameOrGroupFolder, 'string');
 
-    debug(`getByUsername: ${usernameOrGroupFolder}`);
+    debugLog(`getByUsername: ${usernameOrGroupFolder}`);
 
     if (!gCache[usernameOrGroupFolder]) await calculateByUsername(usernameOrGroupFolder);
 
@@ -40,7 +35,7 @@ async function getByUsernameAndDirectory(username, filepath) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof filepath, 'string');
 
-    debug(`getByUsernameAndDirectory: username:${username} directory:${filepath}`);
+    debugLog(`getByUsernameAndDirectory: username:${username} directory:${filepath}`);
 
     if (!gCache[username]) await calculateByUsername(username);
 
@@ -55,7 +50,7 @@ async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryP
     assert.strictEqual(typeof usernameOrGroupFolder, 'string');
     assert.strictEqual(typeof directoryPath, 'string');
 
-    debug(`calculateByUsernameAndDirectory: ${usernameOrGroupFolder} directory:${directoryPath}`);
+    debugLog(`calculateByUsernameAndDirectory: ${usernameOrGroupFolder} directory:${directoryPath}`);
 
     let folderRoot;
 
@@ -81,14 +76,14 @@ async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryP
             else gCache[usernameOrGroupFolder].directories[filepath] = size;
         });
     } catch (error) {
-        debug(`Failed to calculate usage for ${directoryPath}. Falling back to 0. ${error}`);
+        debugLog(`Failed to calculate usage for ${directoryPath}. Falling back to 0. ${error}`);
     }
 }
 
 async function calculateByUsername(usernameOrGroupFolder) {
     assert.strictEqual(typeof usernameOrGroupFolder, 'string');
 
-    debug(`calculateByUsername: ${usernameOrGroupFolder}`);
+    debugLog(`calculateByUsername: ${usernameOrGroupFolder}`);
 
     gCache[usernameOrGroupFolder] = {
         used: 0,
@@ -113,7 +108,7 @@ async function calculateByUsername(usernameOrGroupFolder) {
                 else gCache[usernameOrGroupFolder].directories[filepath] = size;
             });
         } catch (error) {
-            debug(`Failed to calculate usage for ${usernameOrGroupFolder}. Falling back to 0. ${error}`);
+            debugLog(`Failed to calculate usage for ${usernameOrGroupFolder}. Falling back to 0. ${error}`);
         }
     } else {
         const username = usernameOrGroupFolder;
@@ -132,13 +127,13 @@ async function calculateByUsername(usernameOrGroupFolder) {
                 else gCache[username].directories[filepath] = size;
             });
         } catch (error) {
-            debug(`Failed to calculate usage for ${username}. Falling back to 0. ${error}`);
+            debugLog(`Failed to calculate usage for ${username}. Falling back to 0. ${error}`);
         }
     }
 }
 
 async function calculate() {
-    debug(`calculate`);
+    debugLog(`calculate`);
 
     const userList = await users.list();
     for (const user of userList) await calculateByUsername(user.username);
@@ -146,3 +141,10 @@ async function calculate() {
     const groupFolderList = await groupFolders.list();
     for (const folder of groupFolderList) await calculateByUsername('groupfolder-' + folder.id);
 }
+
+export default {
+    getByUsername,
+    getByUsernameAndDirectory,
+    calculateByUsernameAndDirectory,
+    calculate
+};

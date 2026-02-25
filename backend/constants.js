@@ -1,6 +1,10 @@
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-exports = module.exports = {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export default {
     SESSION_SECRET_FILE_PATH: process.env.SESSION_SECRET_FILE_PATH ? path.resolve(process.env.SESSION_SECRET_FILE_PATH) : path.resolve(__dirname, '../.secret'),
     USER_DATA_ROOT: process.env.USER_DATA_PATH ? path.resolve(process.env.USER_DATA_PATH) : path.resolve(__dirname, '../.data'),
     GROUPS_DATA_ROOT: process.env.GROUPS_DATA_PATH ? path.resolve(process.env.GROUPS_DATA_PATH) : path.resolve(__dirname, '../.groups'),

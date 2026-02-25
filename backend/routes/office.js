@@ -1,28 +1,18 @@
-'use strict';
+import assert from 'assert';
+import config from '../config.js';
+import crypto from 'crypto';
+import debug from 'debug';
+import { DOMParser as Dom } from 'xmldom';
+import files from '../files.js';
+import { HttpError, HttpSuccess } from 'connect-lastmile';
+import MainError from '../mainerror.js';
+import mime from '../mime.js';
+import office from '../office.js';
+import safe from 'safetydance';
+import tokens from '../tokens.js';
+import xpath from 'xpath';
 
-exports = module.exports = {
-    getHandle,
-    checkFileInfo,
-    getFile,
-    putFile,
-    getSettings,
-    setSettings
-};
-
-var assert = require('assert'),
-    config = require('../config.js'),
-    crypto = require('crypto'),
-    debug = require('debug')('cubby:routes:office'),
-    Dom = require('xmldom').DOMParser,
-    files = require('../files.js'),
-    HttpError = require('connect-lastmile').HttpError,
-    HttpSuccess = require('connect-lastmile').HttpSuccess,
-    MainError = require('../mainerror.js'),
-    mime = require('../mime.js'),
-    office = require('../office.js'),
-    safe = require('safetydance'),
-    tokens = require('../tokens.js'),
-    xpath = require('xpath');
+const debugLog = debug('cubby:routes:office');
 
 const HANDLES = {};
 
@@ -48,7 +38,7 @@ async function getHandle(req, res, next) {
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
     const mimeType = mime(subject.filePath);
-    debug(`getHandle: ${subject.resource} ${subject.filePath} with mimetype ${mimeType}`);
+    debugLog(`getHandle: ${subject.resource} ${subject.filePath} with mimetype ${mimeType}`);
 
     const nodes = xpath.select(`/wopi-discovery/net-zone/app[@name='${mimeType}']/action`, doc);
     if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
@@ -85,7 +75,7 @@ async function checkFileInfo(req, res, next) {
     const handleId = req.params.handleId;
     if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`checkFileInfo: ${handleId}`);
+    debugLog(`checkFileInfo: ${handleId}`);
 
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
@@ -124,7 +114,7 @@ async function getFile(req, res, next) {
     const handleId = req.params.handleId;
     if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`getFile: ${handleId}`);
+    debugLog(`getFile: ${handleId}`);
 
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
@@ -155,10 +145,10 @@ async function putFile(req, res, next) {
     const handleId = req.params.handleId;
     if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debug(`putFile: ${handleId} ${req.body.length}`);
+    debugLog(`putFile: ${handleId} ${req.body.length}`);
 
     if (!req.body.length) {
-        debug(`putFile: ${handleId} has empty body. Probably a bug in the body parser...but continuing with 200`);
+        debugLog(`putFile: ${handleId} has empty body. Probably a bug in the body parser...but continuing with 200`);
         return next(new HttpSuccess(200, {}));
     }
 
@@ -200,3 +190,12 @@ async function setSettings(req, res, next) {
 
     next(new HttpSuccess(200, {}));
 }
+
+export default {
+    getHandle,
+    checkFileInfo,
+    getFile,
+    putFile,
+    getSettings,
+    setSettings
+};

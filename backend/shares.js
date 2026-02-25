@@ -1,21 +1,13 @@
-exports = module.exports = {
-    list,
-    listSharedWith,
-    get,
-    create,
-    getByOwnerAndFilepath,
-    getByOwnerAndReceiverAndFilepath,
-    remove
-};
+import assert from 'assert';
+import debug from 'debug';
+import files from './files.js';
+import database from './database.js';
+import crypto from 'crypto';
+import mailer from './mailer.js';
+import MainError from './mainerror.js';
+import users from './users.js';
 
-const assert = require('assert'),
-    debug = require('debug')('cubby:shares'),
-    files = require('./files.js'),
-    database = require('./database.js'),
-    crypto = require('crypto'),
-    mailer = require('./mailer.js'),
-    MainError = require('./mainerror.js'),
-    users = require('./users.js');
+const debugLog = debug('cubby:shares');
 
 // in some queries we use postgres regexp so if input contains regexp chars we have to escape them
 function escapeForSqlRegexp(text) {
@@ -56,7 +48,7 @@ function postProcess(data) {
 async function listSharedWith(username) {
     assert.strictEqual(typeof username, 'string');
 
-    debug(`list: ${username}`);
+    debugLog(`list: ${username}`);
 
     const result = await database.query('SELECT * FROM shares WHERE receiver_username = $1', [ username ]);
 
@@ -69,7 +61,7 @@ async function listSharedWith(username) {
 async function list(username) {
     assert.strictEqual(typeof username, 'string');
 
-    debug(`listSharedWith: ${username}`);
+    debugLog(`listSharedWith: ${username}`);
 
     const result = await database.query('SELECT * FROM shares WHERE owner_username = $1', [ username ]);
 
@@ -90,7 +82,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
     // ensure we have a bool with false as fallback
     readonly = !!readonly;
 
-    debug(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
+    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
 
     const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -110,7 +102,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 async function get(shareId) {
     assert.strictEqual(typeof shareId, 'string');
 
-    debug(`get: ${shareId}`);
+    debugLog(`get: ${shareId}`);
 
     const result = await database.query('SELECT * FROM shares WHERE id = $1', [ shareId ]);
 
@@ -124,7 +116,7 @@ async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) 
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof filepath, 'string');
 
-    debug(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
+    debugLog(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
 
     // enabling this would list shares within a folder in the sharedWith of that folder
     // const result = await database.query('SELECT * FROM shares WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path ~ $3', [ ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
@@ -144,7 +136,7 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
     assert.strictEqual(typeof filepath, 'string');
     assert.strictEqual(typeof exactMatch, 'boolean');
 
-    debug(`getByOwnerAndReceiverAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
+    debugLog(`getByOwnerAndReceiverAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
 
     let result;
 
@@ -161,7 +153,17 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
 async function remove(shareId) {
     assert.strictEqual(typeof shareId, 'string');
 
-    debug(`remove: ${shareId}`);
+    debugLog(`remove: ${shareId}`);
 
     await database.query('DELETE FROM shares WHERE id = $1', [ shareId ]);
 }
+
+export default {
+    list,
+    listSharedWith,
+    get,
+    create,
+    getByOwnerAndFilepath,
+    getByOwnerAndReceiverAndFilepath,
+    remove
+};

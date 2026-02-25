@@ -1,19 +1,10 @@
-'use strict';
+import crypto from 'crypto';
+import debug from 'debug';
+import { HttpSuccess, HttpError } from 'connect-lastmile';
+import tokens from '../tokens.js';
+import users from '../users.js';
 
-exports = module.exports = {
-    getConfig,
-    mobileStart,
-    codeToToken,
-    callbackLandingFallback,
-    assetLinks,
-};
-
-const crypto = require('crypto'),
-    debug = require('debug')('cubby:routes:mobile'),
-    HttpSuccess = require('connect-lastmile').HttpSuccess,
-    HttpError = require('connect-lastmile').HttpError,
-    tokens = require('../tokens.js'),
-    users = require('../users.js');
+const debugLog = debug('cubby:routes:mobile');
 
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
@@ -38,7 +29,7 @@ function mobileStart(req, res) {
         if ((Date.now() - ts) > 10 * 60 * 1000) pendingStates.delete(s); // state cleanup
     }
 
-    debug(`mobileStart: auth starting with redirect_uri: ${REDIRECT_URI} (USE_APP_LINKS: ${USE_APP_LINKS})`);
+    debugLog(`mobileStart: auth starting with redirect_uri: ${REDIRECT_URI} (USE_APP_LINKS: ${USE_APP_LINKS})`);
 
     const authUrl = new URL(`${process.env.OIDC_ISSUER_BASE_URL}/auth`);
     authUrl.searchParams.set('client_id', process.env.OIDC_CLIENT_ID);
@@ -70,7 +61,7 @@ async function exchangeCodeWithIdp(code, redirectUri) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        debug(`exchangeCodeWithIdp: ${errorText}`);
+        debugLog(`exchangeCodeWithIdp: ${errorText}`);
         throw new Error('Failed to exchange code for token');
     }
 
@@ -137,3 +128,10 @@ function assetLinks(req, res) {
     }]);
 }
 
+export default {
+    getConfig,
+    mobileStart,
+    codeToToken,
+    callbackLandingFallback,
+    assetLinks,
+};

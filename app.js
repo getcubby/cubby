@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
-const constants = require('./backend/constants.js'),
-    config = require('./backend/config.js'),
-    database = require('./backend/database.js'),
-    diskusage = require('./backend/diskusage.js'),
-    fs = require('fs'),
-    path = require('path'),
-    recoll = require('./backend/recoll.js'),
-    server = require('./backend/server.js'),
-    users = require('./backend/users.js');
+import constants from './backend/constants.js';
+import config from './backend/config.js';
+import database from './backend/database.js';
+import diskusage from './backend/diskusage.js';
+import fs from 'fs';
+import path from 'path';
+import recoll from './backend/recoll.js';
+import server from './backend/server.js';
+import users from './backend/users.js';
+import crypto from 'crypto';
 
 database.init();
 config.init(process.env.CONFIG_FILE_PATH || 'config.json');
@@ -21,7 +22,7 @@ fs.mkdirSync(constants.SESSION_PATH, { recursive: true });
 
 if (!fs.existsSync(constants.SESSION_SECRET_FILE_PATH)) {
     console.log('Generating new session secret...');
-    fs.writeFileSync(constants.SESSION_SECRET_FILE_PATH, require('crypto').randomBytes(20).toString('hex'), 'utf8');
+    fs.writeFileSync(constants.SESSION_SECRET_FILE_PATH, crypto.randomBytes(20).toString('hex'), 'utf8');
 }
 
 server.init(async function (error) {

@@ -1,20 +1,14 @@
-exports = module.exports = {
-    index,
-    indexByUsername,
-    indexByGroupFolder,
+import assert from 'assert';
+import constants from './constants.js';
+import debug from 'debug';
+import exec from './exec.js';
+import files from './files.js';
+import fs from 'fs';
+import groupFolders from './groupfolders.js';
+import path from 'path';
+import users from './users.js';
 
-    searchByUsername
-};
-
-const assert = require('assert'),
-    constants = require('./constants.js'),
-    debug = require('debug')('cubby:search'),
-    exec = require('./exec.js'),
-    files = require('./files.js'),
-    fs = require('fs'),
-    groupFolders = require('./groupfolders.js'),
-    path = require('path'),
-    users = require('./users.js');
+const debugLog = debug('cubby:search');
 
 async function index() {
     const userList = await users.list();
@@ -41,12 +35,12 @@ const scheduled = {};
 function scheduleIndexByUsername(username) {
     assert.strictEqual(typeof username, 'string');
 
-    debug(`scheduleIndexByUsername: ${username} ...`);
+    debugLog(`scheduleIndexByUsername: ${username} ...`);
 
     if (scheduled[username]) clearTimeout(scheduled[username]);
 
     scheduled[username] = setTimeout(async () => {
-        debug(`scheduledIndex for ${username}`);
+        debugLog(`scheduledIndex for ${username}`);
         await indexByUsername(username);
         delete scheduled[username];
     }, 10000);
@@ -58,7 +52,7 @@ async function indexByUsername(username, schedule = false) {
 
     if (schedule) return scheduleIndexByUsername(username);
 
-    debug(`indexByUsername: ${username} ...`);
+    debugLog(`indexByUsername: ${username} ...`);
 
     const configPath = path.join(constants.SEARCH_INDEX_PATH, username);
     const configFilePath = path.join(configPath, 'recoll.conf');
@@ -79,26 +73,26 @@ async function indexByUsername(username, schedule = false) {
         console.error('Failed to create or update recoll index for user.', e);
     }
 
-    debug(`indexByUsername: ${username} done`);
+    debugLog(`indexByUsername: ${username} done`);
 }
 
 async function indexByGroupFolder(groupFolder, schedule = false) {
     assert.strictEqual(typeof groupFolder, 'string');
     assert.strictEqual(typeof schedule, 'boolean');
 
-    debug(`indexByGroupFolder: ${groupFolder} ...`);
+    debugLog(`indexByGroupFolder: ${groupFolder} ...`);
 
     const folder = await groupFolders.get(groupFolder);
     for (const member of folder.members) await indexByUsername(member, schedule);
 
-    debug(`indexByGroupFolder: ${groupFolder} done`);
+    debugLog(`indexByGroupFolder: ${groupFolder} done`);
 }
 
 async function searchByUsername(username, query) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof query, 'string');
 
-    debug(`searchByUsername: ${username} ${query}`);
+    debugLog(`searchByUsername: ${username} ${query}`);
 
     const configPath = path.join(constants.SEARCH_INDEX_PATH, username);
     const dbFilePath = path.join(configPath, 'xapiandb');
@@ -122,7 +116,7 @@ async function searchByUsername(username, query) {
         try {
             entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
         } catch (e) {
-            debug(`searchByUsername: Entry not found for ${filePath}`, e);
+            debugLog(`searchByUsername: Entry not found for ${filePath}`, e);
         }
 
         // skip
@@ -140,3 +134,11 @@ async function searchByUsername(username, query) {
 
     return results;
 }
+
+export default {
+    index,
+    indexByUsername,
+    indexByGroupFolder,
+
+    searchByUsername
+};

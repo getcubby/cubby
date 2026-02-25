@@ -1,7 +1,5 @@
-const assert = require('assert'),
-    util = require('util');
-
-exports = module.exports = MainError;
+import assert from 'assert';
+import util from 'util';
 
 function MainError(reason, errorOrMessage, details) {
     assert.strictEqual(typeof reason, 'string');
@@ -49,3 +47,5 @@ MainError.TRY_AGAIN = 'Try Again';
 MainError.prototype.toPlainObject = function () {
     return Object.assign({ message: this.message, reason: this.reason }, this.details);
 };
+
+export default MainError;

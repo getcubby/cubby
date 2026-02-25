@@ -1,12 +1,6 @@
-exports = module.exports = {
-    add,
-    get,
-    remove
-};
-
-const assert = require('assert'),
-    crypto = require('crypto'),
-    database = require('./database.js');
+import assert from 'assert';
+import crypto from 'crypto';
+import database from './database.js';
 
 function postProcess(data) {
     return data;
@@ -36,3 +30,9 @@ async function remove(token) {
 
     await database.query('DELETE FROM tokens WHERE id = $1', [ token ]);
 }
+
+export default {
+    add,
+    get,
+    remove
+};

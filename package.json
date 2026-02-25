@@ -2,9 +2,10 @@
   "name": "Cubby",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "npm run db-migrate && ./app.js",
-    "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up"
+    "db-migrate": "DATABASE_URL=\"postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}\" ./node_modules/.bin/db-migrate up --file-extension cjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

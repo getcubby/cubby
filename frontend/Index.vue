@@ -684,10 +684,14 @@ async function loadPath(path, forceLoad = false) {
       // need to reset the hash as the original location should be the folder containing the file
       window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
     } else if (markdownEditor.value.canHandle(item)) {
-      markdownEditor.value.open(item, await DirectoryModel.getRawContent(resource));
+      const raw = await DirectoryModel.getRawContent(resource);
+      const textContent = typeof raw === 'string' ? raw : await raw.text();
+      markdownEditor.value.open(item, textContent);
       viewer.value = 'markdown';
     } else if (textViewer.value.canHandle(item)) {
-      textViewer.value.open(item, await DirectoryModel.getRawContent(resource));
+      const raw = await DirectoryModel.getRawContent(resource);
+      const textContent = typeof raw === 'string' ? raw : await raw.text();
+      textViewer.value.open(item, textContent);
       viewer.value = 'text';
     } else {
       viewer.value = 'generic';

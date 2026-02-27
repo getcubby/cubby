@@ -72,7 +72,7 @@ const breadCrumbHome = ref({
   icon: 'fa-solid fa-house',
   route: '#files'
 });
-const viewMode = ref(localStorage.viewMode === 'list' ? 'list' : 'grid');
+const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 
 function toggleViewMode() {
   viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';

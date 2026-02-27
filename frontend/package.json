@@ -6,7 +6,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^3.6.2",
+    "@cloudron/pankow": "^4.1.2",
     "@tiptap/extension-code-block-lowlight": "^3.19.0",
     "@tiptap/extension-collaboration": "^3.0.0",
     "@tiptap/extension-image": "^3.0.0",
@@ -15,13 +15,13 @@
     "@tiptap/starter-kit": "^3.0.0",
     "@tiptap/vue-3": "^3.0.0",
     "@tiptap/y-tiptap": "^3.0.0",
-    "@vitejs/plugin-vue": "^6.0.3",
+    "@vitejs/plugin-vue": "^6.0.4",
     "eslint": "^9.39.2",
     "eslint-plugin-vue": "^10.6.2",
     "lowlight": "^3.3.0",
     "moment": "^2.30.1",
     "vite": "^7.3.1",
-    "vue": "^3.5.26",
+    "vue": "^3.5.29",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29"
   }

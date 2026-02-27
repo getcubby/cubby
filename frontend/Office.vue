@@ -12,7 +12,7 @@ const wopiToken = ref('');
 const wopiUrl = ref('');
 
 onMounted(async () => {
-  const resource = parseResourcePath(window.location.hash.slice(1));
+  const resource = parseResourcePath(decodeURIComponent(window.location.hash.slice(1)));
   const entry = await DirectoryModel.get(resource);
   const [error, handle] = await MainModel.getOfficeHandle(entry);
   if (error) return console.error(error);

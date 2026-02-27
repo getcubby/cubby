@@ -424,17 +424,22 @@ async function onDrop(targetFolder, dataTransfer, files) {
       });
     }
 
+    // Collect all entries synchronously; Chrome clears dataTransfer.items after first await
+    const entries = [];
     for (const item of dataTransfer.items) {
-      const tmp = item.webkitGetAsEntry();
-      if (!tmp) {
+      const entry = item.webkitGetAsEntry();
+      if (!entry) {
         console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
         continue;
       }
+      entries.push(entry);
+    }
 
-      if (tmp.isFile) {
-        fileList.push(await getFile(tmp));
-      } else if (tmp.isDirectory) {
-        await traverseFileTree(tmp, sanitize(`${currentResourcePath.value}/${targetFolder}`));
+    for (const entry of entries) {
+      if (entry.isFile) {
+        fileList.push(await getFile(entry));
+      } else if (entry.isDirectory) {
+        await traverseFileTree(entry, sanitize(`${currentResourcePath.value}/${targetFolder}`));
       }
     }
     fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));

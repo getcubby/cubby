@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "chromedriver": "^145.0.6",
+    "expect.js": "^0.3.1",
+    "mocha": "^11.7.5",
+    "selenium-webdriver": "^4.41.0"
+  }
+}

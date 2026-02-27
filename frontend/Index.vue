@@ -72,6 +72,13 @@ const breadCrumbHome = ref({
   icon: 'fa-solid fa-house',
   route: '#files'
 });
+const viewMode = ref(localStorage.viewMode === 'list' ? 'list' : 'grid');
+
+function toggleViewMode() {
+  viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';
+  localStorage.viewMode = viewMode.value;
+}
+
 const webDavPasswordDialog = ref({
   error: '',
   password: ''
@@ -857,10 +864,13 @@ onMounted(async () => {
                 <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
                 <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
                 <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly" />
+                <div style="flex-grow: 1"></div>
+                <Button plain tool :icon="viewMode === 'list' ? 'fa-solid fa-grip' : 'fa-solid fa-list'" @click="toggleViewMode" style="margin-right: 40px"/>
               </div>
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
                   ref="directoryView"
+                  :view-mode="viewMode"
                   :show-star="true"
                   :show-owner="false"
                   :show-extract="true"

@@ -88,13 +88,21 @@ source .env.sh
 echo ""
 echo "┌────────────────────────────────────────────────────────────┐"
 echo "│ Frontend development                                       │"
-echo "├────────────────────────────────────────────────────────────┤"
-echo "│ Run a second terminal for hot reload frontend server:      │"
-echo "│                                                            │"
-echo "│ > cd frontend/                                             │"
-echo "│ > VITE_API_ORIGIN=http://localhost:3000 npm run dev        │"
-echo "│                                                            │"
 echo "└────────────────────────────────────────────────────────────┘"
+echo " Run a second terminal for hot reload frontend server:"
+echo ""
+echo " > cd frontend/"
+echo " > VITE_API_ORIGIN=http://localhost:3000 npm run dev"
+echo ""
+echo ""
+
+
+echo ""
+echo "┌────────────────────────────────────────────────────────────┐"
+echo "| Postgres connection                                        |"
+echo "└────────────────────────────────────────────────────────────┘"
+echo " > export PGPASSWORD="${POSTGRESQL_PASSWORD}""
+echo " > psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -t"
 echo ""
 
 # for up/down testing

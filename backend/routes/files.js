@@ -20,9 +20,6 @@ function boolLike(arg) {
 }
 
 async function add(req, res, next) {
-    // only allowed for authenticated users until we check for !read-only shares
-    if (!req.user) return next(new HttpError(401, 'not allowed'));
-
     const directory = boolLike(req.query.directory);
     const overwrite = boolLike(req.query.overwrite);
     const mtime = req.query.mtime ? new Date(req.query.mtime) : null;
@@ -30,8 +27,11 @@ async function add(req, res, next) {
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await files.translateResourcePath(req.user.username, filePath);
+    const subject = await files.translateResourcePath(req.user?.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
+
+    if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
@@ -54,8 +54,9 @@ async function head(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await files.translateResourcePath(req.user.username, filePath);
+    const subject = await files.translateResourcePath(req.user?.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
+    if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`head: ${subject.resource} ${subject.filePath}`);
 
@@ -306,16 +307,17 @@ async function update(req, res, next) {
     if (!newFilePath) return next(new HttpError(400, 'action requires new_path argument'));
 
     // from
-    const subject = await files.translateResourcePath(req.user.username, filePath);
+    const subject = await files.translateResourcePath(req.user?.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     // target - if we support actions without target, this needs to move into the ifs
-    const newSubject =  await files.translateResourcePath(req.user.username, newFilePath);
+    const newSubject =  await files.translateResourcePath(req.user?.username, newFilePath);
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
-    debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
+    if (subject.share?.readonly || newSubject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (!subject.share && !newSubject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
-    // TODO support shares
+    debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
     try {
         if (action === 'move') await files.move(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else if (action === 'copy') await files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
@@ -337,8 +339,11 @@ async function remove(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const subject = await files.translateResourcePath(req.user.username, filePath);
+    const subject = await files.translateResourcePath(req.user?.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
+
+    if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 

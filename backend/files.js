@@ -44,7 +44,7 @@ async function translateResourcePath(username, resourcePath) {
         if (share.receiverUsername && share.receiverUsername !== username) return null;
 
         // actual path is without shares/<shareId>/
-        return { resource, resourcePath, usernameOrGroupfolder: share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')) };
+        return { resource, resourcePath, usernameOrGroupfolder: share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')), share };
     } else if (resource === 'groupfolders') {
         const groupId = filePath.split('/')[1];
         if (!groupId) return null;

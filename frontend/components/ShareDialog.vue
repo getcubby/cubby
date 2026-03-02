@@ -26,6 +26,7 @@ const users = ref([]);
 const sharedWith = ref([]);
 const sharedLinks = ref([]);
 const entry = ref({});
+const shareLinkReadonly = ref(true);
 const shareLink = ref({
   expires: false,
   expiresAt: 0,
@@ -73,7 +74,7 @@ async function onCreateShareLink() {
   const ownerUsername = entry.value.group ? null : entry.value.owner;
   const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
 
-  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: true, expiresAt });
+  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt });
 
   copyShareIdLinkToClipboard(shareId);
 
@@ -85,6 +86,7 @@ defineExpose({
     error.value = '';
     receiverUsername.value = '';
     readonly.value = false;
+    shareLinkReadonly.value = true;
     shareLink.value.expires = false;
     shareLink.value.expiresAt = new Date()
 
@@ -130,7 +132,10 @@ defineExpose({
         <template #link>
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedLinks" class="shared-link" :key="link.id">
-              <div>Created {{ prettyDate(link.createdAt) }}</div>
+              <div>
+                <div>Created {{ prettyDate(link.createdAt) }}</div>
+                <small style="color: var(--pankow-color-text-secondary)">{{ link.readonly ? 'Read only' : 'Read & Write' }}</small>
+              </div>
               <div style="display: flex; gap: 5px">
                 <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyShareIdLinkToClipboard(link.id)"/>
                 <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
@@ -140,10 +145,15 @@ defineExpose({
               No shared links yet
             </div>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareLink.expire" />
-            <input type="date" v-model="shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expire"/>
-            <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareLink.expire" />
+              <input type="date" v-model="shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expire"/>
+              <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
+            </div>
           </div>
         </template>
       </TabView>

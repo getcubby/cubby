@@ -994,14 +994,14 @@ onMounted(async () => {
 <style scoped>
 
 hr {
-    border: none;
-    border-top: 1px solid #d0d0d0;
+  border: none;
+  border-top: 1px solid #d0d0d0;
 }
 
 .container {
-    display: flex;
-    width: 100%;
-    height: 100%;
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
 .no-entries-placeholder {
@@ -1051,16 +1051,6 @@ pre {
   pre {
     background-color: black;
   }
-}
-
-.side-bar {
-    display: flex;
-    height: 100%;
-    min-width: 250px;
-    background: linear-gradient(90deg, rgb(0, 120, 241) 0%, var(--pankow-color-primary) 100%);
-    color: white;
-    padding: 10px;
-    flex-direction: column;
 }
 
 .side-bar-entry {

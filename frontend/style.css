@@ -33,3 +33,15 @@ html, body {
     background-color: #f8f9fa;
     justify-content: center;
 }
+
+.pankow-sidebar {
+  background: linear-gradient(90deg, rgb(0, 120, 241) 0%, var(--pankow-color-primary) 100%);
+}
+
+.pankow-sidebar-inner {
+  padding: 10px;
+  display: flex;
+  height: 100%;
+  color: white;
+  flex-direction: column;
+}

@@ -109,7 +109,7 @@ async function get(req, res, next) {
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
 
-            await recent.add(req.user.username, req.query.path);
+            if (req.user) await recent.add(req.user.username, req.query.path);
 
             return sendFile(res, result);
         } else if (type === 'download') {
@@ -144,7 +144,7 @@ async function get(req, res, next) {
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
 
-                await recent.add(req.user.username, req.query.path);
+                if (req.user) await recent.add(req.user.username, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {
@@ -232,7 +232,7 @@ async function get(req, res, next) {
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
 
-                await recent.add(req.user.username, req.query.path);
+                if (req.user) await recent.add(req.user.username, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {
@@ -348,7 +348,7 @@ async function remove(req, res, next) {
         return next(new HttpError(500, error));
     }
 
-    await recent.remove(req.user.username, subject.resourcePath);
+    if (req.user) await recent.remove(req.user.username, subject.resourcePath);
 
     next(new HttpSuccess(200, {}));
 }

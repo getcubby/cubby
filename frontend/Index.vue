@@ -868,13 +868,15 @@ onMounted(async () => {
                 <div style="flex-grow: 1"></div>
                 <Button plain tool :icon="viewMode === 'list' ? 'fa-solid fa-grip' : 'fa-solid fa-list'" @click="toggleViewMode" style="margin-right: 40px"/>
               </div>
+              {{ activeResourceType }}
+              {{ currentResourcePath }}
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
                   ref="directoryView"
                   :view-mode="viewMode"
                   :show-star="true"
                   :show-owner="false"
-                  :show-extract="true"
+                  :show-extract="currentResourcePath !== '/groupfolders/'"
                   :show-size="showSize"
                   :show-modified="true"
                   :show-delete="!isReadonly"
@@ -882,8 +884,13 @@ onMounted(async () => {
                   :show-new-folder="!isReadonly"
                   :show-upload-file="!isReadonly"
                   :show-upload-folder="!isReadonly"
+                  :show-paste="!isReadonly"
+                  :show-rename="!isReadonly"
+                  :show-download="currentResourcePath !== '/groupfolders/'"
+                  :show-select-all="currentResourcePath !== '/groupfolders/'"
+                  :show-copy="currentResourcePath !== '/groupfolders/'"
                   :show-cut="!isReadonly"
-                  :show-share="activeResourceType !== 'shares'"
+                  :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
                   :share-indicator-property="'isSharedWith'"
                   :editable="!isReadonly"
                   :multi-download="true"

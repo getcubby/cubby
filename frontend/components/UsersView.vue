@@ -72,10 +72,12 @@ onMounted(async () => {
     <h1>Users</h1>
 
     <TableView style="max-height: 200px;" :columns="tableColumns" :model="tableModel">
-      <template #username="slotProps">{{ slotProps.username }}</template>
-      <template #email="slotProps">{{ slotProps.email }}</template>
-      <template #admin="slotProps"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>
-      <template #action="slotProps"><Button small outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right">Edit</Button></template>
+      <template #username="{ item:slotProps }">{{ slotProps.username }}</template>
+      <template #email="{ item:slotProps }">{{ slotProps.email }}</template>
+      <template #admin="{ item:slotProps }"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>
+      <template #action="{ item:slotProps }">
+        <Button outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right" icon="fa-solid fa-wrench"/>
+      </template>
     </TableView>
     <div class="user-count">{{ tableModel.length }} Users</div>
   </div>

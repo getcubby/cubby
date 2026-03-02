@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, useTemplateRef, onMounted, inject } from 'vue';
-import { Button, ButtonGroup, Dialog, InputDialog, TableView, TextInput, InputGroup } from '@cloudron/pankow';
+import { Button, Dialog, InputDialog, TableView, TextInput, InputGroup } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 import GroupFolderModel from '../models/GroupFolderModel.js';
 import slugify from '../slugify.js';
@@ -288,13 +288,13 @@ onMounted(async () => {
 
     <h2>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
-      <template #folderPath="slotProps">{{ slotProps.folderPath }} </template>
-      <template #members="slotProps">{{ slotProps.members.join(', ') }} </template>
-      <template #action="slotProps">
-        <ButtonGroup>
-          <Button outline small tool @click="onEditGroupFolder(slotProps)">Edit</Button>
-          <Button danger outline small tool @click="onRemoveGroupFolder(slotProps)">Remove</Button>
-        </ButtonGroup>
+      <template #folderPath="{ item:slotProps }">{{ slotProps.folderPath }} </template>
+      <template #members="{ item:slotProps }">{{ slotProps.members.join(', ') }} </template>
+      <template #action="{ item:slotProps }">
+        <div style="display: flex; gap: 8px">
+          <Button outline tool @click="onEditGroupFolder(slotProps)" icon="fa-solid fa-wrench"/>
+          <Button outline tool danger @click="onRemoveGroupFolder(slotProps)" icon="fa-solid fa-trash"/>
+        </div>
       </template>
     </TableView>
 

@@ -86,18 +86,18 @@ onMounted(refresh);
     <h1>Shared by You</h1>
 
     <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
-      <template #icon="slotProps"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
-      <template #target="slotProps">
+      <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
+      <template #target="{ item:slotProps }">
         {{ slotProps.file.filePath.slice(1) }}
       </template>
-      <template #receiver="slotProps">
+      <template #receiver="{ item:slotProps }">
         <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
         <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
         {{ slotProps.receiverUsername }}
       </template>
-      <template #createdAt="slotProps"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
-      <template #action="slotProps">
-        <Button danger small outline tool @click="onDelete(slotProps)" style="float: right">Delete</Button>
+      <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
+      <template #action="{ item:slotProps }">
+        <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
       </template>
     </TableView>
     <div class="share-count">{{ tableModel.length }} Shares</div>

@@ -868,8 +868,6 @@ onMounted(async () => {
                 <div style="flex-grow: 1"></div>
                 <Button plain tool :icon="viewMode === 'list' ? 'fa-solid fa-grip' : 'fa-solid fa-list'" @click="toggleViewMode" style="margin-right: 40px"/>
               </div>
-              {{ activeResourceType }}
-              {{ currentResourcePath }}
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
                   ref="directoryView"

@@ -548,6 +548,7 @@ async function refresh(item = null) {
 async function loadMainDirectory(path, item, forceLoad = false) {
   // path is files/filepath or shares/shareid/filepath
   const resource = parseResourcePath(path);
+  if (!resource) return;
 
   // nothing new
   if (!forceLoad && currentResourcePath.value === resource.resourcePath) return;

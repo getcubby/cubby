@@ -102,7 +102,8 @@ function parseResourcePath(resourcePath) {
         // without groupId we show the root (share listing)
         result.resourcePath = `/${result.type}/` + (result.groupId ? (result.groupId + result.path) : '');
     } else {
-        console.error('Unknown resource path', resourcePath);
+        // unknown resource path
+        return null;
     }
 
     return result;

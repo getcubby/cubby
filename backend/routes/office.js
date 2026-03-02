@@ -10,11 +10,43 @@ import mime from '../mime.js';
 import office from '../office.js';
 import safe from 'safetydance';
 import tokens from '../tokens.js';
+import users from '../users.js';
 import xpath from 'xpath';
 
 const debugLog = debug('cubby:routes:office');
 
 const HANDLES = {};
+
+function getAccessTokenFromRequest(req) {
+    let accessToken = req.query.access_token || req.body?.accessToken || '';
+    if (req.headers?.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length === 2 && /^Bearer$/i.test(parts[0])) accessToken = parts[1];
+    }
+    return accessToken;
+}
+
+async function wopiAuth(req, res, next) {
+    const accessToken = getAccessTokenFromRequest(req);
+    if (!accessToken) return next(new HttpError(401, 'Invalid Access Token'));
+
+    const [error, user] = await safe(users.getByAccessToken(accessToken));
+    if (error) return next(new HttpError(500, error));
+
+    if (user) {
+        req.user = user;
+        return next();
+    }
+
+    const handleId = req.params.handleId;
+    const handle = handleId ? HANDLES[handleId] : null;
+    if (handle && handle.token === accessToken) {
+        req.user = { username: handle.username, displayName: 'Anonymous' };
+        return next();
+    }
+
+    return next(new HttpError(401, 'Invalid Access Token'));
+}
 
 async function getHandle(req, res, next) {
     const resourcePath = decodeURIComponent(req.query.resourcePath);
@@ -23,7 +55,7 @@ async function getHandle(req, res, next) {
     const collaboraHost = config.get('collabora.host', '');
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
-    const subject = await files.translateResourcePath(req.user.username, resourcePath);
+    const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     let doc;
@@ -43,14 +75,17 @@ async function getHandle(req, res, next) {
     const nodes = xpath.select(`/wopi-discovery/net-zone/app[@name='${mimeType}']/action`, doc);
     if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
 
+    const token = req.user ? await tokens.add(req.user.username) : crypto.randomBytes(32).toString('hex');
+
     const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
     HANDLES[handleId] = {
         username: subject.usernameOrGroupfolder,
         resourcePath: resourcePath,
-        filePath: subject.filePath
+        filePath: subject.filePath,
+        readonly: subject.share?.readonly || false,
+        token: req.user ? null : token,
     };
 
-    const token = await tokens.add(req.user.username);
     const onlineUrl = nodes[0].getAttribute('urlsrc');
 
     res.status(200).json({
@@ -97,7 +132,7 @@ async function checkFileInfo(req, res, next) {
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,
         UserFriendlyName: req.user.displayName || req.user.username,
-        UserCanWrite: true
+        UserCanWrite: !handle.readonly
     }));
 }
 
@@ -154,6 +189,7 @@ async function putFile(req, res, next) {
 
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
+    if (handle.readonly) return next(new HttpError(403, 'share is readonly'));
 
     try {
         await files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true);
@@ -192,6 +228,7 @@ async function setSettings(req, res, next) {
 }
 
 export default {
+    wopiAuth,
     getHandle,
     checkFileInfo,
     getFile,

@@ -118,10 +118,10 @@ function init(callback) {
     // starts or returns a YDoc collaboration object
     router.get ('/api/v1/collab/handle', users.isAuthenticated, collab.getHandle);
 
-    router.get ('/api/v1/office/handle', users.isAuthenticated, office.getHandle);
-    router.get ('/api/v1/office/wopi/files/:handleId', users.tokenAuth, office.checkFileInfo);
-    router.get ('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, office.getFile);
-    router.post('/api/v1/office/wopi/files/:handleId/contents', users.tokenAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
+    router.get ('/api/v1/office/handle', users.optionalAuth, office.getHandle);
+    router.get ('/api/v1/office/wopi/files/:handleId', office.wopiAuth, office.checkFileInfo);
+    router.get ('/api/v1/office/wopi/files/:handleId/contents', office.wopiAuth, office.getFile);
+    router.post('/api/v1/office/wopi/files/:handleId/contents', office.wopiAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
 
     // Mobile auth endpoints (no session/OIDC middleware required)
     router.get('/api/v1/mobile/config', mobile.getConfig); // get this to show the auth form

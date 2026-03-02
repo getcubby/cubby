@@ -16,6 +16,7 @@ import { HttpError, HttpSuccess } from 'connect-lastmile';
 
 const debugLog = debug('cubby:routes:misc');
 
+// This is a public route, be careful what to send
 async function getConfig(req, res, next) {
     // currently we only send configs for collabora
 

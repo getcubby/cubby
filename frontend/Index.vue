@@ -781,13 +781,12 @@ onMounted(async () => {
   }
 
   try {
-    profile.value = await MainModel.getProfile();
+    profile.value = await MainModel.getProfile() || {};
   } catch (e) {
     return console.error('mounted: getProfile() error', e);
   }
 
-  if (profile.value) await refreshConfig();
-  else profile.value = {};
+  await refreshConfig();
 
   // initial load with hash if any
   const hash = localStorage.returnTo || window.location.hash.slice(1);

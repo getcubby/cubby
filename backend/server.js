@@ -69,8 +69,10 @@ function init(callback) {
         });
     }
 
+    // public route !
+    router.get ('/api/v1/config', misc.getConfig);
+
     router.get ('/api/v1/profile', users.isAuthenticated, users.profile);
-    router.get ('/api/v1/config', users.isAuthenticated, misc.getConfig);
 
     router.get ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.getSettings);
     router.put ('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.setSettings);

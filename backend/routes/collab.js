@@ -16,8 +16,8 @@ yUtils.setPersistence({
     writeState: async (_docName, _ydoc) => {}
 });
 
-function setupWSConnection() {
-    return yUtils.setupWSConnection;
+function setupWSConnection(conn, req) {
+    return yUtils.setupWSConnection(conn, req);
 }
 
 async function getHandle(req, res, next) {

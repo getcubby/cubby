@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "./app.js"
+    "start": "./app.js",
+    "postinstall": "rm -rf node_modules/@y/y && ln -s ../yjs node_modules/@y/y"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

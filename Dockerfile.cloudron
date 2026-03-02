@@ -13,18 +13,16 @@ RUN apt-get update && \
     python3-chardet python3-py7zr python3-chm python3-icalendar python3-lxml python3-mido python3-mutagen python3-rarfile && \
     rm -r /var/cache/apt /var/lib/apt/lists
 
-# renovate: datasource=gitlab-tags depName=apps/cubby versioning=semver extractVersion=^v(?<version>.+)$ registryUrl=https://git.cloudron.io
-ARG CUBBY_VERSION=2.7.1
-
-RUN curl -L https://git.cloudron.io/apps/cubby/-/archive/v${CUBBY_VERSION}/cubby-v${CUBBY_VERSION}.tar.gz | tar -xz --strip-components 1 -f - -C .
-
-# for development
-# ARG DEV_BRANCH=main
-# RUN curl -L https://git.cloudron.io/apps/cubby/-/archive/${DEV_BRANCH}/cubby-${DEV_BRANCH}.tar.gz | tar -xz --strip-components 1 -f - -C .
+COPY app.js package.json package-lock.json start.sh /app/code/
+COPY skeleton /app/code/skeleton
+COPY migrations /app/code/migrations
+COPY backend /app/code/backend
 
 RUN npm install --no-update-notifier --no-audit --no-fund --omit dev
 
 FROM base AS frontend
+
+COPY frontend /app/code/frontend
 
 WORKDIR /app/code/frontend
 RUN npm install --no-audit --no-fund --no-update-notifier

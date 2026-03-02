@@ -28,8 +28,7 @@ FROM base AS frontend
 
 WORKDIR /app/code/frontend
 RUN npm install --no-audit --no-fund --no-update-notifier
-RUN npm run build
-RUN ls -l
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 FROM base AS final
 

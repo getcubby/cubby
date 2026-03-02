@@ -18,7 +18,6 @@ import shares from './routes/shares.js';
 import users from './routes/users.js';
 import webdav from './routes/webdav.js';
 import { WebSocketServer } from 'ws';
-import * as yUtils from '@y/websocket-server/utils';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
@@ -211,7 +210,7 @@ function init(callback) {
     const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, app);
     const wsServer = new WebSocketServer({ noServer: true });
 
-    wsServer.on('connection', yUtils.setupWSConnection);
+    wsServer.on('connection', collab.setupWSConnection);
 
     httpServer.on('upgrade', (request, socket, head) => {
         console.log('TODO: add websocket auth!');

@@ -16,6 +16,10 @@ yUtils.setPersistence({
     writeState: async (_docName, _ydoc) => {}
 });
 
+function setupWSConnection() {
+    return yUtils.setupWSConnection;
+}
+
 async function getHandle(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
@@ -50,5 +54,6 @@ async function getHandle(req, res, next) {
 }
 
 export default {
+    setupWSConnection,
     getHandle
 };

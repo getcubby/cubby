@@ -818,6 +818,7 @@ onMounted(async () => {
   } catch (e) {
     return console.error('mounted: getProfile() error', e);
   }
+  if (!profile.value.username) view.value = VIEWS.LOGIN;
 
   await refreshConfig();
 

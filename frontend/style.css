@@ -20,6 +20,10 @@ html, body {
   overflow: hidden;
 }
 
+h2 {
+  font-weight: 400;
+}
+
 @media (prefers-color-scheme: dark) {
   .container {
     background-color: black;

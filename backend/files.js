@@ -415,11 +415,12 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));
 }
 
-async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
+async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath, overwrite = false) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof newUsernameOrGroupfolder, 'string');
     assert.strictEqual(typeof newFilePath, 'string');
+    assert.strictEqual(typeof overwrite, 'boolean');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -427,11 +428,10 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     const fullNewFilePath = getAbsolutePath(newUsernameOrGroupfolder, newFilePath);
     if (!fullNewFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    debugLog(`copy ${fullFilePath} -> ${fullNewFilePath}`);
+    debugLog(`copy ${fullFilePath} -> ${fullNewFilePath} overwrite=${overwrite}`);
 
     try {
-        // TODO add option for overwrite
-        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: false, recursive: true, errorOnExist: true });
+        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: overwrite, recursive: true, errorOnExist: !overwrite });
     } catch (error) {
         if (error.code === 'ERR_FS_CP_EINVAL') {
             if (error.info?.message === 'src and dest cannot be the same') throw new MainError(MainError.CONFLICT);

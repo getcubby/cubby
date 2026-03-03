@@ -170,17 +170,6 @@ async function handlePropfind(req, res, username, segments, pathInfo) {
     const depth = req.headers.depth === 'infinity' || req.headers.depth === '1' ? (req.headers.depth === 'infinity' ? 'infinity' : 1) : 0;
     const baseHref = pathInfo.baseHref;
 
-    let body = '';
-    try {
-        body = await readBody(req);
-    } catch {
-        res.status(400).send('Bad Request');
-        return;
-    }
-
-    // Parse propfind: we support allprop and propname; for prop we return same as allprop for compatibility
-    const wantAllProp = !body || body.includes('<D:allprop') || body.includes('allprop/>') || body.includes('<D:prop>');
-
     const resource = webdavSegmentsToResource(segments);
     if (!resource && segments.length > 0) {
         res.status(404).send('Not Found');
@@ -510,7 +499,7 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         return;
     }
     try {
-        await files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath);
+        await files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite);
         res.status(201).end();
     } catch (e) {
         if (e.reason === MainError.NOT_FOUND) res.status(404).send('Not Found');
@@ -556,15 +545,6 @@ async function handleMove(req, res, username, segments, pathInfo) {
         else if (e.reason === MainError.CONFLICT) res.status(412).send('Precondition Failed');
         else res.status(500).send('Internal Server Error');
     }
-}
-
-function readBody(req) {
-    return new Promise((resolve, reject) => {
-        const chunks = [];
-        req.on('data', chunk => chunks.push(chunk));
-        req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-        req.on('error', reject);
-    });
 }
 
 function expressMiddleware() {

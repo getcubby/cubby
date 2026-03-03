@@ -162,14 +162,19 @@ const isReadonly = computed(() => {
 });
 
 async function onToggleFavorite(entry) {
-  if (entry.favorite) {
-    await FavoriteModel.remove(entry.favorite.id);
-    entry.favorite = null;
-    entry.star = false;
-  } else {
-    const id = await FavoriteModel.create({ owner: entry.owner, path: entry.filePath })
-    entry.favorite = { id, owner: entry.owner, path: entry.filePath };
-    entry.star = true;
+  try {
+    if (entry.favorite) {
+      await FavoriteModel.remove(entry.favorite.id);
+      entry.favorite = null;
+      entry.star = false;
+    } else {
+      const id = await FavoriteModel.create({ owner: entry.owner, path: entry.filePath });
+      entry.favorite = { id, owner: entry.owner, path: entry.filePath };
+      entry.star = true;
+    }
+  } catch (error) {
+    if (error?.cause?.status === 401 || error?.status === 401) onInvalidSession();
+    else console.error('Failed to toggle favorite', error);
   }
 }
 
@@ -214,9 +219,7 @@ function onInvalidSession() {
   // stash for use later after re-login
   localStorage.returnTo = window.location.hash.slice(1);
 
-  profile.value.username = '';
-  profile.value.email = '';
-  profile.value.displayName = '';
+  profile.value = {};
 
   onLogin();
 }
@@ -370,6 +373,15 @@ provide('profile', profile);
 
 function clearSelection() {
   selectedEntries.value = [];
+}
+
+function resetNonFileViewState() {
+  viewer.value = '';
+  entry.value = {};
+  entries.value = [];
+  clearSelection();
+  breadCrumbs.value = [];
+  breadCrumbHome.value = { icon: 'fa-solid fa-house', route: '#files' };
 }
 
 function onSelectionChanged(selectedItems) {
@@ -767,16 +779,33 @@ onMounted(async () => {
       loadPath(hash.slice('files'.length), true);
       view.value = VIEWS.FILES_GROUPFOLDERS;
     } else if (hash === 'recent') {
+      if (!profile.value?.username) {
+        view.value = VIEWS.LOGIN;
+        return;
+      }
+      resetNonFileViewState();
       view.value = VIEWS.RECENT;
     } else if (hash === 'favorites') {
+      if (!profile.value?.username) {
+        view.value = VIEWS.LOGIN;
+        return;
+      }
+      resetNonFileViewState();
       view.value = VIEWS.FAVORITES;
-    } else if (hash.indexOf('users') === 0 && profile.value.admin) {
+    } else if (hash.indexOf('users') === 0 && profile.value?.username && profile.value.admin) {
+      resetNonFileViewState();
       view.value = VIEWS.USERS;
       onCloseSidebar();
-    } else if (hash.indexOf('shares') === 0) {
+    } else if (hash === 'shares') {
+      if (!profile.value?.username) {
+        view.value = VIEWS.LOGIN;
+        return;
+      }
+      resetNonFileViewState();
       view.value = VIEWS.SHARES;
       onCloseSidebar();
-    } else if (hash.indexOf('settings') === 0 && profile.value.admin) {
+    } else if (hash.indexOf('settings') === 0 && profile.value?.username && profile.value.admin) {
+      resetNonFileViewState();
       view.value = VIEWS.SETTINGS;
       onCloseSidebar();
     } else {
@@ -875,7 +904,7 @@ onMounted(async () => {
                 <DirectoryView
                   ref="directoryView"
                   :view-mode="viewMode"
-                  :show-star="true"
+                  :show-star="!!profile?.username"
                   :show-owner="false"
                   :show-extract="currentResourcePath !== '/groupfolders/'"
                   :show-size="showSize"

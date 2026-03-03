@@ -1000,7 +1000,7 @@ onMounted(async () => {
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'text'">
-      <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="onFileSaved" />
+      <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="onFileSaved" :readonly="isReadonly" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

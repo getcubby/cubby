@@ -510,6 +510,10 @@ async function shareHandler(item) {
   shareDialog.value.open(item);
 }
 
+async function onRefreshCurrentDirectory() {
+  await refresh(null);
+}
+
 async function refresh(item = null) {
   if (item) {
     try {
@@ -893,6 +897,7 @@ onMounted(async () => {
                   :multi-download="true"
                   @selection-changed="onSelectionChanged"
                   @item-activated="onOpen"
+                  :refresh-handler="onRefreshCurrentDirectory"
                   :delete-handler="deleteHandler"
                   :share-handler="shareHandler"
                   :star-handler="onToggleFavorite"

@@ -5,14 +5,17 @@ import { API_ORIGIN, BASE_URL, parseResourcePath, sanitize } from './utils.js';
 import {
   Breadcrumb,
   Button,
+  ClipboardButton,
   Dialog,
   DirectoryView,
   FileUploader,
   InputDialog,
+  InputGroup,
   Menu,
   Notification,
   PasswordInput,
   SideBar,
+  TextInput,
   TopBar
 } from '@cloudron/pankow';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
@@ -338,6 +341,7 @@ async function pasteHandler(action, files, target) {
 }
 
 const webDavPasswordDialogElement = useTemplateRef('webDavPasswordDialog');
+const WEBDAV_ORIGIN = API_ORIGIN || window.location.origin;
 async function onWebDavSettings() {
   webDavPasswordDialog.value.error = '';
   webDavPasswordDialog.value.password = '';
@@ -983,10 +987,14 @@ onMounted(async () => {
 
   <!-- WebDAV Password Dialog -->
   <Dialog title="WebDAV Password" ref="webDavPasswordDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onWebDavSettingsSubmit">
-    <p>Files can be used over WebDAV at <i>{{ API_ORIGIN }}/webdav/{{ profile.username }}/</i></p>
-    <p>Set a WebDAV password (will overwrite old one):</p>
+    <label for="webdavOriginInput">Files can be used over WebDAV at</label>
+    <InputGroup>
+      <TextInput id="webdavOriginInput" readonly :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" style="flex: 1"/>
+      <ClipboardButton :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" />
+    </InputGroup>
     <form @submit="onWebDavSettingsSubmit" @submit.prevent>
-      <PasswordInput v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
+      <label for="webdavPasswordInput">Set a WebDAV password (will overwrite old one)</label>
+      <PasswordInput id="webdavPasswordInput" v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
       <small class="has-error" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
     </form>
   </Dialog>

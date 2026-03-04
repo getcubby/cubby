@@ -82,6 +82,9 @@ EOF
 fi
 
 echo "=> Using the following env"
+echo ""
+echo " ! Ensure OIDC client credentials are created with a callback URI of http://localhost:3000/auth/callback"
+echo ""
 cat .env.sh
 source .env.sh
 

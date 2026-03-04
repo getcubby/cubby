@@ -30,7 +30,7 @@
       "supportsDisplayName": true
     },
     "oidc": {
-      "loginRedirectUri": "/api/v1/callback,/api/v1/mobile/callback,org.getcubby://auth/callback"
+      "loginRedirectUri": "/auth/callback,/api/v1/mobile/callback,org.getcubby://auth/callback"
     }
   },
   "mediaLinks": [

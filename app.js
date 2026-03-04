@@ -25,20 +25,21 @@ if (!fs.existsSync(constants.SESSION_SECRET_FILE_PATH)) {
     fs.writeFileSync(constants.SESSION_SECRET_FILE_PATH, crypto.randomBytes(20).toString('hex'), 'utf8');
 }
 
-server.init(async function (error) {
-    if (error) {
+(async () => {
+    try {
+        await server.init();
+        console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
+        console.log('Cubby is up and running.');
+
+        // ensure at least users home dirs
+        const userList = await users.list();
+        for (const user of userList) fs.mkdirSync(path.join(constants.USER_DATA_ROOT, user.username), { recursive: true });
+
+        // refresh data in background
+        diskusage.calculate();
+        recoll.index();
+    } catch (error) {
         console.error(error);
-        process.exit(error ? 1 : 0);
+        process.exit(1);
     }
-
-    console.log(`Using data folder at: ${constants.USER_DATA_ROOT}`);
-    console.log('Cubby is up and running.');
-
-    // ensure at least users home dirs
-    const userList = await users.list();
-    for (const user of userList) fs.mkdirSync(path.join(constants.USER_DATA_ROOT, user.username), { recursive: true });
-
-    // refresh data in background
-    diskusage.calculate();
-    recoll.index();
-});
+})();

@@ -4,10 +4,19 @@ import { HttpError, HttpSuccess } from 'connect-lastmile';
 import safe from 'safetydance';
 
 async function getUserFromSession(req) {
-    if (!req.oidc?.isAuthenticated()) return null;
-    if (!req.oidc.user || !req.oidc.user.sub) return null;
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.username) return null;
 
-    return await users.get(req.oidc.user.sub);
+    let user = await users.get(sessionUser.username);
+    if (!user) {
+        user = await users.ensureUser({
+            username: sessionUser.username,
+            password: '',
+            email: sessionUser.email ?? '',
+            displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
+        });
+    }
+    return user;
 }
 
 async function getUserFromToken(req) {
@@ -31,21 +40,26 @@ async function isAuthenticated(req, res, next) {
     if (!user) user = await getUserFromSession(req);
 
     if (!user) {
-        if (!req.oidc?.isAuthenticated()) return next(new HttpError(401, 'Unauthorized'));
+        const sessionUser = req.session?.user;
+        if (!sessionUser?.username) return next(new HttpError(401, 'Unauthorized'));
 
         req.user = await users.ensureUser({
-            username: req.oidc.user.sub,
+            username: sessionUser.username,
             password: '',
-            email: req.oidc.user.email,
-            displayName: req.oidc.user.name
+            email: sessionUser.email ?? '',
+            displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
         });
-    } else { // keep the internal database in-sync with the open id provider info
-        if (req.oidc?.isAuthenticated() && (user.displayName !== req.oidc.user.name || user.email !== req.oidc.user.email)) {
-            await users.update(user.username, { displayName: req.oidc.user.name, email: req.oidc.user.email });
-            user.displayName = req.oidc.user.name;
-            user.email = req.oidc.user.email;
+    } else {
+        // keep the internal database in sync with the session/OIDC provider info
+        const sessionUser = req.session?.user;
+        if (sessionUser && (user.displayName !== (sessionUser.displayName ?? sessionUser.name) || user.email !== (sessionUser.email ?? ''))) {
+            await users.update(user.username, {
+                displayName: sessionUser.displayName ?? sessionUser.name ?? user.displayName,
+                email: sessionUser.email ?? user.email
+            });
+            user.displayName = sessionUser.displayName ?? sessionUser.name ?? user.displayName;
+            user.email = sessionUser.email ?? user.email;
         }
-
         req.user = user;
     }
 

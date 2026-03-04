@@ -176,7 +176,7 @@ async function search(query) {
 
 async function logout() {
   try {
-    await fetcher.get(`${API_ORIGIN}/api/v1/logout`);
+    await fetcher.get(`${API_ORIGIN}/auth/logout`);
   } catch (e) {
     console.error('Error logging out', e);
   }

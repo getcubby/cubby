@@ -120,6 +120,18 @@ async function init() {
         const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, mainApp);
         const wsServer = new WebSocketServer({ noServer: true });
 
+        // When Windows (or other clients) send PUT with Expect: 100-continue, we must send
+        // 100 Continue before they send the body, otherwise the body never arrives (0-byte uploads).
+        httpServer.on('checkContinue', (req, res) => {
+            if (req.method === 'PUT' && req.url && req.url.startsWith('/webdav/')) {
+                res.writeContinue();
+                mainApp(req, res);
+            } else {
+                res.writeHead(417, { 'Content-Length': '0' });
+                res.end();
+            }
+        });
+
         wsServer.on('connection', collab.setupWSConnection);
 
         httpServer.on('upgrade', (request, socket, head) => {

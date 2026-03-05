@@ -351,6 +351,8 @@ async function handleHead(req, res, username, segments) {
 
 /**
  * Handle PUT: create or overwrite file.
+ * Overwrite is allowed unless client sends If-None-Match: * (create-only).
+ * Returns 204 when overwriting, 201 when creating (for Windows compatibility).
  */
 async function handlePut(req, res, username, segments) {
     const resource = webdavSegmentsToResource(segments);
@@ -368,10 +370,18 @@ async function handlePut(req, res, username, segments) {
         return;
     }
     const mtime = req.headers['last-modified'] ? new Date(req.headers['last-modified']) : new Date();
-    const overwrite = req.headers['if-match'] !== '*' && !req.headers['if-none-match']; // default overwrite
+    // Only refuse overwrite when client explicitly asks for create-only (If-None-Match: *)
+    const overwrite = req.headers['if-none-match'] !== '*';
+    let existed = false;
     try {
-        await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, true);
-        res.status(201).set('Location', req.originalUrl).end();
+        try {
+            await files.get(subject.usernameOrGroupfolder, subject.filePath);
+            existed = true;
+        } catch (e) {
+            if (e.reason !== MainError.NOT_FOUND) throw e;
+        }
+        await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
+        res.status(existed ? 204 : 201).set('Location', req.originalUrl).end();
     } catch (e) {
         if (e.reason === MainError.ALREADY_EXISTS && !overwrite) {
             res.status(412).send('Precondition Failed');
@@ -383,6 +393,83 @@ async function handlePut(req, res, username, segments) {
         }
         res.status(500).send('Internal Server Error');
     }
+}
+
+/**
+ * Generate an opaque lock token for LOCK (Windows Explorer expects this format).
+ */
+function generateLockToken() {
+    const hex = () => Math.floor(Math.random() * 16).toString(16);
+    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) =>
+        (c === 'x' ? hex() : ((parseInt(hex(), 16) & 0x3) | 0x8).toString(16))
+    );
+    return `opaquelocktoken:${uuid}`;
+}
+
+/**
+ * Handle LOCK: required by Windows Explorer for uploads. We return success with a token
+ * but do not enforce locking (no-op lock store).
+ */
+async function handleLock(req, res, username, segments) {
+    const resource = webdavSegmentsToResource(segments);
+    if (!resource || resource.virtualRoot || resource.virtualSharesList || resource.virtualGroupfoldersList) {
+        res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
+        return;
+    }
+    const lockToken = generateLockToken();
+    const body = `<?xml version="1.0" encoding="utf-8"?>
+<D:prop xmlns:D="${DAV_NS}">
+  <D:lockdiscovery>
+    <D:activelock>
+      <D:locktype><D:write/></D:locktype>
+      <D:lockscope><D:exclusive/></D:lockscope>
+      <D:depth>Infinity</D:depth>
+      <D:owner/>
+      <D:timeout>Second-3600</D:timeout>
+      <D:locktoken>
+        <D:href>${escapeXml(lockToken)}</D:href>
+      </D:locktoken>
+    </D:activelock>
+  </D:lockdiscovery>
+</D:prop>`;
+    res.status(200);
+    res.set('Content-Type', 'application/xml; charset="utf-8"');
+    res.set('Lock-Token', `<${lockToken}>`);
+    res.send(body);
+}
+
+/**
+ * Handle UNLOCK: required by Windows Explorer. Accept any Lock-Token and return 204.
+ */
+async function handleUnlock(req, res, username, segments) {
+    const resource = webdavSegmentsToResource(segments);
+    if (!resource || resource.virtualRoot || resource.virtualSharesList || resource.virtualGroupfoldersList) {
+        res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
+        return;
+    }
+    res.status(204).end();
+}
+
+/**
+ * Handle PROPPATCH: Windows Explorer may send property updates. Return 207 with 403
+ * for each property so the client gets a valid multistatus response (required for Windows).
+ */
+async function handleProppatch(req, res, username, segments, pathInfo) {
+    const baseHref = pathInfo.baseHref;
+    const hrefEnc = escapeXml(baseHref);
+    const body = `<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="${DAV_NS}">
+  <D:response>
+    <D:href>${hrefEnc}</D:href>
+    <D:propstat>
+      <D:prop/>
+      <D:status>HTTP/1.1 403 Forbidden</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`;
+    res.status(207);
+    res.set('Content-Type', 'application/xml; charset="utf-8"');
+    res.send(body);
 }
 
 /**
@@ -589,11 +676,14 @@ function expressMiddleware() {
             switch (req.method) {
                 case 'OPTIONS':
                     res.set('DAV', '1, 2');
-                    res.set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE');
+                    res.set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK');
                     res.status(200).end();
                     return;
                 case 'PROPFIND':
                     await handlePropfind(req, res, username, segments, pathInfo);
+                    return;
+                case 'PROPPATCH':
+                    await handleProppatch(req, res, username, segments, pathInfo);
                     return;
                 case 'GET':
                     await handleGet(req, res, username, segments);
@@ -603,6 +693,12 @@ function expressMiddleware() {
                     return;
                 case 'PUT':
                     await handlePut(req, res, username, segments);
+                    return;
+                case 'LOCK':
+                    await handleLock(req, res, username, segments);
+                    return;
+                case 'UNLOCK':
+                    await handleUnlock(req, res, username, segments);
                     return;
                 case 'MKCOL':
                     await handleMkcol(req, res, username, segments);
@@ -617,7 +713,7 @@ function expressMiddleware() {
                     await handleMove(req, res, username, segments, pathInfo);
                     return;
                 default:
-                    res.status(405).set('Allow', 'OPTIONS, PROPFIND, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE').send('Method Not Allowed');
+                    res.status(405).set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK').send('Method Not Allowed');
             }
         } catch (err) {
             debugLog('webdav error: %s', err.message || err);

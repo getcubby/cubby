@@ -79,3 +79,23 @@ The main application can be run using a helper script, which will create and ini
 This will also print the frontend asset builder and watcher command to be run in a second terminal.
 
 During development the user directory is a list of hardcoded users to test with and provided as a mock OpenID provider.
+
+## Windows Notes
+
+To enable Windows to accept WebDav with basic authentication, the following registry key needs to be set:
+See: <https://docs.nextcloud.com/server/latest/user_manual/en/files/access_webdav.html#accessing-files-using-microsoft-windows>
+
+You can create a .reg file with the following content and import it into the registry:
+```
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters]
+"BasicAuthLevel"=dword:00000002
+```
+
+When the Registry has been updated, the WebClient service needs to be restarted.
+In a cmd or powershell terminal with admin privileges, run the following commands:
+```
+net stop WebClient
+net start WebClient
+```

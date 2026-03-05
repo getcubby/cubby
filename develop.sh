@@ -25,7 +25,7 @@ while true; do
 done
 
 # create the same postgres server version to test with
-CONTAINER_NAME="postgres-server-cubby"
+export CONTAINER_NAME="postgres-server-cubby"
 
 export POSTGRESQL_USERNAME="postgres"
 export POSTGRESQL_PASSWORD="password"
@@ -40,29 +40,31 @@ if [[ "${fresh}" == "true" ]]; then
     rm -rf frontend-dist
 fi
 
-OUT=`docker inspect ${CONTAINER_NAME}` || true
-if [[ "${OUT}" = "[]" ]]; then
-    echo "=> Starting ${CONTAINER_NAME}..."
-    docker run --name ${CONTAINER_NAME} -e POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD} -d postgres:12
+OUT=`docker inspect ${CONTAINER_NAME}` 2>/dev/null || true
+if [[ "${OUT}" = "[]" || -z "${OUT}" ]]; then
+    echo "=> Starting ${CONTAINER_NAME} (port ${POSTGRESQL_PORT} published to host)..."
+    docker run --name ${CONTAINER_NAME} -e POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD} -p ${POSTGRESQL_PORT}:5432 -d postgres:12
 else
     echo "=> ${CONTAINER_NAME} already created, just restarting. If you want to start fresh, run 'docker rm --force ${CONTAINER_NAME}'"
     docker restart ${CONTAINER_NAME}
 fi
 
-export POSTGRESQL_HOST=`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME}`
+# Use localhost so the host (and tools like psql) can connect via the published port
+export POSTGRESQL_HOST="127.0.0.1"
 
 export PGPASSWORD="${POSTGRESQL_PASSWORD}"
 echo "=> Waiting for postgres server to be ready..."
-while ! psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -c "SELECT 1"; do
+while ! docker exec ${CONTAINER_NAME} psql -U ${POSTGRESQL_USERNAME} -c "SELECT 1" >/dev/null 2>&1; do
     sleep 1
 done
 
 echo "=> Ensure database"
-psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 | psql -h "${POSTGRESQL_HOST}" -U postgres -c "CREATE DATABASE ${POSTGRESQL_DATABASE}" || true
+docker exec --env PGPASSWORD="${POSTGRESQL_PASSWORD}" ${CONTAINER_NAME}  psql -U ${POSTGRESQL_USERNAME} -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 || \
+    docker exec --env PGPASSWORD="${POSTGRESQL_PASSWORD}" ${CONTAINER_NAME}  psql -U ${POSTGRESQL_USERNAME} -c "CREATE DATABASE ${POSTGRESQL_DATABASE}"
 DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" node ./node_modules/.bin/db-migrate up
 
 # clear skeleton user
-psql -h ${POSTGRESQL_HOST} -p ${POSTGRESQL_PORT} -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -c "DELETE FROM users WHERE username = 'skeleton'"
+docker exec --env PGPASSWORD="${POSTGRESQL_PASSWORD}" ${CONTAINER_NAME} psql -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -c "DELETE FROM users WHERE username = 'skeleton'"
 
 echo "=> Ensure frontend build"
 if [[ ! -d "frontend-dist" ]]; then
@@ -102,10 +104,10 @@ echo ""
 
 echo ""
 echo "┌────────────────────────────────────────────────────────────┐"
-echo "| Postgres connection                                        |"
+echo "| Postgres connection (no local psql required)               |"
 echo "└────────────────────────────────────────────────────────────┘"
-echo " > export PGPASSWORD="${POSTGRESQL_PASSWORD}""
-echo " > psql -h "${POSTGRESQL_HOST}" -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE} -t"
+echo " > docker exec -it ${CONTAINER_NAME} psql -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE}"
+echo "   Or with local psql: PGPASSWORD=... psql -h ${POSTGRESQL_HOST} -U ${POSTGRESQL_USERNAME} -d ${POSTGRESQL_DATABASE}"
 echo ""
 
 # for up/down testing

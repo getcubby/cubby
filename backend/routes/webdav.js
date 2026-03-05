@@ -266,7 +266,15 @@ ${responses.join('\n')}
         return;
     }
 
-    const displayName = entry.fileName || path.basename(subject.filePath) || 'resource';
+    let displayName = entry.fileName || path.basename(subject.filePath);
+    if (!displayName && segments.length > 0) {
+        const lastSegment = segments[segments.length - 1].toLowerCase();
+        if (lastSegment === VIRTUAL_HOME.segment) displayName = VIRTUAL_HOME.displayName;
+        else if (lastSegment === VIRTUAL_SHARES.segment) displayName = VIRTUAL_SHARES.displayName;
+        else if (lastSegment === VIRTUAL_GROUPFOLDERS.segment) displayName = VIRTUAL_GROUPFOLDERS.displayName;
+        else displayName = segments[segments.length - 1];
+    }
+    if (!displayName) displayName = 'resource';
     responses.push(propfindResponse(baseHref, entry, entry.isDirectory, displayName, entry.size, entry.mtime, entry.isFile ? entry.mimeType : null));
 
     if (entry.isDirectory && depth >= 1) {

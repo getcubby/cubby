@@ -5,7 +5,7 @@ WORKDIR /app/code
 
 # CUBBY_COMMIT is ignored as we always build from master but this tracks the release sha for renovate
 # renovate: datasource=git-refs packageName=https://git.cloudron.io/apps/cubby branch=main
-ARG CUBBY_COMMIT=9b098b802e6270c90eabe78870183a2b9f06d7a5
+ARG CUBBY_COMMIT=a915caf6a56ae1a79adaac3303851f63a54150c8
 
 RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8

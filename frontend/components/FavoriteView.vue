@@ -64,6 +64,7 @@ onMounted(refresh);
         <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
       </a>
     </div>
+    <div v-if="favorites.length === 0" class="no-favorites-container">No favorites yet</div>
   </div>
 </template>
 
@@ -73,12 +74,20 @@ onMounted(refresh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
 }
 
 h1 {
   font-size: 20px;
   font-weight: normal;
   padding: 0 20px;
+}
+
+.no-favorites-container {
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
 .favorite-container {

@@ -85,7 +85,7 @@ onMounted(refresh);
 
     <h1>Shared by You</h1>
 
-    <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
+    <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target" placeholder="Nothing shared by you">
       <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
       <template #target="{ item:slotProps }">
         {{ slotProps.file.filePath.slice(1) }}

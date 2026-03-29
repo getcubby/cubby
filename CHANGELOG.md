@@ -496,3 +496,11 @@
 * Improve OpenID login session
 * Fix rclone and windows webdav connection
 
+[2.9.0]
+* Update cubby to 2.9.0
+* Implement share expiration
+* Add empty share and favorites placeholder
+* Also search for subterms not just whole words in files
+* Allow to star group folder and shares
+* Update dependencies and nodejs
+

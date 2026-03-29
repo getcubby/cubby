@@ -460,3 +460,39 @@
 * Fix monaco-text editor
 * Update all dependencies and move the app to esm
 
+[2.7.2]
+* Update cubby to 2.7.2
+* Fix opening office documents which require path encoding
+
+[2.7.4]
+* Update cubby to 2.7.4
+* Add grid view mode
+* Fix dropping multiple files in chromium browsers
+
+[2.7.5]
+* Update cubby to 2.7.5
+* Fix crash in group folder settings
+* Disable non-supported actions in toplevel group folder listing
+* Update frontend and backend dependencies
+* Fix yjs collaboration sync
+
+[2.7.7]
+* Update cubby to 2.7.7
+* Fix accessing files in link shares
+* Allow to create link shares as read-only or read/write
+
+[2.7.8]
+* Update cubby to 2.7.8
+* Support readonly mode in TextViewer
+* Fix OfficeViewer for shared links
+* Fix various login state issues causing flickering
+
+[2.8.0]
+* Update cubby to 2.8.0
+* Expose groupfolders and shares via webdav. Tested only on linux for the moment.
+
+[2.8.1]
+* Update cubby to 2.8.1
+* Improve OpenID login session
+* Fix rclone and windows webdav connection
+

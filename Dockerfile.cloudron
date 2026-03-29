@@ -3,6 +3,10 @@ FROM cloudron/base:5.0.0@sha256:04fd70dbd8ad6149c19de39e35718e024417c3e01dc9c663
 RUN mkdir -p /app/code
 WORKDIR /app/code
 
+# CUBBY_COMMIT is ignored as we always build from master but this tracks the release sha for renovate
+# renovate: datasource=git-refs packageName=https://git.cloudron.io/apps/cubby branch=main
+ARG CUBBY_COMMIT=9b098b802e6270c90eabe78870183a2b9f06d7a5
+
 RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8

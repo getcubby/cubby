@@ -244,9 +244,12 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         file.favorites = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, file.filePath);
     }
 
+    const base = path.basename(filePath);
+    const directoryFileName = base || (group ? group.name : path.basename(fullFilePath));
+
     return new Entry({
         fullFilePath: fullFilePath,
-        fileName: path.basename(filePath),
+        fileName: directoryFileName,
         filePath: filePath,
         size: size,
         mtime: stats.mtime,

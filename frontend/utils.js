@@ -121,6 +121,29 @@ function getEntryIdentifier(entry) {
     else return entry.filePath;
 }
 
+/**
+ * Favorites are stored by canonical owner storage path. Share entries use
+ * share-relative filePath (see Entry.asShare); map back to the real path for API calls.
+ */
+function canonicalFavoritePath(entry) {
+    if (!entry.share) return entry.filePath;
+
+    const shareRoot = entry.share.filePath || '/';
+    const relative = entry.filePath === '/' ? '' : entry.filePath.replace(/^\/+/, '');
+
+    const left = shareRoot.replace(/\/+$/, '') || '/';
+    let combined;
+    if (!relative) {
+        combined = left === '/' ? '/' : left;
+    } else if (left === '/') {
+        combined = '/' + relative;
+    } else {
+        combined = left + '/' + relative;
+    }
+
+    return sanitize(combined);
+}
+
 function entryListSort(list, prop, desc) {
     var tmp = list.sort(function (a, b) {
         var av = a[prop];
@@ -147,5 +170,6 @@ export {
     parseResourcePath,
     prettyType,
     getEntryIdentifier,
+    canonicalFavoritePath,
     entryListSort
 };

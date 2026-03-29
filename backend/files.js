@@ -40,6 +40,8 @@ async function translateResourcePath(username, resourcePath) {
         const share = await shares.get(shareId);
         if (!share) return null;
 
+        if (shares.isExpired(share)) return null;
+
         // check if this share is a public link or only for a specific user
         if (share.receiverUsername && share.receiverUsername !== username) return null;
 

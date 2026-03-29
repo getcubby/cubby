@@ -27,7 +27,8 @@ async function create(data) {
 
   if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
   if (data.ownerGroupfolder) tmp.ownerGroupfolder = data.ownerGroupfolder;
-  if (data.expiresAt) tmp.expiresAt = data.expiresAt;
+  // API: expiresAt is Unix time in milliseconds (finite number), or omit for no expiration
+  if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
   if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
 
   let error, result;

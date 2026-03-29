@@ -125,6 +125,8 @@ async function get(req, res, next) {
             const share = await shares.get(shareId);
             if (!share) return next(new HttpError(404, 'no such share'));
 
+            if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
+
             // receiverUsername is set, so this is not a public share
             if (share.receiverUsername && !req.user) return next(new HttpError(403, 'not allowed'));
 

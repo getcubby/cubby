@@ -45,6 +45,15 @@ function postProcess(data) {
     return data;
 }
 
+function isExpired(share) {
+    if (!share || share.expiresAt == null) return false;
+
+    const t = new Date(share.expiresAt).getTime();
+    if (Number.isNaN(t)) return false;
+
+    return t <= Date.now();
+}
+
 async function listSharedWith(username) {
     assert.strictEqual(typeof username, 'string');
 
@@ -55,7 +64,7 @@ async function listSharedWith(username) {
     result.rows.forEach(postProcess);
 
     // only return non link shares
-    return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail; });
+    return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail; }).filter(function (share) { return !isExpired(share); });
 }
 
 async function list(username) {
@@ -70,19 +79,21 @@ async function list(username) {
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = 0 }) {
+async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = null }) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
     assert(typeof receiverUsername === 'string' || !receiverUsername);
     assert(typeof receiverEmail === 'string' || !receiverEmail);
     assert(typeof readonly === 'undefined' || typeof readonly === 'boolean');
-    assert.strictEqual(typeof expiresAt, 'number');
+    assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
 
     // ensure we have a bool with false as fallback
     readonly = !!readonly;
 
-    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAt}`);
+    const expiresAtDb = expiresAt ? new Date(expiresAt) : null;
+
+    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAtDb || 'none'}`);
 
     const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -90,7 +101,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
     await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
-        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAt || null
+        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAtDb
     ]);
 
     const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
@@ -165,5 +176,6 @@ export default {
     create,
     getByOwnerAndFilepath,
     getByOwnerAndReceiverAndFilepath,
-    remove
+    remove,
+    isExpired
 };

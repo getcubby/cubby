@@ -29,8 +29,22 @@ const entry = ref({});
 const shareLinkReadonly = ref(true);
 const shareLink = ref({
   expires: false,
-  expiresAt: 0,
+  expiresDate: '',
 });
+
+function defaultExpiresDateStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+/** End of selected calendar day in local time, as Unix ms (for API). */
+function endOfLocalDayMs(ymd) {
+  const parts = String(ymd).split('-').map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return 0;
+  const [y, m, day] = parts;
+  return new Date(y, m - 1, day, 23, 59, 59, 999).getTime();
+}
 
 async function refresh(item = null) {
   entry.value = await DirectoryModel.get(item || entry.value);
@@ -70,7 +84,14 @@ function copyShareIdLinkToClipboard(shareId) {
 }
 
 async function onCreateShareLink() {
-  const expiresAt = shareLink.value.expires ? shareLink.value.expiresAt : 0;
+  let expiresAt = 0;
+  if (shareLink.value.expires) {
+    expiresAt = endOfLocalDayMs(shareLink.value.expiresDate);
+    if (!expiresAt) {
+      window.pankow.notify('Invalid expiration date', { type: 'error' });
+      return;
+    }
+  }
   const ownerUsername = entry.value.group ? null : entry.value.owner;
   const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
 
@@ -88,10 +109,7 @@ defineExpose({
     readonly.value = false;
     shareLinkReadonly.value = true;
     shareLink.value.expires = false;
-    shareLink.value.expiresAt = new Date()
-
-    // start with tomorrow
-    shareLink.value.expiresAt.setDate(shareLink.value.expiresAt.getDate() + 1);
+    shareLink.value.expiresDate = defaultExpiresDateStr();
 
     // prepare available users for sharing
     users.value = (await MainModel.getUsers()).filter((u) => { return u.username !== profile.value.username; });
@@ -134,7 +152,10 @@ defineExpose({
             <div v-for="link in sharedLinks" class="shared-link" :key="link.id">
               <div>
                 <div>Created {{ prettyDate(link.createdAt) }}</div>
-                <small style="color: var(--pankow-color-text-secondary)">{{ link.readonly ? 'Read only' : 'Read & Write' }}</small>
+                <small style="color: var(--pankow-color-text-secondary)">
+                  {{ link.readonly ? 'Read only' : 'Read & Write' }}
+                  <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
+                </small>
               </div>
               <div style="display: flex; gap: 5px">
                 <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyShareIdLinkToClipboard(link.id)"/>
@@ -150,8 +171,8 @@ defineExpose({
               <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
-              <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareLink.expire" />
-              <input type="date" v-model="shareLink.expiresAt" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expire"/>
+              <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareLink.expires" />
+              <input type="date" v-model="shareLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expires"/>
               <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
             </div>
           </div>

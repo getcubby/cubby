@@ -17,6 +17,23 @@ function boolLike(arg) {
     return true;
 }
 
+/** `expiresAt` is always milliseconds since Unix epoch (finite number), or omitted / null / 0 for no expiration. */
+function parseExpiresAtMs(raw) {
+    if (raw === undefined || raw === null || raw === 0) return { expiresAtMs: null };
+
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) return { error: 'expiresAt must be a finite number (milliseconds) or omitted' };
+
+    if (raw < 0) return { error: 'expiresAt must be non-negative' };
+
+    const now = Date.now();
+    if (raw <= now) return { error: 'expiresAt must be in the future' };
+
+    const max = now + 10 * 365 * 24 * 60 * 60 * 1000;
+    if (raw > max) return { error: 'expiresAt is too far in the future' };
+
+    return { expiresAtMs: raw };
+}
+
 async function optionalAttachReceiver(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
     assert.strictEqual(typeof req.params.id, 'string');
@@ -31,6 +48,8 @@ async function optionalAttachReceiver(req, res, next) {
     const [error, share] = await safe(shares.get(shareId));
     if (error) return next(new HttpError(500, error));
     if (!share) return next(new HttpError(404, 'share not found'));
+
+    if (shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
 
     req.share = share;
 
@@ -50,6 +69,8 @@ async function attachReceiver(req, res, next) {
     const [error, share] = await safe(shares.get(shareId));
     if (error) return next(new HttpError(500, error));
     if (!share) return next(new HttpError(404, 'share not found'));
+
+    if (shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
 
     req.share = share;
 
@@ -104,7 +125,9 @@ async function createShare(req, res, next) {
     const receiverUsername = req.body.receiverUsername || null;
     const receiverEmail = req.body.receiverEmail || null;
     const readonly = boolLike(req.body.readonly);
-    const expiresAt = req.body.expiresAt ? parseInt(req.body.expiresAt) : 0;
+    const parsed = parseExpiresAtMs(req.body.expiresAt);
+    if (parsed.error) return next(new HttpError(400, parsed.error));
+    const expiresAt = parsed.expiresAtMs;
 
     debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || 'link'}`);
 

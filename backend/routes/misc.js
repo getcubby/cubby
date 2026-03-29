@@ -113,10 +113,12 @@ async function download(req, res, next) {
                 const share = await shares.get(shareId);
                 if (!share) return next(new HttpError(404, 'no such share'));
 
+                if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
+
                 // actual path is without shares/<shareId>/
                 const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
 
-                file = await files.get(share.ownerUsername, path.join(share.filePath, actualFilePath));
+                file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath));
             } else if (resource === 'groupfolders') {
                 const groupFolderSlug = filePath.split('/')[1];
                 if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));

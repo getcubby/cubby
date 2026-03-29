@@ -11,6 +11,11 @@ RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
+ARG NODE_VERSION=24.14.1
+RUN mkdir -p /usr/local/node-$NODE_VERSION && \
+    curl -L https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz | tar zxf - --strip-components 1 -C /usr/local/node-$NODE_VERSION
+ENV PATH=/usr/local/node-$NODE_VERSION/bin:$PATH
+
 # maybe check https://www.recoll.org/pages/features.html#doctypes.pdf also
 RUN apt-get update && \
     apt-get install -y recollcmd recoll libwpd-tools poppler-utils unrtf untex wv pdftk antiword fonts-nanum libwpd-tools djvulibre-bin \

@@ -7,7 +7,7 @@ import database from './database.js';
 import path from 'path';
 import tokens from './tokens.js';
 import MainError from './mainerror.js';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:users');
 

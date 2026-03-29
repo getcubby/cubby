@@ -10,7 +10,7 @@ import path from 'path';
 import preview from '../preview.js';
 import recoll from '../recoll.js';
 import recent from '../recent.js';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 import shares from '../shares.js';
 import { HttpError, HttpSuccess } from 'connect-lastmile';
 

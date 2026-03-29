@@ -3,7 +3,7 @@ import debug from 'debug';
 import favorites from '../favorites.js';
 import files from '../files.js';
 import { HttpError, HttpSuccess } from 'connect-lastmile';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:routes:favorites');
 

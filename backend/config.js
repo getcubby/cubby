@@ -2,7 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import fs from 'fs';
 import path from 'path';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:config');
 

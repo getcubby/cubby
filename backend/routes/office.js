@@ -8,7 +8,7 @@ import { HttpError, HttpSuccess } from 'connect-lastmile';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import office from '../office.js';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 import tokens from '../tokens.js';
 import users from '../users.js';
 import xpath from 'xpath';

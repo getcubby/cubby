@@ -4,7 +4,7 @@ import files from './files.js';
 import database from './database.js';
 import crypto from 'crypto';
 import MainError from './mainerror.js';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:favorites');
 

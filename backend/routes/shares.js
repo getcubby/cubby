@@ -5,7 +5,7 @@ import files from '../files.js';
 import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from 'connect-lastmile';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:routes:shares');
 

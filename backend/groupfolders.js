@@ -7,7 +7,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import MainError from './mainerror.js';
 import recoll from './recoll.js';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:groupfolders');
 

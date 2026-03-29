@@ -1,7 +1,7 @@
 import assert from 'assert';
 import users from '../users.js';
 import { HttpError, HttpSuccess } from 'connect-lastmile';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 async function getUserFromSession(req) {
     const sessionUser = req.session?.user;

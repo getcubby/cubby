@@ -5,7 +5,7 @@ import groupFolders from '../groupfolders.js';
 import { HttpError, HttpSuccess } from 'connect-lastmile';
 import MainError from '../mainerror.js';
 import path from 'path';
-import safe from 'safetydance';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:routes:groupfolders');
 

@@ -18,7 +18,7 @@ async function onSearch() {
   if (!searchQuery.value) return;
 
   searchBusy.value = true;
-  const results = await MainModel.search(searchQuery.value);
+  const results = await MainModel.search('*' + searchQuery.value + '*');
   searchBusy.value = false;
 
   if (dismissed.value) return;

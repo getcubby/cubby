@@ -136,6 +136,7 @@ h1 {
 }
 
 .star-icon {
+  width: 48px;
   color: #ffcb00;
   padding: 10px;
 }

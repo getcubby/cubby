@@ -298,60 +298,75 @@ function onUploadFolder() {
 
 const inputDialog = useTemplateRef('inputDialog');
 const directoryView = useTemplateRef('directoryView');
-async function onNewFile() {
-  const newFileName = await inputDialog.value.prompt({
-    message: 'New Filename',
-    value: '',
-    confirmStyle: 'success',
-    confirmLabel: 'Save',
-    rejectLabel: 'Close'
-  });
+const newItemForm = ref({
+  mode: 'file',
+  name: '',
+  error: '',
+  busy: false
+});
+const newItemDialogElement = useTemplateRef('newItemDialog');
 
-  if (!newFileName) return;
-
-  const resource = parseResourcePath(currentResourcePath.value || 'files/');
-
-  try {
-    await DirectoryModel.newFile(resource, newFileName);
-  } catch (error) {
-    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
-    else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('File name not allowed');
-    else if (error.reason === DirectoryModelError.CONFLICT) console.error('File already exists');
-    else console.error('Failed to add file, unknown error:', error)
-    return;
-  }
-
-  await refresh();
-
-  directoryView.value.highlightByName(newFileName);
+function onNewItemDialogNameInput() {
+  newItemForm.value.error = '';
 }
 
-async function onNewFolder() {
-  const newFolderName = await inputDialog.value.prompt({
-    message: 'New Foldername',
-    value: '',
-    confirmStyle: 'success',
-    confirmLabel: 'Save',
-    rejectLabel: 'Close'
-  });
+function onNewFile() {
+  newItemForm.value.busy = false;
+  newItemForm.value.error = '';
+  newItemForm.value.name = '';
+  newItemForm.value.mode = 'file';
+  newItemDialogElement.value.open();
+}
 
-  if (!newFolderName) return;
+function onNewFolder() {
+  newItemForm.value.busy = false;
+  newItemForm.value.error = '';
+  newItemForm.value.name = '';
+  newItemForm.value.mode = 'folder';
+  newItemDialogElement.value.open();
+}
+
+async function onNewItemDialogSubmit() {
+  if (newItemForm.value.busy) return;
+
+  const name = newItemForm.value.name.trim();
+  if (!name) return;
+
+  newItemForm.value.busy = true;
+  newItemForm.value.error = '';
 
   const resource = parseResourcePath(currentResourcePath.value || 'files/');
+  const mode = newItemForm.value.mode;
 
   try {
-    await DirectoryModel.newFolder(resource, newFolderName);
+    if (mode === 'file') await DirectoryModel.newFile(resource, name);
+    else await DirectoryModel.newFolder(resource, name);
   } catch (error) {
-    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
-    else if (error.reason === DirectoryModelError.NOT_ALLOWED) console.error('Folder name not allowed');
-    else if (error.reason === DirectoryModelError.CONFLICT) console.error('Folder already exists');
-    else console.error('Failed to add folder, unknown error:', error)
+    newItemForm.value.busy = false;
+    if (error.reason === DirectoryModelError.NO_AUTH) {
+      newItemDialogElement.value.close();
+      onInvalidSession();
+      return;
+    }
+    if (error.reason === DirectoryModelError.CONFLICT) {
+      newItemForm.value.error = mode === 'file'
+        ? 'A file with this name already exists.'
+        : 'A folder with this name already exists.';
+      return;
+    }
+    if (error.reason === DirectoryModelError.NOT_ALLOWED) {
+      newItemForm.value.error = 'This name is not allowed.';
+      return;
+    }
+    newItemForm.value.error = error.message || 'Something went wrong. Please try again.';
+    console.error(mode === 'file' ? 'Failed to add file:' : 'Failed to add folder:', error);
     return;
   }
 
+  newItemForm.value.busy = false;
+  newItemDialogElement.value.close();
   await refresh();
-
-  directoryView.value.highlightByName(newFolderName);
+  directoryView.value.highlightByName(name);
 }
 
 async function extractHandler(item) {
@@ -1076,6 +1091,28 @@ onBeforeUnmount(() => {
       <label for="webdavPasswordInput">Set a WebDAV password (will overwrite old one)</label>
       <PasswordInput id="webdavPasswordInput" v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
       <small class="has-error" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
+    </form>
+  </Dialog>
+
+  <Dialog
+    :title="newItemForm.mode === 'file' ? 'New Filename' : 'New Foldername'"
+    ref="newItemDialog"
+    reject-label="Close"
+    confirm-label="Save"
+    confirm-style="success"
+    :confirm-busy="newItemForm.busy"
+    :confirm-active="!!newItemForm.name.trim()"
+    @confirm="onNewItemDialogSubmit"
+  >
+    <form @submit.prevent="onNewItemDialogSubmit">
+      <TextInput
+        id="newItemNameInput"
+        v-model="newItemForm.name"
+        autofocus
+        style="width: 100%"
+        @update:modelValue="onNewItemDialogNameInput"
+      />
+      <p class="has-error" v-show="newItemForm.error">{{ newItemForm.error }}</p>
     </form>
   </Dialog>
 

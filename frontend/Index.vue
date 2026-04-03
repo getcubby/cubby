@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, onMounted, useTemplateRef, computed, provide } from 'vue';
+import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
 import { API_ORIGIN, BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './utils.js';
 import {
   Breadcrumb,
@@ -226,6 +226,53 @@ function onInvalidSession() {
   profile.value = {};
 
   onLogin();
+}
+
+let lastSessionCheckAt = 0;
+let sessionRevalidateDebounceTimer = null;
+
+async function revalidateSession() {
+  if (!ready.value) return;
+  if (view.value === VIEWS.LOGIN) return;
+  if (!profile.value.username) return;
+
+  // only check again if we didn't check within last half a minute
+  const now = Date.now();
+  if (now - lastSessionCheckAt < 30000) return;
+
+  let fetched;
+  try {
+    fetched = await MainModel.getProfile();
+  } catch (e) {
+    console.error('session revalidate: getProfile() error', e);
+    return;
+  }
+
+  lastSessionCheckAt = Date.now();
+
+  if (!fetched || !fetched.username) {
+    if (profile.value.username) onInvalidSession();
+    return;
+  }
+
+  profile.value = fetched;
+}
+
+function scheduleSessionRevalidate() {
+  if (sessionRevalidateDebounceTimer !== null) clearTimeout(sessionRevalidateDebounceTimer);
+  sessionRevalidateDebounceTimer = setTimeout(() => {
+    sessionRevalidateDebounceTimer = null;
+    revalidateSession();
+  }, 400);
+}
+
+function onVisibilityChangeForSession() {
+  if (document.visibilityState !== 'visible') return;
+  scheduleSessionRevalidate();
+}
+
+function onWindowFocusForSession() {
+  scheduleSessionRevalidate();
 }
 
 function onViewerEntryChanged(entry) {
@@ -845,6 +892,18 @@ onMounted(async () => {
   showSize.value = window.innerWidth >= 576;
 
   ready.value = true;
+
+  document.addEventListener('visibilitychange', onVisibilityChangeForSession);
+  window.addEventListener('focus', onWindowFocusForSession);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChangeForSession);
+  window.removeEventListener('focus', onWindowFocusForSession);
+  if (sessionRevalidateDebounceTimer !== null) {
+    clearTimeout(sessionRevalidateDebounceTimer);
+    sessionRevalidateDebounceTimer = null;
+  }
 });
 
 </script>

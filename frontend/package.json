@@ -6,14 +6,14 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^4.1.7",
-    "@tiptap/extension-code-block-lowlight": "^3.21.0",
-    "@tiptap/extension-collaboration": "^3.21.0",
-    "@tiptap/extension-image": "^3.21.0",
-    "@tiptap/markdown": "^3.21.0",
-    "@tiptap/pm": "^3.21.0",
-    "@tiptap/starter-kit": "^3.21.0",
-    "@tiptap/vue-3": "^3.21.0",
+    "@cloudron/pankow": "^4.1.8",
+    "@tiptap/extension-code-block-lowlight": "^3.22.1",
+    "@tiptap/extension-collaboration": "^3.22.1",
+    "@tiptap/extension-image": "^3.22.1",
+    "@tiptap/markdown": "^3.22.1",
+    "@tiptap/pm": "^3.22.1",
+    "@tiptap/starter-kit": "^3.22.1",
+    "@tiptap/vue-3": "^3.22.1",
     "@tiptap/y-tiptap": "^3.0.2",
     "@vitejs/plugin-vue": "^6.0.5",
     "eslint": "^10.1.0",
@@ -21,7 +21,7 @@
     "lowlight": "^3.3.0",
     "moment": "^2.30.1",
     "vite": "^8.0.3",
-    "vue": "^3.5.31",
+    "vue": "^3.5.32",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.30"
   }

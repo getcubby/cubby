@@ -3,7 +3,7 @@
   "title": "Cubby",
   "author": "Cloudron Team",
   "tagline": "Collaborative filemanager",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "upstreamVersion": "NewVersionIsNotSet",
   "minBoxVersion": "7.5.0",
   "healthCheckPath": "/api/healthcheck",

@@ -504,3 +504,10 @@
 * Allow to star group folder and shares
 * Update dependencies and nodejs
 
+[2.10.0]
+* Update cubby to 2.10.0
+* Improve error feedback on new file or folder creation
+* Various relogin state fixes to not lose target resource
+* Ensure public shares can be reopened after session failure
+* Update dependencies
+

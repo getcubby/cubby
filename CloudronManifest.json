@@ -4,7 +4,7 @@
   "author": "Cloudron Team",
   "tagline": "Collaborative filemanager",
   "version": "2.9.0",
-  "upstreamVersion": "NewVersionIsNotSet",
+  "upstreamVersion": "2.9.0",
   "minBoxVersion": "7.5.0",
   "healthCheckPath": "/api/healthcheck",
   "icon": "file://logo.png",

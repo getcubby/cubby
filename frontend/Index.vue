@@ -815,6 +815,13 @@ function onUp() {
 }
 
 onMounted(async () => {
+  const resumeParams = new URLSearchParams(window.location.search);
+  if (resumeParams.has('resumeOffice')) {
+    const p = resumeParams.get('resumeOffice');
+    if (p) localStorage.returnToOffice = p;
+    window.history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+  }
+
   async function handleHash(hash) {
     // we handle decoded paths internally
     hash = decodeURIComponent(hash);
@@ -870,6 +877,19 @@ onMounted(async () => {
   } catch (e) {
     return console.error('mounted: getProfile() error', e);
   }
+
+  if (profile.value.username && localStorage.returnToOffice) {
+    const officePath = localStorage.returnToOffice.trim();
+    localStorage.returnToOffice = '';
+    if (officePath) {
+      const base = (BASE_URL || '/').replace(/\/?$/, '/');
+      const u = new URL('office.html', window.location.origin + base);
+      u.hash = officePath;
+      window.location.replace(u.href);
+      return;
+    }
+  }
+
   if (!profile.value.username) view.value = VIEWS.LOGIN;
 
   await refreshConfig();

@@ -1,8 +1,7 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef } from 'vue';
-import { utils } from '@cloudron/pankow';
-import { parseResourcePath } from './utils.js';
+import { BASE_URL, parseResourcePath } from './utils.js';
 import MainModel from './models/MainModel.js';
 import DirectoryModel from './models/DirectoryModel.js';
 
@@ -11,11 +10,57 @@ const wopiForm = useTemplateRef('wopiForm');
 const wopiToken = ref('');
 const wopiUrl = ref('');
 
+function safeHashResourcePath() {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function redirectToMainAppForLogin() {
+  const path = safeHashResourcePath();
+  localStorage.returnToOffice = path;
+  const base = (BASE_URL || '/').replace(/\/?$/, '/');
+  const landing = new URL(base, window.location.origin);
+  landing.searchParams.set('resumeOffice', path);
+  window.location.href = landing.href;
+}
+
 onMounted(async () => {
-  const resource = parseResourcePath(decodeURIComponent(window.location.hash.slice(1)));
-  const entry = await DirectoryModel.get(resource);
+  const profile = await MainModel.getProfile();
+  if (!profile?.username) {
+    redirectToMainAppForLogin();
+    return;
+  }
+
+  const resource = parseResourcePath(safeHashResourcePath());
+  if (!resource) {
+    console.error('Office: invalid resource path in hash');
+    return;
+  }
+
+  let entry;
+  try {
+    entry = await DirectoryModel.get(resource);
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      redirectToMainAppForLogin();
+      return;
+    }
+    return console.error(error);
+  }
+
   const [error, handle] = await MainModel.getOfficeHandle(entry);
-  if (error) return console.error(error);
+  if (error) {
+    if (error.status === 401 || error.status === 403) {
+      redirectToMainAppForLogin();
+      return;
+    }
+    return console.error(error);
+  }
 
   window.document.title = entry.fileName + ' - Cubby';
 

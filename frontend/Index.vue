@@ -845,7 +845,8 @@ onMounted(async () => {
 
     if (hash.indexOf('files/home/') === 0) {
       if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
-      else window.location.hash = 'files/home/';
+      // Auth failure sets LOGIN + returnTo; do not rewrite hash here or a second load 401s and overwrites returnTo with files/home/
+      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/home/';
     } else if (hash.indexOf('files/shares/') === 0) {
       loadPath(hash.slice('files'.length), true);
       view.value = VIEWS.FILES_SHARES;
@@ -883,7 +884,9 @@ onMounted(async () => {
       view.value = VIEWS.SETTINGS;
       onCloseSidebar();
     } else {
-      window.location.hash = 'files/home/';
+      // Logged-in default route; anonymous users keep empty/unknown hash (login view) — do not force #files/home/
+      if (profile.value?.username) window.location.hash = 'files/home/';
+      else view.value = VIEWS.LOGIN;
     }
   }
 
@@ -909,8 +912,14 @@ onMounted(async () => {
 
   await refreshConfig();
 
-  // initial load with hash if any
-  const hash = localStorage.returnTo || window.location.hash.slice(1);
+  // initial load with hash if any — prefer URL over stale returnTo only for public share
+  // links (#files/shares/...). Otherwise (e.g. OAuth landing on #files/home/ vs returnTo)
+  // keep returnTo so post-login deep links still apply.
+  const urlHash = window.location.hash.slice(1);
+  const storedReturnTo = localStorage.returnTo || '';
+  const preferUrlForShare = storedReturnTo && urlHash && storedReturnTo !== urlHash
+    && urlHash.indexOf('files/shares/') === 0;
+  const hash = preferUrlForShare ? urlHash : (storedReturnTo || urlHash);
   localStorage.returnTo = '';
 
   await handleHash(hash);

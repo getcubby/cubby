@@ -12,7 +12,7 @@
 require('chromedriver');
 
 const execSync = require('child_process').execSync,
-    expect = require('expect.js'),
+    assert = require('node:assert/strict'),
     fs = require('fs'),
     path = require('path'),
     { Builder, By, Key, until } = require('selenium-webdriver'),
@@ -56,14 +56,14 @@ describe('Application life cycle test', function () {
 
         const currentUrl = await browser.getCurrentUrl();
         if (!currentUrl.includes(app.domain)) return;
-        expect(this.currentTest.title).to.be.a('string');
+        assert.strictEqual(typeof this.currentTest.title, 'string');
         await saveScreenshot(this.currentTest.title);
     });
 
     function getAppInfo() {
         var inspect = JSON.parse(execSync('cloudron inspect'));
         app = inspect.apps.filter(function (a) { return a.location.indexOf(LOCATION) === 0; })[0];
-        expect(app).to.be.an('object');
+        assert.ok(app && typeof app === 'object');
     }
 
     async function waitForElement(elem) {

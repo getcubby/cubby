@@ -69,7 +69,7 @@ onMounted(async () => {
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
-    <h1>Users</h1>
+    <h1>Users ({{ tableModel.length }})</h1>
 
     <TableView style="max-height: 200px;" :columns="tableColumns" :model="tableModel">
       <template #username="{ item:slotProps }">{{ slotProps.username }}</template>
@@ -79,7 +79,6 @@ onMounted(async () => {
         <Button outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right" icon="fa-solid fa-wrench"/>
       </template>
     </TableView>
-    <div class="user-count">{{ tableModel.length }} Users</div>
   </div>
 </template>
 
@@ -92,10 +91,6 @@ h1 {
 
 .user-table-container {
   padding: 0 20px;
-}
-
-.user-count {
-  margin-top: 10px;
 }
 
 </style>

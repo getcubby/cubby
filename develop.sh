@@ -97,7 +97,7 @@ echo "└───────────────────────�
 echo " Run a second terminal for hot reload frontend server:"
 echo ""
 echo " > cd frontend/"
-echo " > VITE_API_ORIGIN=http://localhost:3000 npm run dev"
+echo " > npm run dev"
 echo ""
 echo ""
 

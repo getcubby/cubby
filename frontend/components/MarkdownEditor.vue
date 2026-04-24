@@ -366,7 +366,9 @@ let provider;
 
 const SAVE_DEBOUNCE_MS = 2000;
 
-const WEBSOCKET_URI = import.meta.env.VITE_API_ORIGIN ? import.meta.env.VITE_API_ORIGIN.replace('http://', 'ws://') : `wss://${window.location.hostname}`;
+const WEBSOCKET_URI = import.meta.env.DEV
+  ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/__cubby_ws`
+  : `wss://${window.location.host}`;
 
 export default {
   name: 'MarkdownEditor',

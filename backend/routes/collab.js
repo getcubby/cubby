@@ -1,7 +1,7 @@
 import debug from 'debug';
 import files from '../files.js';
 import MainError from '../mainerror.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import * as yUtils from '@y/websocket-server/utils';
 
 const debugLog = debug('cubby:routes:collab');

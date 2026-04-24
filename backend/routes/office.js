@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import debug from 'debug';
 import { DOMParser as Dom } from 'xmldom';
 import files from '../files.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import office from '../office.js';

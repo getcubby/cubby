@@ -4,7 +4,7 @@ import favorites from './routes/favorites.js';
 import files from './routes/files.js';
 import groupFolders from './routes/groupfolders.js';
 import http from 'http';
-import lastMile from 'connect-lastmile';
+import { lastMile } from '@cloudron/connect-lastmile';
 import misc from './routes/misc.js';
 import mobile from './routes/mobile.js';
 import office from './routes/office.js';

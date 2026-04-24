@@ -1,6 +1,6 @@
 import assert from 'assert';
 import users from '../users.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
 
 async function getUserFromSession(req) {

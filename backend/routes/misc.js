@@ -12,7 +12,7 @@ import recoll from '../recoll.js';
 import recent from '../recent.js';
 import safe from '@cloudron/safetydance';
 import shares from '../shares.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 
 const debugLog = debug('cubby:routes:misc');
 

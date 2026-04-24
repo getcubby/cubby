@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import debug from 'debug';
-import { HttpSuccess, HttpError } from 'connect-lastmile';
+import { HttpSuccess, HttpError } from '@cloudron/connect-lastmile';
 import tokens from '../tokens.js';
 import users from '../users.js';
 

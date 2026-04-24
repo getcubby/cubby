@@ -2,7 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import constants from '../constants.js';
 import groupFolders from '../groupfolders.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
 import path from 'path';
 import safe from '@cloudron/safetydance';

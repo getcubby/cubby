@@ -7,7 +7,7 @@ import recent from '../recent.js';
 import shares from '../shares.js';
 import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
-import { HttpError, HttpSuccess } from 'connect-lastmile';
+import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 
 const debugLog = debug('cubby:routes:files');
 

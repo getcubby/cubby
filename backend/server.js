@@ -13,6 +13,7 @@ import shares from './routes/shares.js';
 import users from './routes/users.js';
 import usersDb from './users.js';
 import webdav from './routes/webdav.js';
+import { isScimEnabled, runScimSyncTick, SYNC_INTERVAL_MS } from './scimSync.js';
 import * as tegel from '@cloudron/tegel';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
@@ -150,6 +151,15 @@ async function init() {
         });
         httpServer.once('error', reject);
     });
+
+    if (isScimEnabled()) {
+        runScimSyncTick().catch((err) => {
+            console.error('Initial SCIM sync failed:', err);
+        });
+        setInterval(() => {
+            runScimSyncTick();
+        }, SYNC_INTERVAL_MS);
+    }
 }
 
 export default {

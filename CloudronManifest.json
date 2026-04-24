@@ -5,7 +5,7 @@
   "tagline": "Collaborative filemanager",
   "version": "2.10.0",
   "upstreamVersion": "NewVersionIsNotSet",
-  "minBoxVersion": "7.5.0",
+  "minBoxVersion": "9.2.0",
   "healthCheckPath": "/api/healthcheck",
   "icon": "file://logo.png",
   "description": "file://DESCRIPTION.md",
@@ -31,7 +31,8 @@
     },
     "oidc": {
       "loginRedirectUri": "/auth/callback,/api/v1/mobile/callback,org.getcubby://auth/callback"
-    }
+    },
+    "scim": {}
   },
   "mediaLinks": [
     "https://screenshots.cloudron.io/io.cloudron.cubby/cubby_01.png"

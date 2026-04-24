@@ -94,6 +94,11 @@ async function list() {
     return users.rows;
 }
 
+async function hasAnyAdmin() {
+    const result = await database.query('SELECT EXISTS (SELECT 1 FROM users WHERE admin = TRUE) AS ok');
+    return Boolean(result.rows[0]?.ok);
+}
+
 async function update(username, user) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof user, 'object');
@@ -134,14 +139,43 @@ async function ensureUser(data) {
     const [error] = await safe(add({ username, password, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
 
-    // make first user admin
-    const all = await list();
-    if (all.length === 1) {
-        debugLog(`ensureUser: first user created. Making ${username} the admin.`);
+    // First OIDC login becomes admin if the install has none yet (e.g. users pre-provisioned via SCIM).
+    if (!(await hasAnyAdmin())) {
+        debugLog(`ensureUser: no admin yet. Making ${username} the admin.`);
         await setAdmin(username, true);
     }
 
     return await get(username);
+}
+
+/**
+ * Create or update a user from Cloudron SCIM (same username namespace as OIDC).
+ * @param {string} username
+ * @param {{ displayName: string, email: string }} contact
+ * @returns {Promise<{ created: boolean, updated: boolean }>}
+ */
+async function upsertFromScim(username, contact) {
+    assert.strictEqual(typeof username, 'string');
+    const email = contact.email != null && String(contact.email).trim()
+        ? String(contact.email).trim()
+        : '';
+    const displayName = contact.displayName != null && String(contact.displayName).trim()
+        ? String(contact.displayName).trim()
+        : username.split('@')[0];
+
+    if (await exists(username)) {
+        await update(username, { email, displayName });
+        return { created: false, updated: true };
+    }
+
+    const [error] = await safe(add({ username, email, displayName }));
+    if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
+    if (error && error.reason === MainError.ALREADY_EXISTS) {
+        await update(username, { email, displayName });
+        return { created: false, updated: true };
+    }
+
+    return { created: true, updated: false };
 }
 
 export default {
@@ -155,5 +189,6 @@ export default {
     update,
     setAdmin,
     remove,
-    ensureUser
+    ensureUser,
+    upsertFromScim
 };

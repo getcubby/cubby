@@ -1,6 +1,5 @@
 import path from 'path';
 import debug from 'debug';
-import users from '../users.js';
 import files from '../files.js';
 import shares from '../shares.js';
 import groupFolders from '../groupfolders.js';
@@ -11,6 +10,7 @@ const debugLog = debug('cubby:webdav');
 
 const DAV_NS = 'DAV:';
 const WEBDAV_PREFIX = '/webdav/';
+const LOCAL_WEBDAV_PASSWORD = 'password';
 
 // Virtual root segment names (URL path segments and display names)
 const VIRTUAL_HOME = { segment: 'home', displayName: 'Home' };
@@ -63,6 +63,16 @@ function webdavSegmentsToResource(segments) {
 /**
  * Authenticate request via Basic auth. Returns user object or null.
  */
+async function verifyCloudronCredentials(identifier, password) {
+    const url = `http://${process.env.CLOUDRON_PROXY_IP}:3006/verify-credentials`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password })
+    });
+    return response.ok;
+}
+
 async function authFromRequest(req) {
     const auth = req.headers.authorization;
     if (!auth || !auth.startsWith('Basic ')) {
@@ -84,9 +94,21 @@ async function authFromRequest(req) {
             return null;
         }
         debugLog('auth: attempting login for user=%s', username);
-        const user = await users.webdavLogin(username, password);
-        debugLog('auth: webdavLogin result=%s', user ? 'ok' : 'failed');
-        return user;
+
+        if (process.env.CLOUDRON) {
+            try {
+                const ok = await verifyCloudronCredentials(username, password);
+                debugLog('auth: cloudron verify result=%s', ok ? 'ok' : 'failed');
+                return ok ? { username } : null;
+            } catch (error) {
+                debugLog('auth: cloudron verify failed %s', error.message || error);
+                return null;
+            }
+        }
+
+        const ok = password === LOCAL_WEBDAV_PASSWORD;
+        debugLog('auth: local password result=%s', ok ? 'ok' : 'failed');
+        return ok ? { username } : null;
     } catch (err) {
         debugLog('auth: exception', err);
         return null;

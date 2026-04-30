@@ -122,17 +122,6 @@ async function list(req, res, next) {
     return next(new HttpSuccess(200, { users: result }));
 }
 
-async function update(req, res, next) {
-    assert.strictEqual(typeof req.user, 'object');
-
-    if (typeof req.body.password !== 'string' || !req.body.password) return next(new HttpError(400, 'password must be a non-empty string'));
-
-    const [error] = await safe(users.setWebdavPassword(req.user.username, req.body.password));
-    if (error) return next(new HttpError(500, error));
-
-    next(new HttpSuccess(200, {}));
-}
-
 export default {
     isAuthenticated,
     isAdmin,
@@ -140,6 +129,5 @@ export default {
     tokenAuth,
     optionalAuth,
     profile,
-    update,
     list
 };

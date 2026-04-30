@@ -1,6 +1,5 @@
 import assert from 'assert';
 import constants from './constants.js';
-import crypto from 'crypto';
 import { cp } from 'node:fs/promises';
 import debug from 'debug';
 import database from './database.js';
@@ -11,36 +10,11 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:users');
 
-const CRYPTO_SALT_SIZE = 64; // 512-bit salt
-const CRYPTO_ITERATIONS = 10000; // iterations
-const CRYPTO_KEY_LENGTH = 512; // bits
-const CRYPTO_DIGEST = 'sha1'; // used to be the default in node 4.1.1 cannot change since it will affect existing db records
-
 function postProcess(data) {
     data.displayName = data.display_name;
     delete data.display_name;
 
     return data;
-}
-
-async function webdavLogin(username, password) {
-    assert.strictEqual(typeof username, 'string');
-    assert.strictEqual(typeof password, 'string');
-
-    if (username === '' || password === '') return null;
-
-    debugLog('webdavLogin: ', username);
-
-    const user = await get(username);
-    if (!user) return null;
-
-    const saltBinary = Buffer.from(user.salt, 'hex');
-    const derivedKey = crypto.pbkdf2Sync(password, saltBinary, CRYPTO_ITERATIONS, CRYPTO_KEY_LENGTH, CRYPTO_DIGEST);
-    const derivedKeyHex = Buffer.from(derivedKey, 'binary').toString('hex');
-
-    if (derivedKeyHex !== user.password) return null;
-
-    return user;
 }
 
 async function add(user) {
@@ -113,19 +87,6 @@ async function setAdmin(username, admin) {
     await database.query('UPDATE users SET admin = $1 WHERE username = $2', [ admin, username ]);
 }
 
-async function setWebdavPassword(username, password) {
-    assert.strictEqual(typeof username, 'string');
-    assert.strictEqual(typeof password, 'string');
-
-    const rawSalt = crypto.randomBytes(CRYPTO_SALT_SIZE);
-    const derivedKey = crypto.pbkdf2Sync(password, rawSalt, CRYPTO_ITERATIONS, CRYPTO_KEY_LENGTH, CRYPTO_DIGEST);
-
-    const salt = rawSalt.toString('hex');
-    const saltedPassword = Buffer.from(derivedKey, 'binary').toString('hex');
-
-    await database.query('UPDATE users SET password = $1, salt = $2 WHERE username = $3', [ saltedPassword, salt, username ]);
-}
-
 async function remove(username) {
     assert.strictEqual(typeof username, 'string');
 
@@ -179,13 +140,11 @@ async function upsertFromScim(username, contact) {
 }
 
 export default {
-    webdavLogin,
     add,
     exists,
     get,
     getByAccessToken,
     list,
-    setWebdavPassword,
     update,
     setAdmin,
     remove,

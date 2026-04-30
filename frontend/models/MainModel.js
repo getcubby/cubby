@@ -66,17 +66,6 @@ async function getUsers() {
   return result.body.users;
 }
 
-async function setWebDavPassword(password) {
-  let error, result;
-  try {
-    result = await fetcher.put(`${API_ORIGIN}/api/v1/users`, { password });
-  } catch (e) {
-    error = e;
-  }
-
-  if (error || result.status !== 200) throw new Error('Failed to set password', { cause: error || result })
-}
-
 async function setAdmin(username, isAdmin) {
   let error, result;
   try {
@@ -188,7 +177,6 @@ export default {
   getWopiHost,
   setWopiHost,
   getUsers,
-  setWebDavPassword,
   setAdmin,
   canHandleWithOffice,
   isOfficeWorking,

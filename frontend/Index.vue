@@ -13,7 +13,6 @@ import {
   InputGroup,
   Menu,
   Notification,
-  PasswordInput,
   SideBar,
   TextInput,
   TopBar
@@ -81,11 +80,6 @@ function toggleViewMode() {
   viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';
   localStorage.viewMode = viewMode.value;
 }
-
-const webDavPasswordDialog = ref({
-  error: '',
-  password: ''
-});
 
 const mainMenu = [{
   label: 'Users',
@@ -406,25 +400,7 @@ async function pasteHandler(action, files, target) {
 const webDavPasswordDialogElement = useTemplateRef('webDavPasswordDialog');
 const WEBDAV_ORIGIN = API_ORIGIN || window.location.origin;
 async function onWebDavSettings() {
-  webDavPasswordDialog.value.error = '';
-  webDavPasswordDialog.value.password = '';
   webDavPasswordDialogElement.value.open();
-}
-
-async function onWebDavSettingsSubmit() {
-  try {
-    await MainModel.setWebDavPassword(webDavPasswordDialog.value.password);
-  } catch (error) {
-    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
-    else {
-      webDavPasswordDialog.value.error = 'Unkown error, check logs';
-      console.error('Failed to set webdav password:', error)
-    }
-
-    return;
-  }
-
-  webDavPasswordDialogElement.value.close();
 }
 
 async function refreshConfig() {
@@ -1089,18 +1065,13 @@ onBeforeUnmount(() => {
     </div>
   </Dialog>
 
-  <!-- WebDAV Password Dialog -->
-  <Dialog title="WebDAV Password" ref="webDavPasswordDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onWebDavSettingsSubmit">
+  <!-- WebDAV Dialog -->
+  <Dialog title="WebDAV" ref="webDavPasswordDialog" reject-label="Close">
     <label for="webdavOriginInput">Files can be used over WebDAV at</label>
     <InputGroup>
       <TextInput id="webdavOriginInput" readonly :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" style="flex: 1"/>
       <ClipboardButton :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" />
     </InputGroup>
-    <form @submit="onWebDavSettingsSubmit" @submit.prevent>
-      <label for="webdavPasswordInput">Set a WebDAV password (will overwrite old one)</label>
-      <PasswordInput id="webdavPasswordInput" v-model="webDavPasswordDialog.password" autofocus required :class="{ 'has-error': webDavPasswordDialog.error }" style="width: 100%"/>
-      <small class="has-error" v-show="webDavPasswordDialog.error">{{ webDavPasswordDialog.error }}</small>
-    </form>
   </Dialog>
 
   <Dialog

@@ -66,7 +66,6 @@ async function init() {
         router.del('/api/v1/settings/groupfolders/:id', users.isAuthenticated, users.isAdmin, groupFolders.remove);
 
         router.get('/api/v1/users', users.isAuthenticated, users.list);
-        router.put('/api/v1/users', users.isAuthenticated, users.update);
 
         router.put('/api/v1/users/:username/admin', users.isAuthenticated, users.isAdmin, users.setAdmin);
 

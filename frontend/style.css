@@ -24,6 +24,11 @@ h2 {
   font-weight: 400;
 }
 
+a {
+  color: var(--pankow-text-color);
+  text-decoration: none;
+}
+
 @media (prefers-color-scheme: dark) {
   .container {
     background-color: black;

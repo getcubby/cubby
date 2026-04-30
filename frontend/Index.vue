@@ -1,16 +1,14 @@
 <script setup>
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
-import { API_ORIGIN, BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './utils.js';
+import { BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './utils.js';
 import {
   Breadcrumb,
   Button,
-  ClipboardButton,
   Dialog,
   DirectoryView,
   FileUploader,
   InputDialog,
-  InputGroup,
   Menu,
   Notification,
   SideBar,
@@ -95,10 +93,6 @@ const mainMenu = [{
   label: 'Shared by You',
   icon: 'fa-solid fa-share-from-square',
   action: () => window.location.href = '#shares'
-}, {
-  label: 'WebDAV',
-  icon: 'fa-solid fa-globe',
-  action: onWebDavSettings
 }, {
   label: 'About',
   icon: 'fa-solid fa-circle-info',
@@ -395,12 +389,6 @@ async function pasteHandler(action, files, target) {
   await refresh();
 
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-}
-
-const webDavPasswordDialogElement = useTemplateRef('webDavPasswordDialog');
-const WEBDAV_ORIGIN = API_ORIGIN || window.location.origin;
-async function onWebDavSettings() {
-  webDavPasswordDialogElement.value.open();
 }
 
 async function refreshConfig() {
@@ -1063,15 +1051,6 @@ onBeforeUnmount(() => {
       Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>
       <br/>
     </div>
-  </Dialog>
-
-  <!-- WebDAV Dialog -->
-  <Dialog title="WebDAV" ref="webDavPasswordDialog" reject-label="Close">
-    <label for="webdavOriginInput">Files can be used over WebDAV at</label>
-    <InputGroup>
-      <TextInput id="webdavOriginInput" readonly :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" style="flex: 1"/>
-      <ClipboardButton :value="`${WEBDAV_ORIGIN}/webdav/${profile.username}/`" />
-    </InputGroup>
   </Dialog>
 
   <Dialog

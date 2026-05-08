@@ -168,7 +168,7 @@ function getDirectoryHref(entry) {
   z-index: 3000;
   box-shadow: var(--pankow-menu-shadow);
   overflow: scroll;
-  max-height: calc(100% - 60px);
+  max-height: min(70vh, 512px);
 }
 
 .no-search-results {

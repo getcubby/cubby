@@ -91,7 +91,7 @@ async function codeToToken(req, res, next) {
     try {
         const idpTokens = await exchangeCodeWithIdp(code, REDIRECT_URI);
         const profile = await getOidcProfile(idpTokens.access_token);
-        const user = await users.ensureUser({ username: profile.sub, password: '', email: profile.email, displayName: profile.name });
+        const user = await users.ensureUser({ username: profile.sub, email: profile.email, displayName: profile.name });
         const apiToken = await tokens.add(user.username);
 
         next(new HttpSuccess(200, {

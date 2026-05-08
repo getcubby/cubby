@@ -23,11 +23,9 @@ async function add(user) {
     const username = user.username;
     const email = user.email;
     const displayName = user.displayName;
-    const password = '';
-    const salt = '';
     const admin = false;
 
-    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name, password, salt, admin) VALUES ($1, $2, $3, $4, $5, $6)', [ username, email, displayName, password, salt, admin ]));
+    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name, admin) VALUES ($1, $2, $3, $4)', [ username, email, displayName, admin ]));
     if (error?.nestedError?.detail?.includes('already exists') && error?.nestedError?.detail?.includes('username')) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
     if (error) throw error;
 
@@ -94,10 +92,10 @@ async function remove(username) {
 }
 
 async function ensureUser(data) {
-    const { username, password, email, displayName } = data;
+    const { username, email, displayName } = data;
 
     debugLog(`ensureUser: ${username}`);
-    const [error] = await safe(add({ username, password, email, displayName }));
+    const [error] = await safe(add({ username, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
 
     // First OIDC login becomes admin if the install has none yet (e.g. users pre-provisioned via SCIM).

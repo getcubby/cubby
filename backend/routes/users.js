@@ -11,7 +11,6 @@ async function getUserFromSession(req) {
     if (!user) {
         user = await users.ensureUser({
             username: sessionUser.username,
-            password: '',
             email: sessionUser.email ?? '',
             displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
         });
@@ -45,7 +44,6 @@ async function isAuthenticated(req, res, next) {
 
         req.user = await users.ensureUser({
             username: sessionUser.username,
-            password: '',
             email: sessionUser.email ?? '',
             displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
         });

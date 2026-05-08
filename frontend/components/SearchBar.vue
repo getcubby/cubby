@@ -59,6 +59,22 @@ function getDirectoryHref(entry) {
   return getFilesViewHashHref(entry, folderPath);
 }
 
+/** Sidebar-aligned label so "/" under My Files is distinct from "/" in a group folder. */
+function getResultLocationLabel(entry) {
+  if (entry.share) {
+    const rootName = (entry.share.filePath || '').replace(/^\/+|\/+$/g, '');
+    return rootName ? `Shared · ${rootName}` : 'Shared With You';
+  }
+  if (entry.group) {
+    return entry.group.name || entry.group.id || 'Group folder';
+  }
+  return 'My Files';
+}
+
+function getResultFolderPath(entry, fileName) {
+  return entry.filePath.slice(0, -fileName.length);
+}
+
 </script>
 
 <template>
@@ -76,11 +92,14 @@ function getDirectoryHref(entry) {
         <div v-show="searchResults.length === 0" class="no-search-results">
           Nothing found
         </div>
-        <a v-for="result in searchResults" :key="result.filepath" class="search-result-entry" :href="getEntryHref(result.entry)" @click.stop="onDismiss()">
+        <a v-for="result in searchResults" :key="result.entry.id" class="search-result-entry" :href="getEntryHref(result.entry)" @click.stop="onDismiss()">
           <img :src="result.entry.previewUrl"/>
-          <div style="margin-left: 10px; flex-grow: 1;">
-            <div style="margin-bottom: 10px"><b>{{ result.fileName }}</b></div>
-            <div style="font-size: 12px">{{ result.entry.filePath.slice(0, -result.fileName.length) }}</div>
+          <div class="search-result-body">
+            <div class="search-result-title"><b>{{ result.fileName }}</b></div>
+            <div class="search-result-path-row">
+              <span class="search-result-location" :title="getResultLocationLabel(result.entry)">{{ getResultLocationLabel(result.entry) }}</span>
+              <span class="search-result-folder-path">{{ getResultFolderPath(result.entry, result.fileName) }}</span>
+            </div>
           </div>
           <div class="search-result-entry-actions">
             <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onDismiss()">Open Folder</Button>
@@ -148,6 +167,40 @@ function getDirectoryHref(entry) {
   height: 60px;
   width: 60px;
   object-fit: cover;
+}
+
+.search-result-body {
+  margin-left: 10px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.search-result-title {
+  margin-bottom: 10px;
+}
+
+.search-result-path-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.search-result-location {
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.search-result-folder-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-result-entry-actions {

@@ -3,6 +3,7 @@
 import { ref, useTemplateRef } from 'vue';
 import { Spinner, TextInput, Button } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
+import { getFilesViewHashHref } from '../utils.js';
 
 const searchResultsPanel = useTemplateRef('searchResultsPanel');
 const searchBar = useTemplateRef('searchBar');
@@ -49,14 +50,13 @@ function onFocus() {
   searchResultsPanel.value.style.width = searchBar.value.offsetWidth + 'px';
 }
 
-// only personal files supported for now
 function getEntryHref(entry) {
-  return `/#files/home${entry.filePath}`;
+  return getFilesViewHashHref(entry, entry.filePath);
 }
 
 function getDirectoryHref(entry) {
   const folderPath = entry.isDirectory ? entry.filePath : entry.filePath.slice(0, -entry.fileName.length);
-  return `/#files/home${folderPath}`;
+  return getFilesViewHashHref(entry, folderPath);
 }
 
 </script>

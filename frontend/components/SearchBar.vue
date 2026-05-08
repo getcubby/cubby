@@ -1,31 +1,63 @@
 <script setup>
 
-import { ref, useTemplateRef } from 'vue';
+import { ref, watch, onUnmounted, useTemplateRef } from 'vue';
 import { Spinner, TextInput, Button } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 import { getFilesViewHashHref } from '../utils.js';
 
+const SEARCH_DEBOUNCE_MS = 500;
+
 const searchResultsPanel = useTemplateRef('searchResultsPanel');
 const searchBar = useTemplateRef('searchBar');
 
-const searchBusy = ref(false);
+const searchPending = ref(0);
 const dismissed = ref(false);
 const searchQuery = ref('');
 const searchResults = ref([]);
 const resultsOpen = ref(false);
 const open = ref(false);
 
-async function onSearch() {
-  if (!searchQuery.value) return;
+let debounceTimer = null;
+let searchAbortController = null;
+let searchGeneration = 0;
 
-  searchBusy.value = true;
-  const results = await MainModel.search('*' + searchQuery.value + '*');
-  searchBusy.value = false;
+function clearDebounceTimer() {
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+}
 
-  if (dismissed.value) return;
+function abortInFlightSearch() {
+  searchAbortController?.abort();
+  searchAbortController = null;
+  searchGeneration++;
+}
 
-  // order by recently modified
-  results.sort((a,b) => {
+async function runSearch() {
+  const q = searchQuery.value.trim();
+  if (!q) return;
+
+  searchAbortController?.abort();
+  const controller = new AbortController();
+  searchAbortController = controller;
+
+  const gen = ++searchGeneration;
+  searchPending.value++;
+
+  let results;
+  try {
+    results = await MainModel.search('*' + q + '*', { signal: controller.signal });
+  } catch (e) {
+    if (e?.name === 'AbortError') return;
+    throw e;
+  } finally {
+    searchPending.value--;
+  }
+
+  if (gen !== searchGeneration || dismissed.value) return;
+
+  results.sort((a, b) => {
     return new Date(b.entry.mtime).getTime() - new Date(a.entry.mtime).getTime();
   });
 
@@ -33,12 +65,45 @@ async function onSearch() {
   resultsOpen.value = true;
 }
 
+function scheduleDebouncedSearch() {
+  clearDebounceTimer();
+  debounceTimer = setTimeout(() => {
+    debounceTimer = null;
+    runSearch();
+  }, SEARCH_DEBOUNCE_MS);
+}
+
+function onSearch() {
+  clearDebounceTimer();
+  runSearch();
+}
+
+watch(searchQuery, () => {
+  const q = searchQuery.value.trim();
+  if (!q) {
+    clearDebounceTimer();
+    abortInFlightSearch();
+    searchResults.value = [];
+    resultsOpen.value = false;
+    return;
+  }
+  if (!open.value || dismissed.value) return;
+  scheduleDebouncedSearch();
+});
+
+onUnmounted(() => {
+  clearDebounceTimer();
+  abortInFlightSearch();
+});
+
 function onDismiss() {
   open.value = false;
   resultsOpen.value = false;
 
+  clearDebounceTimer();
+  abortInFlightSearch();
+
   searchQuery.value = '';
-  searchBusy.value = false;
   dismissed.value = true;
 
   setTimeout(() => { searchResults.value = []; }, 1000);
@@ -83,9 +148,9 @@ function getResultFolderPath(entry, fileName) {
       <div class="pankow-dialog-backdrop" @click="onDismiss" v-show="open"></div>
     </Transition>
     <div class="search-bar" ref="searchBar" :class="{'open': open,'results-open': resultsOpen}">
-      <i class="fa-solid fa-magnifying-glass" v-show="!searchBusy" style="cursor: pointer;" @click="onSearch"></i>
-      <Spinner v-show="searchBusy" />
-      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" :disabled="searchBusy" class="search-input"/>
+      <i class="fa-solid fa-magnifying-glass" v-show="searchPending === 0" style="cursor: pointer;" @click="onSearch"></i>
+      <Spinner v-show="searchPending > 0" />
+      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" class="search-input"/>
     </div>
     <Transition name="pankow-roll-down">
       <div v-show="resultsOpen" ref="searchResultsPanel" class="search-result-panel">

@@ -147,11 +147,12 @@ async function recent() {
   return entries;
 }
 
-async function search(query) {
+async function search(query, { signal } = {}) {
   let error, result;
   try {
-    result = await fetcher.get(`${API_ORIGIN}/api/v1/search`, { query });
+    result = await fetcher.get(`${API_ORIGIN}/api/v1/search`, { query }, signal ? { signal } : {});
   } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
     error = e;
   }
 

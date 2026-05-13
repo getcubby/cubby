@@ -14,7 +14,7 @@ import { Button } from '@cloudron/pankow';
       <div class="right">
         <h1>Cubby</h1>
         <h2>The painless file sharing solution</h2>
-        <Button id="loginButton" :href="API_ORIGIN + '/auth/login'">Login with Cloudron</Button>
+        <Button id="loginButton" :href="API_ORIGIN + '/auth/login'">Log in with Cloudron</Button>
         <div class="footer">
           By <a href="https://cloudron.io" target="_blank">Cloudron</a>
         </div>
@@ -25,7 +25,7 @@ import { Button } from '@cloudron/pankow';
       <div style="flex-grow: 1; text-align: center;">
         <h1>Cubby</h1>
         <h2>The painless file sharing solution</h2>
-        <Button id="loginButton" :href="API_ORIGIN + '/auth/login'">Login with Cloudron</Button>
+        <Button id="loginButton" :href="API_ORIGIN + '/auth/login'">Log in with Cloudron</Button>
       </div>
       <div class="mobile-footer">By <a href="https://cloudron.io" target="_blank">Cloudron</a></div>
     </div>

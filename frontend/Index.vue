@@ -960,7 +960,7 @@ onBeforeUnmount(() => {
                 <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">Upload</span></Button>
                 <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
 
-                <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Login</Button>
+                <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Log in</Button>
               </div>
             </template>
           </TopBar>

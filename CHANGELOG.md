@@ -511,3 +511,17 @@
 * Ensure public shares can be reopened after session failure
 * Update dependencies
 
+[2.11.0]
+* Update cubby to 2.11.0
+* **Breaking change:** WebDAV endpoints will prompt for a new password. You can create a new app password from the Cloudron dashboard.
+* Add SCIM user listing support to preprovision users
+* Use the Vite proxy setup for local development
+* Use @cloudron/connect-lastmile
+* Move user count into the header
+* Improve the users view and add basic search
+* Use the Cloudron auth endpoint for WebDAV
+* Remove WebDAV UI
+* Purge password and salt from user signup code paths as well
+* Fix displaying search results in group folders
+* Fix search results max-height
+

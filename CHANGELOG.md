@@ -525,3 +525,7 @@
 * Fix displaying search results in group folders
 * Fix search results max-height
 
+[2.12.0]
+* Update cubby to 2.12.0
+* Update tegel backend for improved session managment
+

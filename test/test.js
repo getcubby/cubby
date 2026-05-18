@@ -2,7 +2,7 @@
 
 /* global it, describe, before, after, afterEach */
 
-import { app, click, cloudronCli, goto, loginOIDC, setupBrowser, takeScreenshot, teardownBrowser, waitFor, clearCache } from '@cloudron/charlie';
+import { app, click, cloudronCli, goto, loginOIDC, setupBrowser, takeScreenshot, teardownBrowser, clearCache } from '@cloudron/charlie';
 
 describe('Application life cycle test', function () {
     before(setupBrowser);
@@ -13,8 +13,8 @@ describe('Application life cycle test', function () {
     });
 
     async function login() {
-        await goto(`https://${app.fqdn}`, /Log in with/);
-        await click(/Log in with/);
+        await goto(`https://${app.fqdn}`, /Log ?in with/i);
+        await click(/Log ?in with/i);
         await loginOIDC('My Files');
     }
 

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import config from '../config.js';
 import debug from 'debug';
 import files from '../files.js';
@@ -81,7 +81,7 @@ async function download(req, res, next) {
 
     debugLog(`download: type=zip skipPath=${skipPath}`, entries);
 
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
         zlib: { level: 9 }
     });
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /* global it, describe, before, after, afterEach */
 
 import { app, click, cloudronCli, goto, loginOIDC, setupBrowser, takeScreenshot, teardownBrowser, clearCache } from '@cloudron/charlie';

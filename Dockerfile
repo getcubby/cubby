@@ -3,7 +3,7 @@ FROM cloudron/base:5.0.0@sha256:04fd70dbd8ad6149c19de39e35718e024417c3e01dc9c663
 RUN mkdir -p /app/code
 WORKDIR /app/code
 
-# CUBBY_COMMIT is used as a reference for renovate when building from branch. The pipeline always builds the package from the branch it is run on
+# CUBBY_COMMIT is a reference for renovate when building from main. The pipeline always builds from the branch it is run on
 # renovate: datasource=git-refs packageName=https://git.cloudron.io/apps/cubby branch=main
 ARG CUBBY_COMMIT=daac17fed5d4f3d1f49059f5a7cb9ebe94375dee
 

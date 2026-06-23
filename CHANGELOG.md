@@ -529,3 +529,7 @@
 * Update cubby to 2.12.0
 * Update tegel backend for improved session managment
 
+[2.12.1]
+* Update cubby to 2.12.1
+* Fix description
+

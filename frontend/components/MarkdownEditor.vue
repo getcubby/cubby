@@ -557,7 +557,7 @@ export default {
         value: src,
         confirmStyle: 'success',
         confirmLabel: 'Add',
-        rejectLabel: 'Close',
+        rejectLabel: 'Cancel',
         rejectStyle: 'secondary'
       });
       if (!imageUrl) return;

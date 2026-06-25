@@ -1044,7 +1044,7 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- About Dialog -->
-  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close" reject-style="secondary">
+  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Cancel" reject-style="secondary">
     <div>
       Cubby the painless file sharing solution!
       <br/>
@@ -1057,7 +1057,7 @@ onBeforeUnmount(() => {
   <Dialog
     :title="newItemForm.mode === 'file' ? 'New filename' : 'New folder name'"
     ref="newItemDialog"
-    reject-label="Close"
+    reject-label="Cancel"
     reject-style="secondary"
     confirm-label="Save"
     confirm-style="success"

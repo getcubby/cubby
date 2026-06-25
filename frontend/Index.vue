@@ -937,11 +937,6 @@ onBeforeUnmount(() => {
 
             <template #right>
               <div class="topbar-actions">
-                <div class="file-actions">
-                  <Button v-show="!isReadonly && selectedEntries.length" icon="fa-regular fa-trash-can" outline danger tool @click="deleteHandler(selectedEntries)"/>
-                  <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
-                </div>
-
                 <Button icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
 
                 <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Log in</Button>
@@ -1127,17 +1122,7 @@ hr {
   gap: 6px;
 }
 
-.file-actions {
-  white-space: nowrap;
-  display: flex;
-  gap: 6px;
-}
-
 @media only screen and (min-width: 767px) {
-  .file-actions {
-    margin-right: 50px;
-  }
-
   .profile-dropdown {
     margin-left: 50px;
   }

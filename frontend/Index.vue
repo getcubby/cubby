@@ -88,10 +88,6 @@ const profileMenu = [{
   visible: () => profile.value.admin,
   action: () => window.location.href = '#settings'
 }, {
-  label: 'Shared by you',
-  icon: 'fa-solid fa-share-from-square',
-  action: () => window.location.href = '#shares'
-}, {
   separator:true
 }, {
   label: 'Log out',
@@ -917,10 +913,13 @@ onBeforeUnmount(() => {
         <div style="margin-top: 30px; margin-bottom: 50px; text-align: center; font-size: 28px; font-weight: bold;"><img src="/logo-transparent.svg" height="70" width="70"/><br/>Cubby</div>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent files</a>
+
+        <div v-show="profile.username" class="side-bar-section-heading">Shares</div>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared with you</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.SHARES }" href="#shares" @click="onCloseSidebar"><i class="fa-solid fa-share-from-square"></i> Shared by you</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
       </SideBar>
@@ -1172,6 +1171,17 @@ pre {
 
 .side-bar-entry > i {
   padding-right: 10px;
+}
+
+.side-bar-section-heading {
+  margin-top: 16px;
+  margin-bottom: 4px;
+  padding: 0 20px;
+  font-size: 11px;
+  font-weight: var(--pankow-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .content {

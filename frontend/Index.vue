@@ -75,18 +75,23 @@ function toggleViewMode() {
   localStorage.viewMode = viewMode.value;
 }
 
-const profileMenu = [{
-  label: 'Settings',
-  icon: 'fa-solid fa-cog',
-  visible: () => profile.value.admin,
-  action: () => window.location.href = '#settings'
-}, {
-  separator:true
-}, {
-  label: 'Log out',
-  icon: 'fa-solid fa-right-from-bracket',
-  action: onLogout
-}];
+const profileMenu = computed(() => {
+  const items = [];
+  if (profile.value.admin) {
+    items.push({
+      label: 'Settings',
+      icon: 'fa-solid fa-cog',
+      action: () => { window.location.href = '#settings'; },
+    });
+    items.push({ separator: true });
+  }
+  items.push({
+    label: 'Log out',
+    icon: 'fa-solid fa-right-from-bracket',
+    action: onLogout,
+  });
+  return items;
+});
 
 const newMenu = [{
   separator: true,

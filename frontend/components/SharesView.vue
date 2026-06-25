@@ -3,6 +3,7 @@
 import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
 import ProfileMenuButton from './ProfileMenuButton.vue';
+import EmptyState from './EmptyState.vue';
 import { Button, Icon, InputDialog, TableView, TopBar } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
@@ -98,34 +99,35 @@ onMounted(refresh);
     </TopBar>
 
     <div class="shares-body">
-      <h1>Shared by you</h1>
-
-    <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target" placeholder="Nothing shared by you">
-      <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
-      <template #target="{ item:slotProps }">
-        {{ slotProps.file.filePath.slice(1) }}
+      <EmptyState
+        v-if="tableModel.length === 0"
+        icon="fa-solid fa-share-from-square"
+        title="Nothing shared by you"
+        description="Files and folders you share will show up here"
+      />
+      <template v-else>
+        <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
+          <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
+          <template #target="{ item:slotProps }">
+            {{ slotProps.file.filePath.slice(1) }}
+          </template>
+          <template #receiver="{ item:slotProps }">
+            <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
+            <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
+            {{ slotProps.receiverUsername }}
+          </template>
+          <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
+          <template #action="{ item:slotProps }">
+            <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
+          </template>
+        </TableView>
+        <div class="share-count">{{ tableModel.length }} shares</div>
       </template>
-      <template #receiver="{ item:slotProps }">
-        <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
-        <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
-        {{ slotProps.receiverUsername }}
-      </template>
-      <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
-      <template #action="{ item:slotProps }">
-        <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
-      </template>
-    </TableView>
-    <div class="share-count">{{ tableModel.length }} shares</div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
-h1 {
-  font-size: 20px;
-  font-weight: normal;
-}
 
 .shares {
   display: flex;
@@ -138,6 +140,13 @@ h1 {
   padding: 0 20px;
   overflow: auto;
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.shares-body:has(.share-count) {
+  justify-content: flex-start;
 }
 
 .share-count {

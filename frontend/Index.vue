@@ -27,6 +27,7 @@ import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
 import ShareDialog from './components/ShareDialog.vue';
 import ProfileMenuButton from './components/ProfileMenuButton.vue';
+import EmptyState from './components/EmptyState.vue';
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
@@ -992,14 +993,32 @@ onBeforeUnmount(() => {
                   :fallback-icon="`${BASE_URL}mime-types/none.svg`"
                 >
                   <template #empty>
-                    <div v-show="!entries.length" class="no-entries-placeholder">
-                      <div v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</div>
-                      <div v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">
-                        <span v-if="profile.admin"><Button href="#settings" icon="fa-solid fa-plus">Add group folder</Button></span>
-                        <span v-else>Not part of any group folder yet</span>
-                      </div>
-                      <div v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</div>
-                    </div>
+                    <EmptyState
+                      v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)"
+                      icon="fa-regular fa-folder"
+                      title="No files"
+                    />
+                    <EmptyState
+                      v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin"
+                      icon="fa-solid fa-user-group"
+                      title="Not part of any group folder"
+                      description="Ask an admin to add you to a group folder"
+                    />
+                    <EmptyState
+                      v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && profile.admin"
+                      icon="fa-solid fa-user-group"
+                      title="No group folders"
+                    >
+                      <template #description>
+                        Create <a href="#settings">group folders in Settings</a>
+                      </template>
+                    </EmptyState>
+                    <EmptyState
+                      v-else-if="activeResourceType === 'shares' && !breadCrumbs.length"
+                      icon="fa-solid fa-share-nodes"
+                      title="Nothing shared with you"
+                      description="Files and folders others shared with you will show up here"
+                    />
                   </template>
                 </DirectoryView>
               </div>
@@ -1117,13 +1136,6 @@ hr {
 .container {
   display: flex;
   width: 100%;
-  height: 100%;
-}
-
-.no-entries-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   height: 100%;
 }
 

@@ -4,9 +4,10 @@ import { ref, onMounted } from 'vue';
 import FavoriteModel from '../models/FavoriteModel.js';
 import SearchBar from './SearchBar.vue';
 import ProfileMenuButton from './ProfileMenuButton.vue';
+import EmptyState from './EmptyState.vue';
 import { Icon, TopBar } from '@cloudron/pankow';
 
-const props = defineProps({
+defineProps({
   profile: {
     type: Object,
     default: () => ({}),
@@ -67,18 +68,25 @@ onMounted(refresh);
 
     <h1>Favorites</h1>
 
-    <div class="favorite-container">
-      <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
-        <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
-        <div>
-          {{ entry.fileName }}<br/>
-          <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
-        </div>
-        <div style="flex-grow: 1;"></div>
-        <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
-      </a>
+    <div class="favorite-body">
+      <div v-if="favorites.length" class="favorite-container">
+        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
+          <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
+          <div>
+            {{ entry.fileName }}<br/>
+            <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
+          </div>
+          <div style="flex-grow: 1;"></div>
+          <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
+        </a>
+      </div>
+      <EmptyState
+        v-else
+        icon="fa-solid fa-star"
+        title="No favorites"
+        description="Files and folders you mark as favorite will show up here"
+      />
     </div>
-    <div v-if="favorites.length === 0" class="no-favorites-container">No favorites yet</div>
   </div>
 </template>
 
@@ -97,16 +105,22 @@ h1 {
   padding: 0 20px;
 }
 
-.no-favorites-container {
+.favorite-body {
   display: flex;
-  height: 100%;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
   justify-content: center;
-  align-items: center;
+}
+
+.favorite-body:has(.favorite-container) {
+  justify-content: flex-start;
 }
 
 .favorite-container {
   overflow: auto;
   padding: 20px;
+  flex-grow: 1;
 }
 
 .favorite-item {

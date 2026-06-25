@@ -5,6 +5,7 @@ import moment from 'moment';
 import MainModel from '../models/MainModel.js';
 import SearchBar from './SearchBar.vue';
 import ProfileMenuButton from './ProfileMenuButton.vue';
+import EmptyState from './EmptyState.vue';
 import { Button, TopBar } from '@cloudron/pankow';
 
 const props = defineProps({
@@ -82,6 +83,12 @@ function iconError(event, entry) {
     <h1>Recent files</h1>
 
     <div class="buckets">
+      <EmptyState
+        v-if="buckets.length === 0"
+        icon="fa-regular fa-clock"
+        title="No recent files"
+        description="Files you open will show up here"
+      />
       <div class="bucket" v-for="bucket in buckets" :key="bucket.label">
         <h2>{{ bucket.label }}</h2>
         <div class="hr"></div>
@@ -132,6 +139,13 @@ h1 {
   flex-grow: 1;
   overflow: auto;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.buckets:has(.bucket) {
+  justify-content: flex-start;
 }
 
 .grid {

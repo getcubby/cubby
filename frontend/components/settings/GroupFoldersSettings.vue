@@ -229,7 +229,7 @@ onMounted(refreshGroupFolders);
       </div>
     </Dialog>
 
-    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No group folders yet">
+    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No group folders">
       <template #folderPath="{ item: slotProps }">{{ slotProps.folderPath }}</template>
       <template #members="{ item: slotProps }">{{ slotProps.members.join(', ') }}</template>
       <template #action="{ item: slotProps }">

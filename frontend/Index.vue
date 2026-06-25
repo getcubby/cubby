@@ -106,16 +106,9 @@ const mainMenu = [{
 }];
 
 const newMenu = [{
-  label: 'New file',
-  icon: 'fa-solid fa-file-circle-plus',
-  action: onNewFile
+  separator: true,
+  label: 'Upload',
 }, {
-  label: 'New folder',
-  icon: 'fa-solid fa-folder-plus',
-  action: onNewFolder
-}];
-
-const uploadMenu = [{
   label: 'Upload file',
   icon: 'fa-solid fa-file-arrow-up',
   action: onUploadFile
@@ -123,6 +116,17 @@ const uploadMenu = [{
   label: 'Upload folder',
   icon: 'fa-regular fa-folder-open',
   action: onUploadFolder
+}, {
+  separator: true,
+  label: 'Create new',
+}, {
+  label: 'New file',
+  icon: 'fa-solid fa-file-circle-plus',
+  action: onNewFile
+}, {
+  label: 'New folder',
+  icon: 'fa-solid fa-folder-plus',
+  action: onNewFolder
 }];
 
 const isReadonly = computed(() => {
@@ -938,8 +942,7 @@ onBeforeUnmount(() => {
                   <Button icon="fa-solid fa-download" outline tool @click="downloadHandler(selectedEntries || null)"/>
                 </div>
 
-                <Button icon="fa-solid fa-arrow-up-from-bracket" :menu="uploadMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">Upload</span></Button>
-                <Button icon="fa-solid fa-plus" label="New" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
+                <Button icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
 
                 <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Log in</Button>
               </div>

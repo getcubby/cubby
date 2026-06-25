@@ -22,6 +22,7 @@ const props = defineProps({
 const emit = defineEmits(['item-activated', 'login']);
 
 const buckets = ref([]);
+const ready = ref(false);
 
 onMounted(async () => {
   const entries = await MainModel.recent();
@@ -49,6 +50,8 @@ onMounted(async () => {
   if (lastWeek.length) buckets.value.push({ label: 'Last week', entries: lastWeek });
   if (lastMonth.length) buckets.value.push({ label: 'Last month', entries: lastMonth });
   if (older.length) buckets.value.push({ label: 'Older', entries: older });
+
+  ready.value = true;
 });
 
 function onActivateItem(entry) {
@@ -82,7 +85,7 @@ function iconError(event, entry) {
 
     <h1>Recent files</h1>
 
-    <div class="buckets">
+    <div class="buckets" v-if="ready">
       <EmptyState
         v-if="buckets.length === 0"
         icon="fa-regular fa-clock"

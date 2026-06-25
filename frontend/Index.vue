@@ -125,26 +125,6 @@ const uploadMenu = [{
   action: onUploadFolder
 }];
 
-const newAndUploadMenu = [{
-  label: 'Upload file',
-  icon: 'fa-solid fa-file-arrow-up',
-  action: onUploadFile
-}, {
-  label: 'Upload folder',
-  icon: 'fa-regular fa-folder-open',
-  action: onUploadFolder
-}, {
-  separator:true
-}, {
-  label: 'New file',
-  icon: 'fa-solid fa-file-circle-plus',
-  action: onNewFile
-}, {
-  label: 'New folder',
-  icon: 'fa-solid fa-folder-plus',
-  action: onNewFolder
-}];
-
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
   if (currentResourcePath.value === '/groupfolders/') return true;
@@ -970,7 +950,6 @@ onBeforeUnmount(() => {
               <div class="breadcrumb-bar">
                 <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
                 <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
-                <Button plain tool secondary icon="fa-solid fa-plus" :menu="newAndUploadMenu" v-show="!isReadonly" />
                 <div style="flex-grow: 1"></div>
                 <Button plain tool :icon="viewMode === 'list' ? 'fa-solid fa-grip' : 'fa-solid fa-list'" @click="toggleViewMode" style="margin-right: 40px"/>
               </div>

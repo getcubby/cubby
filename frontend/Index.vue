@@ -910,7 +910,12 @@ onBeforeUnmount(() => {
     <LoginView v-if="view === VIEWS.LOGIN"/>
     <div class="container" v-else>
       <SideBar class="side-bar" ref="sideBar">
-        <div style="margin-top: 30px; margin-bottom: 50px; text-align: center; font-size: 28px; font-weight: bold;"><img src="/logo-transparent.svg" height="70" width="70"/><br/>Cubby</div>
+        <div class="sidebar-title">
+          <a href="#files/home/" class="sidebar-title-link" @click="onCloseSidebar">
+            <img src="/logo-transparent.svg" alt="" class="sidebar-icon" />
+            <span class="sidebar-app-name">Cubby</span>
+          </a>
+        </div>
 
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
@@ -1158,6 +1163,37 @@ pre {
   overflow: hidden;
   white-space: nowrap;
   min-height: 38px;
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.sidebar-title-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px;
+  text-decoration: none;
+  color: white;
+  cursor: pointer;
+}
+
+.sidebar-title-link:hover {
+  opacity: 0.9;
+}
+
+.sidebar-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.sidebar-app-name {
+  font-size: 24px;
 }
 
 .side-bar-entry.active {

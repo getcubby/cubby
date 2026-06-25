@@ -174,7 +174,8 @@ async function onRemoveGroupFolder(groupFolder) {
     message: `Remove group folder "${groupFolder.name}"?`,
     confirmStyle: 'danger',
     confirmLabel: 'Remove',
-    rejectLabel: 'Cancel'
+    rejectLabel: 'Cancel',
+    rejectStyle: 'secondary'
   });
 
   if (!yes) return;
@@ -244,6 +245,7 @@ onMounted(async () => {
       title="Add group folder"
       ref="addGroupFolderDialog"
       reject-label="Cancel"
+      reject-style="secondary"
       confirm-label="Add"
       :confirm-busy="groupFolderAdd.busy"
       :confirm-active="!!groupFolderAdd.name"
@@ -268,6 +270,7 @@ onMounted(async () => {
       :title="`Edit group folder ${groupFolderEdit.id}`"
       ref="editGroupFolderDialog"
       reject-label="Cancel"
+      reject-style="secondary"
       confirm-label="Save"
       :confirm-busy="groupFolderEdit.busy"
       :confirm-active="!!groupFolderEdit.name"

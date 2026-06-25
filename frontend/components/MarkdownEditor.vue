@@ -557,7 +557,8 @@ export default {
         value: src,
         confirmStyle: 'success',
         confirmLabel: 'Add',
-        rejectLabel: 'Close'
+        rejectLabel: 'Close',
+        rejectStyle: 'secondary'
       });
       if (!imageUrl) return;
 
@@ -657,7 +658,8 @@ export default {
           message: this.tr('filemanager.textEditorCloseDialog.title'),
           confirmStyle: 'danger',
           confirmLabel: 'Discard changes and close',
-          rejectLabel: 'Cancel'
+          rejectLabel: 'Cancel',
+          rejectStyle: 'secondary'
         });
 
         if (!yes) return;

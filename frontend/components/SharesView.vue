@@ -61,7 +61,8 @@ async function onDelete(share) {
     message: `Delete share "${share.file.fileName}"?`,
     confirmStyle: 'danger',
     confirmLabel: 'Delete',
-    rejectLabel: 'Cancel'
+    rejectLabel: 'Cancel',
+    rejectStyle: 'secondary'
   });
 
   if (!yes) return;

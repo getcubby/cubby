@@ -513,7 +513,8 @@ async function deleteHandler(items) {
     message: `Delete ${items.length} item${ items.length === 1 ? '' : 's' }?`,
     confirmStyle: 'danger',
     confirmLabel: 'Delete',
-    rejectLabel: 'Cancel'
+    rejectLabel: 'Cancel',
+    rejectStyle: 'secondary'
   });
 
   if (!confirmed) return;
@@ -1043,7 +1044,7 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- About Dialog -->
-  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close">
+  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Close" reject-style="secondary">
     <div>
       Cubby the painless file sharing solution!
       <br/>
@@ -1057,6 +1058,7 @@ onBeforeUnmount(() => {
     :title="newItemForm.mode === 'file' ? 'New filename' : 'New folder name'"
     ref="newItemDialog"
     reject-label="Close"
+    reject-style="secondary"
     confirm-label="Save"
     confirm-style="success"
     :confirm-busy="newItemForm.busy"

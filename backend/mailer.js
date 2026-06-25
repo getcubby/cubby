@@ -1,4 +1,5 @@
 import assert from 'assert';
+import constants from './constants.js';
 import debug from 'debug';
 import fs from 'fs';
 import handlebars from 'handlebars';
@@ -16,7 +17,7 @@ const debugLog = debug('cubby:mailer');
 const CAN_SEND_EMAIL = (process.env.MAIL_SMTP_SERVER && process.env.MAIL_SMTP_PORT && process.env.MAIL_FROM);
 if (CAN_SEND_EMAIL) {
     console.log(`Can send emails. Email notifications are sent out as ${process.env.MAIL_FROM}`);
-} else {
+} else if (!constants.TEST) {
     console.log(`
 No email configuration found. Set the following environment variables:
     MAIL_SMTP_SERVER
@@ -52,6 +53,8 @@ async function newShare(emailAddress, shareId) {
     const emailBodyHtml = emailTemplateHtml(emailTemplateData);
 
     if (!CAN_SEND_EMAIL) {
+        if (constants.TEST) return;
+
         console.log(`Would send email to ${emailAddress}:`);
         console.log('-----------------------------');
         console.log(`Subject: ${emailSubject}`);

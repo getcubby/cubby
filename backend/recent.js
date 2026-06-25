@@ -110,9 +110,15 @@ async function purge() {
     // TODO
 }
 
+function _resetCache() {
+    recentsCache = {};
+    fs.writeFileSync(constants.RECENTS_CACHE_PATH, JSON.stringify(recentsCache));
+}
+
 export default {
     add,
     remove,
     get,
     purge,
+    _resetCache
 };

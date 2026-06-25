@@ -15,7 +15,7 @@ const LOCAL_WEBDAV_PASSWORD = 'password';
 // Virtual root segment names (URL path segments and display names)
 const VIRTUAL_HOME = { segment: 'home', displayName: 'Home' };
 const VIRTUAL_SHARES = { segment: 'shares', displayName: 'Shared with you' };
-const VIRTUAL_GROUPFOLDERS = { segment: 'groupfolders', displayName: 'Groupfolders' };
+const VIRTUAL_GROUPFOLDERS = { segment: 'groupfolders', displayName: 'Group folders' };
 
 /**
  * Parse WebDAV path after /webdav/username/ into normalized segments (no leading/trailing slash).
@@ -201,7 +201,7 @@ async function handlePropfind(req, res, username, segments, pathInfo) {
     const responses = [];
 
     if (resource.virtualRoot) {
-        // Virtual root: Home, Shared with you, Groupfolders
+        // Virtual root: Home, Shared with you, Group folders
         const rootDisplayName = pathInfo.username || 'Files';
         responses.push(propfindResponse(baseHref, null, true, rootDisplayName, null, new Date(), null));
         if (depth >= 1) {

@@ -82,7 +82,7 @@ onMounted(async () => {
 
 <template>
   <div class="user-table-container">
-    <Dialog :title="`Edit User ${edit.user.username}`" ref="editDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onEditSubmit">
+    <Dialog :title="`Edit user ${edit.user.username}`" ref="editDialog" reject-label="Cancel" confirm-label="Save" confirm-style="success" @confirm="onEditSubmit">
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 

@@ -46,7 +46,7 @@ const VIEWS = {
 
 const beforeUnloadListener = (event) => {
   event.preventDefault();
-  return window.confirm('File operation still in progress. Really close?');
+  return window.confirm('File operation still in progress. Close anyway?');
 };
 
 const aboutDialog = useTemplateRef('aboutDialog');
@@ -90,7 +90,7 @@ const mainMenu = [{
   visible: () => profile.value.admin,
   action: () => window.location.href = '#settings'
 }, {
-  label: 'Shared by You',
+  label: 'Shared by you',
   icon: 'fa-solid fa-share-from-square',
   action: () => window.location.href = '#shares'
 }, {
@@ -100,47 +100,47 @@ const mainMenu = [{
 }, {
   separator:true
 }, {
-  label: 'Logout',
+  label: 'Log out',
   icon: 'fa-solid fa-right-from-bracket',
   action: onLogout
 }];
 
 const newMenu = [{
-  label: 'New File',
+  label: 'New file',
   icon: 'fa-solid fa-file-circle-plus',
   action: onNewFile
 }, {
-  label: 'New Folder',
+  label: 'New folder',
   icon: 'fa-solid fa-folder-plus',
   action: onNewFolder
 }];
 
 const uploadMenu = [{
-  label: 'Upload File',
+  label: 'Upload file',
   icon: 'fa-solid fa-file-arrow-up',
   action: onUploadFile
 }, {
-  label: 'Upload Folder',
+  label: 'Upload folder',
   icon: 'fa-regular fa-folder-open',
   action: onUploadFolder
 }];
 
 const newAndUploadMenu = [{
-  label: 'Upload File',
+  label: 'Upload file',
   icon: 'fa-solid fa-file-arrow-up',
   action: onUploadFile
 }, {
-  label: 'Upload Folder',
+  label: 'Upload folder',
   icon: 'fa-regular fa-folder-open',
   action: onUploadFolder
 }, {
   separator:true
 }, {
-  label: 'New File',
+  label: 'New file',
   icon: 'fa-solid fa-file-circle-plus',
   action: onNewFile
 }, {
-  label: 'New Folder',
+  label: 'New folder',
   icon: 'fa-solid fa-folder-plus',
   action: onNewFolder
 }];
@@ -510,9 +510,9 @@ async function deleteHandler(items) {
   if (!items || items.length === 0) return;
 
   const confirmed = await inputDialog.value.confirm({
-    message: `Really delete ${items.length} item${ items.length === 1 ? '' : 's' }?`,
+    message: `Delete ${items.length} item${ items.length === 1 ? '' : 's' }?`,
     confirmStyle: 'danger',
-    confirmLabel: 'Yes',
+    confirmLabel: 'Delete',
     rejectLabel: 'Cancel'
   });
 
@@ -927,11 +927,11 @@ onBeforeUnmount(() => {
       <SideBar class="side-bar" ref="sideBar">
         <div style="margin-top: 30px; margin-bottom: 50px; text-align: center; font-size: 28px; font-weight: bold;"><img src="/logo-transparent.svg" height="70" width="70"/><br/>Cubby</div>
 
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My Files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My files</a>
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent Files</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared With You</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group Folders</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared with you</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
 
@@ -1019,7 +1019,7 @@ onBeforeUnmount(() => {
                     <div v-show="!entries.length" class="no-entries-placeholder">
                       <div v-show="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)">Folder is empty</div>
                       <div v-show="activeResourceType === 'groupfolders' && !breadCrumbs.length">
-                        <span v-if="profile.admin"><Button href="#settings" icon="fa-solid fa-plus">Add Group Folder</Button></span>
+                        <span v-if="profile.admin"><Button href="#settings" icon="fa-solid fa-plus">Add group folder</Button></span>
                         <span v-else>Not part of any group folder yet</span>
                       </div>
                       <div v-show="activeResourceType === 'shares' && !breadCrumbs.length">Nothing shared with you yet</div>
@@ -1054,7 +1054,7 @@ onBeforeUnmount(() => {
   </Dialog>
 
   <Dialog
-    :title="newItemForm.mode === 'file' ? 'New Filename' : 'New Foldername'"
+    :title="newItemForm.mode === 'file' ? 'New filename' : 'New folder name'"
     ref="newItemDialog"
     reject-label="Close"
     confirm-label="Save"

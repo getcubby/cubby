@@ -33,8 +33,8 @@ onMounted(async () => {
 
   if (today.length) buckets.value.push({ label: 'Today', entries: today });
   if (yesterday.length) buckets.value.push({ label: 'Yesterday', entries: yesterday });
-  if (lastWeek.length) buckets.value.push({ label: 'Last Week', entries: lastWeek });
-  if (lastMonth.length) buckets.value.push({ label: 'Last Month', entries: lastMonth });
+  if (lastWeek.length) buckets.value.push({ label: 'Last week', entries: lastWeek });
+  if (lastMonth.length) buckets.value.push({ label: 'Last month', entries: lastMonth });
   if (older.length) buckets.value.push({ label: 'Older', entries: older });
 });
 
@@ -64,7 +64,7 @@ function iconError(event, entry) {
       </template>
     </TopBar>
 
-    <h1>Recent Files</h1>
+    <h1>Recent files</h1>
 
     <div class="buckets">
       <div class="bucket" v-for="bucket in buckets" :key="bucket.label">
@@ -74,7 +74,7 @@ function iconError(event, entry) {
           <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
             <img :src="entry.previewUrl" width="48" height="48" style="object-fit: cover;" @error="iconError($event, entry)"/>
             <span>{{ entry.fileName }}</span>
-            <Button small outline :href="entry.parentFolderUrl" @click.stop class="open-folder" v-if="entry.parentFolderUrl">Open Folder</Button>
+            <Button small outline :href="entry.parentFolderUrl" @click.stop class="open-folder" v-if="entry.parentFolderUrl">Open folder</Button>
           </div>
         </div>
       </div>

@@ -426,7 +426,7 @@ export default {
         action: () => this.editor?.chain().focus().toggleHeading({ level: 4 }).run()
       }, {
         slug: 'code',
-        label: 'Code Block',
+        label: 'Code block',
         action: () => this.editor?.chain().focus().toggleCodeBlock().run()
       }],
       outline: [], // Array of { level: number, text: string, pos: number }
@@ -453,21 +453,21 @@ export default {
       }, {
         separator: true
       }, {
-        label: 'Bullet List',
+        label: 'Bullet list',
         icon: 'fa-solid fa-list-ul',
         action: () => this.editor?.chain().focus().toggleBulletList().run()
       }, {
-        label: 'Ordered List',
+        label: 'Ordered list',
         icon: 'fa-solid fa-list-ol',
         action: () => this.editor?.chain().focus().toggleOrderedList().run()
       }, {
         separator: true
       }, {
-        label: 'Horizontal Rule',
+        label: 'Horizontal rule',
         icon: 'fa-solid fa-minus',
         action: () => this.editor?.chain().focus().setHorizontalRule().run()
       }, {
-        label: 'Add Image',
+        label: 'Add image',
         icon: 'fa-solid fa-image',
         action: () => this.onAddImage()
       }, {
@@ -535,7 +535,7 @@ export default {
       } else if (this.editor.isActive('heading', { level: 4 })) {
         this.activeBlockTypeLabel = 'Header 4';
       } else if (this.editor.isActive('codeBlock')) {
-        this.activeBlockTypeLabel = 'Code Block';
+        this.activeBlockTypeLabel = 'Code block';
       } else {
         this.activeBlockTypeLabel = 'Paragraph';
       }

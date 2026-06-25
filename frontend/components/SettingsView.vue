@@ -171,10 +171,10 @@ async function onEditGroupFolderSubmit() {
 
 async function onRemoveGroupFolder(groupFolder) {
   const yes = await settingsInputDialog.value.confirm({
-    message: `Really remove group folder ${groupFolder.name}?`,
+    message: `Remove group folder "${groupFolder.name}"?`,
     confirmStyle: 'danger',
-    confirmLabel: 'Yes',
-    rejectLabel: 'No'
+    confirmLabel: 'Remove',
+    rejectLabel: 'Cancel'
   });
 
   if (!yes) return;
@@ -241,7 +241,7 @@ onMounted(async () => {
     <InputDialog ref="settingsInputDialog" />
 
     <Dialog
-      title="Add Group Folder"
+      title="Add group folder"
       ref="addGroupFolderDialog"
       reject-label="Cancel"
       confirm-label="Add"
@@ -255,7 +255,7 @@ onMounted(async () => {
       <TextInput v-model="groupFolderAdd.name" style="width: 100%;" @change="groupFolderAdd.slug = slugify(groupFolderAdd.name)"/>
       <label>Slug (cannot be changed later)</label>
       <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
-      <label v-show="false">Disk Storage Path</label>
+      <label v-show="false">Disk storage path</label>
       <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
       <label>Members</label>
       <div style="display: flex; gap: 6px">
@@ -265,7 +265,7 @@ onMounted(async () => {
     </Dialog>
 
     <Dialog
-      :title="`Edit Group Folder ${groupFolderEdit.id}`"
+      :title="`Edit group folder ${groupFolderEdit.id}`"
       ref="editGroupFolderDialog"
       reject-label="Cancel"
       confirm-label="Save"
@@ -286,8 +286,8 @@ onMounted(async () => {
 
     <h1>Settings</h1>
 
-    <h2>Group Folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
-    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No Group Folders yet">
+    <h2>Group folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
+    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No group folders yet">
       <template #folderPath="{ item:slotProps }">{{ slotProps.folderPath }} </template>
       <template #members="{ item:slotProps }">{{ slotProps.members.join(', ') }} </template>
       <template #action="{ item:slotProps }">
@@ -298,7 +298,7 @@ onMounted(async () => {
       </template>
     </TableView>
 
-    <h2>Office Integration</h2>
+    <h2>Office integration</h2>
     <p>
       Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>.
       Currently this is tested with Collabora and OnlyOffice installed on Cloudron.

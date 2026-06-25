@@ -9,10 +9,10 @@ for team collaboration—from real-time document editing to rich media viewing i
 
 ### Features
 
-* **Full-Text Search**: Look inside files to locate hidden information instantly by keyword, not just by title.
-* **Group Folders**: Secure, centralized folder spaces shared with designated groups of people.
-* **Seamless Collaboration**: Edit text files simultaneously with your team using the built-in Markdown editor.
-* **Office Integration**: Seamlessly connects with Collabora Online or OnlyOffice to handle spreadsheets and presentations.
-* **Built-in Viewers**: Preview PDFs, images, media, text, and source code directly inside the browser.
-* **Flexible Sharing**: Share files seamlessly with internal users, external guests, or collaborate out of independent group folders.
+* **Full-text search**: Look inside files to locate hidden information instantly by keyword, not just by title.
+* **Group folders**: Secure, centralized folder spaces shared with designated groups of people.
+* **Seamless collaboration**: Edit text files simultaneously with your team using the built-in Markdown editor.
+* **Office integration**: Seamlessly connects with Collabora Online or OnlyOffice to handle spreadsheets and presentations.
+* **Built-in viewers**: Preview PDFs, images, media, text, and source code directly inside the browser.
+* **Flexible sharing**: Share files seamlessly with internal users, external guests, or collaborate out of independent group folders.
 

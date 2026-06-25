@@ -279,7 +279,7 @@ async function get(req, res, next) {
             const entry = new Entry({
                 id: 'groupfolders',
                 fullFilePath: '/groupfolders',
-                fileName: 'Group Folder',
+                fileName: 'Group folders',
                 filePath: '/',
                 favorites: [],
                 isDirectory: true,

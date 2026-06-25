@@ -28,7 +28,7 @@ const tableColumns = {
     sort: true
   },
   createdAt: {
-    label: 'Created At',
+    label: 'Created at',
     sort: (a, b) => moment(a).isBefore(moment(b)) ? 1 : -1,
   },
   action: {
@@ -58,10 +58,10 @@ async function refresh() {
 
 async function onDelete(share) {
   const yes = await sharesInputDialog.value.confirm({
-    message: `Really delete share ${share.file.fileName}?`,
+    message: `Delete share "${share.file.fileName}"?`,
     confirmStyle: 'danger',
-    confirmLabel: 'Yes',
-    rejectLabel: 'No'
+    confirmLabel: 'Delete',
+    rejectLabel: 'Cancel'
   });
 
   if (!yes) return;
@@ -83,7 +83,7 @@ onMounted(refresh);
   <div class="shares">
     <InputDialog ref="sharesInputDialog" />
 
-    <h1>Shared by You</h1>
+    <h1>Shared by you</h1>
 
     <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target" placeholder="Nothing shared by you">
       <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
@@ -100,7 +100,7 @@ onMounted(refresh);
         <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
       </template>
     </TableView>
-    <div class="share-count">{{ tableModel.length }} Shares</div>
+    <div class="share-count">{{ tableModel.length }} shares</div>
   </div>
 </template>
 

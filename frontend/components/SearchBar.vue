@@ -124,16 +124,16 @@ function getDirectoryHref(entry) {
   return getFilesViewHashHref(entry, folderPath);
 }
 
-/** Sidebar-aligned label so "/" under My Files is distinct from "/" in a group folder. */
+/** Sidebar-aligned label so "/" under My files is distinct from "/" in a group folder. */
 function getResultLocationLabel(entry) {
   if (entry.share) {
     const rootName = (entry.share.filePath || '').replace(/^\/+|\/+$/g, '');
-    return rootName ? `Shared · ${rootName}` : 'Shared With You';
+    return rootName ? `Shared · ${rootName}` : 'Shared with you';
   }
   if (entry.group) {
     return entry.group.name || entry.group.id || 'Group folder';
   }
-  return 'My Files';
+  return 'My files';
 }
 
 function getResultFolderPath(entry, fileName) {
@@ -167,7 +167,7 @@ function getResultFolderPath(entry, fileName) {
             </div>
           </div>
           <div class="search-result-entry-actions">
-            <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onDismiss()">Open Folder</Button>
+            <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onDismiss()">Open folder</Button>
           </div>
         </a>
       </div>

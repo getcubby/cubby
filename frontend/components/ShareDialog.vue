@@ -126,7 +126,7 @@ defineExpose({
 <template>
   <Dialog ref="dialog" :title="'Sharing ' + entry.fileName" :show-x="true">
     <div>
-      <TabView :tabs="{ user: 'with a User', link: 'via Link' }" default-active="user">
+      <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
         <template #user>
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedWith" class="shared-link" :key="link.id">
@@ -153,7 +153,7 @@ defineExpose({
               <div>
                 <div>Created {{ prettyDate(link.createdAt) }}</div>
                 <small style="color: var(--pankow-color-text-secondary)">
-                  {{ link.readonly ? 'Read only' : 'Read & Write' }}
+                  {{ link.readonly ? 'Read only' : 'Read & write' }}
                   <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
                 </small>
               </div>
@@ -171,9 +171,9 @@ defineExpose({
               <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
-              <Checkbox id="expireShareLinkAt" label="Expire At" v-model="shareLink.expires" />
+              <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />
               <input type="date" v-model="shareLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expires"/>
-              <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and Copy Link</Button>
+              <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and copy link</Button>
             </div>
           </div>
         </template>

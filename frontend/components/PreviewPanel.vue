@@ -32,7 +32,7 @@ function onToggle() {
 
 <template>
   <div class="preview-container" :class="{ 'visible': visible }">
-    <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide Preview' : 'Show Preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+    <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide preview' : 'Show preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
 
     <div class="header" style="padding-bottom: 10px;">Details</div>
 
@@ -57,7 +57,7 @@ function onToggle() {
         <span>{{ prettyFileSize(combinedSize) }}</span>
       </div>
       <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
-        <p>Shared With</p>
+        <p>Shared with</p>
         <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
       </div>
     </div>

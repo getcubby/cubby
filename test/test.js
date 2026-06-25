@@ -13,7 +13,7 @@ describe('Application life cycle test', function () {
     async function login() {
         await goto(`https://${app.fqdn}`, /Log ?in with/i);
         await click(/Log ?in with/i);
-        await loginOIDC('My Files');
+        await loginOIDC('My files');
     }
 
     async function logout() {

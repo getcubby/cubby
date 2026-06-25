@@ -4,7 +4,7 @@ set -eu
 
 readonly source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly DATA_DIR="${HOME}/.cubby_test"
-readonly DEFAULT_TESTS="./backend/test/*-test.js"
+readonly DEFAULT_TESTS="./backend/test/*-test.js ./backend/routes/test/*-test.js"
 
 export_test_env() {
     export CUBBY_ENV=test
@@ -18,6 +18,9 @@ export_test_env() {
     export SEARCH_INDEX_PATH="${DATA_DIR}/recoll"
     export CONFIG_FILE_PATH="${DATA_DIR}/config.json"
     export SESSION_SECRET_FILE_PATH="${DATA_DIR}/.secret"
+
+    export PORT="3456"
+    export APP_ORIGIN="http://127.0.0.1:${PORT}"
 
     export CONTAINER_NAME="postgres-server-cubby-test"
     export POSTGRESQL_USERNAME="postgres"

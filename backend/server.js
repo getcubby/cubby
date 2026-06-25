@@ -1,4 +1,5 @@
 import collab from './routes/collab.js';
+import constants from './constants.js';
 import cors from './cors.js';
 import favorites from './routes/favorites.js';
 import files from './routes/files.js';
@@ -24,16 +25,21 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 
-async function init() {
-    const oidcConfig = process.env.CLOUDRON ? {} : {
+let gHttpServer = null;
+let gScimInterval = null;
+
+async function start() {
+    if (gHttpServer) return;
+    const oidcConfig = constants.TEST ? null : (process.env.CLOUDRON ? {} : {
         issuer: process.env.OIDC_ISSUER_BASE_URL,
         clientId: process.env.OIDC_CLIENT_ID,
         clientSecret: process.env.OIDC_CLIENT_SECRET,
         callbackUrl: `${APP_ORIGIN}/auth/callback`
-    };
+    });
 
     const { app, router, express } = await tegel.createExpressApp({
             oidcConfig,
+            testMode: constants.TEST || null,
             skipLastMile: true,
             jsonBodySizeLimit: '100mb'
         });
@@ -119,6 +125,7 @@ async function init() {
 
         const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, mainApp);
         const wsServer = new WebSocketServer({ noServer: true });
+        gHttpServer = httpServer;
 
         // When Windows (or other clients) send PUT with Expect: 100-continue, we must send
         // 100 Continue before they send the body, otherwise the body never arrives (0-byte uploads).
@@ -141,26 +148,45 @@ async function init() {
             });
         });
 
+    const host = constants.TEST ? '127.0.0.1' : undefined;
+
     await new Promise((resolve, reject) => {
-        httpServer.listen(3000, function () {
-            const host = httpServer.address().address;
-            const port = httpServer.address().port;
-            console.log(`Listening on http://${host}:${port}`);
+        gHttpServer.listen(PORT, host, function () {
+            if (!constants.TEST) {
+                const address = gHttpServer.address();
+                console.log(`Listening on http://${address.address}:${address.port}`);
+            }
             resolve();
         });
-        httpServer.once('error', reject);
+        gHttpServer.once('error', reject);
     });
 
-    if (isScimEnabled()) {
+    if (!constants.TEST && isScimEnabled()) {
         runScimSyncTick().catch((err) => {
             console.error('Initial SCIM sync failed:', err);
         });
-        setInterval(() => {
+        gScimInterval = setInterval(() => {
             runScimSyncTick();
         }, SYNC_INTERVAL_MS);
     }
 }
 
+async function stop() {
+    if (gScimInterval) {
+        clearInterval(gScimInterval);
+        gScimInterval = null;
+    }
+
+    if (!gHttpServer) return;
+
+    await new Promise((resolve, reject) => {
+        gHttpServer.close((error) => error ? reject(error) : resolve());
+    });
+    gHttpServer = null;
+}
+
 export default {
-    init
+    start,
+    stop,
+    init: start
 };

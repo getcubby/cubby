@@ -1,23 +1,75 @@
 # Welcome to Cubby
 
-Only a placeholder document with a bit of info. And not so very useful examples.
+Cubby is your personal file space. Store documents, share them with colleagues, and open many file types directly in the browser — no extra apps required.
 
-## Collaborate text editor
+The files in this folder are samples to help you explore. Delete them whenever you like.
 
-Just share this file with other users to start working on the same document
+## Your home
 
-* Markdown
+**My files** is where your personal storage lives. From here you can:
 
-* Collaboration
+- Upload files or entire folders, or drag and drop onto the file list
+- Create new files and folders with the **+** button
+- Copy, move, rename, and delete items using the context menu or keyboard shortcuts
+- Switch between list and grid view
+- Select multiple files and download them at once
 
-* Sharing
+Use the preview panel on the right to see details about the selected file or folder.
 
-Images can be linked from any public resources and links or directly embedded
+## Built-in viewers
 
-Link: ![Image alt text](https://cloudron.io/img/logo128.png "Image title") Data URI: ![](data:image/png;base64,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)
+Open a file to view or edit it in place:
+
+| Sample file | What to try |
+|-------------|-------------|
+| **Welcome.md** (this file) | Markdown editor with formatting toolbar and document outline |
+| **Documents/Sample document.pdf** | PDF viewer — try searching for *slartibartfast* |
+| **Documents/sample-document.txt** | Text editor — edit and save plain text files |
+| **Videos/Sample video.mp4** | Video playback — rotating Earth visualization |
+| **Pictures/** | Image viewer — open any photo, then use **Previous** / **Next** to browse all images in that folder without closing the viewer |
+
+Cubby also opens plain text and source code files in a built-in editor, where you can edit and save changes directly.
+
+When you open an image, the viewer loads every other image in the same folder so you can step through them like a gallery.
+
+If your administrator has connected an office server, Word, Excel, PowerPoint, and other office documents open in a new tab for editing.
+
+## Share files and folders
+
+Right-click any file or folder (or use the share action) to:
+
+- Share with another Cubby user — choose read-only or full edit access
+- Create a **public link** that anyone can open, optionally with an expiry date
+
+Shared items appear under **Shared with you** in the sidebar. Manage everything you have shared from **Shared by you** in the profile menu.
+
+## Collaborate on Markdown
+
+This file is a Markdown document. To try real-time collaboration:
+
+1. Share **Welcome.md** with another Cubby user (give them edit access)
+2. Both of you open the file — changes sync live, with each person's cursor visible
+
+The editor supports headings, lists, bold, italic, code blocks, images, and more. Use the outline panel on the left to jump between sections.
+
+## Find files quickly
+
+- **Search** — use the search bar at the top to find files by name or content across your storage. Try *slartibartfast* or *breeblebrox* to see full-text search find words inside the sample PDF
+- **Recent files** — revisit files you opened recently
+- **Favorites** — star any file or folder to pin it in the Favorites view
+
+## Group folders
+
+If your team uses **Group folders**, you will see shared team spaces in the sidebar. Everyone in the group can access the same files — useful for project documents and shared assets.
+
+## Archives
+
+Right-click a `.zip` or other supported archive and choose **Extract** to unpack it into the current folder.
+
+## Connect from your desktop
+
+Cubby supports **WebDAV**, so you can mount your files as a network drive in your operating system's file manager. Ask your administrator for the WebDAV URL and your login details.
 
 ---
 
-## Developed by Cloudron
-
-[Cloudron](https://www.cloudron.io) is a complete solution for running apps on your own server.
+*Sample files: `Documents/`, `Pictures/`, and `Videos/`. Feel free to remove them once you are familiar with Cubby. The sample video is NASA's [Rotating Blue Marble](https://svs.gsfc.nasa.gov/3639/) visualization (public domain).*

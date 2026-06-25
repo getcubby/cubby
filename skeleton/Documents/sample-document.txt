@@ -1,0 +1,35 @@
+Getting started with Cubby
+
+This sample document demonstrates the built-in PDF viewer. Open the PDF
+version from My files without leaving the browser, or edit this text file
+in the built-in text editor.
+
+Try search
+
+Cubby can find text inside documents, not just file names. Search your
+home for any of these sample words:
+
+  slartibartfast
+  breeblebrox
+  orbital-tea
+
+Only the sample PDF contains them — so if search finds a hit, you know
+full-text search is working.
+
+If you are reading this in Cubby, congratulations: you have successfully
+avoided the paperwork. For a proper search test, try slartibartfast — a
+word that exists nowhere else in your files except this sentence.
+
+Share documents
+
+Right-click any file or folder to share with another Cubby user or create
+a public link.
+
+Sample files
+
+  Welcome.md     Markdown editor and real-time collaboration
+  Documents/     PDF and text documents like these
+  Pictures/      Image viewer with thumbnail previews
+  Videos/        Video playback in the browser
+
+You can delete these demo files whenever you like.

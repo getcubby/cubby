@@ -48,7 +48,6 @@ const beforeUnloadListener = (event) => {
   return window.confirm('File operation still in progress. Close anyway?');
 };
 
-const aboutDialog = useTemplateRef('aboutDialog');
 const shareDialog = useTemplateRef('shareDialog');
 
 const ready = ref(false);
@@ -92,10 +91,6 @@ const profileMenu = [{
   label: 'Shared by you',
   icon: 'fa-solid fa-share-from-square',
   action: () => window.location.href = '#shares'
-}, {
-  label: 'About',
-  icon: 'fa-solid fa-circle-info',
-  action: () => aboutDialog.value.open()
 }, {
   separator:true
 }, {
@@ -1024,17 +1019,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
-
-  <!-- About Dialog -->
-  <Dialog title="About Cubby" ref="aboutDialog" reject-label="Cancel" reject-style="secondary">
-    <div>
-      Cubby the painless file sharing solution!
-      <br/>
-      <br/>
-      Developed by <a href="https://cloudron.io" target="_blank">Cloudron</a>
-      <br/>
-    </div>
-  </Dialog>
 
   <Dialog
     :title="newItemForm.mode === 'file' ? 'New filename' : 'New folder name'"

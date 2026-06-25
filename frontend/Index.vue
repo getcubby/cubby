@@ -1004,7 +1004,16 @@ onBeforeUnmount(() => {
                 </DirectoryView>
               </div>
             </div>
-            <PreviewPanel :parent-entry="entry" :selected-entries="selectedEntries"/>
+            <PreviewPanel
+              :parent-entry="entry"
+              :selected-entries="selectedEntries"
+              :show-download="currentResourcePath !== '/groupfolders/'"
+              :show-delete="!isReadonly"
+              :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
+              @download="downloadHandler"
+              @delete="deleteHandler"
+              @share="shareHandler"
+            />
           </div>
         </div>
 

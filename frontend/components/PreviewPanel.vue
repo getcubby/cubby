@@ -1,6 +1,7 @@
 <script setup>
 
 import { ref, computed } from 'vue';
+import { Button } from '@cloudron/pankow';
 import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize } from '@cloudron/pankow/utils';
 
@@ -13,7 +14,21 @@ const props = defineProps({
     type: Array,
     default: function () { return []; }
   },
+  showDownload: {
+    type: Boolean,
+    default: false,
+  },
+  showDelete: {
+    type: Boolean,
+    default: false,
+  },
+  showShare: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(['download', 'delete', 'share']);
 
 const visible = ref(localStorage.previewPanelVisible === 'true');
 const entry = computed(() =>{
@@ -23,6 +38,11 @@ const displayName = computed(() => entry.value.name || entry.value.fileName || '
 const displayPath = computed(() => entry.value.filePath || entry.value.resource?.path || '');
 const combinedSize = computed(() => {
   return props.selectedEntries.length ? props.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : props.parentEntry.size;
+});
+
+const showActions = computed(() => {
+  if (props.selectedEntries.length === 0) return false;
+  return props.showDownload || props.showDelete || (props.showShare && props.selectedEntries.length === 1);
 });
 
 function onToggle() {
@@ -42,6 +62,14 @@ function onToggle() {
       <div class="preview-icon-container">
         <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
+      </div>
+      <div class="detail" v-show="showActions">
+        <p>Actions</p>
+        <div class="detail-actions">
+          <Button v-if="showDownload" outline small icon="fa-solid fa-download" @click="emit('download', selectedEntries)">Download</Button>
+          <Button v-if="showDelete" outline small danger icon="fa-solid fa-trash" @click="emit('delete', selectedEntries)">Delete</Button>
+          <Button v-if="showShare && selectedEntries.length === 1" outline small icon="fa-solid fa-share-from-square" @click="emit('share', selectedEntries[0])">Share</Button>
+        </div>
       </div>
       <div class="detail" v-show="selectedEntries.length <= 1 && displayName">
         <p>Name</p>
@@ -132,6 +160,12 @@ function onToggle() {
 .detail-path {
     font-family: var(--font-family-monospace, monospace);
     font-size: 13px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .detail-shared-width {

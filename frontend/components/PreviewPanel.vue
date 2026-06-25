@@ -63,14 +63,6 @@ function onToggle() {
         <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
       </div>
-      <div class="detail" v-show="showActions">
-        <p>Actions</p>
-        <div class="detail-actions">
-          <Button v-if="showDownload" outline small icon="fa-solid fa-download" @click="emit('download', selectedEntries)">Download</Button>
-          <Button v-if="showDelete" outline small danger icon="fa-solid fa-trash" @click="emit('delete', selectedEntries)">Delete</Button>
-          <Button v-if="showShare && selectedEntries.length === 1" outline small icon="fa-solid fa-share-from-square" @click="emit('share', selectedEntries[0])">Share</Button>
-        </div>
-      </div>
       <div class="detail" v-show="selectedEntries.length <= 1 && displayName">
         <p>Name</p>
         <span class="detail-value">{{ displayName }}</span>
@@ -97,6 +89,14 @@ function onToggle() {
       <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
         <p>Shared with</p>
         <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
+      </div>
+      <div class="detail" v-show="showActions">
+        <p>Actions</p>
+        <div class="detail-actions">
+          <Button v-if="showDownload" outline icon="fa-solid fa-download" @click="emit('download', selectedEntries)">Download</Button>
+          <Button v-if="showShare && selectedEntries.length === 1" outline icon="fa-solid fa-share-from-square" @click="emit('share', selectedEntries[0])">Share</Button>
+          <Button v-if="showDelete" outline danger icon="fa-solid fa-trash" @click="emit('delete', selectedEntries)">Delete</Button>
+        </div>
       </div>
     </div>
   </div>

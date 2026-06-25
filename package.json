@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "./app.js",
+    "test": "./run-tests",
     "postinstall": "rm -rf node_modules/@y/y && ln -s ../yjs node_modules/@y/y"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "db-migrate": "^0.11.14",
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.4.3",
+    "pg": "^8.16.3",
     "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9",
     "isbinaryfile": "^6.0.0",
@@ -27,8 +29,11 @@
     "xpath": "0.0.34"
   },
   "devDependencies": {
+    "@cloudron/superagent": "^2.2.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.4.0",
-    "globals": "^17.6.0"
+    "globals": "^17.6.0",
+    "mocha": "^11.7.6",
+    "nock": "^14.0.15"
   }
 }

@@ -1,0 +1,82 @@
+#!/bin/bash
+
+set -eu
+
+readonly source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly DATA_DIR="${HOME}/.cubby_test"
+readonly DEFAULT_TESTS="./backend/test/*-test.js"
+
+export_test_env() {
+    export CUBBY_ENV=test
+    export CUBBY_TEST_DIR="${DATA_DIR}"
+
+    export USER_DATA_PATH="${DATA_DIR}/data"
+    export GROUPS_DATA_PATH="${DATA_DIR}/groups"
+    export THUMBNAIL_PATH="${DATA_DIR}/thumbnails"
+    export SESSION_PATH="${DATA_DIR}/sessions"
+    export RECENTS_CACHE_PATH="${DATA_DIR}/recents.json"
+    export CONFIG_FILE_PATH="${DATA_DIR}/config.json"
+    export SESSION_SECRET_FILE_PATH="${DATA_DIR}/.secret"
+
+    export CONTAINER_NAME="postgres-server-cubby-test"
+    export POSTGRESQL_USERNAME="postgres"
+    export POSTGRESQL_PASSWORD="password"
+    export POSTGRESQL_DATABASE="cubby_test"
+    export POSTGRESQL_PORT="5433"
+    export POSTGRESQL_HOST="127.0.0.1"
+}
+
+# fast path: if explicit tests are provided, run them directly and skip setup.
+if [[ $# -gt 0 ]]; then
+    export_test_env
+    cd "${source_dir}"
+    CUBBY_ENV=test ./node_modules/.bin/mocha --bail --no-timeouts --exit -R spec "$@"
+    exit $?
+fi
+
+cd "${source_dir}"
+export_test_env
+
+echo "=> Prepare test data directory at ${DATA_DIR}"
+rm -rf "${DATA_DIR}"
+mkdir -p "${USER_DATA_PATH}" "${GROUPS_DATA_PATH}" "${THUMBNAIL_PATH}" "${SESSION_PATH}"
+
+if [[ -z ${FAST+x} ]]; then
+    echo "=> Remove existing postgres test container if present"
+    docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+else
+    echo "==> WARNING!! Skipping postgres container cleanup (FAST=1). Database might not be pristine!"
+fi
+
+OUT=$(docker inspect "${CONTAINER_NAME}" 2>/dev/null || true)
+if [[ "${OUT}" = "[]" || -z "${OUT}" ]]; then
+    echo "=> Starting ${CONTAINER_NAME} (port ${POSTGRESQL_PORT} published to host)..."
+    docker run --name "${CONTAINER_NAME}" \
+        -e POSTGRES_PASSWORD="${POSTGRESQL_PASSWORD}" \
+        -p "${POSTGRESQL_PORT}:5432" \
+        -d postgres:12
+else
+    echo "=> ${CONTAINER_NAME} already running"
+    docker restart "${CONTAINER_NAME}" >/dev/null
+fi
+
+export PGPASSWORD="${POSTGRESQL_PASSWORD}"
+echo "=> Waiting for postgres server to be ready..."
+while ! docker exec "${CONTAINER_NAME}" psql -U "${POSTGRESQL_USERNAME}" -c "SELECT 1" >/dev/null 2>&1; do
+    sleep 1
+done
+
+echo "=> Ensure database"
+docker exec --env PGPASSWORD="${POSTGRESQL_PASSWORD}" "${CONTAINER_NAME}" \
+    psql -U "${POSTGRESQL_USERNAME}" -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRESQL_DATABASE}'" | grep -q 1 || \
+    docker exec --env PGPASSWORD="${POSTGRESQL_PASSWORD}" "${CONTAINER_NAME}" \
+        psql -U "${POSTGRESQL_USERNAME}" -c "CREATE DATABASE ${POSTGRESQL_DATABASE}"
+
+echo "=> Run database migrations"
+DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DATABASE}" \
+    node ./node_modules/.bin/db-migrate up
+
+TESTS=${DEFAULT_TESTS}
+
+echo "=> Run tests with mocha"
+CUBBY_ENV=test ./node_modules/.bin/mocha --bail --no-timeouts --exit -R spec ${TESTS}

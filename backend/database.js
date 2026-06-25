@@ -2,6 +2,7 @@ import assert from 'assert';
 import MainError from './mainerror.js';
 import debug from 'debug';
 import pg from 'pg';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:database');
 
@@ -65,8 +66,28 @@ async function transaction(queries) {
     }
 }
 
+async function uninitialize() {
+    if (!gConnectionPool) return;
+
+    await safe(gConnectionPool.end());
+    gConnectionPool = null;
+    debugLog('pool closed');
+}
+
+async function clear() {
+    const result = await query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'migrations'`);
+    if (result.rows.length === 0) return;
+
+    const names = result.rows.map((row) => `"${row.tablename}"`).join(', ');
+    await query(`TRUNCATE ${names} RESTART IDENTITY CASCADE`);
+}
+
+const _clear = clear;
+
 export default {
     init,
+    uninitialize,
     query,
-    transaction
+    transaction,
+    _clear
 };

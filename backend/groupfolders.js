@@ -54,8 +54,10 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
     fs.mkdirSync(folderPath, { recursive: true });
 
     // kick off indexer in background
-    for (const username of members) {
-        recoll.indexByUsername(username);
+    if (!constants.TEST) {
+        for (const username of members) {
+            recoll.indexByUsername(username);
+        }
     }
 }
 

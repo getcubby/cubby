@@ -28,7 +28,7 @@ async function databaseSetup() {
     await database._clear();
     recent._resetCache();
 
-    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH ]) {
+    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH, process.env.SEARCH_INDEX_PATH ]) {
         if (!dir || !fs.existsSync(dir)) continue;
         for (const entry of fs.readdirSync(dir)) {
             fs.rmSync(`${dir}/${entry}`, { recursive: true, force: true });
@@ -59,7 +59,7 @@ async function cleanup() {
     nock.cleanAll();
     await database.uninitialize();
 
-    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH ]) {
+    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH, process.env.SEARCH_INDEX_PATH ]) {
         if (!dir || !fs.existsSync(dir)) continue;
         for (const entry of fs.readdirSync(dir)) {
             fs.rmSync(`${dir}/${entry}`, { recursive: true, force: true });

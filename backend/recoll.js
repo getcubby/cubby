@@ -11,6 +11,8 @@ import users from './users.js';
 const debugLog = debug('cubby:search');
 
 async function index() {
+    if (constants.TEST) return;
+
     const userList = await users.list();
     for (const user of userList) await indexByUsername(user.username);
 }
@@ -34,6 +36,8 @@ async function index() {
 const scheduled = {};
 function scheduleIndexByUsername(username) {
     assert.strictEqual(typeof username, 'string');
+
+    if (constants.TEST) return;
 
     debugLog(`scheduleIndexByUsername: ${username} ...`);
 
@@ -70,7 +74,8 @@ async function indexByUsername(username, schedule = false) {
         // we don't care about the huge stdout for now
         await exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] });
     } catch (e) {
-        console.error('Failed to create or update recoll index for user.', e);
+        debugLog('Failed to create or update recoll index for user.', e);
+        if (!constants.TEST) console.error('Failed to create or update recoll index for user.', e);
     }
 
     debugLog(`indexByUsername: ${username} done`);

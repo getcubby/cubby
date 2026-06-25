@@ -15,6 +15,7 @@ export_test_env() {
     export THUMBNAIL_PATH="${DATA_DIR}/thumbnails"
     export SESSION_PATH="${DATA_DIR}/sessions"
     export RECENTS_CACHE_PATH="${DATA_DIR}/recents.json"
+    export SEARCH_INDEX_PATH="${DATA_DIR}/recoll"
     export CONFIG_FILE_PATH="${DATA_DIR}/config.json"
     export SESSION_SECRET_FILE_PATH="${DATA_DIR}/.secret"
 
@@ -39,7 +40,7 @@ export_test_env
 
 echo "=> Prepare test data directory at ${DATA_DIR}"
 rm -rf "${DATA_DIR}"
-mkdir -p "${USER_DATA_PATH}" "${GROUPS_DATA_PATH}" "${THUMBNAIL_PATH}" "${SESSION_PATH}"
+mkdir -p "${USER_DATA_PATH}" "${GROUPS_DATA_PATH}" "${THUMBNAIL_PATH}" "${SESSION_PATH}" "${SEARCH_INDEX_PATH}"
 
 if [[ -z ${FAST+x} ]]; then
     echo "=> Remove existing postgres test container if present"

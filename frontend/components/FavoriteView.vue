@@ -66,8 +66,6 @@ onMounted(refresh);
       </template>
     </TopBar>
 
-    <h1>Favorites</h1>
-
     <div class="favorite-body">
       <div v-if="favorites.length" class="favorite-container">
         <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
@@ -97,12 +95,6 @@ onMounted(refresh);
   flex-direction: column;
   overflow: hidden;
   height: 100%;
-}
-
-h1 {
-  font-size: 20px;
-  font-weight: normal;
-  padding: 0 20px;
 }
 
 .favorite-body {

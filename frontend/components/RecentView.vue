@@ -83,8 +83,6 @@ function iconError(event, entry) {
       </template>
     </TopBar>
 
-    <h1>Recent files</h1>
-
     <div class="buckets" v-if="ready">
       <EmptyState
         v-if="buckets.length === 0"
@@ -115,10 +113,16 @@ function iconError(event, entry) {
   overflow: hidden;
 }
 
-h1 {
-  font-size: 20px;
-  font-weight: normal;
+.buckets {
+  width: 100%;
   padding: 0 20px;
+  flex-grow: 1;
+  overflow: auto;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .bucket {
@@ -135,20 +139,6 @@ h1 {
   width: 100%;
   margin-bottom: 10px;
   background: linear-gradient(90deg, var(--pankow-color-primary) 0%, rgb(0, 120, 241) 60%, transparent 80%);
-}
-
-.buckets {
-  padding: 0 20px;
-  flex-grow: 1;
-  overflow: auto;
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.buckets:has(.bucket) {
-  justify-content: flex-start;
 }
 
 .grid {

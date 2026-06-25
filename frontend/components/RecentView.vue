@@ -4,9 +4,21 @@ import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
 import SearchBar from './SearchBar.vue';
+import ProfileMenuButton from './ProfileMenuButton.vue';
 import { Button, TopBar } from '@cloudron/pankow';
 
-const emit = defineEmits(['item-activated']);
+const props = defineProps({
+  profile: {
+    type: Object,
+    default: () => ({}),
+  },
+  profileMenu: {
+    type: Array,
+    default: () => [],
+  },
+});
+
+const emit = defineEmits(['item-activated', 'login']);
 
 const buckets = ref([]);
 
@@ -61,6 +73,9 @@ function iconError(event, entry) {
     <TopBar :gap="false" :left-grow="true">
       <template #left>
         <SearchBar @item-activated="onActivateItem"/>
+      </template>
+      <template #right>
+        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
       </template>
     </TopBar>
 

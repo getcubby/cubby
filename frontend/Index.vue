@@ -8,7 +8,6 @@ import {
   Dialog,
   DirectoryView,
   FileUploader,
-  Menu,
   Notification,
   SideBar,
   TextInput,
@@ -28,6 +27,7 @@ import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
 import ShareDialog from './components/ShareDialog.vue';
+import ProfileMenuButton from './components/ProfileMenuButton.vue';
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
@@ -78,7 +78,7 @@ function toggleViewMode() {
   localStorage.viewMode = viewMode.value;
 }
 
-const mainMenu = [{
+const profileMenu = [{
   label: 'Users',
   icon: 'fa-solid fa-users',
   visible: () => profile.value.admin,
@@ -151,11 +151,6 @@ async function onToggleFavorite(entry) {
     if (error?.cause?.status === 401 || error?.status === 401) onInvalidSession();
     else console.error('Failed to toggle favorite', error);
   }
-}
-
-const mainMenuElement = useTemplateRef('mainMenuElement');
-function onMainMenu(event) {
-  mainMenuElement.value.open(event, event.target);
 }
 
 async function uploadJobPreFlightCheckHandler(job) {
@@ -933,28 +928,24 @@ onBeforeUnmount(() => {
         <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
-
-        <Menu ref="mainMenuElement" :model="mainMenu"></Menu>
-        <div class="side-bar-entry side-bar-entry-button" id="profileMenuDropdown" v-show="profile.username" @click="onMainMenu($event)" style="text-align: center; padding-left: 10px;">{{ profile.displayName }}</div>
       </SideBar>
       <div class="content">
-        <SharesView v-if="view === VIEWS.SHARES" />
-        <UsersView v-else-if="view === VIEWS.USERS" :profile="profile" />
-        <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" @groupfolders-changed="onGroupFoldersChanged()"/>
-        <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
-        <FavoriteView v-else-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
+        <SharesView v-if="view === VIEWS.SHARES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
+        <UsersView v-else-if="view === VIEWS.USERS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
+        <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @groupfolders-changed="onGroupFoldersChanged()"/>
+        <RecentView v-else-if="view === VIEWS.RECENT" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
+        <FavoriteView v-else-if="view === VIEWS.FAVORITES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
         <div v-else class="container" style="flex-direction: column; overflow: hidden;">
           <TopBar :gap="false" :left-grow="true">
             <template #left>
-              <SearchBar />
+              <div class="topbar-left-cluster">
+                <Button icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
+                <SearchBar />
+              </div>
             </template>
 
             <template #right>
-              <div class="topbar-actions">
-                <Button icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
-
-                <Button v-show="!profile.username" class="profile-dropdown" icon="fa-solid fa-arrow-right-to-bracket" secondary @click="onLogin">Log in</Button>
-              </div>
+              <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="onLogin" />
             </template>
           </TopBar>
           <div class="container" style="overflow: hidden;">
@@ -1153,15 +1144,12 @@ hr {
   left: 0;
 }
 
-.topbar-actions {
+.topbar-left-cluster {
   display: flex;
-  gap: 6px;
-}
-
-@media only screen and (min-width: 767px) {
-  .profile-dropdown {
-    margin-left: 50px;
-  }
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-grow: 1;
 }
 
 pre {
@@ -1200,15 +1188,6 @@ pre {
 
 .side-bar-entry > i {
   padding-right: 10px;
-}
-
-.side-bar-entry-button {
-  background-color: rgba(255,255,255,0.2);
-}
-
-.side-bar-entry-button:hover {
-  background-color: rgba(255,255,255,0.7);
-  color: #333;
 }
 
 .content {

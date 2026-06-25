@@ -2,7 +2,8 @@
 
 import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
-import { Button, Icon, InputDialog, TableView } from '@cloudron/pankow';
+import ProfileMenuButton from './ProfileMenuButton.vue';
+import { Button, Icon, InputDialog, TableView, TopBar } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
 
@@ -10,8 +11,14 @@ const props = defineProps({
   profile: {
     type: Object,
     default: function () { return {}; }
-  }
+  },
+  profileMenu: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+defineEmits(['login']);
 
 const tableColumns = {
   icon: {
@@ -84,7 +91,14 @@ onMounted(refresh);
   <div class="shares">
     <InputDialog ref="sharesInputDialog" />
 
-    <h1>Shared by you</h1>
+    <TopBar :left-grow="true">
+      <template #right>
+        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="$emit('login')" />
+      </template>
+    </TopBar>
+
+    <div class="shares-body">
+      <h1>Shared by you</h1>
 
     <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target" placeholder="Nothing shared by you">
       <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
@@ -102,6 +116,7 @@ onMounted(refresh);
       </template>
     </TableView>
     <div class="share-count">{{ tableModel.length }} shares</div>
+    </div>
   </div>
 </template>
 
@@ -113,7 +128,16 @@ h1 {
 }
 
 .shares {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.shares-body {
   padding: 0 20px;
+  overflow: auto;
+  flex-grow: 1;
 }
 
 .share-count {

@@ -1,12 +1,23 @@
 <script setup>
 
 import { ref, onMounted } from 'vue';
-import moment from 'moment';
 import FavoriteModel from '../models/FavoriteModel.js';
 import SearchBar from './SearchBar.vue';
-import { Button, Icon, TopBar } from '@cloudron/pankow';
+import ProfileMenuButton from './ProfileMenuButton.vue';
+import { Icon, TopBar } from '@cloudron/pankow';
 
-const emit = defineEmits(['item-activated']);
+const props = defineProps({
+  profile: {
+    type: Object,
+    default: () => ({}),
+  },
+  profileMenu: {
+    type: Array,
+    default: () => [],
+  },
+});
+
+const emit = defineEmits(['item-activated', 'login']);
 
 const favorites = ref([]);
 
@@ -48,6 +59,9 @@ onMounted(refresh);
     <TopBar :gap="false" :left-grow="true">
       <template #left>
         <SearchBar @item-activated="onActivateItem"/>
+      </template>
+      <template #right>
+        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
       </template>
     </TopBar>
 

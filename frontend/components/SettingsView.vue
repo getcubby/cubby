@@ -1,7 +1,8 @@
 <script setup>
 
 import { ref, useTemplateRef, onMounted, inject } from 'vue';
-import { Button, Dialog, InputDialog, TableView, TextInput, InputGroup } from '@cloudron/pankow';
+import { Button, Dialog, InputDialog, TableView, TextInput, InputGroup, TopBar } from '@cloudron/pankow';
+import ProfileMenuButton from './ProfileMenuButton.vue';
 import MainModel from '../models/MainModel.js';
 import GroupFolderModel from '../models/GroupFolderModel.js';
 import slugify from '../slugify.js';
@@ -11,9 +12,13 @@ const props = defineProps({
     type: Object,
     default: function () { return {}; }
   },
+  profileMenu: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['groupfolders-changed']);
+const emit = defineEmits(['groupfolders-changed', 'login']);
 
 const refreshConfig = inject('refreshConfig');
 
@@ -287,6 +292,13 @@ onMounted(async () => {
       </div>
     </Dialog>
 
+    <TopBar :left-grow="true">
+      <template #right>
+        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
+      </template>
+    </TopBar>
+
+    <div class="settings-body">
     <h1>Settings</h1>
 
     <h2>Group folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
@@ -315,13 +327,23 @@ onMounted(async () => {
       <small v-if="office.error" class="has-error"><i class="fa-solid fa-xmark"></i> {{ office.error }}</small>
       <small v-else-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</small>
     </form>
+    </div>
   </div>
 </template>
 
 <style scoped>
 
 .settings-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.settings-body {
   padding: 0 20px;
+  overflow: auto;
+  flex-grow: 1;
 }
 
 h1 {

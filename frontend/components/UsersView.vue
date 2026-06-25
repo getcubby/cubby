@@ -1,7 +1,8 @@
 <script setup>
 
 import { ref, computed, onMounted, useTemplateRef } from 'vue';
-import { Button, Checkbox, Dialog, TableView, TextInput } from '@cloudron/pankow';
+import { Button, Checkbox, Dialog, TableView, TextInput, TopBar } from '@cloudron/pankow';
+import ProfileMenuButton from './ProfileMenuButton.vue';
 import MainModel from '../models/MainModel.js';
 
 const props = defineProps({
@@ -9,7 +10,13 @@ const props = defineProps({
     type: Object,
     default: function () { return {}; }
   },
+  profileMenu: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+defineEmits(['login']);
 
 const tableColumns = {
   username: {
@@ -86,6 +93,13 @@ onMounted(async () => {
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
+    <TopBar :left-grow="true">
+      <template #right>
+        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="$emit('login')" />
+      </template>
+    </TopBar>
+
+    <div class="user-table-body">
     <div class="user-header">
       <h1>Users ({{ tableModel.length }})</h1>
       <TextInput v-model="searchQuery" placeholder="Search users..." class="user-search-input"/>
@@ -100,6 +114,7 @@ onMounted(async () => {
           <Button outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right" icon="fa-solid fa-wrench"/>
         </template>
       </TableView>
+    </div>
     </div>
   </div>
 </template>
@@ -130,6 +145,14 @@ h1 {
 }
 
 .user-table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.user-table-body {
   display: flex;
   flex-direction: column;
   flex: 1;

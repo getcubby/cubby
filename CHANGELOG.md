@@ -533,3 +533,9 @@
 * Update cubby to 2.12.1
 * Fix description
 
+[2.13.0]
+* Update cubby to 2.13.0
+* Use sentence casing in the UI
+* Better skeleton files
+* UI polish
+

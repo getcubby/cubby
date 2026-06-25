@@ -8,7 +8,6 @@ import {
   Dialog,
   DirectoryView,
   FileUploader,
-  InputDialog,
   Menu,
   Notification,
   SideBar,
@@ -268,7 +267,10 @@ function onUploadFolder() {
   fileUploader.value.onUploadFolder(resource.resourcePath);
 }
 
-const inputDialog = useTemplateRef('inputDialog');
+const deleteDialog = useTemplateRef('deleteDialog');
+const deletePending = ref([]);
+const deleteBusy = ref(false);
+
 const directoryView = useTemplateRef('directoryView');
 const newItemForm = ref({
   mode: 'file',
@@ -491,32 +493,45 @@ async function onDrop(targetFolder, dataTransfer, files) {
 }
 
 async function deleteHandler(items) {
-  if (!items || items.length === 0) return;
+  if (!items) return;
+  if (!Array.isArray(items)) items = [items];
+  if (items.length === 0) return;
 
-  const confirmed = await inputDialog.value.confirm({
-    message: `Delete ${items.length} item${ items.length === 1 ? '' : 's' }?`,
-    confirmStyle: 'danger',
-    confirmLabel: 'Delete',
-    rejectLabel: 'Cancel',
-    rejectStyle: 'secondary'
-  });
+  deletePending.value = items;
+  deleteBusy.value = false;
+  deleteDialog.value.open();
+}
 
-  if (!confirmed) return;
+function onDeleteCancel() {
+  if (deleteBusy.value) return;
+  deletePending.value = [];
+}
 
+async function onDeleteConfirm() {
+  if (deleteBusy.value) return;
+
+  const items = deletePending.value;
+  if (items.length === 0) return;
+
+  deleteBusy.value = true;
   window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
 
-  for (let i of items) {
+  for (const item of items) {
     try {
-      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + i.fileName));
+      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + item.fileName));
       await DirectoryModel.remove(resource);
     } catch (e) {
-      console.error(`Failed to remove file ${i.name}:`, e);
+      console.error(`Failed to remove file ${item.fileName}:`, e);
     }
   }
 
   await refresh();
 
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+
+  deleteDialog.value.close();
+  deletePending.value = [];
+  deleteBusy.value = false;
 }
 
 async function renameHandler(item, newName) {
@@ -903,7 +918,6 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- This is re-used and thus global -->
-  <InputDialog ref="inputDialog" />
   <Notification/>
 
   <div v-show="ready" style="height: 100%;">
@@ -1052,6 +1066,28 @@ onBeforeUnmount(() => {
       />
       <p class="has-error" v-show="newItemForm.error">{{ newItemForm.error }}</p>
     </form>
+  </Dialog>
+
+  <Dialog
+    ref="deleteDialog"
+    title="Confirm deletion"
+    reject-label="Cancel"
+    reject-style="secondary"
+    confirm-label="Delete"
+    confirm-style="danger"
+    :confirm-busy="deleteBusy"
+    @confirm="onDeleteConfirm"
+    @close="onDeleteCancel"
+  >
+    <p v-if="deletePending.length === 1">
+      Delete "{{ deletePending[0].fileName }}"?
+    </p>
+    <template v-else-if="deletePending.length > 1">
+      <p>The following items will be deleted:</p>
+      <ul class="delete-file-list">
+        <li v-for="item in deletePending" :key="item.fileName">{{ item.fileName }}</li>
+      </ul>
+    </template>
   </Dialog>
 
   <ShareDialog ref="shareDialog"/>
@@ -1204,6 +1240,13 @@ pre {
   margin: auto 0px;
   padding: 4px;
   align-items: center;
+}
+
+.delete-file-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 </style>

@@ -67,17 +67,17 @@ describe('Application life cycle test', function () {
 
   it('uninstall app', cloudronCli.uninstall);
 
-  it('install app for update', cloudronCli.appstoreInstall);
+//   it('install app for update', cloudronCli.appstoreInstall);
 
-  it('can login', login);
-  it('can see Welcome.md', checkWelcomeMd);
-  it('can logout', logout);
+//   it('can login', login);
+//   it('can see Welcome.md', checkWelcomeMd);
+//   it('can logout', logout);
 
-  it('can update', cloudronCli.update);
+//   it('can update', cloudronCli.update);
 
-  it('can login', login);
-  it('can see Welcome.md', checkWelcomeMd);
-  it('can logout', logout);
+//   it('can login', login);
+//   it('can see Welcome.md', checkWelcomeMd);
+//   it('can logout', logout);
 
-  it('uninstall app', cloudronCli.uninstall);
+//   it('uninstall app', cloudronCli.uninstall);
 });

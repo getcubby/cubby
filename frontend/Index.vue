@@ -1042,6 +1042,7 @@ onBeforeUnmount(() => {
       <TextInput
         id="newItemNameInput"
         v-model="newItemForm.name"
+        :placeholder="newItemForm.mode === 'file' ? 'Filename' : 'Folder name'"
         autofocus
         style="width: 100%"
         @update:modelValue="onNewItemDialogNameInput"

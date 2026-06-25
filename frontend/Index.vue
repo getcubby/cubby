@@ -18,7 +18,6 @@ import DirectoryModel from './models/DirectoryModel.js';
 import MainModel from './models/MainModel.js';
 import FavoriteModel from './models/FavoriteModel.js';
 import LoginView from './components/LoginView.vue';
-import UsersView from './components/UsersView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
@@ -37,7 +36,6 @@ const VIEWS = {
   FILES_SHARES: 'files-shares',
   FILES_GROUPFOLDERS: 'files-groupfolders',
   FAVORITES: 'favorites',
-  USERS: 'users',
   RECENT: 'recent',
   SETTINGS: 'settings',
   SHARES: 'shares'
@@ -78,11 +76,6 @@ function toggleViewMode() {
 }
 
 const profileMenu = [{
-  label: 'Users',
-  icon: 'fa-solid fa-users',
-  visible: () => profile.value.admin,
-  action: () => window.location.href = '#users'
-}, {
   label: 'Settings',
   icon: 'fa-solid fa-cog',
   visible: () => profile.value.admin,
@@ -817,9 +810,10 @@ onMounted(async () => {
       }
       resetNonFileViewState();
       view.value = VIEWS.FAVORITES;
-    } else if (hash.indexOf('users') === 0 && profile.value?.username && profile.value.admin) {
+    } else if ((hash.indexOf('users') === 0 || hash.indexOf('settings') === 0) && profile.value?.username && profile.value.admin) {
+      if (hash.indexOf('users') === 0) window.location.hash = 'settings';
       resetNonFileViewState();
-      view.value = VIEWS.USERS;
+      view.value = VIEWS.SETTINGS;
       onCloseSidebar();
     } else if (hash === 'shares') {
       if (!profile.value?.username) {
@@ -828,10 +822,6 @@ onMounted(async () => {
       }
       resetNonFileViewState();
       view.value = VIEWS.SHARES;
-      onCloseSidebar();
-    } else if (hash.indexOf('settings') === 0 && profile.value?.username && profile.value.admin) {
-      resetNonFileViewState();
-      view.value = VIEWS.SETTINGS;
       onCloseSidebar();
     } else {
       // Logged-in default route; anonymous users keep empty/unknown hash (login view) — do not force #files/home/
@@ -930,7 +920,6 @@ onBeforeUnmount(() => {
       </SideBar>
       <div class="content">
         <SharesView v-if="view === VIEWS.SHARES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
-        <UsersView v-else-if="view === VIEWS.USERS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
         <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @groupfolders-changed="onGroupFoldersChanged()"/>
         <RecentView v-else-if="view === VIEWS.RECENT" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
         <FavoriteView v-else-if="view === VIEWS.FAVORITES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />

@@ -1,16 +1,17 @@
 <script setup>
 
-import { ref, useTemplateRef, onMounted, inject } from 'vue';
-import { Button, Dialog, InputDialog, TableView, TextInput, InputGroup, TopBar } from '@cloudron/pankow';
+import { ref, onMounted } from 'vue';
+import { Button, TopBar } from '@cloudron/pankow';
 import ProfileMenuButton from './ProfileMenuButton.vue';
+import UsersSettings from './settings/UsersSettings.vue';
+import GroupFoldersSettings from './settings/GroupFoldersSettings.vue';
+import OfficeIntegrationSettings from './settings/OfficeIntegrationSettings.vue';
 import MainModel from '../models/MainModel.js';
-import GroupFolderModel from '../models/GroupFolderModel.js';
-import slugify from '../slugify.js';
 
-const props = defineProps({
+defineProps({
   profile: {
     type: Object,
-    default: function () { return {}; }
+    default: () => ({}),
   },
   profileMenu: {
     type: Array,
@@ -20,313 +21,45 @@ const props = defineProps({
 
 const emit = defineEmits(['groupfolders-changed', 'login']);
 
-const refreshConfig = inject('refreshConfig');
-
-const groupFolderTableColumns = {
-  name: {
-    label: 'Name',
-    sort: true
-  },
-  id: {
-    label: 'Slug',
-    sort: true
-  },
-  folderPath: {
-    label: 'Path',
-    sort: true
-  },
-  members: {
-    label: 'Members',
-    sort: false
-  },
-  action: {
-    label: '',
-    width: '20px',
-    sort: false
-  }
-};
-
-const addGroupFolderDialog = useTemplateRef('addGroupFolderDialog');
-const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
-const settingsInputDialog = useTemplateRef('settingsInputDialog');
-
 const users = ref([]);
-const office = ref({
-  error: '',
-  busy: false,
-  wopiHost: '',
-});
-const isOfficeWorking = ref(false);
-const groupFolderTableModel = ref([]);
-const groupFolderAdd = ref({
-  error: '',
-  busy: false,
-  availableUsersMenuModel: [],
-  name: '',
-  slug: '',
-  folderPath: '',
-  members: [],
-});
-const groupFolderEdit = ref({
-  error: '',
-  busy: false,
-  availableUsersMenuModel: [],
-  name: '',
-  members: [],
-});
 
-async function refreshGroupFolders() {
+async function refreshUsers() {
   try {
-    groupFolderTableModel.value = await GroupFolderModel.list();
+    users.value = await MainModel.getUsers();
   } catch (error) {
-    console.error('Failed to list groupFolder.', error);
+    console.error('Failed to list users.', error);
   }
-
-  emit('groupfolders-changed');
 }
 
-// helper for member add/edit
-function groupFolderRemoveMember(members, member) {
-  const index = members.findIndex((m) => m.username === member.username);
-  members.splice(index, 1);
-}
-
-async function onAddGroupFolder() {
-  groupFolderAdd.value.busy = false;
-  groupFolderAdd.value.error = '';
-  groupFolderAdd.value.name = '';
-  groupFolderAdd.value.slug = '';
-  groupFolderAdd.value.members = [];
-  groupFolderAdd.value.folderPath = '';
-  groupFolderAdd.value.availableUsersMenuModel = []
-  for (const user of users.value) {
-    const item = {
-      label: user.username,
-      visible: () => { return !groupFolderAdd.value.members.find((m) => m.username === user.username) },
-      action: () => { groupFolderAdd.value.members.push(user) }
-    };
-    groupFolderAdd.value.availableUsersMenuModel.push(item);
-  }
-
-  addGroupFolderDialog.value.open();
-}
-
-async function onAddGroupFolderSubmit() {
-  groupFolderAdd.value.busy = true;
-
-  try {
-    await GroupFolderModel.add({
-      name: groupFolderAdd.value.name,
-      slug: groupFolderAdd.value.slug,
-      path: groupFolderAdd.value.folderPath,
-      members: groupFolderAdd.value.members.map((m) => m.username)
-    });
-  } catch (e) {
-    console.log(e)
-    groupFolderAdd.value.error = e.message;
-    groupFolderAdd.value.busy = false;
-    return;
-  }
-
-  await refreshGroupFolders();
-
-  groupFolderAdd.value.busy = false;
-  addGroupFolderDialog.value.close();
-}
-
-function onEditGroupFolder(groupFolder) {
-  groupFolderEdit.value.busy = false;
-  groupFolderEdit.value.error = '';
-  groupFolderEdit.value.id = groupFolder.id;
-  groupFolderEdit.value.name = groupFolder.name;
-  groupFolderEdit.value.members = groupFolder.members.map((m) => users.value.find((u) => u.username === m) );
-  groupFolderEdit.value.availableUsersMenuModel = []
-  for (const user of users.value) {
-    const item = {
-      label: user.username,
-      visible: () => { return !groupFolderEdit.value.members.find((m) => m.username === user.username) },
-      action: () => { groupFolderEdit.value.members.push(user) }
-    };
-    groupFolderEdit.value.availableUsersMenuModel.push(item);
-  }
-
-  editGroupFolderDialog.value.open();
-}
-
-async function onEditGroupFolderSubmit() {
-  groupFolderEdit.value.busy = true;
-
-  try {
-    await GroupFolderModel.update(groupFolderEdit.value.id, {
-      name: groupFolderEdit.value.name,
-      members: groupFolderEdit.value.members.map((m) => m.username)
-    });
-  } catch (e) {
-    console.log(e)
-    groupFolderEdit.value.error = e.message;
-    groupFolderEdit.value.busy = false;
-    return;
-  }
-
-  await refreshGroupFolders();
-
-  groupFolderEdit.value.busy = false;
-  editGroupFolderDialog.value.close();
-}
-
-async function onRemoveGroupFolder(groupFolder) {
-  const yes = await settingsInputDialog.value.confirm({
-    message: `Remove group folder "${groupFolder.name}"?`,
-    confirmStyle: 'danger',
-    confirmLabel: 'Remove',
-    rejectLabel: 'Cancel',
-    rejectStyle: 'secondary'
-  });
-
-  if (!yes) return;
-
-  try {
-    await GroupFolderModel.remove(groupFolder.id);
-  } catch (e) {
-    return console.error('Failed to delete groupFolder.', e);
-  }
-
-  await refreshGroupFolders();
-}
-
-async function onOfficeSubmit() {
-  office.value.busy = true;
-
-  try {
-    await MainModel.setWopiHost(office.value.wopiHost);
-  } catch (error) {
-    office.value.error = error.message;
-    office.value.busy = false;
-    isOfficeWorking.value = false;
-    return;
-  }
-
-  office.value.error = '';
-
-  try {
-    office.value.wopiHost = await MainModel.getWopiHost();
-  } catch (error) {
-    office.value.wopiHost = ''
-    office.value.error = error.message;
-  }
-
-  await refreshConfig();
-
-  isOfficeWorking.value = MainModel.isOfficeWorking();
-
-  office.value.busy = false;
+async function onUsersChanged() {
+  await refreshUsers();
 }
 
 onMounted(async () => {
-  users.value = await MainModel.getUsers();
-
-  await refreshGroupFolders();
-
-  office.value.error = '';
-  office.value.confirmBusy = false;
-
-  try {
-    office.value.wopiHost = await MainModel.getWopiHost();
-    isOfficeWorking.value = MainModel.isOfficeWorking();
-  } catch (error) {
-    office.value.wopiHost = ''
-    office.value.error = error.message;
-    console.log('Failed to get wopi host:', error);
-  }
+  await refreshUsers();
 });
 
 </script>
 
 <template>
   <div class="settings-container">
-    <InputDialog ref="settingsInputDialog" />
-
-    <Dialog
-      title="Add group folder"
-      ref="addGroupFolderDialog"
-      reject-label="Cancel"
-      reject-style="secondary"
-      confirm-label="Add"
-      :confirm-busy="groupFolderAdd.busy"
-      :confirm-active="!!groupFolderAdd.name"
-      confirm-style="success"
-      @confirm="onAddGroupFolderSubmit"
-    >
-      <p class="has-error" v-show="groupFolderAdd.error">{{ groupFolderAdd.error }}</p>
-      <label>Name</label>
-      <TextInput v-model="groupFolderAdd.name" style="width: 100%;" @change="groupFolderAdd.slug = slugify(groupFolderAdd.name)"/>
-      <label>Slug (cannot be changed later)</label>
-      <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
-      <label v-show="false">Disk storage path</label>
-      <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
-      <label>Members</label>
-      <div style="display: flex; gap: 6px">
-        <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderAdd.members, member)">{{ member.username }}</Button>
-        <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
-      </div>
-    </Dialog>
-
-    <Dialog
-      :title="`Edit group folder ${groupFolderEdit.id}`"
-      ref="editGroupFolderDialog"
-      reject-label="Cancel"
-      reject-style="secondary"
-      confirm-label="Save"
-      :confirm-busy="groupFolderEdit.busy"
-      :confirm-active="!!groupFolderEdit.name"
-      confirm-style="success"
-      @confirm="onEditGroupFolderSubmit"
-    >
-      <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>
-      <label>Name</label>
-      <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
-      <label>Members</label>
-      <div style="display: flex; gap: 6px">
-        <Button v-for="member in groupFolderEdit.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderEdit.members, member)">{{ member.username }}</Button>
-        <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
-      </div>
-    </Dialog>
-
     <TopBar :left-grow="true">
+      <template #left>
+        <Button plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
+      </template>
       <template #right>
         <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
       </template>
     </TopBar>
 
-    <div class="settings-body">
-    <h1>Settings</h1>
+    <div class="settings-scroll">
+      <div class="settings-content content">
+        <h1 class="settings-page-header">Settings</h1>
 
-    <h2>Group folders <Button icon="fa-solid fa-plus" @click="onAddGroupFolder()">Add</Button></h2>
-    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No group folders yet">
-      <template #folderPath="{ item:slotProps }">{{ slotProps.folderPath }} </template>
-      <template #members="{ item:slotProps }">{{ slotProps.members.join(', ') }} </template>
-      <template #action="{ item:slotProps }">
-        <div style="display: flex; gap: 8px">
-          <Button outline tool @click="onEditGroupFolder(slotProps)" icon="fa-solid fa-wrench"/>
-          <Button outline tool danger @click="onRemoveGroupFolder(slotProps)" icon="fa-solid fa-trash"/>
-        </div>
-      </template>
-    </TableView>
-
-    <h2>Office integration</h2>
-    <p>
-      Cubby can open office documents acting as a <a href="https://en.wikipedia.org/wiki/Web_Application_Open_Platform_Interface" target="_blank">WOPI host</a>.
-      Currently this is tested with Collabora and OnlyOffice installed on Cloudron.
-    </p>
-    <form @submit="onOfficeSubmit" @submit.prevent>
-      <label for="wopiHostnameInput">WOPI hostname:</label>
-      <InputGroup>
-        <TextInput id="wopiHostnameInput" v-model="office.wopiHost" autofocus placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
-        <Button id="wopiHostnameSubmitButtom" type="submit" @click="onOfficeSubmit" :loading="office.busy" tool>Save</Button>
-      </InputGroup>
-      <small v-if="office.error" class="has-error"><i class="fa-solid fa-xmark"></i> {{ office.error }}</small>
-      <small v-else-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</small>
-    </form>
+        <UsersSettings :profile="profile" :users="users" @users-changed="onUsersChanged" />
+        <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
+        <OfficeIntegrationSettings />
+      </div>
     </div>
   </div>
 </template>
@@ -340,24 +73,24 @@ onMounted(async () => {
   height: 100%;
 }
 
-.settings-body {
-  padding: 0 20px;
+.settings-scroll {
   overflow: auto;
   flex-grow: 1;
 }
 
-h1 {
-  font-size: 20px;
-  font-weight: normal;
+.settings-content.content {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+  box-sizing: border-box;
 }
 
-h2 {
-  font-size: 18px;
-  font-weight: normal;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 30px;
+.settings-page-header {
+  margin-top: 18px;
+  margin-bottom: 18px;
+  font-size: 20px;
+  font-weight: var(--pankow-font-weight-bold);
 }
 
 </style>

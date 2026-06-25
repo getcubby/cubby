@@ -19,6 +19,8 @@ const visible = ref(localStorage.previewPanelVisible === 'true');
 const entry = computed(() =>{
   return props.selectedEntries.length ? props.selectedEntries[0] : props.parentEntry;
 });
+const displayName = computed(() => entry.value.name || entry.value.fileName || '');
+const displayPath = computed(() => entry.value.filePath || entry.value.resource?.path || '');
 const combinedSize = computed(() => {
   return props.selectedEntries.length ? props.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : props.parentEntry.size;
 });
@@ -41,20 +43,28 @@ function onToggle() {
         <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
       </div>
+      <div class="detail" v-show="selectedEntries.length <= 1 && displayName">
+        <p>Name</p>
+        <span class="detail-value">{{ displayName }}</span>
+      </div>
+      <div class="detail" v-show="selectedEntries.length <= 1 && displayPath">
+        <p>Path</p>
+        <span class="detail-value detail-path">{{ displayPath }}</span>
+      </div>
       <div class="detail" v-show="selectedEntries.length <= 1">
         <p>Owner</p>
-        <span>{{ entry.owner }}</span>
+        <span class="detail-value">{{ entry.owner }}</span>
       </div>
       <div class="detail" v-show="selectedEntries.length <= 1">
         <p>Updated</p>
-        <span>{{ prettyLongDate(entry.mtime) }}</span>
+        <span class="detail-value">{{ prettyLongDate(entry.mtime) }}</span>
       </div>
       <div class="detail" v-show="selectedEntries.length > 1">
         <p>{{ selectedEntries.length }} files selected</p>
       </div>
       <div class="detail">
         <p>Size</p>
-        <span>{{ prettyFileSize(combinedSize) }}</span>
+        <span class="detail-value">{{ prettyFileSize(combinedSize) }}</span>
       </div>
       <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
         <p>Shared with</p>
@@ -111,6 +121,17 @@ function onToggle() {
 .detail {
     margin-bottom: 5px;
     padding-left: 10px;
+    padding-right: 10px;
+}
+
+.detail-value {
+    display: block;
+    word-break: break-word;
+}
+
+.detail-path {
+    font-family: var(--font-family-monospace, monospace);
+    font-size: 13px;
 }
 
 .detail-shared-width {

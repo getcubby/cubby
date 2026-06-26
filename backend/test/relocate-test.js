@@ -4,6 +4,7 @@ import common from './common.js';
 import files from '../files.js';
 import relocate from '../relocate.js';
 import groupfolders from '../groupfolders.js';
+import shares from '../shares.js';
 import users from '../users.js';
 import MainError from '../mainerror.js';
 import safe from '@cloudron/safetydance';
@@ -73,5 +74,29 @@ describe('relocate', function () {
 
         const leaf = await files.get(admin.username, '/moved-tree/leaf.txt');
         assert.equal(leaf.fileName, 'leaf.txt');
+    });
+
+    it('keeps shares working after relocate', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/shared-move.txt', 'shared');
+
+        const shareId = await shares.create({
+            ownerUsername: admin.username,
+            filePath: '/shared-move.txt',
+            receiverUsername: user.username
+        });
+
+        await relocate.relocate({
+            fromOwner: admin.username,
+            fromPath: '/shared-move.txt',
+            toOwner: admin.username,
+            toPath: '/shared-renamed.txt'
+        });
+
+        const share = await shares.get(shareId);
+        assert.equal(share.filePath, '/shared-renamed.txt');
+
+        const file = await files.get(admin.username, '/shared-renamed.txt');
+        assert.equal(file.fileName, 'shared-renamed.txt');
     });
 });

@@ -160,4 +160,79 @@ describe('shares', function () {
         await shares.remove(shareId);
         assert.equal(await shares.get(shareId), null);
     });
+
+    it('relocatePaths updates an exact file share path', async function () {
+        await createUsersWithFile();
+
+        const shareId = await shares.create({
+            ownerUsername: admin.username,
+            filePath: '/shared.txt',
+            receiverUsername: user.username
+        });
+
+        await shares.relocatePaths({
+            fromOwner: admin.username,
+            fromPath: '/shared.txt',
+            toOwner: admin.username,
+            toPath: '/renamed.txt',
+            isDirectory: false
+        });
+
+        const share = await shares.get(shareId);
+        assert.equal(share.filePath, '/renamed.txt');
+    });
+
+    it('relocatePaths updates folder shares and descendants', async function () {
+        await createUsersWithFile();
+        await files.addDirectory(admin.username, '/shared-dir');
+        await addUserFile(admin.username, '/shared-dir/nested.txt', 'nested');
+
+        const folderShareId = await shares.create({
+            ownerUsername: admin.username,
+            filePath: '/shared-dir',
+            receiverUsername: user.username
+        });
+        const nestedShareId = await shares.create({
+            ownerUsername: admin.username,
+            filePath: '/shared-dir/nested.txt',
+            receiverEmail: 'guest@test.local'
+        });
+
+        await shares.relocatePaths({
+            fromOwner: admin.username,
+            fromPath: '/shared-dir',
+            toOwner: admin.username,
+            toPath: '/moved-dir',
+            isDirectory: true
+        });
+
+        assert.equal((await shares.get(folderShareId)).filePath, '/moved-dir');
+        assert.equal((await shares.get(nestedShareId)).filePath, '/moved-dir/nested.txt');
+    });
+
+    it('relocatePaths updates owner columns on cross-root move', async function () {
+        await users.add(admin);
+        await users.add(user);
+        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await addUserFile(admin.username, '/cross.txt', 'cross');
+
+        const shareId = await shares.create({
+            ownerUsername: admin.username,
+            filePath: '/cross.txt',
+            receiverUsername: user.username
+        });
+
+        await shares.relocatePaths({
+            fromOwner: admin.username,
+            fromPath: '/cross.txt',
+            toOwner: 'groupfolder-team',
+            toPath: '/cross.txt',
+            isDirectory: false
+        });
+
+        const share = await shares.get(shareId);
+        assert.equal(share.filePath, '/cross.txt');
+        assert.equal(share.ownerUsername, null);
+        assert.equal(share.ownerGroupfolder, 'team');
+    });
 });

@@ -161,6 +161,40 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
     return result.rows;
 }
 
+function ownerToDbColumns(owner) {
+    if (files.isGroupfolder(owner)) {
+        return {
+            ownerUsername: null,
+            ownerGroupfolder: owner.slice('groupfolder-'.length)
+        };
+    }
+
+    return {
+        ownerUsername: owner,
+        ownerGroupfolder: null
+    };
+}
+
+async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
+    assert.strictEqual(typeof fromOwner, 'string');
+    assert.strictEqual(typeof fromPath, 'string');
+    assert.strictEqual(typeof toOwner, 'string');
+    assert.strictEqual(typeof toPath, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    const from = ownerToDbColumns(fromOwner);
+    const to = ownerToDbColumns(toOwner);
+
+    debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
+
+    // recursive move shares of child items
+    const pathCondition = isDirectory ? '(file_path = $5 OR file_path LIKE $5 || \'/%\')' : 'file_path = $5';
+
+    await database.query(`UPDATE shares SET owner_username = $1, owner_groupfolder = $2, file_path = $6 || substring(file_path FROM length($5) + 1) WHERE (owner_username = $3 OR owner_groupfolder = $4) AND ${pathCondition}`, [
+        to.ownerUsername, to.ownerGroupfolder, from.ownerUsername, from.ownerGroupfolder, fromPath, toPath
+    ]);
+}
+
 async function remove(shareId) {
     assert.strictEqual(typeof shareId, 'string');
 
@@ -176,6 +210,7 @@ export default {
     create,
     getByOwnerAndFilepath,
     getByOwnerAndReceiverAndFilepath,
+    relocatePaths,
     remove,
     isExpired
 };

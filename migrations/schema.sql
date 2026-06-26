@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS tokens(
     FOREIGN KEY(username) REFERENCES users(username),
     PRIMARY KEY(id));
 
+# a file can be shared multiple times
 CREATE TABLE IF NOT EXISTS shares(
     id VARCHAR(128) NOT NULL UNIQUE,
     owner_username VARCHAR(128),
@@ -73,6 +74,7 @@ CREATE TABLE groupfolders_members(
 
     UNIQUE (groupfolder_id, username));
 
+# favorites has a username component allowing shared files or group folder files to be favorited
 CREATE TABLE IF NOT EXISTS favorites(
     id VARCHAR(128) NOT NULL UNIQUE,
     username VARCHAR(128),
@@ -83,6 +85,7 @@ CREATE TABLE IF NOT EXISTS favorites(
     FOREIGN KEY(username) REFERENCES users(username),
     PRIMARY KEY(id));
 
+# recents has a username component depending on who opened a shared or group folder file
 CREATE TABLE IF NOT EXISTS recents(
     username VARCHAR(128) NOT NULL,
     resource_path VARCHAR(512) NOT NULL,

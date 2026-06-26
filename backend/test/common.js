@@ -2,7 +2,6 @@ import database from '../database.js';
 import files from '../files.js';
 import fs from 'node:fs';
 import nock from 'nock';
-import recent from '../recent.js';
 import tokens from '../tokens.js';
 import users from '../users.js';
 
@@ -26,7 +25,6 @@ async function databaseSetup() {
     nock.cleanAll();
     database.init();
     await database._clear();
-    recent._resetCache();
 
     for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH, process.env.SEARCH_INDEX_PATH ]) {
         if (!dir || !fs.existsSync(dir)) continue;

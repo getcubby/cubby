@@ -82,3 +82,11 @@ CREATE TABLE IF NOT EXISTS favorites(
 
     FOREIGN KEY(username) REFERENCES users(username),
     PRIMARY KEY(id));
+
+CREATE TABLE IF NOT EXISTS recents(
+    username VARCHAR(128) NOT NULL,
+    resource_path VARCHAR(512) NOT NULL,
+    accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(username) REFERENCES users(username),
+    PRIMARY KEY(username, resource_path));

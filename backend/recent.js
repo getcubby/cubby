@@ -1,22 +1,22 @@
 import assert from 'assert';
 import debug from 'debug';
-import constants from './constants.js';
 import shares from './shares.js';
 import path from 'path';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
 import files from './files.js';
+import database from './database.js';
 
 const debugLog = debug('cubby:recent');
 
 const MAX_AGE = 60 * 24 * 60 * 60 * 1000; // ~2 months
 
-let recentsCache = {};
-try {
-    recentsCache = JSON.parse(fs.readFileSync(constants.RECENTS_CACHE_PATH, 'utf8'));
-// eslint-disable-next-line no-unused-vars
-} catch (e) {
-    console.log('No recent file cache found. Starting fresh.');
+function postProcess(data) {
+    data.resourcePath = data.resource_path;
+    delete data.resource_path;
+
+    data.accessedAt = data.accessed_at;
+    delete data.accessed_at;
+
+    return data;
 }
 
 async function add(username, resourcePath) {
@@ -25,17 +25,8 @@ async function add(username, resourcePath) {
 
     debugLog(`add: ${username} ${resourcePath}`);
 
-    if (!recentsCache[username]) recentsCache[username] = [];
-
-    const index = recentsCache[username].findIndex(e => { return e.resourcePath === resourcePath; });
-    if (index !== -1) recentsCache[username].splice(index, 1);
-
-    recentsCache[username].unshift({
-        resourcePath,
-        ts: Date.now()
-    });
-
-    await fsPromises.writeFile(constants.RECENTS_CACHE_PATH, JSON.stringify(recentsCache));
+    await database.query(`INSERT INTO recents (username, resource_path, accessed_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (username, resource_path) DO UPDATE SET accessed_at = CURRENT_TIMESTAMP`, [ username, resourcePath ]);
 }
 
 async function remove(username, resourcePath) {
@@ -44,12 +35,11 @@ async function remove(username, resourcePath) {
 
     debugLog(`remove: ${username} ${resourcePath}`);
 
-    if (!recentsCache[username]) return;
+    await database.query('DELETE FROM recents WHERE username = $1 AND resource_path = $2', [ username, resourcePath ]);
+}
 
-    const index = recentsCache[username].findIndex(e => { return e.resourcePath === resourcePath; });
-    if (index === -1) return;
-
-    recentsCache[username].splice(index, 1);
+async function removeEntry(username, resourcePath) {
+    await database.query('DELETE FROM recents WHERE username = $1 AND resource_path = $2', [ username, resourcePath ]);
 }
 
 async function get(username, daysAgo = 10, maxFiles = 100) {
@@ -60,17 +50,18 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
     const now = Date.now();
     const result = [];
 
-    if (!recentsCache[username]) return [];
+    const rows = await database.query('SELECT * FROM recents WHERE username = $1 ORDER BY accessed_at DESC', [ username ]);
 
     let i = 0;
-    while(result.length < maxFiles && i < recentsCache[username].length) {
-        const recent = recentsCache[username][i];
-        if (now - recent.ts > MAX_AGE) break;
+    while (result.length < maxFiles && i < rows.rows.length) {
+        const recent = postProcess(rows.rows[i]);
+        if (now - recent.accessedAt.getTime() > MAX_AGE) break;
 
         try {
             const subject = await files.translateResourcePath(username, recent.resourcePath);
             if (!subject) {
-                recentsCache[username].splice(i, 1);
+                await removeEntry(username, recent.resourcePath);
+                i++;
                 continue;
             }
 
@@ -78,7 +69,8 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
                 const shareId = subject.resourcePath.slice(1).split('/')[1];
                 const share = await shares.get(shareId);
                 if (!share) {
-                    recentsCache[username].splice(i, 1);
+                    await removeEntry(username, recent.resourcePath);
+                    i++;
                     continue;
                 }
 
@@ -86,12 +78,12 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
 
                 const file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath));
                 file.share = share;
-                file.atime = new Date(recent.ts);
+                file.atime = recent.accessedAt;
 
                 result.push(file.asShare(share.filePath).withoutPrivate(username));
             } else {
                 const file = await files.get(subject.usernameOrGroupfolder, subject.filePath);
-                file.atime = new Date(recent.ts);
+                file.atime = recent.accessedAt;
                 result.push(file.withoutPrivate(username));
             }
 
@@ -99,7 +91,8 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
         // eslint-disable-next-line no-unused-vars
         } catch (error) {
             console.error(`File not found ${username} ${recent.resourcePath}. Removing from recents.`);
-            recentsCache[username].splice(i, 1);
+            await removeEntry(username, recent.resourcePath);
+            i++;
         }
     }
 
@@ -107,12 +100,22 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
 }
 
 async function purge() {
-    // TODO
+    await database.query('DELETE FROM recents WHERE accessed_at < NOW() - INTERVAL \'60 days\'');
 }
 
-function _resetCache() {
-    recentsCache = {};
-    fs.writeFileSync(constants.RECENTS_CACHE_PATH, JSON.stringify(recentsCache));
+async function relocateResourcePaths({ fromResourcePrefix, toResourcePrefix, isDirectory }) {
+    assert.strictEqual(typeof fromResourcePrefix, 'string');
+    assert.strictEqual(typeof toResourcePrefix, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    debugLog(`relocateResourcePaths: ${fromResourcePrefix} -> ${toResourcePrefix} isDirectory:${isDirectory}`);
+
+    if (isDirectory) {
+        await database.query(`UPDATE recents SET resource_path = $2 || substring(resource_path FROM length($1) + 1)
+            WHERE resource_path = $1 OR resource_path LIKE $1 || '/%'`, [ fromResourcePrefix, toResourcePrefix ]);
+    } else {
+        await database.query('UPDATE recents SET resource_path = $2 WHERE resource_path = $1', [ fromResourcePrefix, toResourcePrefix ]);
+    }
 }
 
 export default {
@@ -120,5 +123,5 @@ export default {
     remove,
     get,
     purge,
-    _resetCache
+    relocateResourcePaths
 };

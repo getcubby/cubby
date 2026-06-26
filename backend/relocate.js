@@ -3,8 +3,18 @@ import debug from 'debug';
 import files from './files.js';
 import shares from './shares.js';
 import favorites from './favorites.js';
+import recent from './recent.js';
 
 const debugLog = debug('cubby:relocate');
+
+function storageToResourcePrefix(owner, filePath) {
+    if (owner.indexOf('groupfolder-') === 0) {
+        const groupId = owner.slice('groupfolder-'.length);
+        return `/groupfolders/${groupId}${filePath}`;
+    }
+
+    return `/home${filePath}`;
+}
 
 async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
     assert.strictEqual(typeof fromOwner, 'string');
@@ -23,7 +33,13 @@ async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
 
     await favorites.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
-    // recent, storage_paths added in later phases.
+    await recent.relocateResourcePaths({
+        fromResourcePrefix: storageToResourcePrefix(fromOwner, fromPath),
+        toResourcePrefix: storageToResourcePrefix(toOwner, toPath),
+        isDirectory
+    });
+
+    // storage_paths added in later phase.
     await files.runChangeHooks(fromOwner, fromPath);
     await files.runChangeHooks(toOwner, toPath);
 }

@@ -6,6 +6,7 @@ import relocate from '../relocate.js';
 import groupfolders from '../groupfolders.js';
 import shares from '../shares.js';
 import favorites from '../favorites.js';
+import recent from '../recent.js';
 import users from '../users.js';
 import MainError from '../mainerror.js';
 import safe from '@cloudron/safetydance';
@@ -122,5 +123,26 @@ describe('relocate', function () {
 
         const file = await files.get(admin.username, '/starred-renamed.txt');
         assert.equal(file.fileName, 'starred-renamed.txt');
+    });
+
+    it('keeps recent working after relocate', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/recent-move.txt', 'recent');
+
+        await recent.add(admin.username, '/home/recent-move.txt');
+
+        await relocate.relocate({
+            fromOwner: admin.username,
+            fromPath: '/recent-move.txt',
+            toOwner: admin.username,
+            toPath: '/recent-renamed.txt'
+        });
+
+        const entries = await recent.get(admin.username, 10, 10);
+        assert.equal(entries.length, 1);
+        assert.equal(entries[0].fileName, 'recent-renamed.txt');
+
+        const file = await files.get(admin.username, '/recent-renamed.txt');
+        assert.equal(file.fileName, 'recent-renamed.txt');
     });
 });

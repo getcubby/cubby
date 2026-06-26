@@ -27,6 +27,13 @@ describe('recent', function () {
         assert.equal((await recent.get(admin.username, 10, 10)).length, 1);
     });
 
+    it('returns empty list for user with no recents', async function () {
+        await users.add(admin);
+
+        const entries = await recent.get(admin.username, 10, 10);
+        assert.equal(entries.length, 0);
+    });
+
     it('drops stale entries that no longer resolve', async function () {
         await users.add(admin);
 

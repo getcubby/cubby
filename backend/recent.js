@@ -60,7 +60,7 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
     const now = Date.now();
     const result = [];
 
-    if (!recentsCache[username]) return;
+    if (!recentsCache[username]) return [];
 
     let i = 0;
     while(result.length < maxFiles && i < recentsCache[username].length) {

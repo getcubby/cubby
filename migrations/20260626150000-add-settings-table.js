@@ -30,7 +30,7 @@ exports.up = async function(db) {
     if (!collabora.host) return;
 
     const existing = await db.runSql('SELECT name FROM settings WHERE name=?', [ 'collabora' ]);
-    if (existing.length > 0) return;
+    if (existing.rows.length > 0) return;
 
     await db.runSql('INSERT INTO settings (name, value) VALUES (?, ?)', [ 'collabora', JSON.stringify(collabora) ]);
 };

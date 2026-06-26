@@ -46,14 +46,14 @@ exports.up = async function(db) {
     const { userDataRoot, groupsDataRoot } = roots;
 
     const favorites = await db.runSql('SELECT id, owner, file_path FROM favorites');
-    for (const row of favorites) {
+    for (const row of favorites.rows) {
         if (!pathExists(userDataRoot, groupsDataRoot, row.owner, row.file_path)) {
             await db.runSql('DELETE FROM favorites WHERE id=?', [ row.id ]);
         }
     }
 
     const shares = await db.runSql('SELECT id, owner_username, owner_groupfolder, file_path FROM shares');
-    for (const row of shares) {
+    for (const row of shares.rows) {
         const owner = shareOwner(row);
         if (!owner || !pathExists(userDataRoot, groupsDataRoot, owner, row.file_path)) {
             await db.runSql('DELETE FROM shares WHERE id=?', [ row.id ]);

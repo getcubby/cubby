@@ -52,18 +52,23 @@ async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryP
 
     debugLog(`calculateByUsernameAndDirectory: ${usernameOrGroupFolder} directory:${directoryPath}`);
 
+    const absoluteDirectoryPath = files.getAbsolutePath(usernameOrGroupFolder, directoryPath);
+    if (!absoluteDirectoryPath) return;
+
     let folderRoot;
 
     if (files.isGroupfolder(usernameOrGroupFolder)) {
         const id = usernameOrGroupFolder.slice('groupfolder-'.length);
         const groupFolder = await groupFolders.get(id);
-        folderRoot = groupFolder.groupFolder;
+        folderRoot = groupFolder.folderPath;
     } else {
         folderRoot = path.join(constants.USER_DATA_ROOT, usernameOrGroupFolder);
     }
 
+    if (!gCache[usernameOrGroupFolder]) gCache[usernameOrGroupFolder] = { used: 0, directories: {} };
+
     try {
-        const out = await exec('du', [ '-b', directoryPath ]);
+        const out = await exec('du', [ '-b', absoluteDirectoryPath ]);
         out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
             const parts = l.split('\t');
             if (parts.length !== 2) return;

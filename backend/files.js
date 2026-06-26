@@ -79,7 +79,8 @@ async function runChangeHooks(usernameOrGroupfolder, filePath) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, filePath);
+    const directoryPath = path.posix.dirname(filePath) || '/';
+    await diskusage.calculateByUsernameAndDirectory(usernameOrGroupfolder, directoryPath);
 
     if (isGroupfolder(usernameOrGroupfolder)) {
         await recoll.indexByGroupFolder(usernameOrGroupfolder.slice('groupfolder-'.length), true);
@@ -104,6 +105,8 @@ async function addDirectory(usernameOrGroupfolder, filePath) {
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }
+
+    await runChangeHooks(usernameOrGroupfolder, filePath);
 }
 
 async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime, overwrite) {
@@ -135,7 +138,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
+    await runChangeHooks(usernameOrGroupfolder, filePath);
 
     if (!mtime) return;
 
@@ -169,7 +172,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
+    await runChangeHooks(usernameOrGroupfolder, filePath);
 
     if (!mtime) return;
 
@@ -416,8 +419,8 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     }
 
     // TODO maybe be smart to check if folders are within the same parent folder
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));
+    await runChangeHooks(usernameOrGroupfolder, filePath);
+    await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
 
 async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath, overwrite = false) {
@@ -448,7 +451,7 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
         }
     }
 
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));
+    await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
 
 async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
@@ -487,7 +490,7 @@ async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder
         throw new MainError(MainError.EXTERNAL_ERROR, error.stderr);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullNewFilePath));
+    await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
 
 async function remove(usernameOrGroupfolder, filePath) {
@@ -505,7 +508,7 @@ async function remove(usernameOrGroupfolder, filePath) {
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, path.dirname(fullFilePath));
+    await runChangeHooks(usernameOrGroupfolder, filePath);
 }
 
 export default {

@@ -417,10 +417,6 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
         if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, error);
     }
-
-    // TODO maybe be smart to check if folders are within the same parent folder
-    await runChangeHooks(usernameOrGroupfolder, filePath);
-    await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
 
 async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath, overwrite = false) {
@@ -528,4 +524,5 @@ export default {
     copy,
     extract,
     remove,
+    runChangeHooks,
 };

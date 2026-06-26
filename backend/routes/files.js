@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import files from '../files.js';
+import relocate from '../relocate.js';
 import Entry from '../entry.js';
 import path from 'path';
 import recent from '../recent.js';
@@ -321,7 +322,12 @@ async function update(req, res, next) {
 
     debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
     try {
-        if (action === 'move') await files.move(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
+        if (action === 'move') await relocate.relocate({
+            fromOwner: subject.usernameOrGroupfolder,
+            fromPath: subject.filePath,
+            toOwner: newSubject.usernameOrGroupfolder,
+            toPath: newSubject.filePath
+        });
         else if (action === 'copy') await files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else if (action === 'extract') await files.extract(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
         else return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));

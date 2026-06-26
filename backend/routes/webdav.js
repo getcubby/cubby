@@ -1,6 +1,7 @@
 import path from 'path';
 import debug from 'debug';
 import files from '../files.js';
+import relocate from '../relocate.js';
 import shares from '../shares.js';
 import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
@@ -655,7 +656,12 @@ async function handleMove(req, res, username, segments, pathInfo) {
         return;
     }
     try {
-        await files.move(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath);
+        await relocate.relocate({
+            fromOwner: subject.usernameOrGroupfolder,
+            fromPath: subject.filePath,
+            toOwner: destSubject.usernameOrGroupfolder,
+            toPath: destSubject.filePath
+        });
         res.status(201).end();
     } catch (e) {
         if (e.reason === MainError.NOT_FOUND) res.status(404).send('Not Found');

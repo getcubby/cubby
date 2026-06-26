@@ -546,3 +546,10 @@
 * Update screenshot url
 * add stl example file
 
+[2.14.0]
+* Update cubby to 2.14.0
+* use a button group to show view mode
+* du: update parent entries
+* Move shares, recents, favorites when file moves
+* migrate config.json to settings table
+

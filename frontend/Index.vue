@@ -1007,17 +1007,8 @@ onBeforeUnmount(() => {
                   :fallback-icon="`${BASE_URL}mime-types/none.svg`"
                 >
                   <template #empty>
-                    <EmptyState
-                      v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)"
-                      icon="fa-regular fa-folder"
-                      title="No files"
-                    />
-                    <EmptyState
-                      v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin"
-                      icon="fa-solid fa-user-group"
-                      title="Not part of any group folder"
-                      description="Ask an admin to add you to a group folder"
-                    />
+                    <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" />
+                    <EmptyState v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin" icon="fa-solid fa-user-group" title="Not part of any group folder" description="Ask an admin to add you to a group folder" />
                     <EmptyState
                       v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && profile.admin"
                       icon="fa-solid fa-user-group"
@@ -1027,12 +1018,7 @@ onBeforeUnmount(() => {
                         Create <a href="#settings">group folders in Settings</a>
                       </template>
                     </EmptyState>
-                    <EmptyState
-                      v-else-if="activeResourceType === 'shares' && !breadCrumbs.length"
-                      icon="fa-solid fa-share-nodes"
-                      title="Nothing shared with you"
-                      description="Files and folders others shared with you will show up here"
-                    />
+                    <EmptyState v-else-if="activeResourceType === 'shares' && !breadCrumbs.length" icon="fa-solid fa-share-nodes" title="Nothing shared with you" description="Files and folders others shared with you will show up here" />
                   </template>
                 </DirectoryView>
               </div>

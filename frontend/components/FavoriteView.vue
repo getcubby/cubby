@@ -85,12 +85,7 @@ onMounted(refresh);
             <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
           </a>
         </div>
-        <EmptyState
-          v-else
-          icon="fa-solid fa-star"
-          title="No favorites"
-          description="Files and folders you mark as favorite will show up here"
-        />
+        <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
       </template>
     </div>
   </div>

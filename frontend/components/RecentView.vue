@@ -85,12 +85,7 @@ function iconError(event, entry) {
 
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="buckets" v-else>
-      <EmptyState
-        v-if="buckets.length === 0"
-        icon="fa-regular fa-clock"
-        title="No recent files"
-        description="Files you open will show up here"
-      />
+      <EmptyState v-if="buckets.length === 0" icon="fa-regular fa-clock" title="No recent files" description="Files you open will show up here" />
       <div class="bucket" v-for="bucket in buckets" :key="bucket.label">
         <h2>{{ bucket.label }}</h2>
         <div class="hr"></div>

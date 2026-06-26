@@ -26,6 +26,7 @@ Open a file to view or edit it in place:
 | **Documents/Sample document.pdf** | PDF viewer — try searching for *slartibartfast* |
 | **Documents/sample-document.txt** | Text editor — edit and save plain text files |
 | **Videos/Sample video.mp4** | Video playback — rotating Earth visualization |
+| **Documents/Sample elephant.stl** | 3D viewer — rotate and inspect a low-poly elephant |
 | **Pictures/** | Image viewer — open any photo, then use **Previous** / **Next** to browse all images in that folder without closing the viewer |
 
 Cubby also opens plain text and source code files in a built-in editor, where you can edit and save changes directly.

@@ -8,6 +8,10 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:favorites');
 
+function makeId(username, filePath) {
+    return 'fid-' + crypto.createHash('md5').update(`${username}${filePath}`, 'utf8').digest('hex');
+}
+
 function postProcess(data) {
     data.filePath = data.file_path;
     delete data.file_path;
@@ -54,7 +58,7 @@ async function create(username, owner, filePath) {
     const fullFilePath = files.getAbsolutePath(owner, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    const id = 'fid-' + crypto.createHash('md5').update(`${username}${filePath}`, 'utf8').digest('hex');
+    const id = makeId(username, filePath);
 
     const [error] = await safe(database.query('INSERT INTO favorites (id, username, owner, file_path) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT favorites_pkey DO NOTHING', [ id, username, owner, filePath ]));
     if (error) throw new MainError(MainError.BAD_STATE, error);
@@ -82,10 +86,41 @@ async function remove(id) {
     await database.query('DELETE FROM favorites WHERE id = $1', [ id ]);
 }
 
+async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
+    assert.strictEqual(typeof fromOwner, 'string');
+    assert.strictEqual(typeof fromPath, 'string');
+    assert.strictEqual(typeof toOwner, 'string');
+    assert.strictEqual(typeof toPath, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
+
+    const pathCondition = isDirectory ? '(file_path = $2 OR file_path LIKE $2 || \'/%\')' : 'file_path = $2';
+    const result = await database.query(`SELECT * FROM favorites WHERE owner = $1 AND ${pathCondition}`, [ fromOwner, fromPath ]);
+
+    if (result.rows.length === 0) return;
+
+    const queries = [];
+
+    for (const row of result.rows) {
+        const newFilePath = toPath + row.file_path.slice(fromPath.length);
+        const newId = makeId(row.username, newFilePath);
+
+        queries.push({ query: 'DELETE FROM favorites WHERE id = $1', args: [ row.id ] });
+        queries.push({
+            query: 'INSERT INTO favorites (id, username, owner, file_path, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT ON CONSTRAINT favorites_pkey DO NOTHING',
+            args: [ newId, row.username, toOwner, newFilePath, row.created_at ]
+        });
+    }
+
+    await database.transaction(queries);
+}
+
 export default {
     listByOwnerAndFilePath,
     list,
     get,
     create,
-    remove
+    remove,
+    relocatePaths
 };

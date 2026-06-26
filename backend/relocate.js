@@ -2,6 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import files from './files.js';
 import shares from './shares.js';
+import favorites from './favorites.js';
 
 const debugLog = debug('cubby:relocate');
 
@@ -20,7 +21,9 @@ async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
 
     await shares.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
-    // favorites, recent, storage_paths added in later phases.
+    await favorites.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
+
+    // recent, storage_paths added in later phases.
     await files.runChangeHooks(fromOwner, fromPath);
     await files.runChangeHooks(toOwner, toPath);
 }

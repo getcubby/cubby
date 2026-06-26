@@ -5,6 +5,7 @@ import files from '../files.js';
 import relocate from '../relocate.js';
 import groupfolders from '../groupfolders.js';
 import shares from '../shares.js';
+import favorites from '../favorites.js';
 import users from '../users.js';
 import MainError from '../mainerror.js';
 import safe from '@cloudron/safetydance';
@@ -98,5 +99,28 @@ describe('relocate', function () {
 
         const file = await files.get(admin.username, '/shared-renamed.txt');
         assert.equal(file.fileName, 'shared-renamed.txt');
+    });
+
+    it('keeps favorites working after relocate', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/starred-move.txt', 'starred');
+
+        const favoriteId = await favorites.create(user.username, admin.username, '/starred-move.txt');
+
+        await relocate.relocate({
+            fromOwner: admin.username,
+            fromPath: '/starred-move.txt',
+            toOwner: admin.username,
+            toPath: '/starred-renamed.txt'
+        });
+
+        assert.equal(await favorites.get(favoriteId), null);
+
+        const listed = await favorites.list(user.username);
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].filePath, '/starred-renamed.txt');
+
+        const file = await files.get(admin.username, '/starred-renamed.txt');
+        assert.equal(file.fileName, 'starred-renamed.txt');
     });
 });

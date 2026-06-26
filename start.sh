@@ -24,6 +24,10 @@ export MAIL_SMTP_PASSWORD="${CLOUDRON_MAIL_SMTP_PASSWORD}"
 export MAIL_FROM_DISPLAY_NAME="${CLOUDRON_MAIL_FROM_DISPLAY_NAME:-Cubby}"
 export MAIL_FROM="${CLOUDRON_MAIL_FROM}"
 
+# keep in sync with backend/paths.js
+echo "==> Ensure data directories"
+mkdir -p /app/data/{data,groups,thumbnails,sessions,.recoll}
+
 echo "==> Ensure permissions"
 chown -R cloudron:cloudron /app/data
 

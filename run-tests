@@ -8,7 +8,7 @@ readonly DEFAULT_TESTS="./backend/test/*-test.js ./backend/routes/test/*-test.js
 
 prepare_data_dir() {
     rm -rf "${DATA_DIR}"
-    mkdir -p "${DATA_DIR}/data" "${DATA_DIR}/groups" "${DATA_DIR}/thumbnails" "${DATA_DIR}/sessions" "${DATA_DIR}/.recoll"
+    mkdir -p "${DATA_DIR}"/{data,groups,thumbnails,sessions,.recoll}
 }
 
 export_test_env() {

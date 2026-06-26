@@ -32,7 +32,6 @@ APP_ORIGIN="https://example.com"    # must include schema http:// or https://
 PORT="3000"
 
 # data on disk
-CONFIG_FILE_PATH="/path/config.json"
 USER_DATA_ROOT="/path/data/user/"
 GROUPS_DATA_ROOT="/path/data/groups/"
 THUMBNAIL_ROOT="/path/data/thumbnails/"

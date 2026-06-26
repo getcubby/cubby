@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import constants from './backend/constants.js';
-import config from './backend/config.js';
 import database from './backend/database.js';
 import diskusage from './backend/diskusage.js';
 import fs from 'fs';
@@ -12,7 +11,6 @@ import users from './backend/users.js';
 import crypto from 'crypto';
 
 database.init();
-config.init(process.env.CONFIG_FILE_PATH || 'config.json');
 
 // ensure data directories or crash
 fs.mkdirSync(constants.USER_DATA_ROOT, { recursive: true });

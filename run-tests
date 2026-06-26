@@ -15,7 +15,6 @@ export_test_env() {
     export THUMBNAIL_PATH="${DATA_DIR}/thumbnails"
     export SESSION_PATH="${DATA_DIR}/sessions"
     export SEARCH_INDEX_PATH="${DATA_DIR}/recoll"
-    export CONFIG_FILE_PATH="${DATA_DIR}/config.json"
     export SESSION_SECRET_FILE_PATH="${DATA_DIR}/.secret"
 
     export PORT="3456"

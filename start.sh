@@ -7,7 +7,6 @@ export NODE_ENV=production
 export APP_ORIGIN="${CLOUDRON_APP_ORIGIN}"
 export APP_DATA_ROOT="/app/data"
 
-export CONFIG_FILE_PATH="${APP_DATA_ROOT}/config.json"
 export USER_DATA_PATH="${APP_DATA_ROOT}/data"
 export GROUPS_DATA_PATH="${APP_DATA_ROOT}/groups"
 export THUMBNAIL_PATH="${APP_DATA_ROOT}/groups"
@@ -32,11 +31,6 @@ export MAIL_SMTP_USERNAME="${CLOUDRON_MAIL_SMTP_USERNAME}"
 export MAIL_SMTP_PASSWORD="${CLOUDRON_MAIL_SMTP_PASSWORD}"
 export MAIL_FROM_DISPLAY_NAME="${CLOUDRON_MAIL_FROM_DISPLAY_NAME:-Cubby}"
 export MAIL_FROM="${CLOUDRON_MAIL_FROM}"
-
-if [[ ! -f "/app/data/config.json" ]]; then
-    echo "==> Create initial config.json"
-    echo "{}" > "/app/data/config.json"
-fi
 
 echo "==> Ensure permissions"
 chown -R cloudron:cloudron /app/data

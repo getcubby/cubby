@@ -1,5 +1,5 @@
 import assert from 'assert';
-import config from '../config.js';
+import settings from '../settings.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import { DOMParser as Dom } from 'xmldom';
@@ -52,7 +52,8 @@ async function getHandle(req, res, next) {
     const resourcePath = decodeURIComponent(req.query.resourcePath);
     if (!resourcePath) return next(new HttpError(400, 'resourcePath must be a non-empty string'));
 
-    const collaboraHost = config.get('collabora.host', '');
+    const collabora = await settings.getJson(settings.COLLABORA_KEY);
+    const collaboraHost = collabora?.host || '';
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
@@ -201,8 +202,8 @@ async function putFile(req, res, next) {
 }
 
 async function getSettings(req, res, next) {
-    const officeSettings = config.get('collabora');
-    return next(new HttpSuccess(200, officeSettings));
+    const officeSettings = await settings.getJson(settings.COLLABORA_KEY);
+    return next(new HttpSuccess(200, officeSettings || { host: '' }));
 }
 
 async function setSettings(req, res, next) {
@@ -218,7 +219,7 @@ async function setSettings(req, res, next) {
     }
 
     try {
-        config.set('collabora', { host: req.body.host || '' });
+        await settings.setJson(settings.COLLABORA_KEY, { host: req.body.host || '' });
     } catch (e) {
         console.error(e);
         return next(new HttpError(500, 'failed to commit office settings'));

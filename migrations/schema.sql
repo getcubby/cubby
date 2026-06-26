@@ -93,3 +93,7 @@ CREATE TABLE IF NOT EXISTS recents(
 
     FOREIGN KEY(username) REFERENCES users(username),
     PRIMARY KEY(username, resource_path));
+
+CREATE TABLE IF NOT EXISTS settings(
+    name VARCHAR(128) NOT NULL PRIMARY KEY,
+    value TEXT);

@@ -6,7 +6,6 @@ frontend-dist/
 .groups/
 .thumbnails/
 .sessions/
-config.json
 .secret
 .recoll/
 .recents.json

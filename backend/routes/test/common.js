@@ -1,10 +1,8 @@
-import config from '../../config.js';
 import constants from '../../constants.js';
 import crypto from 'node:crypto';
 import database from '../../database.js';
 import fs from 'node:fs';
 import modelCommon from '../../test/common.js';
-import path from 'node:path';
 import server from '../../server.js';
 
 const PORT = process.env.PORT || 3456;
@@ -24,7 +22,6 @@ function ensureRuntimeDirs() {
 
 async function setupServer() {
     database.init();
-    config.init(process.env.CONFIG_FILE_PATH || path.join(process.env.CUBBY_TEST_DIR || '', 'config.json'));
     ensureRuntimeDirs();
     await server.start();
 }

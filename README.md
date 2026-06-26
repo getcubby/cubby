@@ -31,12 +31,6 @@ APP_ORIGIN="https://example.com"    # must include schema http:// or https://
 # local server port, usually behind a reverse proxy
 PORT="3000"
 
-# data on disk
-USER_DATA_ROOT="/path/data/user/"
-GROUPS_DATA_ROOT="/path/data/groups/"
-THUMBNAIL_ROOT="/path/data/thumbnails/"
-SESSION_PATH="/path/data/sessions/"
-
 # database
 POSTGRESQL_HOST="postgres"
 POSTGRESQL_PORT="3306"

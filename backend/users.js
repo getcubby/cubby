@@ -1,5 +1,5 @@
 import assert from 'assert';
-import constants from './constants.js';
+import paths from './paths.js';
 import { cp } from 'node:fs/promises';
 import debug from 'debug';
 import database from './database.js';
@@ -31,7 +31,7 @@ async function add(user) {
 
     // copy skeleton folder
     debugLog(`add: copy skeleton folder...`);
-    await cp(constants.SKELETON_FOLDER, path.join(constants.USER_DATA_ROOT, username), { recursive: true });
+    await cp(paths.SKELETON_FOLDER, path.join(paths.USER_DATA_ROOT, username), { recursive: true });
 }
 
 async function get(username) {

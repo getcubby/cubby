@@ -120,5 +120,7 @@ export APP_ORIGIN="http://localhost:3000"
 # Use 5555 if live frontend development is run in parallel
 export VITE_DEV_PORT=5555
 
+mkdir -p .data/data .data/groups .data/thumbnails .data/sessions .data/.recoll
+
 echo "=> Start cubby"
 ./app.js

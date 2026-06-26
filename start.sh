@@ -5,14 +5,6 @@ set -eu
 export NODE_ENV=production
 
 export APP_ORIGIN="${CLOUDRON_APP_ORIGIN}"
-export APP_DATA_ROOT="/app/data"
-
-export USER_DATA_PATH="${APP_DATA_ROOT}/data"
-export GROUPS_DATA_PATH="${APP_DATA_ROOT}/groups"
-export THUMBNAIL_PATH="${APP_DATA_ROOT}/groups"
-export SESSION_PATH="${APP_DATA_ROOT}/sessions"
-export SESSION_SECRET_FILE_PATH="${APP_DATA_ROOT}/.session.secret"
-export SEARCH_INDEX_PATH="${APP_DATA_ROOT}/.recoll"
 
 # CLOUDRON_OIDC_PROVIDER_NAME is not supported
 export OIDC_ISSUER_BASE_URL="${CLOUDRON_OIDC_ISSUER}"
@@ -36,7 +28,7 @@ echo "==> Ensure permissions"
 chown -R cloudron:cloudron /app/data
 
 echo "==> Remove legacy recents file"
-rm -f "${APP_DATA_ROOT}/.recents.json"
+rm -f /app/data/.recents.json
 
 echo "==> Run database migrations"
 DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up

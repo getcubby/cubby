@@ -3,11 +3,6 @@ node_modules
 frontend-dist/
 
 .data/
-.groups/
-.thumbnails/
-.sessions/
-.secret
-.recoll/
 .recents.json
 
 # local env files

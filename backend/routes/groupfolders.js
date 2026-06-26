@@ -1,6 +1,6 @@
 import assert from 'assert';
 import debug from 'debug';
-import constants from '../constants.js';
+import paths from '../paths.js';
 import groupFolders from '../groupfolders.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
@@ -20,7 +20,7 @@ async function add(req, res, next) {
 
     // TODO validate args
 
-    debugLog(`add: ${name} at ${folderPath || path.join(constants.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
+    debugLog(`add: ${name} at ${folderPath || path.join(paths.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
 
     const [error] = await safe(groupFolders.add(slug, name, folderPath, members));
     if (error?.reason === MainError.NOT_FOUND) return next(new HttpError(412, 'member not found'));

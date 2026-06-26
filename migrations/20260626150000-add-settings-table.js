@@ -5,8 +5,7 @@ const path = require('path');
 const pg = require('pg');
 
 function getConfigFilePath() {
-    if (process.env.CONFIG_FILE_PATH) return process.env.CONFIG_FILE_PATH;
-    if (process.env.APP_DATA_ROOT) return path.join(process.env.APP_DATA_ROOT, 'config.json');
+    if (process.env.CLOUDRON) return '/app/data/config.json';
 
     return path.join(process.cwd(), 'config.json');
 }

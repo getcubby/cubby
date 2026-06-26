@@ -1,5 +1,6 @@
 import assert from 'assert';
 import constants from './constants.js';
+import paths from './paths.js';
 import debug from 'debug';
 import exec from './exec.js';
 import files from './files.js';
@@ -58,13 +59,13 @@ async function indexByUsername(username, schedule = false) {
 
     debugLog(`indexByUsername: ${username} ...`);
 
-    const configPath = path.join(constants.SEARCH_INDEX_PATH, username);
+    const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
     const configFilePath = path.join(configPath, 'recoll.conf');
 
     fs.mkdirSync(configPath, { recursive: true });
 
     // collect all paths we want to index and write config file
-    const pathsToIndex = [ path.join(constants.USER_DATA_ROOT, username) ];
+    const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
     for (const groupFolder of await groupFolders.list(username)) {
         pathsToIndex.push(groupFolder.folderPath);
     }
@@ -99,7 +100,7 @@ async function searchByUsername(username, query) {
 
     debugLog(`searchByUsername: ${username} ${query}`);
 
-    const configPath = path.join(constants.SEARCH_INDEX_PATH, username);
+    const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
     const dbFilePath = path.join(configPath, 'xapiandb');
     if (!fs.existsSync(dbFilePath)) await indexByUsername(username);
 

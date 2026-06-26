@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
-import constants from '../constants.js';
+import paths from '../paths.js';
 import common from './common.js';
 import fs from 'node:fs';
 import groupfolders from '../groupfolders.js';
@@ -28,7 +28,7 @@ describe('groupfolders', function () {
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
         assert.deepEqual(folder.members.sort(), [ admin.username, user.username ].sort());
-        assert.ok(fs.existsSync(path.join(constants.GROUPS_DATA_ROOT, 'team')));
+        assert.ok(fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')));
 
         const all = await groupfolders.list();
         assert.equal(all.length, 1);
@@ -73,6 +73,6 @@ describe('groupfolders', function () {
         await groupfolders.remove('team');
 
         assert.equal(await groupfolders.get('team'), null);
-        assert.equal(!fs.existsSync(path.join(constants.GROUPS_DATA_ROOT, 'team')), true);
+        assert.equal(!fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')), true);
     });
 });

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import constants from './constants.js';
+import paths from './paths.js';
 import debug from 'debug';
 import favorites from './favorites.js';
 import fs from 'fs';
@@ -64,7 +64,7 @@ async function translateResourcePath(username, resourcePath) {
 }
 
 function getAbsolutePath(usernameOrGroupfolder, filePath) {
-    const dataRoot = isGroupfolder(usernameOrGroupfolder) ? constants.GROUPS_DATA_ROOT : constants.USER_DATA_ROOT;
+    const dataRoot = isGroupfolder(usernameOrGroupfolder) ? paths.GROUPS_DATA_ROOT : paths.USER_DATA_ROOT;
     const identifier = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : usernameOrGroupfolder;
 
     fs.mkdirSync(path.join(dataRoot, identifier), { recursive: true });
@@ -327,15 +327,15 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
 async function getByAbsolutePath(absolutePath) {
     assert.strictEqual(typeof absolutePath, 'string');
 
-    if (absolutePath.indexOf(constants.USER_DATA_ROOT) === 0) {
+    if (absolutePath.indexOf(paths.USER_DATA_ROOT) === 0) {
         // user path
-        const tmp = absolutePath.slice(constants.USER_DATA_ROOT.length);
+        const tmp = absolutePath.slice(paths.USER_DATA_ROOT.length);
         const username = tmp.split('/')[1];
         const filePath = tmp.slice(username.length+1);
         return await get(username, filePath);
-    } else if (absolutePath.indexOf(constants.GROUPS_DATA_ROOT) === 0) {
+    } else if (absolutePath.indexOf(paths.GROUPS_DATA_ROOT) === 0) {
         // groupfolder path
-        const tmp = absolutePath.slice(constants.GROUPS_DATA_ROOT.length);
+        const tmp = absolutePath.slice(paths.GROUPS_DATA_ROOT.length);
         const groupFolder = tmp.split('/')[1];
         const filePath = tmp.slice(groupFolder.length+1);
         return await get('groupfolder-' + groupFolder, filePath);

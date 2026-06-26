@@ -1,5 +1,5 @@
 import assert from 'assert';
-import constants from './constants.js';
+import paths from './paths.js';
 import debug from 'debug';
 import exec from './exec.js';
 import files from './files.js';
@@ -20,7 +20,7 @@ async function getFolderRoot(usernameOrGroupFolder) {
         return groupFolder.folderPath;
     }
 
-    return path.join(constants.USER_DATA_ROOT, usernameOrGroupFolder);
+    return path.join(paths.USER_DATA_ROOT, usernameOrGroupFolder);
 }
 
 function ensureCache(usernameOrGroupFolder) {
@@ -67,7 +67,7 @@ async function getByUsername(usernameOrGroupFolder) {
     if (!gCache[usernameOrGroupFolder]) await calculateByUsername(usernameOrGroupFolder);
 
     // TODO use the quota if any set
-    const result = await df.file(constants.USER_DATA_ROOT);
+    const result = await df.file(paths.USER_DATA_ROOT);
 
     return {
         used: gCache[usernameOrGroupFolder].used,

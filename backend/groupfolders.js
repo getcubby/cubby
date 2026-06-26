@@ -1,5 +1,6 @@
 import assert from 'assert';
 import constants from './constants.js';
+import paths from './paths.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import database from './database.js';
@@ -15,7 +16,7 @@ function postProcess(data) {
     data.folderPath = data.folder_path;
     delete data.folder_path;
 
-    if (!data.folderPath) data.folderPath = path.join(constants.GROUPS_DATA_ROOT, data.id);
+    if (!data.folderPath) data.folderPath = path.join(paths.GROUPS_DATA_ROOT, data.id);
 
     return data;
 }
@@ -50,7 +51,7 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
     if (error) throw error;
 
     // ensure folder
-    if (!folderPath) folderPath = path.join(constants.GROUPS_DATA_ROOT, idOrSlug);
+    if (!folderPath) folderPath = path.join(paths.GROUPS_DATA_ROOT, idOrSlug);
     fs.mkdirSync(folderPath, { recursive: true });
 
     // kick off indexer in background
@@ -138,7 +139,7 @@ async function update(id, name, members) {
 async function remove(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const groupFolderPath = path.join(constants.GROUPS_DATA_ROOT, id);
+    const groupFolderPath = path.join(paths.GROUPS_DATA_ROOT, id);
 
     debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
 

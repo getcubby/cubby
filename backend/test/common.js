@@ -2,6 +2,7 @@ import database from '../database.js';
 import files from '../files.js';
 import fs from 'node:fs';
 import nock from 'nock';
+import paths from '../paths.js';
 import tokens from '../tokens.js';
 import users from '../users.js';
 
@@ -26,8 +27,8 @@ async function databaseSetup() {
     database.init();
     await database._clear();
 
-    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH, process.env.SEARCH_INDEX_PATH ]) {
-        if (!dir || !fs.existsSync(dir)) continue;
+    for (const dir of [ paths.USER_DATA_ROOT, paths.GROUPS_DATA_ROOT, paths.SEARCH_INDEX_PATH ]) {
+        if (!fs.existsSync(dir)) continue;
         for (const entry of fs.readdirSync(dir)) {
             fs.rmSync(`${dir}/${entry}`, { recursive: true, force: true });
         }
@@ -57,8 +58,8 @@ async function cleanup() {
     nock.cleanAll();
     await database.uninitialize();
 
-    for (const dir of [ process.env.USER_DATA_PATH, process.env.GROUPS_DATA_PATH, process.env.SEARCH_INDEX_PATH ]) {
-        if (!dir || !fs.existsSync(dir)) continue;
+    for (const dir of [ paths.USER_DATA_ROOT, paths.GROUPS_DATA_ROOT, paths.SEARCH_INDEX_PATH ]) {
+        if (!fs.existsSync(dir)) continue;
         for (const entry of fs.readdirSync(dir)) {
             fs.rmSync(`${dir}/${entry}`, { recursive: true, force: true });
         }

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import constants from './constants.js';
+import paths from './paths.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import exec from './exec.js';
@@ -43,15 +43,15 @@ const generators = [{
         assert.strictEqual(typeof fullFilePath, 'string');
 
         const hash = crypto.createHash('md5').update(fullFilePath).digest('hex');
-        const targetPath = path.join(constants.THUMBNAIL_ROOT, hash);
+        const targetPath = path.join(paths.THUMBNAIL_ROOT, hash);
 
         async function generate(hash, fullFilePath) {
-            const targetPath = path.join(constants.THUMBNAIL_ROOT, hash);
+            const targetPath = path.join(paths.THUMBNAIL_ROOT, hash);
 
             debugLog(`generateImageMagick: hash=${hash} fullFilePath=${fullFilePath}`);
 
             try {
-                await fs.ensureDir(constants.THUMBNAIL_ROOT);
+                await fs.ensureDir(paths.THUMBNAIL_ROOT);
                 if (mimeType === 'image/gif') await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath+'[0]', targetPath ]);
                 else await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath, targetPath ]);
             } catch (e) {
@@ -78,7 +78,7 @@ function getHash(mimeType, fullFilePath) {
 function getLocalPath(hash) {
     assert.strictEqual(typeof hash, 'string');
 
-    const targetPath = path.join(constants.THUMBNAIL_ROOT, hash);
+    const targetPath = path.join(paths.THUMBNAIL_ROOT, hash);
     if (!fs.existsSync(targetPath)) return null;
 
     return targetPath;

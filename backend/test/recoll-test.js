@@ -2,7 +2,7 @@ import { describe, it, before, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
 import child_process from 'node:child_process';
 import common from './common.js';
-import constants from '../constants.js';
+import paths from '../paths.js';
 import exec from '../exec.js';
 import fs from 'node:fs';
 import groupfolders from '../groupfolders.js';
@@ -32,14 +32,14 @@ describe('recoll', function () {
     after(cleanup);
 
     function indexDbPath(username) {
-        return path.join(constants.SEARCH_INDEX_PATH, username, 'xapiandb');
+        return path.join(paths.SEARCH_INDEX_PATH, username, 'xapiandb');
     }
 
     async function buildRecollConfig(username) {
-        const configPath = path.join(constants.SEARCH_INDEX_PATH, username);
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
         fs.mkdirSync(configPath, { recursive: true });
 
-        const pathsToIndex = [ path.join(constants.USER_DATA_ROOT, username) ];
+        const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
         for (const groupFolder of await groupfolders.list(username)) {
             pathsToIndex.push(groupFolder.folderPath);
         }

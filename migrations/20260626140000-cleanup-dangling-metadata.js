@@ -9,9 +9,11 @@ function isGroupfolder(owner) {
 }
 
 function getDataRoots() {
+    if (!process.env.CLOUDRON) return null;
+
     return {
-        userDataRoot: path.resolve(process.env.USER_DATA_PATH),
-        groupsDataRoot: path.resolve(process.env.GROUPS_DATA_PATH)
+        userDataRoot: '/app/data/data',
+        groupsDataRoot: '/app/data/groups'
     };
 }
 
@@ -39,9 +41,10 @@ function shareOwner(row) {
 }
 
 exports.up = async function() {
-    if (!process.env.USER_DATA_PATH || !process.env.GROUPS_DATA_PATH) return;
+    const roots = getDataRoots();
+    if (!roots) return;
 
-    const { userDataRoot, groupsDataRoot } = getDataRoots();
+    const { userDataRoot, groupsDataRoot } = roots;
     const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
 

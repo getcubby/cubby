@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
 import common from './common.js';
-import constants from '../constants.js';
+import paths from '../paths.js';
 import files from '../files.js';
 import groupfolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
@@ -30,7 +30,7 @@ describe('files', function () {
         await createUsers();
 
         const valid = files.getAbsolutePath(admin.username, '/docs/readme.txt');
-        assert.equal(valid, path.join(constants.USER_DATA_ROOT, admin.username, 'docs', 'readme.txt'));
+        assert.equal(valid, path.join(paths.USER_DATA_ROOT, admin.username, 'docs', 'readme.txt'));
 
         assert.equal(files.getAbsolutePath(admin.username, '/../secret'), null);
     });

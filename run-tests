@@ -3,19 +3,16 @@
 set -eu
 
 readonly source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly DATA_DIR="${HOME}/.cubby_test"
+readonly DATA_DIR="/tmp/cubby_test"
 readonly DEFAULT_TESTS="./backend/test/*-test.js ./backend/routes/test/*-test.js"
+
+prepare_data_dir() {
+    rm -rf "${DATA_DIR}"
+    mkdir -p "${DATA_DIR}/data" "${DATA_DIR}/groups" "${DATA_DIR}/thumbnails" "${DATA_DIR}/sessions" "${DATA_DIR}/.recoll"
+}
 
 export_test_env() {
     export CUBBY_ENV=test
-    export CUBBY_TEST_DIR="${DATA_DIR}"
-
-    export USER_DATA_PATH="${DATA_DIR}/data"
-    export GROUPS_DATA_PATH="${DATA_DIR}/groups"
-    export THUMBNAIL_PATH="${DATA_DIR}/thumbnails"
-    export SESSION_PATH="${DATA_DIR}/sessions"
-    export SEARCH_INDEX_PATH="${DATA_DIR}/recoll"
-    export SESSION_SECRET_FILE_PATH="${DATA_DIR}/.secret"
 
     export PORT="3456"
     export APP_ORIGIN="http://127.0.0.1:${PORT}"
@@ -31,6 +28,7 @@ export_test_env() {
 # fast path: if explicit tests are provided, run them directly and skip setup.
 if [[ $# -gt 0 ]]; then
     export_test_env
+    prepare_data_dir
     cd "${source_dir}"
     CUBBY_ENV=test ./node_modules/.bin/mocha --bail --no-timeouts --exit -R spec "$@"
     exit $?
@@ -40,8 +38,7 @@ cd "${source_dir}"
 export_test_env
 
 echo "=> Prepare test data directory at ${DATA_DIR}"
-rm -rf "${DATA_DIR}"
-mkdir -p "${USER_DATA_PATH}" "${GROUPS_DATA_PATH}" "${THUMBNAIL_PATH}" "${SESSION_PATH}" "${SEARCH_INDEX_PATH}"
+prepare_data_dir
 
 if [[ -z ${FAST+x} ]]; then
     echo "=> Remove existing postgres test container if present"

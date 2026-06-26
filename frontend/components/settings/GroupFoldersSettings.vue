@@ -44,6 +44,7 @@ const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
 const settingsInputDialog = useTemplateRef('settingsInputDialog');
 
 const groupFolderTableModel = ref([]);
+const groupFoldersBusy = ref(true);
 const groupFolderAdd = ref({
   error: '',
   busy: false,
@@ -62,12 +63,15 @@ const groupFolderEdit = ref({
 });
 
 async function refreshGroupFolders() {
+  groupFoldersBusy.value = true;
+
   try {
     groupFolderTableModel.value = await GroupFolderModel.list();
   } catch (error) {
     console.error('Failed to list groupFolder.', error);
   }
 
+  groupFoldersBusy.value = false;
   emit('groupfolders-changed');
 }
 
@@ -229,7 +233,7 @@ onMounted(refreshGroupFolders);
       </div>
     </Dialog>
 
-    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" placeholder="No group folders">
+    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" :busy="groupFoldersBusy" placeholder="No group folders">
       <template #folderPath="{ item: slotProps }">{{ slotProps.folderPath }}</template>
       <template #members="{ item: slotProps }">{{ slotProps.members.join(', ') }}</template>
       <template #action="{ item: slotProps }">

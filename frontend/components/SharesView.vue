@@ -4,7 +4,7 @@ import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
 import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Button, Icon, InputDialog, TableView, TopBar } from '@cloudron/pankow';
+import { Button, Icon, InputDialog, ProgressBar, TableView, TopBar } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
 
@@ -53,8 +53,11 @@ const edit = ref({
   user: {}
 });
 const tableModel = ref([]);
+const busy = ref(true);
 
 async function refresh() {
+  busy.value = true;
+
   tableModel.value = await ShareModel.list();
 
   // set properties for sorting the table
@@ -62,6 +65,8 @@ async function refresh() {
     s.target = s.file.filePath.toLowerCase();
     s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
   });
+
+  busy.value = false;
 }
 
 async function onDelete(share) {
@@ -99,8 +104,9 @@ onMounted(refresh);
     </TopBar>
 
     <div class="shares-body">
+      <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
       <EmptyState
-        v-if="tableModel.length === 0"
+        v-else-if="tableModel.length === 0"
         icon="fa-solid fa-share-from-square"
         title="Nothing shared by you"
         description="Files and folders you share will show up here"

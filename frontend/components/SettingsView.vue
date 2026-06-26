@@ -22,13 +22,18 @@ defineProps({
 const emit = defineEmits(['groupfolders-changed', 'login']);
 
 const users = ref([]);
+const usersBusy = ref(true);
 
 async function refreshUsers() {
+  usersBusy.value = true;
+
   try {
     users.value = await MainModel.getUsers();
   } catch (error) {
     console.error('Failed to list users.', error);
   }
+
+  usersBusy.value = false;
 }
 
 async function onUsersChanged() {
@@ -56,7 +61,7 @@ onMounted(async () => {
       <div class="settings-content content">
         <h1 class="settings-page-header">Settings</h1>
 
-        <UsersSettings :profile="profile" :users="users" @users-changed="onUsersChanged" />
+        <UsersSettings :profile="profile" :users="users" :busy="usersBusy" @users-changed="onUsersChanged" />
         <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
         <OfficeIntegrationSettings />
       </div>

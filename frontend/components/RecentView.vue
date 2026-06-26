@@ -6,7 +6,7 @@ import MainModel from '../models/MainModel.js';
 import SearchBar from './SearchBar.vue';
 import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Button, TopBar } from '@cloudron/pankow';
+import { Button, ProgressBar, TopBar } from '@cloudron/pankow';
 
 const props = defineProps({
   profile: {
@@ -22,7 +22,7 @@ const props = defineProps({
 const emit = defineEmits(['item-activated', 'login']);
 
 const buckets = ref([]);
-const ready = ref(false);
+const busy = ref(true);
 
 onMounted(async () => {
   const entries = await MainModel.recent();
@@ -51,7 +51,7 @@ onMounted(async () => {
   if (lastMonth.length) buckets.value.push({ label: 'Last month', entries: lastMonth });
   if (older.length) buckets.value.push({ label: 'Older', entries: older });
 
-  ready.value = true;
+  busy.value = false;
 });
 
 function onActivateItem(entry) {
@@ -83,7 +83,8 @@ function iconError(event, entry) {
       </template>
     </TopBar>
 
-    <div class="buckets" v-if="ready">
+    <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+    <div class="buckets" v-else>
       <EmptyState
         v-if="buckets.length === 0"
         icon="fa-regular fa-clock"
@@ -111,6 +112,7 @@ function iconError(event, entry) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
 }
 
 .buckets {

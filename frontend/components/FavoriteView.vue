@@ -5,7 +5,7 @@ import FavoriteModel from '../models/FavoriteModel.js';
 import SearchBar from './SearchBar.vue';
 import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Icon, TopBar } from '@cloudron/pankow';
+import { Icon, ProgressBar, TopBar } from '@cloudron/pankow';
 
 defineProps({
   profile: {
@@ -21,13 +21,18 @@ defineProps({
 const emit = defineEmits(['item-activated', 'login']);
 
 const favorites = ref([]);
+const busy = ref(true);
 
 async function refresh() {
+  busy.value = true;
+
   try {
     favorites.value = await FavoriteModel.list();
   } catch (e) {
     console.error('Failed to list favorites.', e);
   }
+
+  busy.value = false;
 }
 
 function onActivateItem(entry) {
@@ -67,23 +72,26 @@ onMounted(refresh);
     </TopBar>
 
     <div class="favorite-body">
-      <div v-if="favorites.length" class="favorite-container">
-        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
-          <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
-          <div>
-            {{ entry.fileName }}<br/>
-            <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
-          </div>
-          <div style="flex-grow: 1;"></div>
-          <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
-        </a>
-      </div>
-      <EmptyState
-        v-else
-        icon="fa-solid fa-star"
-        title="No favorites"
-        description="Files and folders you mark as favorite will show up here"
-      />
+      <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+      <template v-else>
+        <div v-if="favorites.length" class="favorite-container">
+          <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
+            <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
+            <div>
+              {{ entry.fileName }}<br/>
+              <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
+            </div>
+            <div style="flex-grow: 1;"></div>
+            <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
+          </a>
+        </div>
+        <EmptyState
+          v-else
+          icon="fa-solid fa-star"
+          title="No favorites"
+          description="Files and folders you mark as favorite will show up here"
+        />
+      </template>
     </div>
   </div>
 </template>

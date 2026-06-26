@@ -14,6 +14,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  busy: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['users-changed']);
@@ -87,7 +91,7 @@ async function onEditSubmit() {
 <template>
   <Section title="Users">
     <template #header-title-extra>
-      <span class="section-count">({{ tableModel.length }})</span>
+      <span class="section-count">({{ busy ? '-' : tableModel.length }})</span>
     </template>
     <template #filter-bar>
       <TextInput v-model="searchQuery" placeholder="Search users..." style="flex-grow: 1; min-width: 120px;"/>
@@ -105,7 +109,7 @@ async function onEditSubmit() {
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
-    <TableView :columns="tableColumns" :model="filteredTableModel" :placeholder="tablePlaceholder">
+    <TableView :columns="tableColumns" :model="filteredTableModel" :busy="busy" :placeholder="tablePlaceholder">
       <template #username="{ item: slotProps }">{{ slotProps.username }}</template>
       <template #email="{ item: slotProps }">{{ slotProps.email }}</template>
       <template #admin="{ item: slotProps }"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>

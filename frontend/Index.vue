@@ -50,6 +50,7 @@ const beforeUnloadListener = (event) => {
 const shareDialog = useTemplateRef('shareDialog');
 
 const ready = ref(false);
+const directoryBusy = ref(false);
 const view = ref('');
 const viewer = ref('');
 const showSize = ref(true);
@@ -557,6 +558,8 @@ async function refresh(item = null) {
     const idx = entries.value.findIndex((e) => e.id === item.id );
     if (idx !== -1) entries.value.splice(idx, 1, item);
   } else {
+    directoryBusy.value = true;
+
     const resource = parseResourcePath(currentResourcePath.value);
 
     try {
@@ -574,6 +577,7 @@ async function refresh(item = null) {
 
     entry.value = item;
     entries.value = item.files;
+    directoryBusy.value = false;
   }
 }
 
@@ -673,7 +677,9 @@ const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
 
 async function onGroupFoldersChanged() {
+  directoryBusy.value = true;
   await loadMainDirectory(currentResourcePath.value, null, true);
+  directoryBusy.value = false;
 }
 
 // return false/true on fail/success
@@ -684,6 +690,8 @@ async function loadPath(path, forceLoad = false) {
   if (viewer.value) viewer.value = '';
 
   if (!forceLoad && currentResourcePath.value === resource.resourcePath) return true;
+
+  directoryBusy.value = true;
 
   let item;
   try {
@@ -747,6 +755,7 @@ async function loadPath(path, forceLoad = false) {
   }
 
   entry.value = item;
+  directoryBusy.value = false;
 
   return true;
 }
@@ -797,11 +806,11 @@ onMounted(async () => {
       // Auth failure sets LOGIN + returnTo; do not rewrite hash here or a second load 401s and overwrites returnTo with files/home/
       else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/home/';
     } else if (hash.indexOf('files/shares/') === 0) {
-      loadPath(hash.slice('files'.length), true);
-      view.value = VIEWS.FILES_SHARES;
+      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_SHARES;
+      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/shares/';
     } else if (hash.indexOf('files/groupfolders/') === 0) {
-      loadPath(hash.slice('files'.length), true);
-      view.value = VIEWS.FILES_GROUPFOLDERS;
+      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_GROUPFOLDERS;
+      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/groupfolders/';
     } else if (hash === 'recent') {
       if (!profile.value?.username) {
         view.value = VIEWS.LOGIN;
@@ -953,6 +962,7 @@ onBeforeUnmount(() => {
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView
                   ref="directoryView"
+                  :busy="directoryBusy"
                   :view-mode="viewMode"
                   :show-star="!!profile?.username"
                   :show-owner="false"

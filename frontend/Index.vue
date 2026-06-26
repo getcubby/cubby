@@ -5,6 +5,7 @@ import { BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './
 import {
   Breadcrumb,
   Button,
+  ButtonGroup,
   Dialog,
   DirectoryView,
   FileUploader,
@@ -72,9 +73,9 @@ const breadCrumbHome = ref({
 });
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 
-function toggleViewMode() {
-  viewMode.value = viewMode.value === 'list' ? 'grid' : 'list';
-  localStorage.viewMode = viewMode.value;
+function setViewMode(mode) {
+  viewMode.value = mode;
+  localStorage.viewMode = mode;
 }
 
 const profileMenu = computed(() => {
@@ -957,7 +958,10 @@ onBeforeUnmount(() => {
                 <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
                 <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
                 <div style="flex-grow: 1"></div>
-                <Button plain tool :icon="viewMode === 'list' ? 'fa-solid fa-grip' : 'fa-solid fa-list'" @click="toggleViewMode" style="margin-right: 40px"/>
+                <ButtonGroup style="margin-right: 40px">
+                  <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
+                  <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
+                </ButtonGroup>
               </div>
               <div style="overflow: hidden; height: calc(100% - 46px);">
                 <DirectoryView

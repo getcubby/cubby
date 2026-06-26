@@ -151,21 +151,6 @@ function canonicalFavoritePath(entry) {
     return sanitize(combined);
 }
 
-/** Parse #shares or #shares?path=... for the Shared by you view. */
-function parseSharesHash(hash) {
-    if (hash !== 'shares' && !hash.startsWith('shares?')) return null;
-
-    const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : '';
-    const path = new URLSearchParams(query).get('path') || '';
-
-    return { search: path };
-}
-
-/** Hash route to Shared by you filtered by file path (e.g. /Welcome.md). */
-function getSharesManageHash(filePath) {
-    return `shares?path=${encodeURIComponent(filePath || '')}`;
-}
-
 function entryListSort(list, prop, desc) {
     var tmp = list.sort(function (a, b) {
         var av = a[prop];
@@ -194,7 +179,5 @@ export {
     prettyType,
     getEntryIdentifier,
     canonicalFavoritePath,
-    entryListSort,
-    parseSharesHash,
-    getSharesManageHash
+    entryListSort
 };

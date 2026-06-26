@@ -1,10 +1,10 @@
 <script setup>
 
-import { ref, computed, watch, useTemplateRef, onMounted } from 'vue';
+import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
 import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Button, Icon, InputDialog, ProgressBar, TableView, TextInput, TopBar } from '@cloudron/pankow';
+import { Button, Icon, InputDialog, ProgressBar, TableView, TopBar } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
 
@@ -16,10 +16,6 @@ const props = defineProps({
   profileMenu: {
     type: Array,
     default: () => [],
-  },
-  initialSearch: {
-    type: String,
-    default: '',
   },
 });
 
@@ -51,39 +47,23 @@ const tableColumns = {
 
 const sharesInputDialog = useTemplateRef('sharesInputDialog');
 
-const searchQuery = ref('');
+const users = ref([]);
+const edit = ref({
+  admin: false,
+  user: {}
+});
 const tableModel = ref([]);
 const busy = ref(true);
-
-watch(() => props.initialSearch, (value) => {
-  searchQuery.value = value || '';
-}, { immediate: true });
-
-const filteredTableModel = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return tableModel.value;
-  return tableModel.value.filter((s) => {
-    const path = (s.file.filePath || '').toLowerCase();
-    const pathDisplay = path.slice(1);
-    const receiver = (s.receiverUsername || '').toLowerCase();
-    return path.includes(q) || pathDisplay.includes(q) || receiver.includes(q);
-  });
-});
-
-const tablePlaceholder = computed(() => {
-  if (tableModel.value.length === 0) return '';
-  if (searchQuery.value.trim() && filteredTableModel.value.length === 0) return 'No matching shares';
-  return '';
-});
 
 async function refresh() {
   busy.value = true;
 
   tableModel.value = await ShareModel.list();
 
+  // set properties for sorting the table
   tableModel.value.forEach((s) => {
     s.target = s.file.filePath.toLowerCase();
-    s.receiver = s.receiverUsername || 'zzzzzzzzz';
+    s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
   });
 
   busy.value = false;
@@ -123,34 +103,31 @@ onMounted(refresh);
       </template>
     </TopBar>
 
-    <div class="shares-body" :class="{ 'shares-body-empty': !busy && tableModel.length === 0 }">
+    <div class="shares-body">
       <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+      <EmptyState
+        v-else-if="tableModel.length === 0"
+        icon="fa-solid fa-share-from-square"
+        title="Nothing shared by you"
+        description="Files and folders you share will show up here"
+      />
       <template v-else>
-        <EmptyState
-          v-if="tableModel.length === 0"
-          icon="fa-solid fa-share-from-square"
-          title="Nothing shared by you"
-          description="Files and folders you share will show up here"
-        />
-        <template v-else>
-          <TextInput v-model="searchQuery" placeholder="Search shares..." class="shares-search"/>
-
-          <TableView :columns="tableColumns" :model="filteredTableModel" :placeholder="tablePlaceholder" default-sort-by="target">
-            <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
-            <template #target="{ item:slotProps }">
-              {{ slotProps.file.filePath.slice(1) }}
-            </template>
-            <template #receiver="{ item:slotProps }">
-              <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
-              <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
-              {{ slotProps.receiverUsername }}
-            </template>
-            <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
-            <template #action="{ item:slotProps }">
-              <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
-            </template>
-          </TableView>
-        </template>
+        <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
+          <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
+          <template #target="{ item:slotProps }">
+            {{ slotProps.file.filePath.slice(1) }}
+          </template>
+          <template #receiver="{ item:slotProps }">
+            <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
+            <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
+            {{ slotProps.receiverUsername }}
+          </template>
+          <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
+          <template #action="{ item:slotProps }">
+            <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
+          </template>
+        </TableView>
+        <div class="share-count">{{ tableModel.length }} shares</div>
       </template>
     </div>
   </div>
@@ -166,22 +143,20 @@ onMounted(refresh);
 }
 
 .shares-body {
-  padding: 12px 20px 0;
+  padding: 0 20px;
   overflow: auto;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.shares-body:has(.share-count) {
   justify-content: flex-start;
 }
 
-.shares-body-empty {
-  justify-content: center;
-  padding-top: 0;
-}
-
-.shares-search {
-  max-width: 320px;
-  margin-bottom: 12px;
+.share-count {
+  margin-top: 10px;
 }
 
 </style>

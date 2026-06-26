@@ -124,7 +124,15 @@ defineExpose({
 </script>
 
 <template>
-  <Dialog ref="dialog" :title="'Sharing ' + entry.fileName" :show-x="true">
+  <Dialog
+    ref="dialog"
+    title="Share"
+    reject-label="Done"
+    reject-style="secondary"
+  >
+    <p v-show="entry.fileName">
+      Sharing "{{ entry.fileName }}" with other users or via a link.
+    </p>
     <div>
       <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
         <template #user>

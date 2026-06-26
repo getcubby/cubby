@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
-import { BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './utils.js';
+import { BASE_URL, canonicalFavoritePath, parseResourcePath, parseSharesHash, sanitize } from './utils.js';
 import {
   Breadcrumb,
   Button,
@@ -48,6 +48,7 @@ const beforeUnloadListener = (event) => {
 };
 
 const shareDialog = useTemplateRef('shareDialog');
+const sharesInitialSearch = ref('');
 
 const ready = ref(false);
 const directoryBusy = ref(false);
@@ -830,12 +831,13 @@ onMounted(async () => {
       resetNonFileViewState();
       view.value = VIEWS.SETTINGS;
       onCloseSidebar();
-    } else if (hash === 'shares') {
+    } else if (hash === 'shares' || hash.startsWith('shares?')) {
       if (!profile.value?.username) {
         view.value = VIEWS.LOGIN;
         return;
       }
       resetNonFileViewState();
+      sharesInitialSearch.value = parseSharesHash(hash)?.search || '';
       view.value = VIEWS.SHARES;
       onCloseSidebar();
     } else {
@@ -934,7 +936,7 @@ onBeforeUnmount(() => {
         <div style="flex-grow: 1">&nbsp;</div>
       </SideBar>
       <div class="content">
-        <SharesView v-if="view === VIEWS.SHARES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
+        <SharesView v-if="view === VIEWS.SHARES" :profile="profile" :profile-menu="profileMenu" :initial-search="sharesInitialSearch" @login="onLogin" />
         <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @groupfolders-changed="onGroupFoldersChanged()"/>
         <RecentView v-else-if="view === VIEWS.RECENT" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
         <FavoriteView v-else-if="view === VIEWS.FAVORITES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />

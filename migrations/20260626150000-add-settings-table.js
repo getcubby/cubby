@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const pg = require('pg');
 
 function getConfigFilePath() {
     if (process.env.CLOUDRON) return '/app/data/config.json';
@@ -30,17 +29,10 @@ exports.up = async function(db) {
     const collabora = config.collabora || { host: '' };
     if (!collabora.host) return;
 
-    const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
+    const existing = await db.runSql('SELECT name FROM settings WHERE name=?', [ 'collabora' ]);
+    if (existing.length > 0) return;
 
-    try {
-        const existing = await client.query('SELECT name FROM settings WHERE name = $1', [ 'collabora' ]);
-        if (existing.rows.length > 0) return;
-
-        await client.query('INSERT INTO settings (name, value) VALUES ($1, $2)', [ 'collabora', JSON.stringify(collabora) ]);
-    } finally {
-        await client.end();
-    }
+    await db.runSql('INSERT INTO settings (name, value) VALUES (?, ?)', [ 'collabora', JSON.stringify(collabora) ]);
 };
 
 exports.down = async function(db) {

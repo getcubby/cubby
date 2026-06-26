@@ -35,7 +35,7 @@ echo "==> Remove legacy recents file"
 rm -f /app/data/.recents.json
 
 echo "==> Run database migrations"
-DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
+DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
 
 echo "==> Start the server"
 export DEBUG="cubby:*"

@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const pg = require('pg');
 
 function isGroupfolder(owner) {
     return owner.indexOf('groupfolder-') === 0;
@@ -40,31 +39,25 @@ function shareOwner(row) {
     return null;
 }
 
-exports.up = async function() {
+exports.up = async function(db) {
     const roots = getDataRoots();
     if (!roots) return;
 
     const { userDataRoot, groupsDataRoot } = roots;
-    const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-    await client.connect();
 
-    try {
-        const favorites = await client.query('SELECT id, owner, file_path FROM favorites');
-        for (const row of favorites.rows) {
-            if (!pathExists(userDataRoot, groupsDataRoot, row.owner, row.file_path)) {
-                await client.query('DELETE FROM favorites WHERE id = $1', [ row.id ]);
-            }
+    const favorites = await db.runSql('SELECT id, owner, file_path FROM favorites');
+    for (const row of favorites) {
+        if (!pathExists(userDataRoot, groupsDataRoot, row.owner, row.file_path)) {
+            await db.runSql('DELETE FROM favorites WHERE id=?', [ row.id ]);
         }
+    }
 
-        const shares = await client.query('SELECT id, owner_username, owner_groupfolder, file_path FROM shares');
-        for (const row of shares.rows) {
-            const owner = shareOwner(row);
-            if (!owner || !pathExists(userDataRoot, groupsDataRoot, owner, row.file_path)) {
-                await client.query('DELETE FROM shares WHERE id = $1', [ row.id ]);
-            }
+    const shares = await db.runSql('SELECT id, owner_username, owner_groupfolder, file_path FROM shares');
+    for (const row of shares) {
+        const owner = shareOwner(row);
+        if (!owner || !pathExists(userDataRoot, groupsDataRoot, owner, row.file_path)) {
+            await db.runSql('DELETE FROM shares WHERE id=?', [ row.id ]);
         }
-    } finally {
-        await client.end();
     }
 };
 

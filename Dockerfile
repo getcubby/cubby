@@ -42,4 +42,6 @@ FROM base AS final
 COPY --from=frontend /app/code/frontend-dist ./frontend-dist
 COPY start.sh /app/code/
 
+WORKDIR /app/code
+
 CMD [ "/app/code/start.sh" ]

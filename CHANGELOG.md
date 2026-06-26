@@ -553,3 +553,6 @@
 * Move shares, recents, favorites when file moves
 * migrate config.json to settings table
 
+[2.15.0]
+* Update cubby to dc3ffb3
+

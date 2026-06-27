@@ -71,22 +71,20 @@ onMounted(refresh);
       </template>
     </TopBar>
 
-    <div class="favorite-body">
-      <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
-      <template v-else>
-        <div v-if="favorites.length" class="favorite-container">
-          <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
-            <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
-            <div>
-              {{ entry.fileName }}<br/>
-              <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
-            </div>
-            <div style="flex-grow: 1;"></div>
-            <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
-          </a>
-        </div>
-        <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
-      </template>
+    <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+    <div class="favorite-body" v-else>
+      <div v-if="favorites.length" class="favorite-container">
+        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
+          <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
+          <div>
+            {{ entry.fileName }}<br/>
+            <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
+          </div>
+          <div style="flex-grow: 1;"></div>
+          <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
+        </a>
+      </div>
+      <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
     </div>
   </div>
 </template>

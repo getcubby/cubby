@@ -103,9 +103,9 @@ onMounted(refresh);
       </template>
     </TopBar>
 
-    <div class="shares-body">
-      <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
-      <EmptyState v-else-if="tableModel.length === 0" icon="fa-solid fa-share-from-square" title="Nothing shared by you" description="Files and folders you share will show up here" />
+    <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+    <div class="shares-body" v-else>
+      <EmptyState v-if="tableModel.length === 0" icon="fa-solid fa-share-from-square" title="Nothing shared by you" description="Files and folders you share will show up here" />
       <template v-else>
         <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
           <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>

@@ -1,35 +1,19 @@
 <script setup>
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
-import { BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from './utils.js';
-import {
-  Breadcrumb,
-  Button,
-  ButtonGroup,
-  Dialog,
-  DirectoryView,
-  FileUploader,
-  Notification,
-  SideBar,
-  TextInput,
-  TopBar
-} from '@cloudron/pankow';
-import DirectoryModel from './models/DirectoryModel.js';
+import { BASE_URL, parseResourcePath } from './utils.js';
+import { Button, Notification, SideBar, TopBar } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
-import FavoriteModel from './models/FavoriteModel.js';
 import LoginView from './components/LoginView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
-import PreviewPanel from './components/PreviewPanel.vue';
+import FileBrowser from './components/FileBrowser.vue';
 import FileViewerOverlay from './components/FileViewerOverlay.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
 import ShareDialog from './components/ShareDialog.vue';
 import ProfileMenuButton from './components/ProfileMenuButton.vue';
-import EmptyState from './components/EmptyState.vue';
-
-const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
 const VIEWS = {
   LOGIN: 'login',
@@ -42,39 +26,16 @@ const VIEWS = {
   SHARES: 'shares'
 };
 
-const beforeUnloadListener = (event) => {
-  event.preventDefault();
-  return window.confirm('File operation still in progress. Close anyway?');
-};
-
 const shareDialog = useTemplateRef('shareDialog');
+const fileBrowser = useTemplateRef('fileBrowser');
+const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
+const sideBar = useTemplateRef('sideBar');
 
 const ready = ref(false);
-const directoryBusy = ref(false);
 const view = ref('');
-const showSize = ref(true);
-const activeResourceType = ref('');
 const profile = ref({});
 const config = ref({});
 const currentHash = ref('');
-const uiError = ref('');
-const entry = ref({});
-const entries = ref([]);
-const selectedEntries = ref([]);
-const currentPath = ref('/');
-const currentResourcePath = ref('');
-const currentShare = ref(null);
-const breadCrumbs = ref([]);
-const breadCrumbHome = ref({
-  icon: 'fa-solid fa-house',
-  route: '#files'
-});
-const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
-
-function setViewMode(mode) {
-  viewMode.value = mode;
-  localStorage.viewMode = mode;
-}
 
 const profileMenu = computed(() => {
   const items = [];
@@ -100,30 +61,25 @@ const newMenu = [{
 }, {
   label: 'Upload file',
   icon: 'fa-solid fa-file-arrow-up',
-  action: onUploadFile
+  action: () => fileBrowser.value?.openUploadFile()
 }, {
   label: 'Upload folder',
   icon: 'fa-regular fa-folder-open',
-  action: onUploadFolder
+  action: () => fileBrowser.value?.openUploadFolder()
 }, {
   separator: true,
   label: 'Create new',
 }, {
   label: 'New file',
   icon: 'fa-solid fa-file-circle-plus',
-  action: onNewFile
+  action: () => fileBrowser.value?.openNewFile()
 }, {
   label: 'New folder',
   icon: 'fa-solid fa-folder-plus',
-  action: onNewFolder
+  action: () => fileBrowser.value?.openNewFolder()
 }];
 
-const isReadonly = computed(() => {
-  if (currentResourcePath.value === '/shares/') return true;
-  if (currentResourcePath.value === '/groupfolders/') return true;
-  if (!currentShare.value) return false;
-  return currentShare.value.readonly;
-});
+const isReadonly = computed(() => fileBrowser.value?.isReadonly ?? true);
 
 const isFileBrowserView = computed(() =>
   view.value === VIEWS.FILES_HOME ||
@@ -134,43 +90,6 @@ const isFileBrowserView = computed(() =>
 const showTopBarNew = computed(() => isFileBrowserView.value);
 const showTopBarBack = computed(() => view.value === VIEWS.SETTINGS);
 
-async function onToggleFavorite(entry) {
-  try {
-    if (entry.favorite) {
-      await FavoriteModel.remove(entry.favorite.id);
-      entry.favorite = null;
-      entry.star = false;
-    } else {
-      const path = canonicalFavoritePath(entry);
-      const id = await FavoriteModel.create({ owner: entry.owner, path });
-      entry.favorite = { id, owner: entry.owner, path };
-      entry.star = true;
-    }
-  } catch (error) {
-    if (error?.cause?.status === 401 || error?.status === 401) onInvalidSession();
-    else console.error('Failed to toggle favorite', error);
-  }
-}
-
-async function uploadJobPreFlightCheckHandler(job) {
-  // abort if target folder already exists
-  if (job.folder && await DirectoryModel.exists(parseResourcePath(job.targetFolder), job.folder)) {
-    window.pankow.notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
-    return false;
-  }
-
-  return true;
-}
-
-async function uploadHandler(targetDir, file, progressHandler) {
-  const resource = parseResourcePath(targetDir);
-
-  await DirectoryModel.upload(resource, file, progressHandler);
-
-  refresh();
-}
-
-const sideBar = useTemplateRef('sideBar');
 function onCloseSidebar() {
   sideBar.value.close();
 }
@@ -185,11 +104,8 @@ async function onLogout() {
 }
 
 function onInvalidSession() {
-  // stash for use later after re-login
   localStorage.returnTo = window.location.hash.slice(1);
-
   profile.value = {};
-
   onLogin();
 }
 
@@ -201,7 +117,6 @@ async function revalidateSession() {
   if (view.value === VIEWS.LOGIN) return;
   if (!profile.value.username) return;
 
-  // only check again if we didn't check within last half a minute
   const now = Date.now();
   if (now - lastSessionCheckAt < 30000) return;
 
@@ -240,142 +155,26 @@ function onWindowFocusForSession() {
   scheduleSessionRevalidate();
 }
 
-const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
-
-function onImageViewerNavigate(entry) {
-  // prevent to reload image
-  currentHash.value = `#files${entry.resourcePath}`;
-  window.location.hash = `files${entry.resourcePath}`;
-}
-
 function onFileViewerClose() {
-  const resource = parseResourcePath(currentResourcePath.value || '/home/');
+  const folderPath = fileBrowser.value?.currentResourcePath || '/home/';
+  const resource = parseResourcePath(folderPath);
   window.location.hash = `files${resource.resourcePath}`;
 }
 
-function onUploadFinished() {
-  refresh();
+async function onOpenFile({ item, resource, siblingEntries }) {
+  await fileViewerOverlay.value?.openFile(item, resource, siblingEntries);
 }
 
-const fileUploader = useTemplateRef('fileUploader');
-function onUploadFile() {
-  const resource = parseResourcePath(currentResourcePath.value || 'files/');
-  fileUploader.value.onUploadFile(resource.resourcePath);
+function onCloseViewer() {
+  fileViewerOverlay.value?.close();
 }
 
-function onUploadFolder() {
-  const resource = parseResourcePath(currentResourcePath.value || 'files/');
-  fileUploader.value.onUploadFolder(resource.resourcePath);
+async function fileViewerDownloadHandler(items) {
+  return fileBrowser.value?.downloadHandler(items);
 }
 
-const deleteDialog = useTemplateRef('deleteDialog');
-const deletePending = ref([]);
-const deleteBusy = ref(false);
-
-const directoryView = useTemplateRef('directoryView');
-const newItemForm = ref({
-  mode: 'file',
-  name: '',
-  error: '',
-  busy: false
-});
-const newItemDialogElement = useTemplateRef('newItemDialog');
-
-function onNewItemDialogNameInput() {
-  newItemForm.value.error = '';
-}
-
-function onNewFile() {
-  newItemForm.value.busy = false;
-  newItemForm.value.error = '';
-  newItemForm.value.name = '';
-  newItemForm.value.mode = 'file';
-  newItemDialogElement.value.open();
-}
-
-function onNewFolder() {
-  newItemForm.value.busy = false;
-  newItemForm.value.error = '';
-  newItemForm.value.name = '';
-  newItemForm.value.mode = 'folder';
-  newItemDialogElement.value.open();
-}
-
-async function onNewItemDialogSubmit() {
-  if (newItemForm.value.busy) return;
-
-  const name = newItemForm.value.name.trim();
-  if (!name) return;
-
-  newItemForm.value.busy = true;
-  newItemForm.value.error = '';
-
-  const resource = parseResourcePath(currentResourcePath.value || 'files/');
-  const mode = newItemForm.value.mode;
-
-  try {
-    if (mode === 'file') await DirectoryModel.newFile(resource, name);
-    else await DirectoryModel.newFolder(resource, name);
-  } catch (error) {
-    newItemForm.value.busy = false;
-    if (error.reason === DirectoryModelError.NO_AUTH) {
-      newItemDialogElement.value.close();
-      onInvalidSession();
-      return;
-    }
-    if (error.reason === DirectoryModelError.CONFLICT) {
-      newItemForm.value.error = mode === 'file'
-        ? 'A file with this name already exists.'
-        : 'A folder with this name already exists.';
-      return;
-    }
-    if (error.reason === DirectoryModelError.NOT_ALLOWED) {
-      newItemForm.value.error = 'This name is not allowed.';
-      return;
-    }
-    newItemForm.value.error = error.message || 'Something went wrong. Please try again.';
-    console.error(mode === 'file' ? 'Failed to add file:' : 'Failed to add folder:', error);
-    return;
-  }
-
-  newItemForm.value.busy = false;
-  newItemDialogElement.value.close();
-  await refresh();
-  directoryView.value.highlightByName(name);
-}
-
-async function extractHandler(item) {
-  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-  try {
-    await DirectoryModel.extract(item.resource);
-  } catch (error) {
-    if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
-    else if (error.reason === DirectoryModelError.PROCESSING_ERROR) {
-      console.log(error)
-      window.pankow.notify({ text: 'Failed to extract file: ' + error.message, persistent: true, type: 'danger' });
-    } else {
-      window.pankow.notify('Unknown error, check logs.');
-    }
-
-    window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-    return;
-  }
-  await refresh();
-
-  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-}
-
-async function pasteHandler(action, files, target) {
-  if (!files || !files.length) return;
-
-  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-  const resource = parseResourcePath((target && target.isDirectory) ? sanitize(currentResourcePath.value + '/' + target.fileName) : currentResourcePath.value);
-  await DirectoryModel.paste(resource, action, files);
-  await refresh();
-
-  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+async function fileViewerSaveHandler(item, content, done) {
+  return fileBrowser.value?.onFileSaved(item, content, done);
 }
 
 async function refreshConfig() {
@@ -389,353 +188,9 @@ async function refreshConfig() {
 provide('refreshConfig', refreshConfig);
 provide('profile', profile);
 
-function clearSelection() {
-  selectedEntries.value = [];
-}
-
 function resetNonFileViewState() {
-  fileViewerOverlay.value?.close();
-  entry.value = {};
-  entries.value = [];
-  clearSelection();
-  breadCrumbs.value = [];
-  breadCrumbHome.value = { icon: 'fa-solid fa-house', route: '#files' };
-}
-
-function onSelectionChanged(selectedItems) {
-  selectedEntries.value = selectedItems;
-}
-
-async function onFileSaved(item, content, done) {
-  try {
-    await DirectoryModel.saveFile(item.resource, content);
-  } catch (error) {
-    console.error(`Failed to save file ${item.resourcePath}`, error);
-  }
-
-  if (typeof done === 'function') done();
-}
-
-// if entries is provided download those, otherwise selected entries, otherwise all entries
-async function downloadHandler(items) {
-  // in case we got a single entry
-  if (items && !Array.isArray(items)) items = [ items ];
-  if (!items) items = selectedEntries.value;
-  if (items.length === 0) items = entries.value;
-
-  const resource = parseResourcePath(currentResourcePath.value);
-  await DirectoryModel.download(resource, items);
-}
-
-// either dataTransfer (external drop) or files (internal drag)
-async function onDrop(targetFolder, dataTransfer, files) {
-  const fullTargetFolder = sanitize(`${currentResourcePath.value}/${targetFolder}`);
-
-  if (dataTransfer) {
-    async function getFile(e) {
-      return new Promise((resolve, reject) => {
-        e.file(resolve, reject);
-      });
-    }
-
-    const fileList = [];
-    async function traverseFileTree(item, path) {
-      return new Promise(async (resolve, reject) => {
-        if (item.isFile) {
-          fileList.push(await getFile(item));
-          resolve();
-        } else if (item.isDirectory) {
-          // Get folder contents
-          const dirReader = item.createReader();
-          const items = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
-
-          for (let i in items) {
-            await traverseFileTree(items[i], item.name);
-          }
-
-          resolve();
-        } else {
-          console.log('Skipping uknown file type', item);
-          resolve();
-        }
-      });
-    }
-
-    // Collect all entries synchronously; Chrome clears dataTransfer.items after first await
-    const entries = [];
-    for (const item of dataTransfer.items) {
-      const entry = item.webkitGetAsEntry();
-      if (!entry) {
-        console.warn('Dropped item not supported.', item, item.getAsString((s) => console.log(s)));
-        continue;
-      }
-      entries.push(entry);
-    }
-
-    for (const entry of entries) {
-      if (entry.isFile) {
-        fileList.push(await getFile(entry));
-      } else if (entry.isDirectory) {
-        await traverseFileTree(entry, sanitize(`${currentResourcePath.value}/${targetFolder}`));
-      }
-    }
-    fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));
-  } else {
-    if (!files.length) return;
-
-    window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-    // check ctrl for cut/copy
-    await DirectoryModel.paste(parseResourcePath(fullTargetFolder), 'cut', files);
-    await refresh();
-
-    window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-  }
-}
-
-async function deleteHandler(items) {
-  if (!items) return;
-  if (!Array.isArray(items)) items = [items];
-  if (items.length === 0) return;
-
-  deletePending.value = items;
-  deleteBusy.value = false;
-  deleteDialog.value.open();
-}
-
-function onDeleteCancel() {
-  if (deleteBusy.value) return;
-  deletePending.value = [];
-}
-
-async function onDeleteConfirm() {
-  if (deleteBusy.value) return;
-
-  const items = deletePending.value;
-  if (items.length === 0) return;
-
-  deleteBusy.value = true;
-  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-  for (const item of items) {
-    try {
-      const resource = parseResourcePath(sanitize(currentResourcePath.value + '/' + item.fileName));
-      await DirectoryModel.remove(resource);
-    } catch (e) {
-      console.error(`Failed to remove file ${item.fileName}:`, e);
-    }
-  }
-
-  await refresh();
-
-  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-  deleteDialog.value.close();
-  deletePending.value = [];
-  deleteBusy.value = false;
-}
-
-async function renameHandler(item, newName) {
-  // this will make the change immediate for the UI even if not yet committed
-  item.name = newName;
-
-  const fromResource = item.resource;
-  const toResource = parseResourcePath(sanitize(currentResourcePath.value + '/' + newName));
-
-  if (fromResource.resourcePath === toResource.resourcePath) return;
-
-  await DirectoryModel.rename(fromResource, toResource);
-  await refresh();
-
-  directoryView.value.highlightByName(item.name);
-}
-
-async function shareHandler(item) {
-  shareDialog.value.open(item);
-}
-
-async function onRefreshCurrentDirectory() {
-  await refresh(null);
-}
-
-async function refresh(item = null) {
-  if (item) {
-    try {
-      item = await DirectoryModel.get(item.resource, item.resource.path);
-    } catch (error) {
-      if (error.status === 401) return onInvalidSession();
-      else if (error.status === 404) uiError.value = 'Does not exist';
-      else console.error(error);
-      return;
-    }
-
-    // this will replace the entry to keep bindings alive
-    const idx = entries.value.findIndex((e) => e.id === item.id );
-    if (idx !== -1) entries.value.splice(idx, 1, item);
-  } else {
-    directoryBusy.value = true;
-
-    const resource = parseResourcePath(currentResourcePath.value);
-
-    try {
-      item = await DirectoryModel.get(resource, resource.path);
-    } catch (error) {
-      if (error.status === 401) return onInvalidSession();
-      else if (error.status === 404) uiError.value = 'Does not exist';
-      else console.error(error);
-      return;
-    }
-
-    entry.value.files.forEach(function (e) {
-      e.filePathNew = e.fileName;
-    });
-
-    entry.value = item;
-    entries.value = item.files;
-    directoryBusy.value = false;
-  }
-}
-
-async function loadMainDirectory(path, item, forceLoad = false) {
-  // path is files/filepath or shares/shareid/filepath
-  const resource = parseResourcePath(path);
-  if (!resource) return;
-
-  // nothing new
-  if (!forceLoad && currentResourcePath.value === resource.resourcePath) return;
-
-  if (!item) {
-    try {
-      item = await DirectoryModel.get(resource, resource.path);
-    } catch (error) {
-      entries.value = [];
-      item = {};
-
-      if (error.status === 401) return onInvalidSession();
-      else if (error.status === 404) return uiError.value = 'Does not exist';
-      else return console.error(error);
-    }
-  }
-
-  activeResourceType.value = resource.type;
-  currentPath.value = resource.path;
-  currentResourcePath.value = resource.resourcePath;
-  currentShare.value = item.share || null;
-
-  if (resource.type === 'home') {
-    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
-    });
-    breadCrumbHome.value = {
-      icon: 'fa-solid fa-house',
-      route: '#files/home/'
-    };
-  } else if (resource.type === 'shares') {
-    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
-    });
-    breadCrumbHome.value = {
-      icon: 'fa-solid fa-share-nodes',
-      route: '#files/shares/'
-    };
-
-    // if we are not toplevel, add the share information
-    if (item.share) {
-      breadCrumbs.value.unshift({
-        label: item.share.filePath.slice(1), // remove slash at the beginning
-        route: '#files/shares/' + resource.shareId + '/'
-      });
-    }
-  } else if (resource.type === 'groupfolders') {
-    breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
-    });
-    breadCrumbHome.value = {
-      icon: 'fa-solid fa-user-group',
-      route: '#files/groupfolders/'
-    };
-
-    // if we are not toplevel, add the groupfolder information
-    if (item.group) {
-      breadCrumbs.value.unshift({
-        label: item.group.name,
-        route: '#files/groupfolders/' + item.group.id + '/'
-      });
-    }
-  } else {
-    console.error('FIXME breadcrumbs for resource type', resource.type);
-  }
-
-  item.files.forEach(function (e) {
-    e.filePathNew = e.fileName;
-  });
-
-  entry.value = item;
-  entries.value = item.files;
-  fileViewerOverlay.value?.close();
-}
-
-async function onGroupFoldersChanged() {
-  directoryBusy.value = true;
-  await loadMainDirectory(currentResourcePath.value, null, true);
-  directoryBusy.value = false;
-}
-
-// return false/true on fail/success
-async function loadPath(path, forceLoad = false) {
-  const resource = parseResourcePath(path || currentResourcePath.value);
-
-  fileViewerOverlay.value?.close();
-
-  if (!forceLoad && currentResourcePath.value === resource.resourcePath) return true;
-
-  directoryBusy.value = true;
-
-  let item;
-  try {
-    item = await DirectoryModel.get(resource);
-  } catch (error) {
-    entries.value = [];
-    entry.value = {};
-
-    if (error.status === 401 || error.status === 403) {
-      onInvalidSession();
-      return false;
-    } else if (error.status === 404) {
-      console.error('Failed to load entry', resource, error);
-      window.pankow.notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
-      return false;
-    } else {
-      console.error(error);
-      return false;
-    }
-  }
-
-  window.location.hash = `files${resource.resourcePath}`;
-
-  if (item.isDirectory) await loadMainDirectory(resource.resourcePath, item, forceLoad);
-  else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
-
-  if (!item.isDirectory) {
-    await fileViewerOverlay.value.openFile(item, resource, entries.value);
-  } else {
-    fileViewerOverlay.value?.close();
-    clearSelection();
-  }
-
-  entry.value = item;
-  directoryBusy.value = false;
-
-  return true;
+  onCloseViewer();
+  fileBrowser.value?.reset();
 }
 
 function onOpen(item) {
@@ -744,17 +199,8 @@ function onOpen(item) {
   else window.location.hash = `files/home${item.filePath}`;
 }
 
-function onUp() {
-  if (window.location.hash.indexOf('#shares/') === 0) {
-    const hash = window.location.hash.slice('#shares/'.length);
-
-    // if we are first level of that share, go back to all shares
-    if (!hash.split('/')[1]) window.location.hash = 'shares/';
-    else window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
-  } else {
-    const hash = window.location.hash.slice(1);
-    window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
-  }
+function onGroupFoldersChanged() {
+  fileBrowser.value?.reload();
 }
 
 onMounted(async () => {
@@ -766,20 +212,16 @@ onMounted(async () => {
   }
 
   async function handleHash(hash) {
-    // we handle decoded paths internally
     hash = decodeURIComponent(hash);
 
-    activeResourceType.value = '';
-
     if (hash.indexOf('files/home/') === 0) {
-      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
-      // Auth failure sets LOGIN + returnTo; do not rewrite hash here or a second load 401s and overwrites returnTo with files/home/
+      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
       else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/home/';
     } else if (hash.indexOf('files/shares/') === 0) {
-      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_SHARES;
+      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_SHARES;
       else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/shares/';
     } else if (hash.indexOf('files/groupfolders/') === 0) {
-      if (await loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_GROUPFOLDERS;
+      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_GROUPFOLDERS;
       else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/groupfolders/';
     } else if (hash === 'recent') {
       if (!profile.value?.username) {
@@ -809,7 +251,6 @@ onMounted(async () => {
       view.value = VIEWS.SHARES;
       onCloseSidebar();
     } else {
-      // Logged-in default route; anonymous users keep empty/unknown hash (login view) — do not force #files/home/
       if (profile.value?.username) window.location.hash = 'files/home/';
       else view.value = VIEWS.LOGIN;
     }
@@ -837,9 +278,6 @@ onMounted(async () => {
 
   await refreshConfig();
 
-  // initial load with hash if any — prefer URL over stale returnTo only for public share
-  // links (#files/shares/...). Otherwise (e.g. OAuth landing on #files/home/ vs returnTo)
-  // keep returnTo so post-login deep links still apply.
   const urlHash = window.location.hash.slice(1);
   const storedReturnTo = localStorage.returnTo || '';
   const preferUrlForShare = storedReturnTo && urlHash && storedReturnTo !== urlHash
@@ -850,15 +288,11 @@ onMounted(async () => {
   await handleHash(hash);
 
   window.addEventListener('hashchange', () => {
-    // allows us to not reload but only change the hash
     if (currentHash.value === decodeURIComponent(window.location.hash)) return;
     currentHash.value = window.location.hash;
 
     handleHash(window.location.hash.slice(1));
   }, false);
-
-  // TODO make this dynamic
-  showSize.value = window.innerWidth >= 576;
 
   ready.value = true;
 
@@ -878,7 +312,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- This is re-used and thus global -->
   <Notification/>
 
   <div v-show="ready" style="height: 100%;">
@@ -921,168 +354,33 @@ onBeforeUnmount(() => {
         </TopBar>
 
         <SharesView v-if="view === VIEWS.SHARES" />
-        <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged()" />
+        <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged" />
         <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
         <FavoriteView v-else-if="view === VIEWS.FAVORITES" />
-        <div v-else class="container file-browser-container">
-          <div class="container" style="overflow: hidden;">
-            <div class="main-container-content">
-              <div class="breadcrumb-bar">
-                <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
-                <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
-                <div style="flex-grow: 1"></div>
-                <ButtonGroup style="margin-right: 40px">
-                  <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
-                  <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
-                </ButtonGroup>
-              </div>
-              <div style="overflow: hidden; height: calc(100% - 46px);">
-                <DirectoryView
-                  ref="directoryView"
-                  :busy="directoryBusy"
-                  :view-mode="viewMode"
-                  :show-star="!!profile?.username"
-                  :show-owner="false"
-                  :show-extract="currentResourcePath !== '/groupfolders/'"
-                  :show-size="showSize"
-                  :show-modified="true"
-                  :show-delete="!isReadonly"
-                  :show-new-file="!isReadonly"
-                  :show-new-folder="!isReadonly"
-                  :show-upload-file="!isReadonly"
-                  :show-upload-folder="!isReadonly"
-                  :show-paste="!isReadonly"
-                  :show-rename="!isReadonly"
-                  :show-download="currentResourcePath !== '/groupfolders/'"
-                  :show-select-all="currentResourcePath !== '/groupfolders/'"
-                  :show-copy="currentResourcePath !== '/groupfolders/'"
-                  :show-cut="!isReadonly"
-                  :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
-                  :share-indicator-property="'isSharedWith'"
-                  :editable="!isReadonly"
-                  :multi-download="true"
-                  @selection-changed="onSelectionChanged"
-                  @item-activated="onOpen"
-                  :refresh-handler="onRefreshCurrentDirectory"
-                  :delete-handler="deleteHandler"
-                  :share-handler="shareHandler"
-                  :star-handler="onToggleFavorite"
-                  :rename-handler="renameHandler"
-                  :paste-handler="pasteHandler"
-                  :download-handler="downloadHandler"
-                  :extract-handler="extractHandler"
-                  :new-file-handler="onNewFile"
-                  :new-folder-handler="onNewFolder"
-                  :upload-file-handler="onUploadFile"
-                  :upload-folder-handler="onUploadFolder"
-                  :drop-handler="onDrop"
-                  :items="entries"
-                  :fallback-icon="`${BASE_URL}mime-types/none.svg`"
-                >
-                  <template #empty>
-                    <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" />
-                    <EmptyState v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin" icon="fa-solid fa-user-group" title="Not part of any group folder" description="Ask an admin to add you to a group folder" />
-                    <EmptyState
-                      v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && profile.admin"
-                      icon="fa-solid fa-user-group"
-                      title="No group folders"
-                    >
-                      <template #description>
-                        Create <a href="#settings">group folders in Settings</a>
-                      </template>
-                    </EmptyState>
-                    <EmptyState v-else-if="activeResourceType === 'shares' && !breadCrumbs.length" icon="fa-solid fa-share-nodes" title="Nothing shared with you" description="Files and folders others shared with you will show up here" />
-                  </template>
-                </DirectoryView>
-              </div>
-            </div>
-            <PreviewPanel
-              :parent-entry="entry"
-              :selected-entries="selectedEntries"
-              :show-download="currentResourcePath !== '/groupfolders/'"
-              :show-delete="!isReadonly"
-              :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
-              @download="downloadHandler"
-              @delete="deleteHandler"
-              @share="shareHandler"
-            />
-          </div>
-        </div>
-
-        <FileUploader
-          ref="fileUploader"
-          :upload-handler="uploadHandler"
-          :job-pre-flight-check-handler="uploadJobPreFlightCheckHandler"
-          @finished="onUploadFinished"
+        <FileBrowser
+          v-show="isFileBrowserView"
+          ref="fileBrowser"
+          @invalid-session="onInvalidSession"
+          @share="(item) => shareDialog.open(item)"
+          @close-viewer="onCloseViewer"
+          @open-file="onOpenFile"
         />
       </div>
     </div>
   </div>
-
-  <Dialog
-    :title="newItemForm.mode === 'file' ? 'New filename' : 'New folder name'"
-    ref="newItemDialog"
-    reject-label="Cancel"
-    reject-style="secondary"
-    confirm-label="Save"
-    confirm-style="success"
-    :confirm-busy="newItemForm.busy"
-    :confirm-active="!!newItemForm.name.trim()"
-    @confirm="onNewItemDialogSubmit"
-  >
-    <form @submit.prevent="onNewItemDialogSubmit">
-      <TextInput
-        id="newItemNameInput"
-        v-model="newItemForm.name"
-        :placeholder="newItemForm.mode === 'file' ? 'Filename' : 'Folder name'"
-        autofocus
-        style="width: 100%"
-        @update:modelValue="onNewItemDialogNameInput"
-      />
-      <p class="has-error" v-show="newItemForm.error">{{ newItemForm.error }}</p>
-    </form>
-  </Dialog>
-
-  <Dialog
-    ref="deleteDialog"
-    title="Confirm deletion"
-    reject-label="Cancel"
-    reject-style="secondary"
-    confirm-label="Delete"
-    confirm-style="danger"
-    :confirm-busy="deleteBusy"
-    @confirm="onDeleteConfirm"
-    @close="onDeleteCancel"
-  >
-    <p v-if="deletePending.length === 1">
-      Delete "{{ deletePending[0].fileName }}"?
-    </p>
-    <template v-else-if="deletePending.length > 1">
-      <p>The following items will be deleted:</p>
-      <ul class="delete-file-list">
-        <li v-for="item in deletePending" :key="item.fileName">{{ item.fileName }}</li>
-      </ul>
-    </template>
-  </Dialog>
 
   <ShareDialog ref="shareDialog"/>
 
   <FileViewerOverlay
     ref="fileViewerOverlay"
     :readonly="isReadonly"
-    :download-handler="downloadHandler"
-    :save-handler="onFileSaved"
+    :download-handler="fileViewerDownloadHandler"
+    :save-handler="fileViewerSaveHandler"
     @close="onFileViewerClose"
-    @image-viewer-navigate="onImageViewerNavigate"
   />
 </template>
 
 <style scoped>
-
-hr {
-  border: none;
-  border-top: 1px solid #d0d0d0;
-}
 
 .container {
   display: flex;
@@ -1101,25 +399,6 @@ hr {
 .topbar-new-slot {
   flex-shrink: 0;
   width: 76px;
-}
-
-.file-browser-container {
-  flex-direction: column;
-  overflow: hidden;
-  flex-grow: 1;
-  min-height: 0;
-}
-
-pre {
-  background-color: lightgray;
-  border-radius: 2px;
-  padding: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  pre {
-    background-color: black;
-  }
 }
 
 .side-bar-entry {
@@ -1197,35 +476,6 @@ pre {
   overflow: hidden;
   flex-grow: 1;
   flex-direction: column;
-}
-
-.upload {
-  display: flex;
-  height: 50px;
-  width: 100%;
-  padding: 10px;
-  flex-direction: column;
-}
-
-.main-container-content {
-  position: relative;
-  overflow: hidden;
-  flex-grow: 1;
-}
-
-.breadcrumb-bar {
-  display: flex;
-  gap: 4px;
-  margin: auto 0px;
-  padding: 4px;
-  align-items: center;
-}
-
-.delete-file-list {
-  margin: 8px 0 0;
-  padding-left: 20px;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 </style>

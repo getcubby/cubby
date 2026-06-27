@@ -21,7 +21,7 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['close', 'image-viewer-navigate']);
+const emit = defineEmits(['close']);
 
 const profile = inject('profile');
 
@@ -44,7 +44,7 @@ function onViewerClose() {
 }
 
 function onImageViewerNavigate(entry) {
-  emit('image-viewer-navigate', entry);
+  history.replaceState(null, '', `#files${entry.resourcePath}`);
 }
 
 async function openFile(item, resource, siblingEntries) {

@@ -1,7 +1,6 @@
 import assert from 'assert';
 import mimeIcons from './mimeicons.js';
 import crypto from 'crypto';
-import { isBinaryFileSync } from 'isbinaryfile';
 import preview from './preview.js';
 
 function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
@@ -34,7 +33,6 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.atime = atime;
     this.isDirectory = isDirectory;
     this.isFile = isFile;
-    this.isBinary = isFile ? isBinaryFileSync(fullFilePath) : false;
     this.favorites = favorites;
     this.mimeType = mimeType;
     this.files = files;
@@ -107,7 +105,6 @@ Entry.prototype.withoutPrivate = function (username = null) {
         isFile: this.isFile,
         isShare: this.isShare,
         isGroup: this.isGroup,
-        isBinary: this.isBinary,
         mimeType: this.mimeType,
         favorite: username ? this.favorites.find(f => f.username === username) : null,
         files: this.files.map(function (f) { return f.withoutPrivate(username); }),

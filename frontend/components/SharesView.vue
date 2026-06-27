@@ -2,24 +2,10 @@
 
 import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
-import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Button, Icon, InputDialog, ProgressBar, TableView, TopBar } from '@cloudron/pankow';
+import { Button, Icon, InputDialog, ProgressBar, TableView } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
-
-const props = defineProps({
-  profile: {
-    type: Object,
-    default: function () { return {}; }
-  },
-  profileMenu: {
-    type: Array,
-    default: () => [],
-  },
-});
-
-defineEmits(['login']);
 
 const tableColumns = {
   icon: {
@@ -47,11 +33,6 @@ const tableColumns = {
 
 const sharesInputDialog = useTemplateRef('sharesInputDialog');
 
-const users = ref([]);
-const edit = ref({
-  admin: false,
-  user: {}
-});
 const tableModel = ref([]);
 const busy = ref(true);
 
@@ -97,12 +78,6 @@ onMounted(refresh);
   <div class="shares">
     <InputDialog ref="sharesInputDialog" />
 
-    <TopBar :left-grow="true">
-      <template #right>
-        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="$emit('login')" />
-      </template>
-    </TopBar>
-
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="shares-body" v-else>
       <EmptyState v-if="tableModel.length === 0" icon="fa-solid fa-share-from-square" title="Nothing shared by you" description="Files and folders you share will show up here" />
@@ -135,6 +110,8 @@ onMounted(refresh);
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .shares-body {

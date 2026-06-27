@@ -3,23 +3,10 @@
 import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
-import SearchBar from './SearchBar.vue';
-import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Button, ProgressBar, TopBar } from '@cloudron/pankow';
+import { Button, ProgressBar } from '@cloudron/pankow';
 
-const props = defineProps({
-  profile: {
-    type: Object,
-    default: () => ({}),
-  },
-  profileMenu: {
-    type: Array,
-    default: () => [],
-  },
-});
-
-const emit = defineEmits(['item-activated', 'login']);
+const emit = defineEmits(['item-activated']);
 
 const buckets = ref([]);
 const busy = ref(true);
@@ -74,15 +61,6 @@ function iconError(event, entry) {
 
 <template>
   <div class="recent">
-    <TopBar :gap="false" :left-grow="true">
-      <template #left>
-        <SearchBar @item-activated="onActivateItem"/>
-      </template>
-      <template #right>
-        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
-      </template>
-    </TopBar>
-
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="buckets" v-else>
       <EmptyState v-if="buckets.length === 0" icon="fa-regular fa-clock" title="No recent files" description="Files you open will show up here" />
@@ -108,6 +86,8 @@ function iconError(event, entry) {
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .buckets {

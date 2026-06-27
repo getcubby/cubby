@@ -1,25 +1,14 @@
 <script setup>
 
-import { ref, onMounted } from 'vue';
-import { Button, TopBar } from '@cloudron/pankow';
-import ProfileMenuButton from './ProfileMenuButton.vue';
+import { ref, inject, onMounted } from 'vue';
 import UsersSettings from './settings/UsersSettings.vue';
 import GroupFoldersSettings from './settings/GroupFoldersSettings.vue';
 import OfficeIntegrationSettings from './settings/OfficeIntegrationSettings.vue';
 import MainModel from '../models/MainModel.js';
 
-defineProps({
-  profile: {
-    type: Object,
-    default: () => ({}),
-  },
-  profileMenu: {
-    type: Array,
-    default: () => [],
-  },
-});
+const profile = inject('profile');
 
-const emit = defineEmits(['groupfolders-changed', 'login']);
+const emit = defineEmits(['groupfolders-changed']);
 
 const users = ref([]);
 const usersBusy = ref(true);
@@ -48,15 +37,6 @@ onMounted(async () => {
 
 <template>
   <div class="settings-container">
-    <TopBar :left-grow="true">
-      <template #left>
-        <Button plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
-      </template>
-      <template #right>
-        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
-      </template>
-    </TopBar>
-
     <div class="settings-scroll">
       <div class="settings-content content">
         <h1 class="settings-page-header">Settings</h1>
@@ -76,6 +56,8 @@ onMounted(async () => {
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .settings-scroll {

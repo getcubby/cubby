@@ -2,23 +2,8 @@
 
 import { ref, onMounted } from 'vue';
 import FavoriteModel from '../models/FavoriteModel.js';
-import SearchBar from './SearchBar.vue';
-import ProfileMenuButton from './ProfileMenuButton.vue';
 import EmptyState from './EmptyState.vue';
-import { Icon, ProgressBar, TopBar } from '@cloudron/pankow';
-
-defineProps({
-  profile: {
-    type: Object,
-    default: () => ({}),
-  },
-  profileMenu: {
-    type: Array,
-    default: () => [],
-  },
-});
-
-const emit = defineEmits(['item-activated', 'login']);
+import { Icon, ProgressBar } from '@cloudron/pankow';
 
 const favorites = ref([]);
 const busy = ref(true);
@@ -33,10 +18,6 @@ async function refresh() {
   }
 
   busy.value = false;
-}
-
-function onActivateItem(entry) {
-  emit('item-activated', entry);
 }
 
 async function onUnFavorite(entry) {
@@ -62,19 +43,10 @@ onMounted(refresh);
 
 <template>
   <div class="favorites">
-    <TopBar :gap="false" :left-grow="true">
-      <template #left>
-        <SearchBar @item-activated="onActivateItem"/>
-      </template>
-      <template #right>
-        <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="emit('login')" />
-      </template>
-    </TopBar>
-
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="favorite-body" v-else>
       <div v-if="favorites.length" class="favorite-container">
-        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href" @click="onCloseSidebar">
+        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href">
           <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
           <div>
             {{ entry.fileName }}<br/>
@@ -96,6 +68,8 @@ onMounted(refresh);
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .favorite-body {

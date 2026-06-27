@@ -127,6 +127,15 @@ const isReadonly = computed(() => {
   return currentShare.value.readonly;
 });
 
+const isFileBrowserView = computed(() =>
+  view.value === VIEWS.FILES_HOME ||
+  view.value === VIEWS.FILES_SHARES ||
+  view.value === VIEWS.FILES_GROUPFOLDERS
+);
+
+const showTopBarNew = computed(() => isFileBrowserView.value);
+const showTopBarBack = computed(() => view.value === VIEWS.SETTINGS);
+
 async function onToggleFavorite(entry) {
   try {
     if (entry.favorite) {
@@ -935,23 +944,27 @@ onBeforeUnmount(() => {
         <div style="flex-grow: 1">&nbsp;</div>
       </SideBar>
       <div class="content">
-        <SharesView v-if="view === VIEWS.SHARES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" />
-        <SettingsView v-else-if="view === VIEWS.SETTINGS" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @groupfolders-changed="onGroupFoldersChanged()"/>
-        <RecentView v-else-if="view === VIEWS.RECENT" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
-        <FavoriteView v-else-if="view === VIEWS.FAVORITES" :profile="profile" :profile-menu="profileMenu" @login="onLogin" @item-activated="onOpen" />
-        <div v-else class="container" style="flex-direction: column; overflow: hidden;">
-          <TopBar :gap="false" :left-grow="true">
-            <template #left>
-              <div class="topbar-left-cluster">
-                <Button icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
-                <SearchBar />
+        <TopBar :gap="false" :left-grow="true">
+          <template #left>
+            <div class="topbar-left-cluster">
+              <div class="topbar-new-slot">
+                <Button v-if="showTopBarNew" icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
+                <Button v-else-if="showTopBarBack" plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
               </div>
-            </template>
+              <SearchBar />
+            </div>
+          </template>
 
-            <template #right>
-              <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="onLogin" />
-            </template>
-          </TopBar>
+          <template #right>
+            <ProfileMenuButton :profile="profile" :menu="profileMenu" @login="onLogin" />
+          </template>
+        </TopBar>
+
+        <SharesView v-if="view === VIEWS.SHARES" />
+        <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged()" />
+        <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
+        <FavoriteView v-else-if="view === VIEWS.FAVORITES" />
+        <div v-else class="container file-browser-container">
           <div class="container" style="overflow: hidden;">
             <div class="main-container-content">
               <div class="breadcrumb-bar">
@@ -1154,6 +1167,18 @@ hr {
   gap: 8px;
   min-width: 0;
   flex-grow: 1;
+}
+
+.topbar-new-slot {
+  flex-shrink: 0;
+  width: 76px;
+}
+
+.file-browser-container {
+  flex-direction: column;
+  overflow: hidden;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 pre {

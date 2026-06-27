@@ -4,7 +4,8 @@ import paths from './paths.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import database from './database.js';
-import fs from 'fs-extra';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import MainError from './mainerror.js';
 import recoll from './recoll.js';
@@ -144,7 +145,7 @@ async function remove(id) {
     debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
 
     try {
-        await fs.remove(groupFolderPath);
+        await fsPromises.rm(groupFolderPath, { recursive: true });
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }

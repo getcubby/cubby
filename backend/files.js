@@ -3,7 +3,6 @@ import paths from './paths.js';
 import debug from 'debug';
 import favorites from './favorites.js';
 import fs from 'fs';
-import fsExtra from 'fs-extra';
 import fsPromises from 'fs/promises';
 import groupFolders from './groupfolders.js';
 import path from 'path';
@@ -101,7 +100,7 @@ async function addDirectory(usernameOrGroupfolder, filePath) {
     if (fs.existsSync(fullFilePath)) throw new MainError(MainError.ALREADY_EXISTS);
 
     try {
-        await fsExtra.ensureDir(fullFilePath);
+        await fsPromises.mkdir(fullFilePath, { recursive: true });
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }
@@ -127,7 +126,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     const fullFilePathPart = fullFilePath + '.part';
 
     try {
-        await fsExtra.ensureDir(path.dirname(fullFilePath));
+        await fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true });
         const writeStream = fs.createWriteStream(fullFilePathPart);
         await pipeline(stream, writeStream);
 
@@ -143,7 +142,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     if (!mtime) return;
 
     try {
-        var fd = fs.openSync(fullFilePath);
+        const fd = fs.openSync(fullFilePath);
         fs.futimesSync(fd, mtime, mtime);
     } catch (error) {
         try { await fsPromises.rm(fullFilePath); } catch (e) {} // eslint-disable-line
@@ -166,7 +165,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
     if (fs.existsSync(fullFilePath) && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
     try {
-        await fsExtra.ensureDir(path.dirname(fullFilePath));
+        await fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true });
         await fsPromises.writeFile(fullFilePath, content, 'utf8');
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
@@ -410,11 +409,14 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     debugLog(`move ${fullFilePath} -> ${fullNewFilePath}`);
 
+    if (path.resolve(fullFilePath) === path.resolve(fullNewFilePath)) throw new MainError(MainError.CONFLICT);
+
     try {
         // TODO add option for overwrite
-        await fsExtra.move(fullFilePath, fullNewFilePath, { overwrite: false });
+        await fsPromises.mkdir(path.dirname(fullNewFilePath), { recursive: true });
+        await fsPromises.rename(fullFilePath, fullNewFilePath);
     } catch (error) {
-        if (error.message === 'Source and destination must not be the same.') throw new MainError(MainError.CONFLICT);
+        if (error.code === 'EEXIST') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, error);
     }
 }

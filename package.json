@@ -19,7 +19,6 @@
     "db-migrate-pg": "^1.5.2",
     "debug": "^4.4.3",
     "pg": "^8.22.0",
-    "fs-extra": "^11.3.5",
     "handlebars": "^4.7.9",
     "isbinaryfile": "^6.0.0",
     "nodemailer": "^9.0.1",

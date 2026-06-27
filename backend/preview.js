@@ -3,7 +3,8 @@ import paths from './paths.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import exec from './exec.js';
-import fs from 'fs-extra';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 
 const debugLog = debug('cubby:preview');
@@ -51,7 +52,7 @@ const generators = [{
             debugLog(`generateImageMagick: hash=${hash} fullFilePath=${fullFilePath}`);
 
             try {
-                await fs.ensureDir(paths.THUMBNAIL_ROOT);
+                await fsPromises.mkdir(paths.THUMBNAIL_ROOT, { recursive: true });
                 if (mimeType === 'image/gif') await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath+'[0]', targetPath ]);
                 else await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath, targetPath ]);
             } catch (e) {

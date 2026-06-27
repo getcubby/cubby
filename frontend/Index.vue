@@ -14,7 +14,6 @@ import {
   TextInput,
   TopBar
 } from '@cloudron/pankow';
-import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from './models/DirectoryModel.js';
 import MainModel from './models/MainModel.js';
 import FavoriteModel from './models/FavoriteModel.js';
@@ -22,7 +21,7 @@ import LoginView from './components/LoginView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import PreviewPanel from './components/PreviewPanel.vue';
-import MarkdownEditor from './components/MarkdownEditor.vue';
+import FileViewerOverlay from './components/FileViewerOverlay.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
@@ -53,7 +52,6 @@ const shareDialog = useTemplateRef('shareDialog');
 const ready = ref(false);
 const directoryBusy = ref(false);
 const view = ref('');
-const viewer = ref('');
 const showSize = ref(true);
 const activeResourceType = ref('');
 const profile = ref({});
@@ -242,10 +240,17 @@ function onWindowFocusForSession() {
   scheduleSessionRevalidate();
 }
 
-function onViewerEntryChanged(entry) {
+const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
+
+function onImageViewerNavigate(entry) {
   // prevent to reload image
-  currentHash.value = `#files${entry.resourcePath}`
+  currentHash.value = `#files${entry.resourcePath}`;
   window.location.hash = `files${entry.resourcePath}`;
+}
+
+function onFileViewerClose() {
+  const resource = parseResourcePath(currentResourcePath.value || '/home/');
+  window.location.hash = `files${resource.resourcePath}`;
 }
 
 function onUploadFinished() {
@@ -389,7 +394,7 @@ function clearSelection() {
 }
 
 function resetNonFileViewState() {
-  viewer.value = '';
+  fileViewerOverlay.value?.close();
   entry.value = {};
   entries.value = [];
   clearSelection();
@@ -676,15 +681,8 @@ async function loadMainDirectory(path, item, forceLoad = false) {
 
   entry.value = item;
   entries.value = item.files;
-  viewer.value = '';
+  fileViewerOverlay.value?.close();
 }
-
-const imageViewer = useTemplateRef('imageViewer');
-const pdfViewer = useTemplateRef('pdfViewer');
-const markdownEditor = useTemplateRef('markdownEditor');
-const textViewer = useTemplateRef('textViewer');
-const threeDViewer = useTemplateRef('threeDViewer');
-const genericViewer = useTemplateRef('genericViewer');
 
 async function onGroupFoldersChanged() {
   directoryBusy.value = true;
@@ -696,8 +694,7 @@ async function onGroupFoldersChanged() {
 async function loadPath(path, forceLoad = false) {
   const resource = parseResourcePath(path || currentResourcePath.value);
 
-  // clear potential viewer first
-  if (viewer.value) viewer.value = '';
+  fileViewerOverlay.value?.close();
 
   if (!forceLoad && currentResourcePath.value === resource.resourcePath) return true;
 
@@ -728,39 +725,10 @@ async function loadPath(path, forceLoad = false) {
   if (item.isDirectory) await loadMainDirectory(resource.resourcePath, item, forceLoad);
   else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
 
-  // if we don't have a folder load the viewer
   if (!item.isDirectory) {
-    if (imageViewer.value.canHandle(item)) {
-      const otherSupportedEntries = entries.value.filter((e) => imageViewer.value.canHandle(e));
-
-      imageViewer.value.open(item, otherSupportedEntries);
-      viewer.value = 'image';
-    } else if (pdfViewer.value.canHandle(item)) {
-      pdfViewer.value.open(item);
-      viewer.value = 'pdf';
-    } else if (threeDViewer.value.canHandle(item)) {
-      threeDViewer.value.open(item, await DirectoryModel.getRawContent(resource));
-      viewer.value = 'threed';
-    } else if (MainModel.canHandleWithOffice(item)) {
-      window.open('/office.html#' + item.resourcePath, '_blank');
-
-      // need to reset the hash as the original location should be the folder containing the file
-      window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
-    } else if (markdownEditor.value.canHandle(item)) {
-      const raw = await DirectoryModel.getRawContent(resource);
-      const textContent = typeof raw === 'string' ? raw : await raw.text();
-      markdownEditor.value.open(item, textContent);
-      viewer.value = 'markdown';
-    } else if (textViewer.value.canHandle(item)) {
-      const raw = await DirectoryModel.getRawContent(resource);
-      const textContent = typeof raw === 'string' ? raw : await raw.text();
-      textViewer.value.open(item, textContent);
-      viewer.value = 'text';
-    } else {
-      viewer.value = 'generic';
-      genericViewer.value.open(item);
-    }
+    await fileViewerOverlay.value.openFile(item, resource, entries.value);
   } else {
+    fileViewerOverlay.value?.close();
     clearSelection();
   }
 
@@ -774,14 +742,6 @@ function onOpen(item) {
   if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
   else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
   else window.location.hash = `files/home${item.filePath}`;
-}
-
-function onViewerClose() {
-  viewer.value = '';
-
-  // update the browser hash
-  const resource = parseResourcePath(currentResourcePath.value || '/home/');
-  window.location.hash = `files${resource.resourcePath}`;
 }
 
 function onUp() {
@@ -1107,36 +1067,14 @@ onBeforeUnmount(() => {
 
   <ShareDialog ref="shareDialog"/>
 
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'image'">
-      <ImageViewer ref="imageViewer" @close="onViewerClose" :navigation-handler="onViewerEntryChanged" :download-handler="downloadHandler" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'text'">
-      <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="onFileSaved" :readonly="isReadonly" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'pdf'">
-      <PdfViewer ref="pdfViewer" @close="onViewerClose" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'markdown'">
-      <MarkdownEditor ref="markdownEditor" @close="onViewerClose" :profile="profile" :save-handler="onFileSaved" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'threed'">
-      <ThreeDViewer ref="threeDViewer" @close="onViewerClose" />
-    </div>
-  </Transition>
-  <Transition name="pankow-fade">
-    <div class="viewer-container" v-show="viewer === 'generic'">
-      <GenericViewer ref="genericViewer" @close="onViewerClose" />
-    </div>
-  </Transition>
+  <FileViewerOverlay
+    ref="fileViewerOverlay"
+    :readonly="isReadonly"
+    :download-handler="downloadHandler"
+    :save-handler="onFileSaved"
+    @close="onFileViewerClose"
+    @image-viewer-navigate="onImageViewerNavigate"
+  />
 </template>
 
 <style scoped>
@@ -1150,15 +1088,6 @@ hr {
   display: flex;
   width: 100%;
   height: 100%;
-}
-
-.viewer-container {
-  z-index: 30;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
 }
 
 .topbar-left-cluster {

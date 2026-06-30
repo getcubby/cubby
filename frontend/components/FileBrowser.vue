@@ -38,6 +38,7 @@ const currentResourcePath = ref('');
 const currentShare = ref(null);
 const breadCrumbs = ref([]);
 const breadCrumbHome = ref({
+  label: 'My files',
   icon: 'fa-solid fa-house',
   route: '#files'
 });
@@ -188,7 +189,7 @@ function reset() {
   entries.value = [];
   clearSelection();
   breadCrumbs.value = [];
-  breadCrumbHome.value = { icon: 'fa-solid fa-house', route: '#files' };
+  breadCrumbHome.value = { label: 'My files', icon: 'fa-solid fa-house', route: '#files' };
   activeResourceType.value = '';
   currentResourcePath.value = '';
   currentShare.value = null;
@@ -445,6 +446,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
       };
     });
     breadCrumbHome.value = {
+      label: 'My files',
       icon: 'fa-solid fa-house',
       route: '#files/home/'
     };
@@ -456,6 +458,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
       };
     });
     breadCrumbHome.value = {
+      label: 'Shared with you',
       icon: 'fa-solid fa-share-nodes',
       route: '#files/shares/'
     };
@@ -474,6 +477,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
       };
     });
     breadCrumbHome.value = {
+      label: 'Group folders',
       icon: 'fa-solid fa-user-group',
       route: '#files/groupfolders/'
     };

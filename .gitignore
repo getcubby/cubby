@@ -2,8 +2,12 @@
 node_modules
 frontend-dist/
 
+.recoll/
+.groups/
+.sessions/
+.thumbnails/
 .data/
-.recents.json
+.secret
 
 # local env files
 .env.local

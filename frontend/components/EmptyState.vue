@@ -40,7 +40,6 @@ defineProps({
   justify-content: center;
   text-align: center;
   padding: 24px;
-  max-width: 320px;
   margin: 0 auto;
 }
 

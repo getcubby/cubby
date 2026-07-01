@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, InputDialog, TableView, TextInput } from '@cloudron/pankow';
+import { Button, Dialog, InputDialog, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
@@ -34,7 +34,7 @@ const groupFolderTableColumns = {
   },
   action: {
     label: '',
-    width: '20px',
+    width: '100px',
     sort: false,
   },
 };
@@ -237,10 +237,19 @@ onMounted(refreshGroupFolders);
       <template #folderPath="{ item: slotProps }">{{ slotProps.folderPath }}</template>
       <template #members="{ item: slotProps }">{{ slotProps.members.join(', ') }}</template>
       <template #action="{ item: slotProps }">
-        <div style="display: flex; gap: 8px">
-          <Button outline tool @click="onEditGroupFolder(slotProps)" icon="fa-solid fa-wrench"/>
-          <Button outline tool danger @click="onRemoveGroupFolder(slotProps)" icon="fa-solid fa-trash"/>
-        </div>
+        <TableViewActionBar
+          :actions="[{
+            label: 'Edit',
+            icon: 'fa-solid fa-wrench',
+            action: () => onEditGroupFolder(slotProps),
+            quickAction: true,
+          }, {
+            label: 'Remove',
+            icon: 'fa-solid fa-trash',
+            action: () => onRemoveGroupFolder(slotProps),
+            quickAction: true,
+          }]"
+        />
       </template>
     </TableView>
   </Section>

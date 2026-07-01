@@ -37,6 +37,7 @@ const tableColumns = {
   },
   action: {
     label: '',
+    width: '60px',
     sort: false,
   },
 };

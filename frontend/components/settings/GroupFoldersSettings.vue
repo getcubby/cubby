@@ -24,10 +24,6 @@ const groupFolderTableColumns = {
     label: 'Slug',
     sort: true,
   },
-  folderPath: {
-    label: 'Path',
-    sort: true,
-  },
   members: {
     label: 'Members',
     sort: false,
@@ -234,7 +230,6 @@ onMounted(refreshGroupFolders);
     </Dialog>
 
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" :busy="groupFoldersBusy" placeholder="No group folders">
-      <template #folderPath="{ item: slotProps }">{{ slotProps.folderPath }}</template>
       <template #members="{ item: slotProps }">{{ slotProps.members.join(', ') }}</template>
       <template #action="{ item: slotProps }">
         <TableViewActionBar

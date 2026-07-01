@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, computed, watch, useTemplateRef } from 'vue';
-import { Checkbox, Dialog, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
+import { Checkbox, Dialog, InputDialog, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import MainModel from '../../models/MainModel.js';
 
@@ -37,12 +37,13 @@ const tableColumns = {
   },
   action: {
     label: '',
-    width: '60px',
+    width: '100px',
     sort: false,
   },
 };
 
 const editDialog = useTemplateRef('editDialog');
+const deleteConfirmDialog = useTemplateRef('deleteConfirmDialog');
 const tableModel = ref([]);
 const searchQuery = ref('');
 const edit = ref({
@@ -87,6 +88,26 @@ async function onEditSubmit() {
   editDialog.value.close();
 }
 
+async function onRemove(user) {
+  const yes = await deleteConfirmDialog.value.confirm({
+    message: `Delete user "${user.username}" and all their files? This will also delete the user's files and cannot be undone.`,
+    confirmStyle: 'danger',
+    confirmLabel: 'Delete',
+    rejectLabel: 'Cancel',
+    rejectStyle: 'secondary',
+  });
+
+  if (!yes) return;
+
+  try {
+    await MainModel.removeUser(user.username);
+  } catch (e) {
+    return console.error('Failed to remove user.', e);
+  }
+
+  emit('users-changed');
+}
+
 </script>
 
 <template>
@@ -110,6 +131,8 @@ async function onEditSubmit() {
       <Checkbox v-model="edit.admin" required :disabled="edit.user.username === profile.username" label="Admin"/>
     </Dialog>
 
+    <InputDialog ref="deleteConfirmDialog" />
+
     <TableView :columns="tableColumns" :model="filteredTableModel" :busy="busy" :placeholder="tablePlaceholder">
       <template #username="{ item: slotProps }">{{ slotProps.username }}</template>
       <template #email="{ item: slotProps }">{{ slotProps.email }}</template>
@@ -118,8 +141,14 @@ async function onEditSubmit() {
         <TableViewActionBar
           :actions="[{
             label: 'Edit',
-            icon: 'fa-solid fa-pen',
+            icon: 'fa-solid fa-wrench',
             action: () => onEdit(slotProps),
+            quickAction: true,
+            visible: slotProps.username !== profile.username,
+          }, {
+            label: 'Remove',
+            icon: 'fa-solid fa-trash',
+            action: () => onRemove(slotProps),
             quickAction: true,
             visible: slotProps.username !== profile.username,
           }]"

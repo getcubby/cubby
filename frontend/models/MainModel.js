@@ -77,6 +77,17 @@ async function setAdmin(username, isAdmin) {
   if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
 }
 
+async function removeUser(username) {
+    let error, result;
+    try {
+        result = await fetcher.del(`${API_ORIGIN}/api/v1/users/${username}`);
+    } catch (e) {
+        error = e;
+    }
+
+    if (error || result.status !== 200) throw new Error('Failed to remove user', { cause: error || result });
+}
+
 function canHandleWithOffice(entry) {
   if (!configCache.viewers) return false;
   if (!configCache.viewers.collabora) return false;
@@ -179,6 +190,7 @@ export default {
   setWopiHost,
   getUsers,
   setAdmin,
+  removeUser,
   canHandleWithOffice,
   isOfficeWorking,
   getOfficeHandle,

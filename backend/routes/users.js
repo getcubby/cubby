@@ -87,6 +87,27 @@ async function setAdmin(req, res, next) {
     next(new HttpSuccess(200, {}));
 }
 
+async function removeUser(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+    assert.strictEqual(typeof req.params.username, 'string');
+    assert.strictEqual(req.user.admin, true);
+
+    const targetUser = await users.get(req.params.username);
+    if (!targetUser) return next(new HttpError(404, 'user not found'));
+    if (req.user.username === req.params.username) return next(new HttpError(403, 'cannot delete own user'));
+
+    if (targetUser.admin) {
+        const allUsers = await users.list();
+        const otherAdmins = allUsers.filter(u => u.admin && u.username !== req.params.username);
+        if (otherAdmins.length === 0) return next(new HttpError(403, 'cannot delete the last admin'));
+    }
+
+    const [error] = await safe(users.remove(req.params.username));
+    if (error) return next(new HttpError(500, error));
+
+    next(new HttpSuccess(200, {}));
+}
+
 // following middlewares have to check req.user if needed, like public share links
 async function optionalAuth(req, res, next) {
     req.user = await getUserFromToken(req);
@@ -124,6 +145,7 @@ export default {
     isAuthenticated,
     isAdmin,
     setAdmin,
+    removeUser,
     tokenAuth,
     optionalAuth,
     profile,

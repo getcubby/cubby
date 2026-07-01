@@ -75,6 +75,8 @@ async function start() {
 
         router.put('/api/v1/users/:username/admin', users.isAuthenticated, users.isAdmin, users.setAdmin);
 
+        router.del('/api/v1/users/:username', users.isAuthenticated, users.isAdmin, users.removeUser);
+
         router.head('/api/v1/files', users.optionalAuth, files.head);
         router.get('/api/v1/files', users.optionalAuth, files.get);
         router.post('/api/v1/files', users.optionalAuth, files.add);

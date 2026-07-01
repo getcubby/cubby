@@ -1,6 +1,6 @@
 import assert from 'assert';
 import paths from './paths.js';
-import { cp } from 'node:fs/promises';
+import { cp, rm } from 'node:fs/promises';
 import debug from 'debug';
 import database from './database.js';
 import path from 'path';
@@ -89,6 +89,7 @@ async function remove(username) {
     assert.strictEqual(typeof username, 'string');
 
     await database.query('DELETE FROM users WHERE username = $1', [ username ]);
+    await rm(path.join(paths.USER_DATA_ROOT, username), { recursive: true, force: true });
 }
 
 async function ensureUser(data) {

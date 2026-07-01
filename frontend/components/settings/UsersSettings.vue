@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, computed, watch, useTemplateRef } from 'vue';
-import { Button, Checkbox, Dialog, TableView, TextInput } from '@cloudron/pankow';
+import { Checkbox, Dialog, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import MainModel from '../../models/MainModel.js';
 
@@ -114,7 +114,15 @@ async function onEditSubmit() {
       <template #email="{ item: slotProps }">{{ slotProps.email }}</template>
       <template #admin="{ item: slotProps }"><i class="fa-solid fa-check" v-show="slotProps.admin"></i></template>
       <template #action="{ item: slotProps }">
-        <Button outline tool @click="onEdit(slotProps)" :disabled="slotProps.username === profile.username" style="float: right" icon="fa-solid fa-wrench"/>
+        <TableViewActionBar
+          :actions="[{
+            label: 'Edit',
+            icon: 'fa-solid fa-wrench',
+            action: () => onEdit(slotProps),
+            quickAction: true,
+            visible: slotProps.username !== profile.username,
+          }]"
+        />
       </template>
     </TableView>
   </Section>

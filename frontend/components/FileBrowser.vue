@@ -645,7 +645,7 @@ defineExpose({
             :fallback-icon="`${BASE_URL}mime-types/none.svg`"
           >
             <template #empty>
-              <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" />
+              <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" description="Create new or upload existing files" />
               <EmptyState v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin" icon="fa-solid fa-user-group" title="Not part of any group folder" description="Ask an admin to add you to a group folder" />
               <EmptyState
                 v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && profile.admin"

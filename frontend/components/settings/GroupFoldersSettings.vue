@@ -240,7 +240,7 @@ onMounted(refreshGroupFolders);
         <TableViewActionBar
           :actions="[{
             label: 'Edit',
-            icon: 'fa-solid fa-wrench',
+            icon: 'fa-solid fa-pen',
             action: () => onEditGroupFolder(slotProps),
             quickAction: true,
           }, {

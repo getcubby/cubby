@@ -118,7 +118,7 @@ async function onEditSubmit() {
         <TableViewActionBar
           :actions="[{
             label: 'Edit',
-            icon: 'fa-solid fa-wrench',
+            icon: 'fa-solid fa-pen',
             action: () => onEdit(slotProps),
             quickAction: true,
             visible: slotProps.username !== profile.username,

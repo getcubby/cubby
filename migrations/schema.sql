@@ -78,11 +78,14 @@ CREATE TABLE groupfolders_members(
 CREATE TABLE IF NOT EXISTS favorites(
     id VARCHAR(128) NOT NULL UNIQUE,
     username VARCHAR(128),
-    owner VARCHAR(128),
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
     file_path VARCHAR(256) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY(username) REFERENCES users(username),
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
     PRIMARY KEY(id));
 
 # recents has a username component depending on who opened a shared or group folder file

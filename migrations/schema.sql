@@ -97,13 +97,16 @@ CREATE TABLE IF NOT EXISTS recents(
 CREATE TABLE IF NOT EXISTS file_activity(
     id VARCHAR(128) PRIMARY KEY,
     actor VARCHAR(128) NOT NULL,
-    owner VARCHAR(128) NOT NULL,
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
     file_path VARCHAR(512) NOT NULL,
     action VARCHAR(32) NOT NULL,
     details JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY(actor) REFERENCES users(username));
+    FOREIGN KEY(actor) REFERENCES users(username),
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id));
 
 CREATE TABLE IF NOT EXISTS settings(
     name VARCHAR(128) NOT NULL PRIMARY KEY,

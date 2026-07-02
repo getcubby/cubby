@@ -564,3 +564,11 @@
 * Move shares, recents, favorites when file moves
 * migrate config.json to settings table
 
+[2.15.1]
+* Update cubby to 2.15.1
+* Implement user deletion feature
+* group folders: use multi-select for user selection
+* Unify empty view layouts
+* Do not show group folder folderPath
+* 
+

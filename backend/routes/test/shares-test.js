@@ -60,4 +60,24 @@ describe('shares API', function () {
         const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), admin.token);
         assert.equal(listResponse.body.shares.some((share) => share.id === createResponse.body.shareId), false);
     });
+
+    it('logs unshared when a share is removed', async function () {
+        await addUserFile(admin.username, '/unshare-activity.txt', 'unshare activity');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), admin.token)
+            .send({
+                ownerUsername: admin.username,
+                path: '/unshare-activity.txt',
+                receiverUsername: user.username
+            });
+
+        await withToken(superagent.del(`${serverUrl}/api/v1/shares`), admin.token)
+            .query({ shareId: createResponse.body.shareId });
+
+        const activityResponse = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), admin.token)
+            .query({ path: '/home/unshare-activity.txt' });
+        assert.equal(activityResponse.status, 200);
+        assert.equal(activityResponse.body.activity[0].action, 'unshared');
+        assert.equal(activityResponse.body.activity[0].details.shareId, createResponse.body.shareId);
+    });
 });

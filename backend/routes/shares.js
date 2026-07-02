@@ -182,8 +182,15 @@ async function removeShare(req, res, next) {
 
     debugLog(`removeShare: ${shareId}`);
 
+    const [getError, share] = await safe(shares.get(shareId));
+    if (getError) return next(new HttpError(500, getError));
+    if (!share) return next(new HttpError(404, 'not found'));
+
     const [error] = await safe(shares.remove(shareId));
     if (error) return next(new HttpError(500, error));
+
+    const owner = share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`;
+    await activity.log({ actor: req.user.username, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUsername: share.receiverUsername, receiverEmail: share.receiverEmail } });
 
     next(new HttpSuccess(200, {}));
 }

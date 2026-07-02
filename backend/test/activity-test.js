@@ -219,4 +219,46 @@ describe('activity', function () {
         assert.equal(listed.length, 1);
         assert.equal(listed[0].owner, 'groupfolder-team');
     });
+
+    it('lastActivityAt returns the latest content action timestamp', async function () {
+        await createUsers();
+
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/mtime.txt', action: 'created' });
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/mtime.txt', action: 'updated' });
+
+        const last = await activity.lastActivityAt(admin.username, '/mtime.txt');
+        assert.ok(last instanceof Date);
+
+        const listed = await activity.listByPath(admin.username, '/mtime.txt');
+        assert.equal(last.getTime(), listed[0].createdAt.getTime());
+        assert.equal(listed[0].action, 'updated');
+    });
+
+    it('lastActivityAt ignores shared and unshared actions', async function () {
+        await createUsers();
+
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/share-mtime.txt', action: 'shared', details: { shareId: 's1' } });
+        assert.equal(await activity.lastActivityAt(admin.username, '/share-mtime.txt'), null);
+
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/share-mtime.txt', action: 'updated' });
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/share-mtime.txt', action: 'unshared', details: { shareId: 's1' } });
+
+        const last = await activity.lastActivityAt(admin.username, '/share-mtime.txt');
+        const listed = await activity.listByPath(admin.username, '/share-mtime.txt');
+        assert.equal(last.getTime(), listed.find((row) => row.action === 'updated').createdAt.getTime());
+    });
+
+    it('lastActivityAt includes descendant activity when recursive', async function () {
+        await createUsers();
+        await files.addDirectory(admin.username, '/mtime-parent');
+        await addUserFile(admin.username, '/mtime-parent/child.txt', 'child');
+
+        await activity.log({ actor: admin.username, owner: admin.username, filePath: '/mtime-parent/child.txt', action: 'updated' });
+
+        assert.equal(await activity.lastActivityAt(admin.username, '/mtime-parent', { recursive: false }), null);
+
+        const last = await activity.lastActivityAt(admin.username, '/mtime-parent', { recursive: true });
+        const childActivity = await activity.listByPath(admin.username, '/mtime-parent/child.txt');
+        assert.equal(last.getTime(), childActivity[0].createdAt.getTime());
+    });
 });

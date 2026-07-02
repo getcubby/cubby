@@ -72,6 +72,23 @@ describe('files', function () {
         assert.equal(dir.fileName, 'projects');
     });
 
+    it('overlays directory mtime with descendant file activity', async function () {
+        await createUsers();
+
+        await files.addDirectory(admin.username, '/mtime-overlay');
+        const beforeChild = await files.get(admin.username, '/mtime-overlay');
+        const parentMtimeBefore = beforeChild.mtime.getTime();
+
+        await files.addOrOverwriteFileContents(admin.username, '/mtime-overlay/child.txt', Buffer.from('child'), null, true, { actor: admin.username });
+
+        const parent = await files.get(admin.username, '/mtime-overlay');
+        const child = parent.files.find((entry) => entry.fileName === 'child.txt');
+
+        assert.ok(parent.mtime.getTime() >= parentMtimeBefore);
+        assert.ok(child.mtime.getTime() >= parent.mtime.getTime() - 5000);
+        assert.ok(parent.mtime.getTime() >= child.mtime.getTime() - 5000);
+    });
+
     it('can resolve home resource paths', async function () {
         await createUsers();
         await addUserFile(admin.username, '/notes.txt', 'notes');

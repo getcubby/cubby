@@ -8,6 +8,8 @@ import MainError from './mainerror.js';
 const debugLog = debug('cubby:activity');
 
 const ACTIONS = new Set([ 'created', 'updated', 'moved', 'copied', 'deleted', 'shared', 'unshared' ]);
+const CONTENT_ACTIONS = [ 'created', 'updated', 'deleted', 'moved', 'copied' ];
+const CONTENT_ACTIONS_SQL = CONTENT_ACTIONS.map((a) => `'${a}'`).join(', ');
 
 function postProcess(data) {
     data.filePath = data.file_path;
@@ -83,6 +85,29 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
     return result.rows;
 }
 
+async function lastActivityAt(owner, filePath, { recursive = false } = {}) {
+    assert.strictEqual(typeof owner, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof recursive, 'boolean');
+
+    debugLog(`lastActivityAt: ${owner}${filePath} recursive:${recursive}`);
+
+    let result;
+
+    if (recursive) {
+        result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
+            WHERE owner = $1 AND (file_path = $2 OR file_path LIKE $2 || '/%') AND action IN (${CONTENT_ACTIONS_SQL})`, [ owner, filePath ]);
+    } else {
+        result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
+            WHERE owner = $1 AND file_path = $2 AND action IN (${CONTENT_ACTIONS_SQL})`, [ owner, filePath ]);
+    }
+
+    const timestamp = result.rows[0]?.last_activity_at;
+    if (!timestamp) return null;
+
+    return new Date(timestamp);
+}
+
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
     assert.strictEqual(typeof fromOwner, 'string');
     assert.strictEqual(typeof fromPath, 'string');
@@ -102,5 +127,6 @@ export default {
     log,
     clearByPath,
     listByPath,
+    lastActivityAt,
     relocatePaths
 };

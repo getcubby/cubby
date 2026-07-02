@@ -24,6 +24,12 @@ function isGroupfolder(usernameOrGroupfolder) {
     return usernameOrGroupfolder.indexOf('groupfolder-') === 0;
 }
 
+async function effectiveMtime(usernameOrGroupfolder, filePath, statMtime, recursive) {
+    const activityAt = await activity.lastActivityAt(usernameOrGroupfolder, filePath, { recursive });
+    if (!activityAt) return statMtime;
+    return activityAt > statMtime ? activityAt : statMtime;
+}
+
 async function translateResourcePath(username, resourcePath) {
     const resource = resourcePath.split('/')[1];
     const filePath = resourcePath.slice(resource.length+1);
@@ -223,7 +229,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
 
     try {
         const contents = await fsPromises.readdir(fullFilePath);
-        files = contents.map(function (file) {
+        files = await Promise.all(contents.map(function (file) {
             try {
                 const stat = fs.statSync(path.join(fullFilePath, file));
                 return { name: file, stat: stat, fullFilePath: path.join(fullFilePath, file) };
@@ -231,13 +237,15 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
                 debugLog(`getDirectory: cannot stat ${path.join(fullFilePath, file)}`, e);
                 return null;
             }
-        }).filter(function (file) { return file && (file.stat.isDirectory() || file.stat.isFile()); }).map(function (file) {
+        }).filter(function (file) { return file && (file.stat.isDirectory() || file.stat.isFile()); }).map(async function (file) {
+            const childFilePath = path.join(filePath, file.name);
+            const mtime = await effectiveMtime(usernameOrGroupfolder, childFilePath, file.stat.mtime, file.stat.isDirectory());
             return new Entry({
                 fullFilePath: file.fullFilePath,
                 fileName: file.name,
-                filePath: path.join(filePath, file.name),
+                filePath: childFilePath,
                 size: file.stat.size,
-                mtime: file.stat.mtime,
+                mtime,
                 atime: file.stat.atime,
                 isDirectory: file.stat.isDirectory(),
                 isFile: file.stat.isFile(),
@@ -245,7 +253,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
                 owner: usernameOrGroupfolder,
                 mimeType: file.stat.isDirectory() ? 'inode/directory' : mime(file.name)
             });
-        });
+        }));
     } catch (error) {
         throw new MainError(MainError.FS_ERROR, error);
     }
@@ -278,7 +286,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         fileName: directoryFileName,
         filePath: filePath,
         size: size,
-        mtime: stats.mtime,
+        mtime: await effectiveMtime(usernameOrGroupfolder, filePath, stats.mtime, true),
         atime: stats.atime,
         isDirectory: true,
         isFile: false,
@@ -335,7 +343,7 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         favorites: favs,
         size: size,
         group: group,
-        mtime: stats.mtime,
+        mtime: await effectiveMtime(usernameOrGroupfolder, filePath, stats.mtime, false),
         atime: stats.atime,
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),

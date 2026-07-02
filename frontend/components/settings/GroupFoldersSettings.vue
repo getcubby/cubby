@@ -1,7 +1,7 @@
 <script setup>
 
-import { ref, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, InputDialog, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
+import { ref, computed, onMounted, useTemplateRef } from 'vue';
+import { Button, Dialog, FormGroup, InputDialog, MultiSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
@@ -44,7 +44,6 @@ const groupFoldersBusy = ref(true);
 const groupFolderAdd = ref({
   error: '',
   busy: false,
-  availableUsersMenuModel: [],
   name: '',
   slug: '',
   folderPath: '',
@@ -53,10 +52,14 @@ const groupFolderAdd = ref({
 const groupFolderEdit = ref({
   error: '',
   busy: false,
-  availableUsersMenuModel: [],
   name: '',
   members: [],
 });
+
+const userOptions = computed(() => props.users.map((u) => ({
+  ...u,
+  label: u.username || u.email,
+})));
 
 async function refreshGroupFolders() {
   groupFoldersBusy.value = true;
@@ -71,23 +74,6 @@ async function refreshGroupFolders() {
   emit('groupfolders-changed');
 }
 
-function groupFolderRemoveMember(members, member) {
-  const index = members.findIndex((m) => m.username === member.username);
-  members.splice(index, 1);
-}
-
-function buildAvailableUsersMenuModel(members) {
-  const menu = [];
-  for (const user of props.users) {
-    menu.push({
-      label: user.username,
-      visible: () => !members.find((m) => m.username === user.username),
-      action: () => { members.push(user); },
-    });
-  }
-  return menu;
-}
-
 async function onAddGroupFolder() {
   groupFolderAdd.value.busy = false;
   groupFolderAdd.value.error = '';
@@ -95,7 +81,6 @@ async function onAddGroupFolder() {
   groupFolderAdd.value.slug = '';
   groupFolderAdd.value.members = [];
   groupFolderAdd.value.folderPath = '';
-  groupFolderAdd.value.availableUsersMenuModel = buildAvailableUsersMenuModel(groupFolderAdd.value.members);
   addGroupFolderDialog.value.open();
 }
 
@@ -107,7 +92,7 @@ async function onAddGroupFolderSubmit() {
       name: groupFolderAdd.value.name,
       slug: groupFolderAdd.value.slug,
       path: groupFolderAdd.value.folderPath,
-      members: groupFolderAdd.value.members.map((m) => m.username),
+      members: groupFolderAdd.value.members,
     });
   } catch (e) {
     groupFolderAdd.value.error = e.message;
@@ -125,8 +110,7 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.error = '';
   groupFolderEdit.value.id = groupFolder.id;
   groupFolderEdit.value.name = groupFolder.name;
-  groupFolderEdit.value.members = groupFolder.members.map((m) => props.users.find((u) => u.username === m));
-  groupFolderEdit.value.availableUsersMenuModel = buildAvailableUsersMenuModel(groupFolderEdit.value.members);
+  groupFolderEdit.value.members = [...groupFolder.members];
   editGroupFolderDialog.value.open();
 }
 
@@ -136,7 +120,7 @@ async function onEditGroupFolderSubmit() {
   try {
     await GroupFolderModel.update(groupFolderEdit.value.id, {
       name: groupFolderEdit.value.name,
-      members: groupFolderEdit.value.members.map((m) => m.username),
+      members: groupFolderEdit.value.members,
     });
   } catch (e) {
     groupFolderEdit.value.error = e.message;
@@ -201,11 +185,10 @@ onMounted(refreshGroupFolders);
       <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
       <label v-show="false">Disk storage path</label>
       <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
-      <label>Members</label>
-      <div style="display: flex; gap: 6px">
-        <Button v-for="member in groupFolderAdd.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderAdd.members, member)">{{ member.username }}</Button>
-        <Button v-show="groupFolderAdd.members.length < groupFolderAdd.availableUsersMenuModel.length" outline small :menu="groupFolderAdd.availableUsersMenuModel">Add member</Button>
-      </div>
+      <FormGroup>
+        <label>Members</label>
+        <MultiSelect v-model="groupFolderAdd.members" :options="userOptions" option-key="username" :search-threshold="20" style="width: 100%;" />
+      </FormGroup>
     </Dialog>
 
     <Dialog
@@ -222,11 +205,10 @@ onMounted(refreshGroupFolders);
       <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>
       <label>Name</label>
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
-      <label>Members</label>
-      <div style="display: flex; gap: 6px">
-        <Button v-for="member in groupFolderEdit.members" :key="member.username" outline small danger icon="fa-solid fa-xmark" @click="groupFolderRemoveMember(groupFolderEdit.members, member)">{{ member.username }}</Button>
-        <Button v-show="groupFolderEdit.members.length < groupFolderEdit.availableUsersMenuModel.length" outline small :menu="groupFolderEdit.availableUsersMenuModel">Add member</Button>
-      </div>
+      <FormGroup>
+        <label>Members</label>
+        <MultiSelect v-model="groupFolderEdit.members" :options="userOptions" option-key="username" :search-threshold="20" style="width: 100%;" />
+      </FormGroup>
     </Dialog>
 
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" :busy="groupFoldersBusy" placeholder="No group folders">

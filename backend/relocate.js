@@ -4,6 +4,7 @@ import files from './files.js';
 import shares from './shares.js';
 import favorites from './favorites.js';
 import recent from './recent.js';
+import activity from './activity.js';
 
 const debugLog = debug('cubby:relocate');
 
@@ -39,7 +40,8 @@ async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
         isDirectory
     });
 
-    // storage_paths added in later phase.
+    await activity.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
+
     await files.runChangeHooks(fromOwner, fromPath);
     await files.runChangeHooks(toOwner, toPath);
 }

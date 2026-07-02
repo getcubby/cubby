@@ -1,6 +1,7 @@
 import collab from './routes/collab.js';
 import constants from './constants.js';
 import cors from './cors.js';
+import activity from './routes/activity.js';
 import favorites from './routes/favorites.js';
 import files from './routes/files.js';
 import groupFolders from './routes/groupfolders.js';
@@ -97,6 +98,7 @@ async function start() {
         router.get('/api/v1/preview/:type/:id/:hash', users.optionalAuth, shares.optionalAttachReceiver, misc.getPreview);
 
         router.get('/api/v1/recent', users.isAuthenticated, misc.getRecent);
+        router.get('/api/v1/activity', users.isAuthenticated, activity.list);
         router.get('/api/v1/download', users.isAuthenticated, misc.download);
         router.get('/api/v1/search', users.isAuthenticated, misc.search);
 

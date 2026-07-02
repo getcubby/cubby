@@ -2,6 +2,8 @@ import assert from 'assert';
 import crypto from 'crypto';
 import debug from 'debug';
 import database from './database.js';
+import files from './files.js';
+import MainError from './mainerror.js';
 
 const debugLog = debug('cubby:activity');
 
@@ -40,11 +42,19 @@ async function log({ actor, owner, filePath, action, details = null }) {
     return id;
 }
 
-async function listByPath(owner, filePath, { includeDescendants = false, limit = 50 } = {}) {
+async function listByPath(owner, filePath, { limit = 50 } = {}) {
     assert.strictEqual(typeof owner, 'string');
     assert.strictEqual(typeof filePath, 'string');
-    assert.strictEqual(typeof includeDescendants, 'boolean');
     assert.strictEqual(typeof limit, 'number');
+
+    let includeDescendants = false;
+
+    try {
+        const entry = await files.head(owner, filePath);
+        includeDescendants = entry.isDirectory;
+    } catch (error) {
+        if (error.reason !== MainError.NOT_FOUND) throw error;
+    }
 
     debugLog(`listByPath: ${owner}${filePath} includeDescendants:${includeDescendants} limit:${limit}`);
 

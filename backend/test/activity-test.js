@@ -92,9 +92,28 @@ describe('activity', function () {
             isDirectory: true
         });
 
-        const listed = await activity.listByPath(admin.username, '/moved-activity-dir', { includeDescendants: true });
+        await files.addDirectory(admin.username, '/moved-activity-dir');
+
+        const listed = await activity.listByPath(admin.username, '/moved-activity-dir');
         assert.equal(listed.length, 1);
         assert.equal(listed[0].filePath, '/moved-activity-dir/nested.txt');
+    });
+
+    it('listByPath includes descendant activity for directories', async function () {
+        await createUsers();
+        await files.addDirectory(admin.username, '/activity-parent');
+        await addUserFile(admin.username, '/activity-parent/child.txt', 'child');
+
+        await activity.log({
+            actor: admin.username,
+            owner: admin.username,
+            filePath: '/activity-parent/child.txt',
+            action: 'updated'
+        });
+
+        const listed = await activity.listByPath(admin.username, '/activity-parent');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].filePath, '/activity-parent/child.txt');
     });
 
     it('relocatePaths updates owner on cross-root move', async function () {

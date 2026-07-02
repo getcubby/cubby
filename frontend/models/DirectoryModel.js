@@ -132,6 +132,7 @@ async function saveFile(resource, content) {
 
 async function newFile(resource, newFileName) {
   const file = new Blob();
+  const newFilePath = pathJoin(resource.resourcePath, newFileName);
 
   const req = new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
@@ -160,7 +161,7 @@ async function newFile(resource, newFileName) {
       }));
     });
 
-    xhr.open('POST', `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + newFileName)}`);
+    xhr.open('POST', `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(newFilePath)}`);
 
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
 
@@ -212,6 +213,8 @@ async function upload(resource, file, progressHandler) {
     uniqueRelativeFilePath = insertFilenameModifier(uniqueRelativeFilePath, extension, '-new');
   }
 
+  const uploadPath = pathJoin(resource.resourcePath, uniqueRelativeFilePath);
+
   const req = new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
     xhr.withCredentials = true;
@@ -242,7 +245,7 @@ async function upload(resource, file, progressHandler) {
       if (event.loaded) progressHandler({ direction: 'upload', loaded: event.loaded});
     });
 
-    xhr.open('POST', `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(resource.resourcePath + '/' + uniqueRelativeFilePath)}`);
+    xhr.open('POST', `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(uploadPath)}`);
 
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
 

@@ -17,11 +17,12 @@ function storageToResourcePrefix(owner, filePath) {
     return `/home${filePath}`;
 }
 
-async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
+async function relocate({ actor, fromOwner, fromPath, toOwner, toPath }) {
     assert.strictEqual(typeof fromOwner, 'string');
     assert.strictEqual(typeof fromPath, 'string');
     assert.strictEqual(typeof toOwner, 'string');
     assert.strictEqual(typeof toPath, 'string');
+    assert(actor === undefined || typeof actor === 'string');
 
     debugLog(`relocate: ${fromOwner}:${fromPath} -> ${toOwner}:${toPath}`);
 
@@ -43,7 +44,7 @@ async function relocate({ fromOwner, fromPath, toOwner, toPath }) {
     await activity.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
     await files.runChangeHooks(fromOwner, fromPath);
-    await files.runChangeHooks(toOwner, toPath);
+    await files.runChangeHooks(toOwner, toPath, actor ? { actor, action: 'moved', details: { fromOwner, fromPath, toOwner, toPath } } : null);
 }
 
 export default {

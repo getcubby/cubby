@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import shares from '../shares.js';
+import activity from '../activity.js';
 import files from '../files.js';
 import path from 'path';
 import MainError from '../mainerror.js';
@@ -143,6 +144,9 @@ async function createShare(req, res, next) {
 
     const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt }));
     if (error) return next(new HttpError(500, error));
+
+    const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
+    await activity.log({ actor: req.user.username, owner, filePath, action: 'shared', details: { shareId, receiverUsername, receiverEmail } });
 
     next(new HttpSuccess(200, { shareId }));
 }

@@ -105,7 +105,7 @@ async function runChangeHooks(usernameOrGroupfolder, filePath, activityContext =
 async function addDirectory(usernameOrGroupfolder, filePath, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
-    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
+    assert(actor === undefined || typeof actor === 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -129,7 +129,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strictEqual(typeof stream, 'object');
-    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
+    assert(actor === undefined || typeof actor === 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -173,7 +173,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strict(Buffer.isBuffer(content));
-    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
+    assert(actor === undefined || typeof actor === 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -440,12 +440,13 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
     }
 }
 
-async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath, overwrite = false) {
+async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath, overwrite = false, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof newUsernameOrGroupfolder, 'string');
     assert.strictEqual(typeof newFilePath, 'string');
     assert.strictEqual(typeof overwrite, 'boolean');
+    assert(actor === undefined || typeof actor === 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -468,7 +469,7 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
         }
     }
 
-    await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
+    await runChangeHooks(newUsernameOrGroupfolder, newFilePath, actor ? { actor, action: 'copied', details: { fromOwner: usernameOrGroupfolder, fromPath: filePath } } : null);
 }
 
 async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {

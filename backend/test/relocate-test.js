@@ -7,6 +7,7 @@ import groupfolders from '../groupfolders.js';
 import shares from '../shares.js';
 import favorites from '../favorites.js';
 import recent from '../recent.js';
+import activity from '../activity.js';
 import diskusage from '../diskusage.js';
 import users from '../users.js';
 import MainError from '../mainerror.js';
@@ -28,6 +29,7 @@ describe('relocate', function () {
         await addUserFile(admin.username, '/relocate.txt', 'payload');
 
         await relocate.relocate({
+            actor: admin.username,
             fromOwner: admin.username,
             fromPath: '/relocate.txt',
             toOwner: admin.username,
@@ -39,6 +41,11 @@ describe('relocate', function () {
 
         const file = await files.get(admin.username, '/renamed.txt');
         assert.equal(file.fileName, 'renamed.txt');
+
+        const activityItems = await activity.listByPath(admin.username, '/renamed.txt');
+        assert.equal(activityItems.length, 1);
+        assert.equal(activityItems[0].action, 'moved');
+        assert.equal(activityItems[0].details.toPath, '/renamed.txt');
     });
 
     it('can move a file across storage roots', async function () {

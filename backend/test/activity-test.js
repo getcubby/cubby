@@ -2,6 +2,7 @@ import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
 import common from './common.js';
 import activity from '../activity.js';
+import relocate from '../relocate.js';
 import files from '../files.js';
 import groupfolders from '../groupfolders.js';
 import users from '../users.js';
@@ -138,6 +139,36 @@ describe('activity', function () {
         assert.equal(listed.length, 1);
         assert.equal(listed[0].action, 'created');
         assert.equal(listed[0].details.isDirectory, true);
+    });
+
+    it('logs copied via copy', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/copy-src.txt', 'payload');
+
+        await files.copy(admin.username, '/copy-src.txt', admin.username, '/copy-dst.txt', false, { actor: admin.username });
+
+        const listed = await activity.listByPath(admin.username, '/copy-dst.txt');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].action, 'copied');
+        assert.equal(listed[0].details.fromPath, '/copy-src.txt');
+    });
+
+    it('relocate logs a moved event', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/relocate-activity.txt', 'payload');
+
+        await relocate.relocate({
+            actor: admin.username,
+            fromOwner: admin.username,
+            fromPath: '/relocate-activity.txt',
+            toOwner: admin.username,
+            toPath: '/relocate-activity-renamed.txt'
+        });
+
+        const listed = await activity.listByPath(admin.username, '/relocate-activity-renamed.txt');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].action, 'moved');
+        assert.equal(listed[0].details.toPath, '/relocate-activity-renamed.txt');
     });
 
     it('relocatePaths updates owner on cross-root move', async function () {

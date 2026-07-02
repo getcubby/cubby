@@ -617,7 +617,7 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         return;
     }
     try {
-        await files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite);
+        await files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite, { actor: username });
         res.status(201).end();
     } catch (e) {
         if (e.reason === MainError.NOT_FOUND) res.status(404).send('Not Found');
@@ -657,6 +657,7 @@ async function handleMove(req, res, username, segments, pathInfo) {
     }
     try {
         await relocate.relocate({
+            actor: username,
             fromOwner: subject.usernameOrGroupfolder,
             fromPath: subject.filePath,
             toOwner: destSubject.usernameOrGroupfolder,

@@ -32,6 +32,11 @@ function postProcess(data) {
     data.createdAt = data.created_at;
     delete data.created_at;
 
+    if (data.owner_groupfolder) data.owner = `groupfolder-${data.owner_groupfolder}`;
+    else data.owner = data.owner_username;
+    delete data.owner_username;
+    delete data.owner_groupfolder;
+
     if (data.details && typeof data.details === 'string') {
         data.details = JSON.parse(data.details);
     }

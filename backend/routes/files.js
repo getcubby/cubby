@@ -358,7 +358,7 @@ async function remove(req, res, next) {
     debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 
     try {
-        await files.remove(subject.usernameOrGroupfolder, subject.filePath);
+        await files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.user?.username });
     } catch (error) {
         return next(new HttpError(500, error));
     }

@@ -171,6 +171,30 @@ describe('activity', function () {
         assert.equal(listed[0].details.toPath, '/relocate-activity-renamed.txt');
     });
 
+    it('logs deleted after remove', async function () {
+        await createUsers();
+        await files.addOrOverwriteFileContents(admin.username, '/delete-me.txt', Buffer.from('payload'), null, true, { actor: admin.username });
+
+        await files.remove(admin.username, '/delete-me.txt', { actor: admin.username });
+
+        const listed = await activity.listByPath(admin.username, '/delete-me.txt');
+        assert.equal(listed.length, 2);
+        assert.equal(listed[0].action, 'deleted');
+    });
+
+    it('clears activity history when a path is recreated', async function () {
+        await createUsers();
+        await files.addOrOverwriteFileContents(admin.username, '/recreate.txt', Buffer.from('v1'), null, true, { actor: admin.username });
+        await files.addOrOverwriteFileContents(admin.username, '/recreate.txt', Buffer.from('v2'), null, true, { actor: admin.username });
+        await files.remove(admin.username, '/recreate.txt', { actor: admin.username });
+
+        await files.addOrOverwriteFileContents(admin.username, '/recreate.txt', Buffer.from('v3'), null, true, { actor: admin.username });
+
+        const listed = await activity.listByPath(admin.username, '/recreate.txt');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].action, 'created');
+    });
+
     it('relocatePaths updates owner on cross-root move', async function () {
         await createUsers();
         await groupfolders.add('team', 'Team', '', [ admin.username ]);

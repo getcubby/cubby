@@ -556,7 +556,7 @@ async function handleDelete(req, res, username, segments) {
         return;
     }
     try {
-        await files.remove(subject.usernameOrGroupfolder, subject.filePath);
+        await files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: username });
         res.status(204).end();
     } catch (e) {
         if (e.reason === MainError.NOT_FOUND) {

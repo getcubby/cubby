@@ -93,6 +93,9 @@ async function runChangeHooks(usernameOrGroupfolder, filePath, activityContext =
     assert.strictEqual(typeof activityContext.actor, 'string');
     assert.strictEqual(typeof activityContext.action, 'string');
 
+    // clear the actitvity log of a deleted file from the past
+    if (activityContext.action === 'created') await activity.clearByPath(usernameOrGroupfolder, filePath);
+
     await activity.log({
         actor: activityContext.actor,
         owner: usernameOrGroupfolder,
@@ -511,9 +514,10 @@ async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder
     await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
 
-async function remove(usernameOrGroupfolder, filePath) {
+async function remove(usernameOrGroupfolder, filePath, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
+    assert(actor === undefined || typeof actor === 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -526,7 +530,7 @@ async function remove(usernameOrGroupfolder, filePath) {
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, filePath);
+    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'deleted' } : null);
 }
 
 export default {

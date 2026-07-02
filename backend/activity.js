@@ -42,6 +42,15 @@ async function log({ actor, owner, filePath, action, details = null }) {
     return id;
 }
 
+async function clearByPath(owner, filePath) {
+    assert.strictEqual(typeof owner, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+
+    debugLog(`clearByPath: ${owner}${filePath}`);
+
+    await database.query('DELETE FROM file_activity WHERE owner = $1 AND file_path = $2', [ owner, filePath ]);
+}
+
 async function listByPath(owner, filePath, { limit = 50 } = {}) {
     assert.strictEqual(typeof owner, 'string');
     assert.strictEqual(typeof filePath, 'string');
@@ -91,6 +100,7 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
 export default {
     log,
+    clearByPath,
     listByPath,
     relocatePaths
 };

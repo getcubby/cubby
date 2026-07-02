@@ -158,6 +158,19 @@ async function recent() {
   return entries;
 }
 
+async function activity(path, { limit = 50 } = {}) {
+  let error, result;
+  try {
+    result = await fetcher.get(`${API_ORIGIN}/api/v1/activity`, { path, limit });
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to fetch activity', { cause: error || result });
+
+  return result.body.activity;
+}
+
 async function search(query, { signal } = {}) {
   let error, result;
   try {
@@ -196,6 +209,7 @@ export default {
   getOfficeHandle,
   getCollabHandle,
   recent,
+  activity,
   search,
   logout,
 };

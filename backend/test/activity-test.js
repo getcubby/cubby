@@ -116,6 +116,30 @@ describe('activity', function () {
         assert.equal(listed[0].filePath, '/activity-parent/child.txt');
     });
 
+    it('logs created and updated via addOrOverwriteFileContents', async function () {
+        await createUsers();
+
+        await files.addOrOverwriteFileContents(admin.username, '/hook-created.txt', Buffer.from('v1'), null, true, { actor: admin.username });
+        let listed = await activity.listByPath(admin.username, '/hook-created.txt');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].action, 'created');
+
+        await files.addOrOverwriteFileContents(admin.username, '/hook-created.txt', Buffer.from('v2'), null, true, { actor: admin.username });
+        listed = await activity.listByPath(admin.username, '/hook-created.txt');
+        assert.equal(listed.length, 2);
+        assert.equal(listed[0].action, 'updated');
+    });
+
+    it('logs created folder via addDirectory', async function () {
+        await createUsers();
+
+        await files.addDirectory(admin.username, '/hook-dir', { actor: admin.username });
+        const listed = await activity.listByPath(admin.username, '/hook-dir');
+        assert.equal(listed.length, 1);
+        assert.equal(listed[0].action, 'created');
+        assert.equal(listed[0].details.isDirectory, true);
+    });
+
     it('relocatePaths updates owner on cross-root move', async function () {
         await createUsers();
         await groupfolders.add('team', 'Team', '', [ admin.username ]);

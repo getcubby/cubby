@@ -12,6 +12,7 @@ import Entry from './entry.js';
 import shares from './shares.js';
 import recoll from './recoll.js';
 import diskusage from './diskusage.js';
+import activity from './activity.js';
 import MainError from './mainerror.js';
 import { pipeline } from 'node:stream/promises';
 
@@ -74,7 +75,7 @@ function getAbsolutePath(usernameOrGroupfolder, filePath) {
     return fullFilePath;
 }
 
-async function runChangeHooks(usernameOrGroupfolder, filePath) {
+async function runChangeHooks(usernameOrGroupfolder, filePath, activityContext = null) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
@@ -86,11 +87,25 @@ async function runChangeHooks(usernameOrGroupfolder, filePath) {
     } else {
         await recoll.indexByUsername(usernameOrGroupfolder, true);
     }
+
+    if (!activityContext) return;
+
+    assert.strictEqual(typeof activityContext.actor, 'string');
+    assert.strictEqual(typeof activityContext.action, 'string');
+
+    await activity.log({
+        actor: activityContext.actor,
+        owner: usernameOrGroupfolder,
+        filePath,
+        action: activityContext.action,
+        details: activityContext.details ?? null
+    });
 }
 
-async function addDirectory(usernameOrGroupfolder, filePath) {
+async function addDirectory(usernameOrGroupfolder, filePath, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
+    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -105,22 +120,24 @@ async function addDirectory(usernameOrGroupfolder, filePath) {
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, filePath);
+    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'created', details: { isDirectory: true } } : null);
 }
 
-async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime, overwrite) {
+async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime, overwrite, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strictEqual(typeof stream, 'object');
+    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debugLog(`addOrOverwriteFile: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
-    if (fs.existsSync(fullFilePath) && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
+    const existed = fs.existsSync(fullFilePath);
+    if (existed && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
     // we first upload to .part file and the rename
     const fullFilePathPart = fullFilePath + '.part';
@@ -137,7 +154,7 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, filePath);
+    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
 
     if (!mtime) return;
 
@@ -150,19 +167,21 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     }
 }
 
-async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite) {
+async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strict(Buffer.isBuffer(content));
+    if (actor !== undefined) assert.strictEqual(typeof actor, 'string');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debugLog(`addOrOverwriteFileContents: ${usernameOrGroupfolder} ${fullFilePath} mtime:${mtime} overwrite:${overwrite}`);
 
-    if (fs.existsSync(fullFilePath) && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
+    const existed = fs.existsSync(fullFilePath);
+    if (existed && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
     try {
         await fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true });
@@ -171,7 +190,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
         throw new MainError(MainError.FS_ERROR, error);
     }
 
-    await runChangeHooks(usernameOrGroupfolder, filePath);
+    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
 
     if (!mtime) return;
 

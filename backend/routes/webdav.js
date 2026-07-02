@@ -411,7 +411,7 @@ async function handlePut(req, res, username, segments) {
         } catch (e) {
             if (e.reason !== MainError.NOT_FOUND) throw e;
         }
-        await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
+        await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor: username });
         res.status(existed ? 204 : 201).set('Location', req.originalUrl).end();
     } catch (e) {
         if (e.reason === MainError.ALREADY_EXISTS && !overwrite) {
@@ -522,7 +522,7 @@ async function handleMkcol(req, res, username, segments) {
         return;
     }
     try {
-        await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
+        await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor: username });
         res.status(201).end();
     } catch (e) {
         if (e.reason === MainError.ALREADY_EXISTS) {

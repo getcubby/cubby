@@ -83,6 +83,7 @@ async function getHandle(req, res, next) {
         username: subject.usernameOrGroupfolder,
         resourcePath: resourcePath,
         filePath: subject.filePath,
+        actorUsername: req.user?.username || null,
         readonly: subject.share?.readonly || false,
         token: req.user ? null : token,
     };
@@ -193,7 +194,7 @@ async function putFile(req, res, next) {
     if (handle.readonly) return next(new HttpError(403, 'share is readonly'));
 
     try {
-        await files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true);
+        await files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: handle.actorUsername });
     } catch (error) {
         return next(new HttpError(500, error));
     }

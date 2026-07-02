@@ -37,11 +37,12 @@ async function add(req, res, next) {
     debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
    try {
+        const actor = req.user?.username;
         if (directory) {
-            await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath);
+            await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor });
         } else {
-            await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite);
-            await recent.add(subject.usernameOrGroupfolder, subject.resourcePath);
+            await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor });
+            if (req.user) await recent.add(req.user.username, subject.resourcePath);
         }
     } catch (error) {
         if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));

@@ -28,6 +28,20 @@ describe('activity API', function () {
         assert.equal(response.body.activity[0].filePath, '/activity-api.txt');
     });
 
+    it('lists activity logged on file upload', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/files`), admin.token)
+            .query({ path: '/home/upload-activity.txt', overwrite: true })
+            .set('Content-Type', 'application/octet-stream')
+            .send(Buffer.from('uploaded'));
+
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), admin.token)
+            .query({ path: '/home/upload-activity.txt' });
+        assert.equal(response.status, 200);
+        assert.equal(response.body.activity.length, 1);
+        assert.equal(response.body.activity[0].action, 'created');
+        assert.equal(response.body.activity[0].actor, admin.username);
+    });
+
     it('returns empty activity for paths with no rows', async function () {
         await addUserFile(admin.username, '/activity-empty.txt', 'empty');
 

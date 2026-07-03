@@ -88,14 +88,14 @@ CREATE TABLE IF NOT EXISTS favorites(
     FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
     PRIMARY KEY(id));
 
-# recents has a username component depending on who opened a shared or group folder file
+# recents records who opened a file (opener) and the virtual resource path
 CREATE TABLE IF NOT EXISTS recents(
-    username VARCHAR(128) NOT NULL,
+    opener VARCHAR(128) NOT NULL,
     resource_path VARCHAR(512) NOT NULL,
     accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY(username) REFERENCES users(username),
-    PRIMARY KEY(username, resource_path));
+    FOREIGN KEY(opener) REFERENCES users(username),
+    PRIMARY KEY(opener, resource_path));
 
 CREATE TABLE IF NOT EXISTS file_activity(
     id VARCHAR(128) PRIMARY KEY,

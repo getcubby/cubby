@@ -19,38 +19,38 @@ function postProcess(data) {
     return data;
 }
 
-async function add(username, resourcePath) {
-    assert.strictEqual(typeof username, 'string');
+async function add(opener, resourcePath) {
+    assert.strictEqual(typeof opener, 'string');
     assert.strictEqual(typeof resourcePath, 'string');
 
-    debugLog(`add: ${username} ${resourcePath}`);
+    debugLog(`add: ${opener} ${resourcePath}`);
 
-    await database.query(`INSERT INTO recents (username, resource_path, accessed_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (username, resource_path) DO UPDATE SET accessed_at = CURRENT_TIMESTAMP`, [ username, resourcePath ]);
+    await database.query(`INSERT INTO recents (opener, resource_path, accessed_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (opener, resource_path) DO UPDATE SET accessed_at = CURRENT_TIMESTAMP`, [ opener, resourcePath ]);
 }
 
-async function remove(username, resourcePath) {
-    assert.strictEqual(typeof username, 'string');
+async function remove(opener, resourcePath) {
+    assert.strictEqual(typeof opener, 'string');
     assert.strictEqual(typeof resourcePath, 'string');
 
-    debugLog(`remove: ${username} ${resourcePath}`);
+    debugLog(`remove: ${opener} ${resourcePath}`);
 
-    await database.query('DELETE FROM recents WHERE username = $1 AND resource_path = $2', [ username, resourcePath ]);
+    await database.query('DELETE FROM recents WHERE opener = $1 AND resource_path = $2', [ opener, resourcePath ]);
 }
 
-async function removeEntry(username, resourcePath) {
-    await database.query('DELETE FROM recents WHERE username = $1 AND resource_path = $2', [ username, resourcePath ]);
+async function removeEntry(opener, resourcePath) {
+    await database.query('DELETE FROM recents WHERE opener = $1 AND resource_path = $2', [ opener, resourcePath ]);
 }
 
-async function get(username, daysAgo = 10, maxFiles = 100) {
-    assert.strictEqual(typeof username, 'string');
+async function get(opener, daysAgo = 10, maxFiles = 100) {
+    assert.strictEqual(typeof opener, 'string');
     assert.strictEqual(typeof daysAgo, 'number');
     assert.strictEqual(typeof maxFiles, 'number');
 
     const now = Date.now();
     const result = [];
 
-    const rows = await database.query('SELECT * FROM recents WHERE username = $1 ORDER BY accessed_at DESC', [ username ]);
+    const rows = await database.query('SELECT * FROM recents WHERE opener = $1 ORDER BY accessed_at DESC', [ opener ]);
 
     let i = 0;
     while (result.length < maxFiles && i < rows.rows.length) {
@@ -58,9 +58,9 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
         if (now - recent.accessedAt.getTime() > MAX_AGE) break;
 
         try {
-            const subject = await files.translateResourcePath(username, recent.resourcePath);
+            const subject = await files.translateResourcePath(opener, recent.resourcePath);
             if (!subject) {
-                await removeEntry(username, recent.resourcePath);
+                await removeEntry(opener, recent.resourcePath);
                 i++;
                 continue;
             }
@@ -69,7 +69,7 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
                 const shareId = subject.resourcePath.slice(1).split('/')[1];
                 const share = await shares.get(shareId);
                 if (!share) {
-                    await removeEntry(username, recent.resourcePath);
+                    await removeEntry(opener, recent.resourcePath);
                     i++;
                     continue;
                 }
@@ -80,18 +80,18 @@ async function get(username, daysAgo = 10, maxFiles = 100) {
                 file.share = share;
                 file.atime = recent.accessedAt;
 
-                result.push(file.asShare(share.filePath).withoutPrivate(username));
+                result.push(file.asShare(share.filePath).withoutPrivate(opener));
             } else {
                 const file = await files.get(subject.usernameOrGroupfolder, subject.filePath);
                 file.atime = recent.accessedAt;
-                result.push(file.withoutPrivate(username));
+                result.push(file.withoutPrivate(opener));
             }
 
             i++;
         // eslint-disable-next-line no-unused-vars
         } catch (error) {
-            console.error(`File not found ${username} ${recent.resourcePath}. Removing from recents.`);
-            await removeEntry(username, recent.resourcePath);
+            console.error(`File not found ${opener} ${recent.resourcePath}. Removing from recents.`);
+            await removeEntry(opener, recent.resourcePath);
             i++;
         }
     }

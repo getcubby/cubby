@@ -52,6 +52,7 @@ MainError.prototype.toPlainObject = function () {
 MainError.toHttpError = function (error) {
     switch (error.reason) {
     case MainError.BAD_FIELD:
+    case MainError.INVALID_PATH:
         return new HttpError(400, error);
     case MainError.NOT_FOUND:
         return new HttpError(404, error);

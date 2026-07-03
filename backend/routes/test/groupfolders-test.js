@@ -41,6 +41,6 @@ describe('groupfolders API', function () {
 
     it('returns not implemented for get by id', async function () {
         const response = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders/missing`), admin.token).ok(() => true);
-        assert.equal(response.status, 500);
+        assert.equal(response.status, 409);
     });
 });

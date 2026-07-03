@@ -2,7 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import paths from '../paths.js';
 import groupFolders from '../groupfolders.js';
-import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
+import { HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
 import path from 'path';
 import safe from '@cloudron/safetydance';
@@ -48,7 +48,7 @@ async function get(req, res, next) {
 
     debugLog(`get: ${id}`);
 
-    next(new HttpError(500, 'not implemented'));
+    next(MainError.toHttpError(new MainError(MainError.NOT_IMPLEMENTED, 'not implemented')));
 }
 
 async function update(req, res, next) {

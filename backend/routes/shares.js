@@ -47,7 +47,7 @@ async function optionalAttachReceiver(req, res, next) {
     debugLog(`optionalAttachReceiver: ${shareId}`);
 
     const [error, share] = await safe(shares.get(shareId));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
     if (!share) return next(new HttpError(404, 'share not found'));
 
     if (shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
@@ -68,7 +68,7 @@ async function attachReceiver(req, res, next) {
     debugLog(`attachReceiver: ${shareId}`);
 
     const [error, share] = await safe(shares.get(shareId));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
     if (!share) return next(new HttpError(404, 'share not found'));
 
     if (shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
@@ -91,8 +91,7 @@ async function getShareLink(req, res, next) {
     debugLog(`get: ${req.share.id} path:${filePath} type:${type || 'json'}`);
 
     const [error, file] = await safe(files.get(req.share.ownerUsername ? req.share.ownerUsername : `groupfolder-${req.share.ownerGroupfolder}`, path.join(req.share.filePath, filePath)));
-    if (error?.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     if (type === 'raw') {
         if (file.isDirectory) return res.redirect(301, `/#files/shares/${req.share.id}/`);
@@ -134,7 +133,7 @@ async function createShare(req, res, next) {
 
     if (receiverEmail || receiverUsername) {
         const [error, existingShares] = await safe(shares.getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiverUsername || receiverEmail, filePath, true /* exact match */));
-        if (error) return next(new HttpError(500, error));
+        if (error) return next(MainError.toHttpError(error));
 
         if (existingShares && existingShares.length) {
             debugLog(`create: share already exists. Reusing ${existingShares[0].id}`);
@@ -143,7 +142,7 @@ async function createShare(req, res, next) {
     }
 
     const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt }));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
     await activity.log({ actor: req.user.username, owner, filePath, action: 'shared', details: { shareId, receiverUsername, receiverEmail } });
@@ -157,7 +156,7 @@ async function listShares(req, res, next) {
     debugLog('listShares');
 
     const [error, result] = await safe(shares.list(req.user.username));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     const validShares = [];
     // Collect all file entries from shares
@@ -187,7 +186,7 @@ async function removeShare(req, res, next) {
     if (!share) return next(new HttpError(404, 'not found'));
 
     const [error] = await safe(shares.remove(shareId));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     const owner = share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`;
     await activity.log({ actor: req.user.username, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUsername: share.receiverUsername, receiverEmail: share.receiverEmail } });

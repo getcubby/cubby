@@ -9,6 +9,7 @@ import recent from '../recent.js';
 import shares from '../shares.js';
 import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
+import safe from '@cloudron/safetydance';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 
 const debugLog = debug('cubby:routes:files');
@@ -37,18 +38,15 @@ async function add(req, res, next) {
 
     debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
 
-   try {
-        const actor = req.user?.username;
-        if (directory) {
-            await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor });
-        } else {
-            await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor });
-            if (req.user) await recent.add(req.user.username, subject.resourcePath);
-        }
-    } catch (error) {
-        if (error.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'already exists'));
-        return next(new HttpError(500, error));
+    const actor = req.user?.username;
+    let error;
+    if (directory) {
+        [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor }));
+    } else {
+        [error] = await safe(files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor }));
+        if (!error && req.user) await recent.add(req.user.username, subject.resourcePath);
     }
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, {}));
 }
@@ -63,13 +61,8 @@ async function head(req, res, next) {
 
     debugLog(`head: ${subject.resource} ${subject.filePath}`);
 
-    let result;
-    try {
-        result = await files.head(subject.usernameOrGroupfolder, subject.filePath);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(files.head(subject.usernameOrGroupfolder, subject.filePath));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, result));
 }
@@ -102,13 +95,8 @@ async function get(req, res, next) {
     if (resource !== 'shares' && !req.user) return next(new HttpError(401, 'Unauthorized'));
 
     if (resource === 'home') {
-        let result;
-        try {
-            result = await files.get(req.user.username, filePath);
-        } catch (error) {
-            if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-            return next(new HttpError(500, error));
-        }
+        const [error, result] = await safe(files.get(req.user.username, filePath));
+        if (error) return next(MainError.toHttpError(error));
 
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
@@ -139,13 +127,8 @@ async function get(req, res, next) {
             // actual path is without shares/<shareId>/
             const shareFilePath = filePath.split('/').slice(2).join('/');
 
-            let file;
-            try {
-                file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath));
-            } catch (error) {
-                if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
-                return next(new HttpError(500, error));
-            }
+            const [error, file] = await safe(files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath)));
+            if (error) return next(MainError.toHttpError(error));
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
@@ -164,42 +147,37 @@ async function get(req, res, next) {
             // those files are always part of this share
             file.files.forEach(function (f) { f.share = share; });
             file.share = share;
-            file = file.asShare(share.filePath);
-            await favorites.attachToShareTree(file, shareId);
+            let shareFile = file.asShare(share.filePath);
+            await favorites.attachToShareTree(shareFile, shareId);
 
-            next(new HttpSuccess(200, file.withoutPrivate(req.user ? req.user.username : null)));
+            next(new HttpSuccess(200, shareFile.withoutPrivate(req.user ? req.user.username : null)));
         } else {
             debugLog('listShares');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
 
-            let result = [];
-
-            try {
-                result = await shares.listSharedWith(req.user.username);
-            } catch (error) {
-                return next(new HttpError(500, error));
-            }
+            const [listError, result] = await safe(shares.listSharedWith(req.user.username));
+            if (listError) return next(MainError.toHttpError(listError));
 
             // Collect all file entries from shares
             const sharedFiles = [];
             for (const share of result) {
                 const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUsername;
 
-                try {
-                    let file = await files.get(owner, share.filePath);
-
-                    file.isShare = true;
-                    file.share = share;
-                    file = file.asShare(share.filePath);
-                    file.id = share.id;
-
-                    sharedFiles.push(file);
-                } catch (error) {
+                const [getError, file] = await safe(files.get(owner, share.filePath));
+                if (getError) {
                     // TODO maybe delete share from db if file/folder is gone
-                    console.error('Failed to list share files.', error);
+                    console.error('Failed to list share files.', getError);
+                    continue;
                 }
+
+                file.isShare = true;
+                file.share = share;
+                let shareEntry = file.asShare(share.filePath);
+                shareEntry.id = share.id;
+
+                sharedFiles.push(shareEntry);
             }
 
             const entry = new Entry({
@@ -229,13 +207,8 @@ async function get(req, res, next) {
             // actual path is without groupfolder/<groupId>/
             const groupFilePath = '/' + filePath.split('/').slice(2).join('/');
 
-            let file;
-            try {
-                file = await files.get(`groupfolder-${group.id}`, groupFilePath);
-            } catch (error) {
-                if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
-                return next(new HttpError(500, error));
-            }
+            const [error, file] = await safe(files.get(`groupfolder-${group.id}`, groupFilePath));
+            if (error) return next(MainError.toHttpError(error));
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
@@ -255,30 +228,22 @@ async function get(req, res, next) {
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
 
-            let result = [];
-
-            try {
-                result = await groupFolders.list(req.user.username);
-            } catch (error) {
-                return next(new HttpError(500, error));
-            }
+            const [listError, result] = await safe(groupFolders.list(req.user.username));
+            if (listError) return next(MainError.toHttpError(listError));
 
             // Collect all file entries from groupfolder
             const memberOfGroups = [];
-            try {
-                for (const group of result) {
-                    let file = await files.get(`groupfolder-${group.id}`, '/');
+            for (const group of result) {
+                const [getError, file] = await safe(files.get(`groupfolder-${group.id}`, '/'));
+                if (getError) return next(MainError.toHttpError(getError));
 
-                    file.fileName = group.name;
-                    file.isShare = false;
-                    file.isGroup = true;
-                    file = file.asGroup('/');
-                    file.id = group.id;
+                file.fileName = group.name;
+                file.isShare = false;
+                file.isGroup = true;
+                let groupEntry = file.asGroup('/');
+                groupEntry.id = group.id;
 
-                    memberOfGroups.push(file);
-                }
-            } catch (error) {
-                return next(new HttpError(500, error));
+                memberOfGroups.push(groupEntry);
             }
 
             const entry = new Entry({
@@ -325,25 +290,24 @@ async function update(req, res, next) {
     if (!subject.share && !newSubject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
-    try {
-        if (action === 'move') await relocate.relocate({
+
+    let error;
+    if (action === 'move') {
+        [error] = await safe(relocate.relocate({
             actor: req.user?.username,
             fromOwner: subject.usernameOrGroupfolder,
             fromPath: subject.filePath,
             toOwner: newSubject.usernameOrGroupfolder,
             toPath: newSubject.filePath
-        });
-        else if (action === 'copy') await files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath, false, { actor: req.user?.username });
-        else if (action === 'extract') await files.extract(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath);
-        else return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        if (error.reason === MainError.BAD_FIELD) return next(new HttpError(400, 'invalid paths'));
-        if (error.reason === MainError.CONFLICT) return next(new HttpError(409, 'already exists'));
-        if (error.reason === MainError.BAD_STATE) return next(new HttpError(422, error.message));
-        if (error.reason === MainError.EXTERNAL_ERROR) return next(new HttpError(422, error.message));
-        return next(new HttpError(500, error));
+        }));
+    } else if (action === 'copy') {
+        [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath, false, { actor: req.user?.username }));
+    } else if (action === 'extract') {
+        [error] = await safe(files.extract(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath));
+    } else {
+        return next(new HttpError(400, 'unknown action. Must be one of "move", "copy"'));
     }
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));
 }
@@ -360,11 +324,8 @@ async function remove(req, res, next) {
 
     debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 
-    try {
-        await files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.user?.username });
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.user?.username }));
+    if (error) return next(MainError.toHttpError(error));
 
     if (req.user) await recent.remove(req.user.username, subject.resourcePath);
 

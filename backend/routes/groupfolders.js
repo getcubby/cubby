@@ -23,9 +23,7 @@ async function add(req, res, next) {
     debugLog(`add: ${name} at ${folderPath || path.join(paths.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
 
     const [error] = await safe(groupFolders.add(slug, name, folderPath, members));
-    if (error?.reason === MainError.NOT_FOUND) return next(new HttpError(412, 'member not found'));
-    if (error?.reason === MainError.ALREADY_EXISTS) return next(new HttpError(412, 'slug already exists'));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));
 }
@@ -37,7 +35,7 @@ async function list(req, res, next) {
     debugLog(`list:`);
 
     const [error, result] = await safe(groupFolders.list());
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, { groupFolder: result }));
 }
@@ -66,8 +64,7 @@ async function update(req, res, next) {
     debugLog(`update: ${id} with ${name} and members ${members.join(',')}`);
 
     const [error] = await safe(groupFolders.update(id, name, members));
-    if (error?.reason === MainError.NOT_FOUND) return next(new HttpError(412, 'member not found'));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));
 }
@@ -81,7 +78,7 @@ async function remove(req, res, next) {
     debugLog(`remove: ${id}`);
 
     const [error] = await safe(groupFolders.remove(id));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));
 }

@@ -31,7 +31,7 @@ async function wopiAuth(req, res, next) {
     if (!accessToken) return next(new HttpError(401, 'Invalid Access Token'));
 
     const [error, user] = await safe(users.getByAccessToken(accessToken));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     if (user) {
         req.user = user;
@@ -59,14 +59,16 @@ async function getHandle(req, res, next) {
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    let doc;
-    try {
-        const res = await fetch(`${collaboraHost}/hosting/discovery`);
-        doc = new Dom().parseFromString(await res.text());
-    } catch (error) {
-        if (error && error.code === 'ENOTFOUND') return next(new HttpError(412, 'office endpoint not configured'));
-        return next(new HttpError(500, error));
+    const [fetchError, discoveryRes] = await safe(fetch(`${collaboraHost}/hosting/discovery`));
+    if (fetchError) {
+        if (fetchError.code === 'ENOTFOUND') return next(new HttpError(412, 'office endpoint not configured'));
+        return next(new HttpError(500, fetchError));
     }
+
+    const [textError, discoveryText] = await safe(discoveryRes.text());
+    if (textError) return next(new HttpError(500, textError));
+
+    const doc = new Dom().parseFromString(discoveryText);
 
     if (!doc) return next(new HttpError(500, 'The retrieved discovery.xml file is not a valid XML file'));
 
@@ -117,13 +119,8 @@ async function checkFileInfo(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    let result;
-    try {
-        result = await files.get(handle.username, handle.filePath);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(files.get(handle.username, handle.filePath));
+    if (error) return next(MainError.toHttpError(error));
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
 
@@ -156,13 +153,8 @@ async function getFile(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    let result;
-    try {
-        result = await files.get(handle.username, handle.filePath);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(files.get(handle.username, handle.filePath));
+    if (error) return next(MainError.toHttpError(error));
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
 
@@ -193,11 +185,8 @@ async function putFile(req, res, next) {
     if (!handle)  return next(new HttpError(404, 'not found'));
     if (handle.readonly) return next(new HttpError(403, 'share is readonly'));
 
-    try {
-        await files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: handle.actorUsername });
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: handle.actorUsername }));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));
 }
@@ -219,10 +208,9 @@ async function setSettings(req, res, next) {
         if (result.length === 0) return next(new HttpError(412, 'Does not appear to be a supported WOPI host'));
     }
 
-    try {
-        await settings.setJson(settings.COLLABORA_KEY, { host: req.body.host || '' });
-    } catch (e) {
-        console.error(e);
+    const [error] = await safe(settings.setJson(settings.COLLABORA_KEY, { host: req.body.host || '' }));
+    if (error) {
+        console.error(error);
         return next(new HttpError(500, 'failed to commit office settings'));
     }
 

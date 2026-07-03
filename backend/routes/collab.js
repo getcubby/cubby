@@ -1,6 +1,7 @@
 import debug from 'debug';
 import files from '../files.js';
 import MainError from '../mainerror.js';
+import safe from '@cloudron/safetydance';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import * as yUtils from '@y/websocket-server/utils';
 
@@ -29,16 +30,8 @@ async function getHandle(req, res, next) {
 
     debugLog(`getHandle: ${subject.resource} ${subject.filePath}`);
 
-    const entry = files.get(subject.usernameOrGroupfolder, subject.filePath);
-    if (!entry) return next(new HttpError(400, 'invalid '));
-
-    let result;
-    try {
-        result = await files.get(subject.usernameOrGroupfolder, subject.filePath);
-    } catch (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'not found'));
-        return next(new HttpError(500, error));
-    }
+    const [error, result] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
+    if (error) return next(MainError.toHttpError(error));
 
     if (!result.isFile) return next(new HttpError(400, 'type not supported'));
 

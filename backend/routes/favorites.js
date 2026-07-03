@@ -26,11 +26,7 @@ async function create(req, res, next) {
     }
 
     const [error, id] = await safe(favorites.create(req.user.username, createArgs));
-    if (error) {
-        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'share does not exist'));
-        if (error.reason === MainError.INVALID_PATH) return next(new HttpError(400, 'invalid path'));
-        return next(new HttpError(500, error));
-    }
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { id }));
 }
@@ -41,7 +37,7 @@ async function list(req, res, next) {
     debugLog(`list: for ${req.user.username}`);
 
     const [error, result] = await safe(favorites.list(req.user.username));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { favorites: result }));
 }
@@ -52,7 +48,7 @@ async function get(req, res, next) {
     debugLog(`get: ${req.params.id}`);
 
     const [error, result] = await safe(favorites.get(req.params.id));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
     if (!result) return next(new HttpError(404, 'favorite does not exist'));
     if (result.username !== req.user.username) return next(new HttpError(404, 'favorite does not exist'));
 
@@ -65,7 +61,7 @@ async function remove(req, res, next) {
     debugLog(`remove: ${req.params.id}`);
 
     const [error] = await safe(favorites.remove(req.params.id));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, {}));
 }

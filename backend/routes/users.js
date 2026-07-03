@@ -1,5 +1,6 @@
 import assert from 'assert';
 import users from '../users.js';
+import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
 
@@ -82,7 +83,7 @@ async function setAdmin(req, res, next) {
     if (req.user.username === req.params.username) return next(new HttpError(403, 'cannot set admin status on own user'));
 
     const [error] = await safe(users.setAdmin(req.params.username, req.body.admin));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, {}));
 }
@@ -103,7 +104,7 @@ async function removeUser(req, res, next) {
     }
 
     const [error] = await safe(users.remove(req.params.username));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, {}));
 }
@@ -117,7 +118,7 @@ async function optionalAuth(req, res, next) {
 
 async function tokenAuth(req, res, next) {
     const [error, user] = await safe(getUserFromToken(req));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
     if (!user) return next(new HttpError(401, 'Invalid Access Token'));
 
     req.user = user;
@@ -136,7 +137,7 @@ async function list(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
     const [error, result] = await safe(users.list());
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, { users: result }));
 }

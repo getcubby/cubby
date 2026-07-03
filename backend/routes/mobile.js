@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import debug from 'debug';
 import { HttpSuccess, HttpError } from '@cloudron/connect-lastmile';
+import safe from '@cloudron/safetydance';
 import tokens from '../tokens.js';
 import users from '../users.js';
 
@@ -88,25 +89,39 @@ async function codeToToken(req, res, next) {
     if (!pendingStates.has(state)) return next(new HttpError(400, 'invalid or expired state'));
     pendingStates.delete(state);
 
-    try {
-        const idpTokens = await exchangeCodeWithIdp(code, REDIRECT_URI);
-        const profile = await getOidcProfile(idpTokens.access_token);
-        const user = await users.ensureUser({ username: profile.sub, email: profile.email, displayName: profile.name });
-        const apiToken = await tokens.add(user.username);
-
-        next(new HttpSuccess(200, {
-            token: apiToken,
-            user: {
-                username: user.username,
-                email: user.email,
-                displayName: user.displayName,
-                admin: user.admin
-            }
-        }));
-    } catch (error) {
-        console.error('codeToToken error:', error);
-        next(new HttpError(401, error.message || 'Authentication failed'));
+    const [tokenError, idpTokens] = await safe(exchangeCodeWithIdp(code, REDIRECT_URI));
+    if (tokenError) {
+        console.error('codeToToken error:', tokenError);
+        return next(new HttpError(401, tokenError.message || 'Authentication failed'));
     }
+
+    const [profileError, profile] = await safe(getOidcProfile(idpTokens.access_token));
+    if (profileError) {
+        console.error('codeToToken error:', profileError);
+        return next(new HttpError(401, profileError.message || 'Authentication failed'));
+    }
+
+    const [userError, user] = await safe(users.ensureUser({ username: profile.sub, email: profile.email, displayName: profile.name }));
+    if (userError) {
+        console.error('codeToToken error:', userError);
+        return next(new HttpError(401, userError.message || 'Authentication failed'));
+    }
+
+    const [addTokenError, apiToken] = await safe(tokens.add(user.username));
+    if (addTokenError) {
+        console.error('codeToToken error:', addTokenError);
+        return next(new HttpError(401, addTokenError.message || 'Authentication failed'));
+    }
+
+    next(new HttpSuccess(200, {
+        token: apiToken,
+        user: {
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName,
+            admin: user.admin
+        }
+    }));
 }
 
 // Serves landing page for when app is not installed (App Link should intercept this) . this can happen if someone manually

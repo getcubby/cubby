@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import activity from '../activity.js';
+import MainError from '../mainerror.js';
 import files from '../files.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
@@ -22,7 +23,7 @@ async function list(req, res, next) {
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     const [error, items] = await safe(activity.listByPath(subject.usernameOrGroupfolder, subject.filePath, { limit }));
-    if (error) return next(new HttpError(500, error));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { activity: items }));
 }

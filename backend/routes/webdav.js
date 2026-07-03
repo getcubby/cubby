@@ -6,8 +6,22 @@ import shares from '../shares.js';
 import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:webdav');
+
+function sendMainError(res, error) {
+    if (error?.reason === MainError.NOT_FOUND) {
+        res.status(404).send('Not Found');
+        return;
+    }
+    if (error?.reason) {
+        const httpError = MainError.toHttpError(error);
+        res.status(httpError.status).send(String(error.message || 'Error'));
+        return;
+    }
+    res.status(500).send('Internal Server Error');
+}
 
 const DAV_NS = 'DAV:';
 const WEBDAV_PREFIX = '/webdav/';
@@ -80,40 +94,40 @@ async function authFromRequest(req) {
         debugLog('auth: no Authorization or not Basic');
         return null;
     }
-    try {
+    const decoded = safe(function () {
         const b64 = auth.slice(6).trim();
-        const decoded = Buffer.from(b64, 'base64').toString('utf8');
-        const i = decoded.indexOf(':');
-        if (i === -1) {
-            debugLog('auth: no colon in decoded Basic value');
-            return null;
-        }
-        const username = decoded.slice(0, i);
-        const password = decoded.slice(i + 1);
-        if (!username || !password) {
-            debugLog('auth: empty username or password');
-            return null;
-        }
-        debugLog('auth: attempting login for user=%s', username);
-
-        if (process.env.CLOUDRON) {
-            try {
-                const ok = await verifyCloudronCredentials(username, password);
-                debugLog('auth: cloudron verify result=%s', ok ? 'ok' : 'failed');
-                return ok ? { username } : null;
-            } catch (error) {
-                debugLog('auth: cloudron verify failed %s', error.message || error);
-                return null;
-            }
-        }
-
-        const ok = password === LOCAL_WEBDAV_PASSWORD;
-        debugLog('auth: local password result=%s', ok ? 'ok' : 'failed');
-        return ok ? { username } : null;
-    } catch (err) {
-        debugLog('auth: exception', err);
+        return Buffer.from(b64, 'base64').toString('utf8');
+    });
+    if (decoded === null) {
+        debugLog('auth: exception', safe.error);
         return null;
     }
+    const i = decoded.indexOf(':');
+    if (i === -1) {
+        debugLog('auth: no colon in decoded Basic value');
+        return null;
+    }
+    const username = decoded.slice(0, i);
+    const password = decoded.slice(i + 1);
+    if (!username || !password) {
+        debugLog('auth: empty username or password');
+        return null;
+    }
+    debugLog('auth: attempting login for user=%s', username);
+
+    if (process.env.CLOUDRON) {
+        const [error, ok] = await safe(verifyCloudronCredentials(username, password));
+        if (error) {
+            debugLog('auth: cloudron verify failed %s', error.message || error);
+            return null;
+        }
+        debugLog('auth: cloudron verify result=%s', ok ? 'ok' : 'failed');
+        return ok ? { username } : null;
+    }
+
+    const ok = password === LOCAL_WEBDAV_PASSWORD;
+    debugLog('auth: local password result=%s', ok ? 'ok' : 'failed');
+    return ok ? { username } : null;
 }
 
 function sendXml(res, status, body) {
@@ -226,11 +240,9 @@ ${responses.join('\n')}
         if (depth >= 1) {
             for (const share of list) {
                 const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUsername;
-                let file;
-                try {
-                    file = await files.get(owner, share.filePath);
-                } catch (e) {
-                    debugLog('share file get failed', share.id, e);
+                const [getError, file] = await safe(files.get(owner, share.filePath));
+                if (getError) {
+                    debugLog('share file get failed', share.id, getError);
                     continue;
                 }
                 const name = file.fileName || share.id;
@@ -250,11 +262,9 @@ ${responses.join('\n')}
         responses.push(propfindResponse(baseHref, null, true, VIRTUAL_GROUPFOLDERS.displayName, null, new Date(), null));
         if (depth >= 1) {
             for (const group of list) {
-                let file;
-                try {
-                    file = await files.get(`groupfolder-${group.id}`, '/');
-                } catch (e) {
-                    debugLog('groupfolder get failed', group.id, e);
+                const [getError, file] = await safe(files.get(`groupfolder-${group.id}`, '/'));
+                if (getError) {
+                    debugLog('groupfolder get failed', group.id, getError);
                     continue;
                 }
                 const name = group.name || group.id;
@@ -276,16 +286,10 @@ ${responses.join('\n')}
         return;
     }
 
-    let entry;
-    try {
-        entry = await files.get(subject.usernameOrGroupfolder, subject.filePath);
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) {
-            res.status(404).send('Not Found');
-            return;
-        }
-        debugLog('propfind get error', e);
-        res.status(500).send('Internal Server Error');
+    const [getError, entry] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
+    if (getError) {
+        debugLog('propfind get error', getError);
+        sendMainError(res, getError);
         return;
     }
 
@@ -332,23 +336,19 @@ async function handleGet(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        const entry = await files.get(subject.usernameOrGroupfolder, subject.filePath);
-        if (entry.isDirectory) {
-            res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
-            return;
-        }
-        res.set('Content-Type', entry.mimeType || mime(entry.filePath));
-        if (entry.size != null) res.set('Content-Length', String(entry.size));
-        if (entry.mtime) res.set('Last-Modified', formatDate(entry.mtime));
-        res.sendFile(entry._fullFilePath, { dotfiles: 'allow' });
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) {
-            res.status(404).send('Not Found');
-            return;
-        }
-        res.status(500).send('Internal Server Error');
+    const [getError, entry] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
+    if (getError) {
+        sendMainError(res, getError);
+        return;
     }
+    if (entry.isDirectory) {
+        res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
+        return;
+    }
+    res.set('Content-Type', entry.mimeType || mime(entry.filePath));
+    if (entry.size != null) res.set('Content-Length', String(entry.size));
+    if (entry.mtime) res.set('Last-Modified', formatDate(entry.mtime));
+    res.sendFile(entry._fullFilePath, { dotfiles: 'allow' });
 }
 
 /**
@@ -365,19 +365,15 @@ async function handleHead(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        const headResult = await files.head(subject.usernameOrGroupfolder, subject.filePath);
-        res.set('Content-Type', headResult.mimeType || mime(headResult.filePath));
-        res.set('Content-Length', String(headResult.size));
-        if (headResult.mtime) res.set('Last-Modified', formatDate(headResult.mtime));
-        res.status(200).end();
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) {
-            res.status(404).send('Not Found');
-            return;
-        }
-        res.status(500).send('Internal Server Error');
+    const [headError, headResult] = await safe(files.head(subject.usernameOrGroupfolder, subject.filePath));
+    if (headError) {
+        sendMainError(res, headError);
+        return;
     }
+    res.set('Content-Type', headResult.mimeType || mime(headResult.filePath));
+    res.set('Content-Length', String(headResult.size));
+    if (headResult.mtime) res.set('Last-Modified', formatDate(headResult.mtime));
+    res.status(200).end();
 }
 
 /**
@@ -403,27 +399,29 @@ async function handlePut(req, res, username, segments) {
     const mtime = req.headers['last-modified'] ? new Date(req.headers['last-modified']) : new Date();
     // Only refuse overwrite when client explicitly asks for create-only (If-None-Match: *)
     const overwrite = req.headers['if-none-match'] !== '*';
-    let existed = false;
-    try {
-        try {
-            await files.get(subject.usernameOrGroupfolder, subject.filePath);
-            existed = true;
-        } catch (e) {
-            if (e.reason !== MainError.NOT_FOUND) throw e;
-        }
-        await files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor: username });
-        res.status(existed ? 204 : 201).set('Location', req.originalUrl).end();
-    } catch (e) {
-        if (e.reason === MainError.ALREADY_EXISTS && !overwrite) {
+
+    const [existsError] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
+    const existed = !existsError;
+    if (existsError && existsError.reason !== MainError.NOT_FOUND) {
+        sendMainError(res, existsError);
+        return;
+    }
+
+    const [putError] = await safe(files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor: username }));
+    if (putError) {
+        if (putError.reason === MainError.ALREADY_EXISTS && !overwrite) {
             res.status(412).send('Precondition Failed');
             return;
         }
-        if (e.reason === MainError.INVALID_PATH) {
+        if (putError.reason === MainError.INVALID_PATH) {
             res.status(409).send('Conflict');
             return;
         }
-        res.status(500).send('Internal Server Error');
+        sendMainError(res, putError);
+        return;
     }
+
+    res.status(existed ? 204 : 201).set('Location', req.originalUrl).end();
 }
 
 /**
@@ -521,20 +519,21 @@ async function handleMkcol(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        await files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor: username });
-        res.status(201).end();
-    } catch (e) {
-        if (e.reason === MainError.ALREADY_EXISTS) {
+    const [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor: username }));
+    if (error) {
+        if (error.reason === MainError.ALREADY_EXISTS) {
             res.status(405).send('Method Not Allowed');
             return;
         }
-        if (e.reason === MainError.INVALID_PATH) {
+        if (error.reason === MainError.INVALID_PATH) {
             res.status(409).send('Conflict');
             return;
         }
-        res.status(500).send('Internal Server Error');
+        sendMainError(res, error);
+        return;
     }
+
+    res.status(201).end();
 }
 
 /**
@@ -555,16 +554,13 @@ async function handleDelete(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        await files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: username });
-        res.status(204).end();
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) {
-            res.status(404).send('Not Found');
-            return;
-        }
-        res.status(500).send('Internal Server Error');
+    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: username }));
+    if (error) {
+        sendMainError(res, error);
+        return;
     }
+
+    res.status(204).end();
 }
 
 /**
@@ -572,18 +568,17 @@ async function handleDelete(req, res, username, segments) {
  */
 function parseDestination(destHeader, baseOrigin) {
     if (!destHeader) return null;
-    try {
-        const u = new URL(destHeader, baseOrigin);
-        const pathname = decodeURIComponent(u.pathname);
-        if (!pathname.startsWith(WEBDAV_PREFIX)) return null;
-        const after = pathname.slice(WEBDAV_PREFIX.length).replace(/\/+/g, '/').replace(/^\//, '').replace(/\/$/, '');
-        const parts = after.split('/');
-        const destUsername = parts[0];
-        const destSegments = parts.slice(1);
-        return { destUsername, destSegments };
-    } catch {
-        return null;
-    }
+
+    const u = safe(function () { return new URL(destHeader, baseOrigin); });
+    if (u === null) return null;
+
+    const pathname = decodeURIComponent(u.pathname);
+    if (!pathname.startsWith(WEBDAV_PREFIX)) return null;
+    const after = pathname.slice(WEBDAV_PREFIX.length).replace(/\/+/g, '/').replace(/^\//, '').replace(/\/$/, '');
+    const parts = after.split('/');
+    const destUsername = parts[0];
+    const destSegments = parts.slice(1);
+    return { destUsername, destSegments };
 }
 
 /**
@@ -616,14 +611,17 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        await files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite, { actor: username });
-        res.status(201).end();
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) res.status(404).send('Not Found');
-        else if (e.reason === MainError.CONFLICT) res.status(412).send('Precondition Failed');
-        else res.status(500).send('Internal Server Error');
+    const [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite, { actor: username }));
+    if (error) {
+        if (error.reason === MainError.CONFLICT) {
+            res.status(412).send('Precondition Failed');
+            return;
+        }
+        sendMainError(res, error);
+        return;
     }
+
+    res.status(201).end();
 }
 
 /**
@@ -655,20 +653,23 @@ async function handleMove(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    try {
-        await relocate.relocate({
-            actor: username,
-            fromOwner: subject.usernameOrGroupfolder,
-            fromPath: subject.filePath,
-            toOwner: destSubject.usernameOrGroupfolder,
-            toPath: destSubject.filePath
-        });
-        res.status(201).end();
-    } catch (e) {
-        if (e.reason === MainError.NOT_FOUND) res.status(404).send('Not Found');
-        else if (e.reason === MainError.CONFLICT) res.status(412).send('Precondition Failed');
-        else res.status(500).send('Internal Server Error');
+    const [error] = await safe(relocate.relocate({
+        actor: username,
+        fromOwner: subject.usernameOrGroupfolder,
+        fromPath: subject.filePath,
+        toOwner: destSubject.usernameOrGroupfolder,
+        toPath: destSubject.filePath
+    }));
+    if (error) {
+        if (error.reason === MainError.CONFLICT) {
+            res.status(412).send('Precondition Failed');
+            return;
+        }
+        sendMainError(res, error);
+        return;
     }
+
+    res.status(201).end();
 }
 
 function expressMiddleware() {
@@ -709,7 +710,7 @@ function expressMiddleware() {
         const username = user.username;
         const { segments } = pathInfo;
 
-        try {
+        const [dispatchError] = await safe((async () => {
             switch (req.method) {
                 case 'OPTIONS':
                     res.set('DAV', '1, 2');
@@ -752,8 +753,9 @@ function expressMiddleware() {
                 default:
                     res.status(405).set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK').send('Method Not Allowed');
             }
-        } catch (err) {
-            debugLog('webdav error: %s', err.message || err);
+        })());
+        if (dispatchError) {
+            debugLog('webdav error: %s', dispatchError.message || dispatchError);
             res.status(500).send('Internal Server Error');
         }
     };

@@ -98,52 +98,48 @@ async function download(req, res, next) {
 
     // collect and attach all requested files
     for (const resourcePath of entries) {
-        try {
-            const resource = resourcePath.split('/')[1];
-            if (!resource) return next(new HttpError(400, 'invalid resource'));
-            const filePath = resourcePath.slice(resource.length+1);
+        const resource = resourcePath.split('/')[1];
+        if (!resource) return next(new HttpError(400, 'invalid resource'));
+        const filePath = resourcePath.slice(resource.length+1);
 
-            let file = null;
+        let getArgs = null;
 
-            if (resource === 'home') {
-                file = await files.get(req.user.username, filePath);
-            } else if (resource === 'shares') {
-                const shareId = filePath.split('/')[1];
-                if (!shareId)  return next(new HttpError(404, 'missing share id'));
+        if (resource === 'home') {
+            getArgs = [ req.user.username, filePath ];
+        } else if (resource === 'shares') {
+            const shareId = filePath.split('/')[1];
+            if (!shareId)  return next(new HttpError(404, 'missing share id'));
 
-                const share = await shares.get(shareId);
-                if (!share) return next(new HttpError(404, 'no such share'));
+            const share = await shares.get(shareId);
+            if (!share) return next(new HttpError(404, 'no such share'));
 
-                if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
+            if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
-                // actual path is without shares/<shareId>/
-                const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
+            const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
+            getArgs = [ share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
+        } else if (resource === 'groupfolders') {
+            const groupFolderSlug = filePath.split('/')[1];
+            if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
 
-                file = await files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath));
-            } else if (resource === 'groupfolders') {
-                const groupFolderSlug = filePath.split('/')[1];
-                if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
+            const groupFolder = await groupFolders.get(groupFolderSlug);
+            if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
 
-                const groupFolder = await groupFolders.get(groupFolderSlug);
-                if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
-
-                // actual path is without groupfolders/<slug>/
-                const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
-
-                file = await files.get('groupfolder-' + groupFolderSlug, actualFilePath);
-            } else {
-                return next(new HttpError(404, `resource ${resource} not supported for download`));
-            }
-
-            debugLog(`download: add ${file.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
-
-            if (file.isDirectory) archive.directory(file._fullFilePath, file.filePath.slice(skipPath.length));
-            else archive.file(file._fullFilePath, { name: file.filePath.slice(skipPath.length) });
-        } catch (error) {
-            console.error('download: cannot get file', resourcePath, error);
-            if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'file not found'));
-            return next(new HttpError(500, error));
+            const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
+            getArgs = [ 'groupfolder-' + groupFolderSlug, actualFilePath ];
+        } else {
+            return next(new HttpError(404, `resource ${resource} not supported for download`));
         }
+
+        const [error, file] = await safe(files.get(...getArgs));
+        if (error) {
+            console.error('download: cannot get file', resourcePath, error);
+            return next(MainError.toHttpError(error));
+        }
+
+        debugLog(`download: add ${file.isDirectory ? 'directory' : 'file'} to archive: ${file._fullFilePath} as ${file.filePath.slice(skipPath.length)}`);
+
+        if (file.isDirectory) archive.directory(file._fullFilePath, file.filePath.slice(skipPath.length));
+        else archive.file(file._fullFilePath, { name: file.filePath.slice(skipPath.length) });
     }
 
     res.attachment(`${name}.zip`);
@@ -160,12 +156,8 @@ async function getRecent(req, res, next) {
 
     debugLog(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
 
-    let entries = [];
-    try {
-        entries = await recent.list(req.user.username, daysAgo, maxFiles);
-    } catch (error) {
-        return next(new HttpError(500, error));
-    }
+    const [error, entries] = await safe(recent.list(req.user.username, daysAgo, maxFiles));
+    if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { recents: entries }));
 }
@@ -178,11 +170,9 @@ async function search(req, res, next) {
 
     debugLog(`search: ${req.user.username} ${query}`);
 
-    let results;
-    try {
-        results = await recoll.searchByUsername(req.user.username, query);
-    } catch (e) {
-        console.error('search error:', e);
+    const [error, results] = await safe(recoll.searchByUsername(req.user.username, query));
+    if (error) {
+        console.error('search error:', error);
         return next(new HttpError(500, 'search failed'));
     }
 

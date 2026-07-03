@@ -91,7 +91,7 @@ describe('relocate', function () {
         await files.addDirectory(admin.username, '/docs');
         await addUserFile(admin.username, '/docs/report.txt', 'report-content');
 
-        const favoriteId = await favorites.create(user.username, admin.username, '/docs/report.txt');
+        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/docs/report.txt' });
         await recent.add(admin.username, '/home/docs/report.txt');
 
         await diskusage.getByUsernameAndDirectory(admin.username, '/docs');
@@ -104,8 +104,8 @@ describe('relocate', function () {
             toPath: '/docs/report-renamed.txt'
         });
 
-        assert.equal(await favorites.get(favoriteId), null);
-        assert.equal((await favorites.list(user.username))[0].filePath, '/docs/report-renamed.txt');
+        const favorite = await favorites.get(favoriteId);
+        assert.equal(favorite.filePath, '/docs/report-renamed.txt');
 
         const recents = await recent.get(admin.username, 10, 10);
         assert.equal(recents.length, 1);
@@ -127,7 +127,7 @@ describe('relocate', function () {
             filePath: '/parent-a/old-dir',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(user.username, admin.username, '/parent-a/old-dir/nested.txt');
+        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/parent-a/old-dir/nested.txt' });
         await recent.add(admin.username, '/home/parent-a/old-dir/nested.txt');
 
         await diskusage.getByUsernameAndDirectory(admin.username, '/parent-a/old-dir');
@@ -142,8 +142,8 @@ describe('relocate', function () {
 
         assert.equal((await shares.get(shareId)).filePath, '/parent-b/new-dir');
 
-        assert.equal(await favorites.get(favoriteId), null);
-        assert.equal((await favorites.list(user.username))[0].filePath, '/parent-b/new-dir/nested.txt');
+        const movedFavorite = await favorites.get(favoriteId);
+        assert.equal(movedFavorite.filePath, '/parent-b/new-dir/nested.txt');
 
         const recents = await recent.get(admin.username, 10, 10);
         assert.equal(recents.length, 1);
@@ -163,7 +163,7 @@ describe('relocate', function () {
             filePath: '/cross.txt',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(user.username, admin.username, '/cross.txt');
+        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/cross.txt' });
         await recent.add(admin.username, '/home/cross.txt');
 
         await diskusage.getByUsernameAndDirectory(admin.username, '/');
@@ -204,7 +204,7 @@ describe('relocate', function () {
             filePath: '/back.txt',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(admin.username, 'groupfolder-team', '/back.txt');
+        const favoriteId = await favorites.create(admin.username, { owner: 'groupfolder-team', filePath: '/back.txt' });
         await recent.add(admin.username, '/groupfolders/team/back.txt');
 
         await diskusage.getByUsernameAndDirectory('groupfolder-team', '/');

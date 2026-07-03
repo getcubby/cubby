@@ -129,26 +129,19 @@ function getEntryIdentifier(entry) {
 }
 
 /**
- * Favorites are stored by canonical owner storage path. Share entries use
- * share-relative filePath (see Entry.asShare); map back to the real path for API calls.
+ * Build a virtual resource path from a favorite row returned by the API.
  */
-function canonicalFavoritePath(entry) {
-    if (!entry.share) return entry.filePath;
-
-    const shareRoot = entry.share.filePath || '/';
-    const relative = entry.filePath === '/' ? '' : entry.filePath.replace(/^\/+/, '');
-
-    const left = shareRoot.replace(/\/+$/, '') || '/';
-    let combined;
-    if (!relative) {
-        combined = left === '/' ? '/' : left;
-    } else if (left === '/') {
-        combined = '/' + relative;
-    } else {
-        combined = left + '/' + relative;
+function toResourcePath(favorite) {
+    if (favorite.shareId) {
+        const suffix = favorite.filePath === '/' ? '' : favorite.filePath;
+        return sanitize(`/shares/${favorite.shareId}${suffix}`);
     }
 
-    return sanitize(combined);
+    if (favorite.owner && favorite.owner.indexOf('groupfolder-') === 0) {
+        return sanitize(`/groupfolders/${favorite.owner.slice('groupfolder-'.length)}${favorite.filePath}`);
+    }
+
+    return sanitize(`/home${favorite.filePath}`);
 }
 
 function entryListSort(list, prop, desc) {
@@ -178,6 +171,6 @@ export {
     parseResourcePath,
     prettyType,
     getEntryIdentifier,
-    canonicalFavoritePath,
+    toResourcePath,
     entryListSort
 };

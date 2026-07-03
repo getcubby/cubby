@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import files from '../files.js';
+import favorites from '../favorites.js';
 import relocate from '../relocate.js';
 import Entry from '../entry.js';
 import path from 'path';
@@ -163,8 +164,10 @@ async function get(req, res, next) {
             // those files are always part of this share
             file.files.forEach(function (f) { f.share = share; });
             file.share = share;
+            file = file.asShare(share.filePath);
+            await favorites.attachToShareTree(file, shareId);
 
-            next(new HttpSuccess(200, file.asShare(share.filePath).withoutPrivate(req.user ? req.user.username : null)));
+            next(new HttpSuccess(200, file.withoutPrivate(req.user ? req.user.username : null)));
         } else {
             debugLog('listShares');
 

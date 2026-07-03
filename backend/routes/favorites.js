@@ -1,7 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import favorites from '../favorites.js';
-import files from '../files.js';
+import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
 
@@ -13,12 +13,24 @@ async function create(req, res, next) {
     if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
 
     const filePath = req.body.path.replace(/\/+/g, '/');
-    const owner = req.body.owner || req.user.username; // user can favorite a filePath owned by another (when shared)
+    const shareId = req.body.shareId || null;
 
-    debugLog(`create: owner:${owner} ${filePath}`);
+    let createArgs;
+    if (shareId) {
+        debugLog(`create: share:${shareId} ${filePath}`);
+        createArgs = { shareId, filePath };
+    } else {
+        const owner = req.body.owner || req.user.username;
+        debugLog(`create: owner:${owner} ${filePath}`);
+        createArgs = { owner, filePath };
+    }
 
-    const [error, id] = await safe(favorites.create(req.user.username, owner, filePath));
-    if (error) return next(new HttpError(500, error));
+    const [error, id] = await safe(favorites.create(req.user.username, createArgs));
+    if (error) {
+        if (error.reason === MainError.NOT_FOUND) return next(new HttpError(404, 'share does not exist'));
+        if (error.reason === MainError.INVALID_PATH) return next(new HttpError(400, 'invalid path'));
+        return next(new HttpError(500, error));
+    }
 
     next(new HttpSuccess(200, { id }));
 }
@@ -31,17 +43,7 @@ async function list(req, res, next) {
     const [error, result] = await safe(favorites.list(req.user.username));
     if (error) return next(new HttpError(500, error));
 
-    const validFavorites = [];
-    // Collect all file entries from favorites
-    for (const favorite of result) {
-        const [error, file] = await safe(files.get(favorite.owner, favorite.filePath));
-        if (error) debugLog('Favorite does not map to a file or folder', favorite, error);
-        if (!file) continue;
-
-        validFavorites.push(file.withoutPrivate(req.user.username));
-    }
-
-    next(new HttpSuccess(200, { favorites: validFavorites }));
+    next(new HttpSuccess(200, { favorites: result }));
 }
 
 async function get(req, res, next) {
@@ -52,12 +54,9 @@ async function get(req, res, next) {
     const [error, result] = await safe(favorites.get(req.params.id));
     if (error) return next(new HttpError(500, error));
     if (!result) return next(new HttpError(404, 'favorite does not exist'));
+    if (result.username !== req.user.username) return next(new HttpError(404, 'favorite does not exist'));
 
-    const [fileError, file] = await safe(files.get(result.owner, result.filePath));
-    if (fileError) debugLog('Favorite does not map to a file or folder', result, fileError);
-    if (!file) return next(new HttpError(409, 'favorite does not map to a file'));
-
-    next(new HttpSuccess(200, {}));
+    next(new HttpSuccess(200, { favorite: result }));
 }
 
 async function remove(req, res, next) {

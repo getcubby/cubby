@@ -1,5 +1,6 @@
 import { fetcher } from '@cloudron/pankow';
-import { API_ORIGIN } from '../utils';
+import { API_ORIGIN, parseResourcePath, toResourcePath } from '../utils.js';
+import DirectoryModel from './DirectoryModel.js';
 
 async function list() {
   let error, result;
@@ -11,24 +12,35 @@ async function list() {
 
   if (error || result.status !== 200) throw new Error('Failed to list favorites', { cause: error || result })
 
-  // translate for local development
-  result.body.favorites.forEach((f) => {
-    f.previewUrl = `${API_ORIGIN}${f.previewUrl}`;
+  const entries = [];
 
-    // we don't know from which resource it is yet :/
-    if (f.share) f.href = `#files/shares/${f.share.id}${f.filePath}`;
-    else if (f.group) f.href = `#files/groupfolders/${f.group.id}${f.filePath}`;
-    else f.href = `#files/home${f.filePath}`;
-  });
+  for (const favorite of result.body.favorites) {
+    const resource = parseResourcePath(toResourcePath(favorite));
+    if (!resource) continue;
 
-  return result.body.favorites;
+    let entry;
+    try {
+      entry = await DirectoryModel.get(resource);
+    } catch (e) {
+      continue;
+    }
+
+    entry.favorite = favorite;
+    entry.star = true;
+    entry.href = `#files${entry.resourcePath}`;
+    entries.push(entry);
+  }
+
+  return entries;
 }
 
 async function create(data) {
-  let tmp = {
-    owner: data.owner,
+  const tmp = {
     path: data.path
   };
+
+  if (data.shareId) tmp.shareId = data.shareId;
+  else tmp.owner = data.owner;
 
   let error, result;
   try {

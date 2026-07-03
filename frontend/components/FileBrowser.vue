@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, useTemplateRef, computed, inject, onMounted } from 'vue';
-import { BASE_URL, canonicalFavoritePath, parseResourcePath, sanitize } from '../utils.js';
+import { BASE_URL, parseResourcePath, sanitize } from '../utils.js';
 import {
   Breadcrumb,
   Button,
@@ -67,9 +67,12 @@ async function onToggleFavorite(favoriteEntry) {
       favoriteEntry.favorite = null;
       favoriteEntry.star = false;
     } else {
-      const path = canonicalFavoritePath(favoriteEntry);
-      const id = await FavoriteModel.create({ owner: favoriteEntry.owner, path });
-      favoriteEntry.favorite = { id, owner: favoriteEntry.owner, path };
+      const payload = favoriteEntry.share
+        ? { shareId: favoriteEntry.share.id, path: favoriteEntry.filePath }
+        : { owner: favoriteEntry.owner, path: favoriteEntry.filePath };
+
+      const id = await FavoriteModel.create(payload);
+      favoriteEntry.favorite = { id, ...payload };
       favoriteEntry.star = true;
     }
   } catch (error) {

@@ -75,18 +75,24 @@ CREATE TABLE groupfolders_members(
     UNIQUE (groupfolder_id, username));
 
 # favorites has a username component allowing shared files or group folder files to be favorited
+# when share_id is set, file_path is relative to that share root
 CREATE TABLE IF NOT EXISTS favorites(
     id VARCHAR(128) NOT NULL UNIQUE,
     username VARCHAR(128),
+    share_id VARCHAR(128),
     owner_username VARCHAR(128),
     owner_groupfolder VARCHAR(128),
     file_path VARCHAR(256) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY(username) REFERENCES users(username),
+    FOREIGN KEY(share_id) REFERENCES shares(id) ON DELETE CASCADE,
     FOREIGN KEY(owner_username) REFERENCES users(username),
     FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
     PRIMARY KEY(id));
+
+CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_share_path ON favorites (username, share_id, file_path) WHERE share_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_owner_path ON favorites (username, owner_username, owner_groupfolder, file_path) WHERE share_id IS NULL;
 
 # recents records who opened a file (opener) and the virtual resource path
 CREATE TABLE IF NOT EXISTS recents(

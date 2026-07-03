@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { HttpError } from '@cloudron/connect-lastmile';
 import util from 'util';
 
 function MainError(reason, errorOrMessage, details) {
@@ -46,6 +47,32 @@ MainError.TRY_AGAIN = 'Try Again';
 
 MainError.prototype.toPlainObject = function () {
     return Object.assign({ message: this.message, reason: this.reason }, this.details);
+};
+
+MainError.toHttpError = function (error) {
+    switch (error.reason) {
+    case MainError.BAD_FIELD:
+        return new HttpError(400, error);
+    case MainError.NOT_FOUND:
+        return new HttpError(404, error);
+    case MainError.ALREADY_EXISTS:
+    case MainError.BAD_STATE:
+    case MainError.CONFLICT:
+    case MainError.NOT_IMPLEMENTED:
+        return new HttpError(409, error);
+    case MainError.INVALID_CREDENTIALS:
+        return new HttpError(412, error);
+    case MainError.EXTERNAL_ERROR:
+    case MainError.FS_ERROR:
+    case MainError.NETWORK_ERROR:
+    case MainError.MAIL_ERROR:
+    case MainError.LDAP_ERROR:
+        return new HttpError(424, error);
+    case MainError.DATABASE_ERROR:
+    case MainError.INTERNAL_ERROR:
+    default:
+        return new HttpError(500, error);
+    }
 };
 
 export default MainError;

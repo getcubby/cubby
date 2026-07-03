@@ -6,6 +6,7 @@ import exec from './exec.js';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:preview');
 
@@ -51,13 +52,17 @@ const generators = [{
 
             debugLog(`generateImageMagick: hash=${hash} fullFilePath=${fullFilePath}`);
 
-            try {
-                await fsPromises.mkdir(paths.THUMBNAIL_ROOT, { recursive: true });
-                if (mimeType === 'image/gif') await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath+'[0]', targetPath ]);
-                else await exec('convert', [ '-auto-orient', '-thumbnail', '512', fullFilePath, targetPath ]);
-            } catch (e) {
-                console.error(`Failed to create thumbnail for ${fullFilePath}`, e);
+            const [mkdirError] = await safe(fsPromises.mkdir(paths.THUMBNAIL_ROOT, { recursive: true }));
+            if (mkdirError) {
+                console.error(`Failed to create thumbnail for ${fullFilePath}`, mkdirError);
+                return;
             }
+
+            const convertArgs = mimeType === 'image/gif'
+                ? [ '-auto-orient', '-thumbnail', '512', fullFilePath+'[0]', targetPath ]
+                : [ '-auto-orient', '-thumbnail', '512', fullFilePath, targetPath ];
+            const [execError] = await safe(exec('convert', convertArgs));
+            if (execError) console.error(`Failed to create thumbnail for ${fullFilePath}`, execError);
         }
 
         if (!fs.existsSync(targetPath)) enqueue(hash, fullFilePath, generate);

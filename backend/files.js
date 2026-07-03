@@ -14,6 +14,7 @@ import recoll from './recoll.js';
 import diskusage from './diskusage.js';
 import activity from './activity.js';
 import MainError from './mainerror.js';
+import safe from '@cloudron/safetydance';
 import { pipeline } from 'node:stream/promises';
 
 const debugLog = debug('cubby:files');
@@ -81,6 +82,18 @@ function getAbsolutePath(usernameOrGroupfolder, filePath) {
     return fullFilePath;
 }
 
+async function applyMtime(fullFilePath, mtime) {
+    const fd = safe.fs.openSync(fullFilePath, 'r+');
+    if (fd === -1) throw new MainError(MainError.FS_ERROR, safe.error);
+
+    if (!safe.fs.futimesSync(fd, mtime, mtime)) {
+        safe.fs.closeSync(fd);
+        throw new MainError(MainError.FS_ERROR, safe.error);
+    }
+
+    safe.fs.closeSync(fd);
+}
+
 async function runChangeHooks(usernameOrGroupfolder, filePath, activityContext = null) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
@@ -123,11 +136,8 @@ async function addDirectory(usernameOrGroupfolder, filePath, { actor } = {}) {
 
     if (fs.existsSync(fullFilePath)) throw new MainError(MainError.ALREADY_EXISTS);
 
-    try {
-        await fsPromises.mkdir(fullFilePath, { recursive: true });
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
-    }
+    const [error] = await safe(fsPromises.mkdir(fullFilePath, { recursive: true }));
+    if (error) throw new MainError(MainError.FS_ERROR, error);
 
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'created', details: { isDirectory: true } } : null);
 }
@@ -151,28 +161,33 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     // we first upload to .part file and the rename
     const fullFilePathPart = fullFilePath + '.part';
 
-    try {
-        await fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true });
-        const writeStream = fs.createWriteStream(fullFilePathPart);
-        await pipeline(stream, writeStream);
+    const [mkdirError] = await safe(fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true }));
+    if (mkdirError) {
+        await safe(fsPromises.rm(fullFilePathPart));
+        throw new MainError(MainError.FS_ERROR, mkdirError);
+    }
 
-        // rename .part after upload pipeline finished
-        await fsPromises.rename(fullFilePathPart, fullFilePath);
-    } catch (error) {
-        try { await fsPromises.rm(fullFilePathPart); } catch (e) {} // eslint-disable-line
-        throw new MainError(MainError.FS_ERROR, error);
+    const writeStream = fs.createWriteStream(fullFilePathPart);
+    const [pipelineError] = await safe(pipeline(stream, writeStream));
+    if (pipelineError) {
+        await safe(fsPromises.rm(fullFilePathPart));
+        throw new MainError(MainError.FS_ERROR, pipelineError);
+    }
+
+    const [renameError] = await safe(fsPromises.rename(fullFilePathPart, fullFilePath));
+    if (renameError) {
+        await safe(fsPromises.rm(fullFilePathPart));
+        throw new MainError(MainError.FS_ERROR, renameError);
     }
 
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
 
     if (!mtime) return;
 
-    try {
-        const fd = fs.openSync(fullFilePath);
-        fs.futimesSync(fd, mtime, mtime);
-    } catch (error) {
-        try { await fsPromises.rm(fullFilePath); } catch (e) {} // eslint-disable-line
-        throw new MainError(MainError.FS_ERROR, error);
+    const [mtimeError] = await safe(applyMtime(fullFilePath, mtime));
+    if (mtimeError) {
+        await safe(fsPromises.rm(fullFilePath));
+        throw mtimeError;
     }
 }
 
@@ -192,23 +207,18 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
     const existed = fs.existsSync(fullFilePath);
     if (existed && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
-    try {
-        await fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true });
-        await fsPromises.writeFile(fullFilePath, content, 'utf8');
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
-    }
+    const [mkdirError] = await safe(fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true }));
+    if (mkdirError) throw new MainError(MainError.FS_ERROR, mkdirError);
+
+    const [writeError] = await safe(fsPromises.writeFile(fullFilePath, content, 'utf8'));
+    if (writeError) throw new MainError(MainError.FS_ERROR, writeError);
 
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
 
     if (!mtime) return;
 
-    try {
-        var fd = fs.openSync(fullFilePath);
-        fs.futimesSync(fd, mtime, mtime);
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
-    }
+    const [mtimeError] = await safe(applyMtime(fullFilePath, mtime));
+    if (mtimeError) throw mtimeError;
 }
 
 async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats) {
@@ -219,43 +229,40 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
 
     debugLog(`getDirectory: from ${usernameOrGroupfolder} at ${fullFilePath} filePath:${filePath}`);
 
-    let files;
-
     const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
     const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
 
     // for groups attach it
     const group = ownerGroupfolder ? await groupFolders.get(ownerGroupfolder) : null;
 
-    try {
-        const contents = await fsPromises.readdir(fullFilePath);
-        files = await Promise.all(contents.map(function (file) {
-            try {
-                const stat = fs.statSync(path.join(fullFilePath, file));
-                return { name: file, stat: stat, fullFilePath: path.join(fullFilePath, file) };
-            } catch (e) {
-                debugLog(`getDirectory: cannot stat ${path.join(fullFilePath, file)}`, e);
-                return null;
-            }
-        }).filter(function (file) { return file && (file.stat.isDirectory() || file.stat.isFile()); }).map(async function (file) {
-            const childFilePath = path.join(filePath, file.name);
-            const mtime = await effectiveMtime(usernameOrGroupfolder, childFilePath, file.stat.mtime, file.stat.isDirectory());
-            return new Entry({
-                fullFilePath: file.fullFilePath,
-                fileName: file.name,
-                filePath: childFilePath,
-                size: file.stat.size,
-                mtime,
-                atime: file.stat.atime,
-                isDirectory: file.stat.isDirectory(),
-                isFile: file.stat.isFile(),
-                group: group,
-                owner: usernameOrGroupfolder,
-                mimeType: file.stat.isDirectory() ? 'inode/directory' : mime(file.name)
-            });
+    const [readdirError, contents] = await safe(fsPromises.readdir(fullFilePath));
+    if (readdirError) throw new MainError(MainError.FS_ERROR, readdirError);
+
+    const files = [];
+    for (const name of contents) {
+        const childFullPath = path.join(fullFilePath, name);
+        const stat = safe.fs.statSync(childFullPath);
+        if (!stat) {
+            debugLog(`getDirectory: cannot stat ${childFullPath}`, safe.error);
+            continue;
+        }
+        if (!stat.isDirectory() && !stat.isFile()) continue;
+
+        const childFilePath = path.join(filePath, name);
+        const mtime = await effectiveMtime(usernameOrGroupfolder, childFilePath, stat.mtime, stat.isDirectory());
+        files.push(new Entry({
+            fullFilePath: childFullPath,
+            fileName: name,
+            filePath: childFilePath,
+            size: stat.size,
+            mtime,
+            atime: stat.atime,
+            isDirectory: stat.isDirectory(),
+            isFile: stat.isFile(),
+            group: group,
+            owner: usernameOrGroupfolder,
+            mimeType: stat.isDirectory() ? 'inode/directory' : mime(name)
         }));
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
     }
 
     // attach shares
@@ -310,22 +317,15 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     const ownerUsername = isGroupfolder(usernameOrGroupfolder) ? null : usernameOrGroupfolder;
     const ownerGroupfolder = isGroupfolder(usernameOrGroupfolder) ? usernameOrGroupfolder.slice('groupfolder-'.length) : null;
 
-    let result;
-    try {
-        result = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath);
-    } catch (error) {
-        // TODO not sure what to do here
-        console.error(error);
-    }
+    const [sharesError, sharesResult] = await safe(shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath));
+    if (sharesError) console.error(sharesError);
 
     let size = 0;
 
     if (stats.isDirectory()) {
-        try {
-            size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, filePath);
-        } catch (error) {
-            console.error(error);
-        }
+        const [duError, duSize] = await safe(diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, filePath));
+        if (duError) console.error(duError);
+        else size = duSize;
     } else {
         size = stats.size;
     }
@@ -347,7 +347,7 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         atime: stats.atime,
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),
-        sharedWith: result || [],
+        sharedWith: sharesResult || [],
         owner: usernameOrGroupfolder,
         mimeType: stats.isDirectory() ? 'inode/directory' : mime(filePath)
     });
@@ -384,15 +384,15 @@ async function get(usernameOrGroupfolder, filePath) {
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    let result;
-    try {
-        const stat = await fsPromises.stat(fullFilePath);
-        if (stat.isDirectory()) result = await getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stat);
-        if (stat.isFile()) result = await getFile(usernameOrGroupfolder, fullFilePath, filePath, stat);
-    } catch (error) {
-        if (error.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
-        throw new MainError(MainError.FS_ERROR, error);
+    const [statError, stat] = await safe(fsPromises.stat(fullFilePath));
+    if (statError) {
+        if (statError.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
+        throw new MainError(MainError.FS_ERROR, statError);
     }
+
+    let result;
+    if (stat.isDirectory()) result = await getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stat);
+    if (stat.isFile()) result = await getFile(usernameOrGroupfolder, fullFilePath, filePath, stat);
 
     return result;
 }
@@ -406,23 +406,23 @@ async function head(usernameOrGroupfolder, filePath) {
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
-    try {
-        const stat = await fsPromises.stat(fullFilePath);
-        return {
-            fileName: path.basename(fullFilePath),
-            filePath: filePath,
-            size: stat.size,
-            mtime: stat.mtime,
-            isDirectory: stat.isDirectory(),
-            isFile: stat.isFile(),
-            // sharedWith: result || [],
-            owner: usernameOrGroupfolder,
-            mimeType: stat.isDirectory() ? 'inode/directory' : mime(filePath)
-        };
-    } catch (error) {
-        if (error.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
-        throw new MainError(MainError.FS_ERROR, error);
+    const [statError, stat] = await safe(fsPromises.stat(fullFilePath));
+    if (statError) {
+        if (statError.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND);
+        throw new MainError(MainError.FS_ERROR, statError);
     }
+
+    return {
+        fileName: path.basename(fullFilePath),
+        filePath: filePath,
+        size: stat.size,
+        mtime: stat.mtime,
+        isDirectory: stat.isDirectory(),
+        isFile: stat.isFile(),
+        // sharedWith: result || [],
+        owner: usernameOrGroupfolder,
+        mimeType: stat.isDirectory() ? 'inode/directory' : mime(filePath)
+    };
 }
 
 async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, newFilePath) {
@@ -441,13 +441,13 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     if (path.resolve(fullFilePath) === path.resolve(fullNewFilePath)) throw new MainError(MainError.CONFLICT);
 
-    try {
-        // TODO add option for overwrite
-        await fsPromises.mkdir(path.dirname(fullNewFilePath), { recursive: true });
-        await fsPromises.rename(fullFilePath, fullNewFilePath);
-    } catch (error) {
-        if (error.code === 'EEXIST') throw new MainError(MainError.CONFLICT);
-        throw new MainError(MainError.FS_ERROR, error);
+    const [mkdirError] = await safe(fsPromises.mkdir(path.dirname(fullNewFilePath), { recursive: true }));
+    if (mkdirError) throw new MainError(MainError.FS_ERROR, mkdirError);
+
+    const [renameError] = await safe(fsPromises.rename(fullFilePath, fullNewFilePath));
+    if (renameError) {
+        if (renameError.code === 'EEXIST') throw new MainError(MainError.CONFLICT);
+        throw new MainError(MainError.FS_ERROR, renameError);
     }
 }
 
@@ -467,17 +467,14 @@ async function copy(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     debugLog(`copy ${fullFilePath} -> ${fullNewFilePath} overwrite=${overwrite}`);
 
-    try {
-        await fsPromises.cp(fullFilePath, fullNewFilePath, { force: overwrite, recursive: true, errorOnExist: !overwrite });
-    } catch (error) {
-        if (error.code === 'ERR_FS_CP_EINVAL') {
-            if (error.info?.message === 'src and dest cannot be the same') throw new MainError(MainError.CONFLICT);
-            else throw new MainError(MainError.BAD_FIELD);
-        } else if (error.code === 'ERR_FS_CP_EEXIST') {
-            throw new MainError(MainError.CONFLICT);
-        } else {
-            throw new MainError(MainError.FS_ERROR, error);
+    const [copyError] = await safe(fsPromises.cp(fullFilePath, fullNewFilePath, { force: overwrite, recursive: true, errorOnExist: !overwrite }));
+    if (copyError) {
+        if (copyError.code === 'ERR_FS_CP_EINVAL') {
+            if (copyError.info?.message === 'src and dest cannot be the same') throw new MainError(MainError.CONFLICT);
+            throw new MainError(MainError.BAD_FIELD);
         }
+        if (copyError.code === 'ERR_FS_CP_EEXIST') throw new MainError(MainError.CONFLICT);
+        throw new MainError(MainError.FS_ERROR, copyError);
     }
 
     await runChangeHooks(newUsernameOrGroupfolder, newFilePath, actor ? { actor, action: 'copied', details: { fromOwner: usernameOrGroupfolder, fromPath: filePath } } : null);
@@ -513,11 +510,8 @@ async function extract(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder
         throw new MainError(MainError.BAD_STATE, 'file is not an archive');
     }
 
-    try {
-        await exec(cmd, args);
-    } catch (error) {
-        throw new MainError(MainError.EXTERNAL_ERROR, error.stderr);
-    }
+    const [execError] = await safe(exec(cmd, args));
+    if (execError) throw new MainError(MainError.EXTERNAL_ERROR, execError.stderr || execError);
 
     await runChangeHooks(newUsernameOrGroupfolder, newFilePath);
 }
@@ -532,11 +526,8 @@ async function remove(usernameOrGroupfolder, filePath, { actor } = {}) {
 
     debugLog(`remove ${fullFilePath}`);
 
-    try {
-        await fsPromises.rm(fullFilePath, { recursive: true });
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
-    }
+    const [error] = await safe(fsPromises.rm(fullFilePath, { recursive: true }));
+    if (error) throw new MainError(MainError.FS_ERROR, error);
 
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'deleted' } : null);
 }

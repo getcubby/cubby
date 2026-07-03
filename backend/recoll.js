@@ -8,6 +8,7 @@ import fs from 'fs';
 import groupFolders from './groupfolders.js';
 import path from 'path';
 import users from './users.js';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:search');
 
@@ -71,12 +72,10 @@ async function indexByUsername(username, schedule = false) {
     }
     fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
 
-    try {
-        // we don't care about the huge stdout for now
-        await exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] });
-    } catch (e) {
-        debugLog('Failed to create or update recoll index for user.', e);
-        if (!constants.TEST) console.error('Failed to create or update recoll index for user.', e);
+    const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
+    if (indexError) {
+        debugLog('Failed to create or update recoll index for user.', indexError);
+        if (!constants.TEST) console.error('Failed to create or update recoll index for user.', indexError);
     }
 
     debugLog(`indexByUsername: ${username} done`);
@@ -118,12 +117,8 @@ async function searchByUsername(username, query) {
         // skip archives
         if (!filePath.endsWith(fileName)) continue;
 
-        let entry;
-        try {
-            entry = await files.getByAbsolutePath(filePath.slice('file://'.length));
-        } catch (e) {
-            debugLog(`searchByUsername: Entry not found for ${filePath}`, e);
-        }
+        const [getError, entry] = await safe(files.getByAbsolutePath(filePath.slice('file://'.length)));
+        if (getError) debugLog(`searchByUsername: Entry not found for ${filePath}`, getError);
 
         // skip
         if (!entry) continue;

@@ -143,11 +143,8 @@ async function remove(id) {
 
     debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
 
-    try {
-        await fsPromises.rm(groupFolderPath, { recursive: true });
-    } catch (error) {
-        throw new MainError(MainError.FS_ERROR, error);
-    }
+    const [rmError] = await safe(fsPromises.rm(groupFolderPath, { recursive: true }));
+    if (rmError) throw new MainError(MainError.FS_ERROR, rmError);
 
     const queries = [{
         query: 'DELETE FROM groupfolders_members WHERE groupfolder_id = $1',

@@ -4,6 +4,7 @@ import debug from 'debug';
 import database from './database.js';
 import files from './files.js';
 import MainError from './mainerror.js';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:activity');
 
@@ -85,11 +86,11 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
 
     let includeDescendants = false;
 
-    try {
-        const entry = await files.head(owner, filePath);
+    const [headError, entry] = await safe(files.head(owner, filePath));
+    if (headError) {
+        if (headError.reason !== MainError.NOT_FOUND) throw headError;
+    } else {
         includeDescendants = entry.isDirectory;
-    } catch (error) {
-        if (error.reason !== MainError.NOT_FOUND) throw error;
     }
 
     debugLog(`listByPath: ${owner}${filePath} includeDescendants:${includeDescendants} limit:${limit}`);

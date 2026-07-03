@@ -1,4 +1,4 @@
-import fs from 'fs';
+import safe from '@cloudron/safetydance';
 
 const GLOBS2_FILE = '/usr/share/mime/globs2';
 
@@ -9,13 +9,11 @@ function init() {
 
     console.log(`Loading rich mime-types from ${GLOBS2_FILE}`);
 
-    var glob2;
     gTypes = {};
 
-    try {
-        glob2 = fs.readFileSync(GLOBS2_FILE, 'utf8');
-    } catch (e) {
-        console.log('Failed to load globs2 file. Using built-in media-types.', e);
+    const glob2 = safe.fs.readFileSync(GLOBS2_FILE, 'utf8');
+    if (glob2 === null) {
+        console.log('Failed to load globs2 file. Using built-in media-types.', safe.error);
         return;
     }
 

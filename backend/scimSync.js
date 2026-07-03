@@ -1,4 +1,5 @@
 import users from './users.js';
+import safe from '@cloudron/safetydance';
 
 const SCIM_ORIGIN = process.env.CLOUDRON_SCIM_ORIGIN || '';
 const SCIM_TOKEN = process.env.CLOUDRON_SCIM_TOKEN || '';
@@ -44,18 +45,16 @@ async function fetchScimUsers() {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
-        let res;
-        try {
-            res = await fetch(url.toString(), {
-                signal: ctrl.signal,
-                headers: {
-                    Authorization: `Bearer ${SCIM_TOKEN}`,
-                    Accept: 'application/scim+json, application/json'
-                }
-            });
-        } finally {
-            clearTimeout(timer);
-        }
+        const [fetchError, res] = await safe(fetch(url.toString(), {
+            signal: ctrl.signal,
+            headers: {
+                Authorization: `Bearer ${SCIM_TOKEN}`,
+                Accept: 'application/scim+json, application/json'
+            }
+        }));
+        clearTimeout(timer);
+
+        if (fetchError) throw fetchError;
 
         if (!res.ok) {
             throw new Error(`SCIM API returned HTTP ${res.status}`);
@@ -119,13 +118,14 @@ export async function syncScimUsers() {
 export async function runScimSyncTick() {
     if (!isScimEnabled()) return;
 
-    try {
-        const stats = await syncScimUsers();
-        if (stats.created > 0 || stats.updated > 0) {
-            console.log(`SCIM sync: created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`);
-        }
-    } catch (err) {
-        console.error('SCIM sync failed:', err.message || err);
+    const [error, stats] = await safe(syncScimUsers());
+    if (error) {
+        console.error('SCIM sync failed:', error.message || error);
+        return;
+    }
+
+    if (stats.created > 0 || stats.updated > 0) {
+        console.log(`SCIM sync: created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`);
     }
 }
 

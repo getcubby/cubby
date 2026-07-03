@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import safe from '@cloudron/safetydance';
 
 const getColumnBoundaries = async header => {
 	// Regex captures each individual column
@@ -43,11 +43,10 @@ const parseOutput = async output => {
 };
 
 const run = async args => {
-	let output = '';
-	try {
-		output = execSync('df ' + args.join(' '), { encoding: 'utf8' });
-	} catch (e) {
-		console.error('Faild to run df', args.join(' '), e);
+	const output = safe.child_process.execSync('df ' + args.join(' '), { encoding: 'utf8' });
+	if (output === null) {
+		console.error('Failed to run df', args.join(' '), safe.error);
+		return parseOutput('');
 	}
 
 	return parseOutput(output);
@@ -76,15 +75,9 @@ df.file = async file => {
 		throw new TypeError('The `file` parameter is required');
 	}
 
-	let data;
-	try {
-		data = await run(['-kP', file]);
-	} catch (error) {
-		if (/No such file or directory/.test(error.stderr)) {
-			throw new Error(`The specified file \`${file}\` doesn't exist`);
-		}
-
-		throw error;
+	const data = await run(['-kP', file]);
+	if (!data[0]) {
+		throw new Error(`The specified file \`${file}\` doesn't exist`);
 	}
 
 	return data[0];

@@ -7,6 +7,7 @@ import groupFolders from './groupfolders.js';
 import users from './users.js';
 import path from 'path';
 import df from './df.js';
+import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:diskusage');
 
@@ -98,18 +99,19 @@ async function refreshDirectorySubtree(usernameOrGroupFolder, directoryPath) {
 
     pruneDirectoryFromCache(cache, directoryPath);
 
-    try {
-        const out = await exec('du', [ '-b', absoluteDirectoryPath ]);
-        out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
-            const parts = l.split('\t');
-            if (parts.length !== 2) return;
-
-            const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
-            applyDuLine(cache, folderRoot, size, parts[1]);
-        });
-    } catch (error) {
+    const [error, out] = await safe(exec('du', [ '-b', absoluteDirectoryPath ]));
+    if (error) {
         debugLog(`Failed to calculate usage for ${directoryPath}. Falling back to 0. ${error}`);
+        return;
     }
+
+    out.split('\n').filter(function (l) { return !!l; }).forEach(function (l) {
+        const parts = l.split('\t');
+        if (parts.length !== 2) return;
+
+        const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
+        applyDuLine(cache, folderRoot, size, parts[1]);
+    });
 }
 
 async function refreshDirectorySummary(usernameOrGroupFolder, directoryPath) {
@@ -119,19 +121,20 @@ async function refreshDirectorySummary(usernameOrGroupFolder, directoryPath) {
     const folderRoot = await getFolderRoot(usernameOrGroupFolder);
     const cache = ensureCache(usernameOrGroupFolder);
 
-    try {
-        const out = await exec('du', [ '-sb', absoluteDirectoryPath ]);
-        const line = out.split('\n').filter(function (l) { return !!l; })[0];
-        if (!line) return;
-
-        const parts = line.split('\t');
-        if (parts.length !== 2) return;
-
-        const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
-        applyDuLine(cache, folderRoot, size, parts[1]);
-    } catch (error) {
+    const [error, out] = await safe(exec('du', [ '-sb', absoluteDirectoryPath ]));
+    if (error) {
         debugLog(`Failed to summarize usage for ${directoryPath}. Falling back to 0. ${error}`);
+        return;
     }
+
+    const line = out.split('\n').filter(function (l) { return !!l; })[0];
+    if (!line) return;
+
+    const parts = line.split('\t');
+    if (parts.length !== 2) return;
+
+    const size = parseInt(parts[0]) === 4096 ? 0 : parseInt(parts[0]);
+    applyDuLine(cache, folderRoot, size, parts[1]);
 }
 
 async function calculateByUsernameAndDirectory(usernameOrGroupFolder, directoryPath) {

@@ -672,6 +672,51 @@ async function handleMove(req, res, username, segments, pathInfo) {
     res.status(201).end();
 }
 
+async function dispatchWebdavMethod(req, res, username, segments, pathInfo) {
+    switch (req.method) {
+        case 'OPTIONS':
+            res.set('DAV', '1, 2');
+            res.set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK');
+            res.status(200).end();
+            return;
+        case 'PROPFIND':
+            await handlePropfind(req, res, username, segments, pathInfo);
+            return;
+        case 'PROPPATCH':
+            await handleProppatch(req, res, username, segments, pathInfo);
+            return;
+        case 'GET':
+            await handleGet(req, res, username, segments);
+            return;
+        case 'HEAD':
+            await handleHead(req, res, username, segments);
+            return;
+        case 'PUT':
+            await handlePut(req, res, username, segments);
+            return;
+        case 'LOCK':
+            await handleLock(req, res, username, segments);
+            return;
+        case 'UNLOCK':
+            await handleUnlock(req, res, username, segments);
+            return;
+        case 'MKCOL':
+            await handleMkcol(req, res, username, segments);
+            return;
+        case 'DELETE':
+            await handleDelete(req, res, username, segments);
+            return;
+        case 'COPY':
+            await handleCopy(req, res, username, segments, pathInfo);
+            return;
+        case 'MOVE':
+            await handleMove(req, res, username, segments, pathInfo);
+            return;
+        default:
+            res.status(405).set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK').send('Method Not Allowed');
+    }
+}
+
 function expressMiddleware() {
     return async function webdavHandler(req, res, next) {
         if (!req.path.startsWith(WEBDAV_PREFIX)) return next();
@@ -710,50 +755,7 @@ function expressMiddleware() {
         const username = user.username;
         const { segments } = pathInfo;
 
-        const [dispatchError] = await safe((async () => {
-            switch (req.method) {
-                case 'OPTIONS':
-                    res.set('DAV', '1, 2');
-                    res.set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK');
-                    res.status(200).end();
-                    return;
-                case 'PROPFIND':
-                    await handlePropfind(req, res, username, segments, pathInfo);
-                    return;
-                case 'PROPPATCH':
-                    await handleProppatch(req, res, username, segments, pathInfo);
-                    return;
-                case 'GET':
-                    await handleGet(req, res, username, segments);
-                    return;
-                case 'HEAD':
-                    await handleHead(req, res, username, segments);
-                    return;
-                case 'PUT':
-                    await handlePut(req, res, username, segments);
-                    return;
-                case 'LOCK':
-                    await handleLock(req, res, username, segments);
-                    return;
-                case 'UNLOCK':
-                    await handleUnlock(req, res, username, segments);
-                    return;
-                case 'MKCOL':
-                    await handleMkcol(req, res, username, segments);
-                    return;
-                case 'DELETE':
-                    await handleDelete(req, res, username, segments);
-                    return;
-                case 'COPY':
-                    await handleCopy(req, res, username, segments, pathInfo);
-                    return;
-                case 'MOVE':
-                    await handleMove(req, res, username, segments, pathInfo);
-                    return;
-                default:
-                    res.status(405).set('Allow', 'OPTIONS, PROPFIND, PROPPATCH, MKCOL, GET, HEAD, PUT, DELETE, COPY, MOVE, LOCK, UNLOCK').send('Method Not Allowed');
-            }
-        })());
+        const [dispatchError] = await safe(dispatchWebdavMethod(req, res, username, segments, pathInfo));
         if (dispatchError) {
             debugLog('webdav error: %s', dispatchError.message || dispatchError);
             res.status(500).send('Internal Server Error');

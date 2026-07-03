@@ -17,21 +17,19 @@ if (!fs.existsSync(paths.SESSION_SECRET_FILE_PATH)) {
     fs.writeFileSync(paths.SESSION_SECRET_FILE_PATH, crypto.randomBytes(20).toString('hex'), 'utf8');
 }
 
-(async () => {
-    try {
-        await server.init();
-        console.log(`Using data folder at: ${paths.dataRoot()}`);
-        console.log('Cubby is up and running.');
+try {
+    await server.init();
+    console.log(`Using data folder at: ${paths.dataRoot()}`);
+    console.log('Cubby is up and running.');
 
-        // ensure at least users home dirs
-        const userList = await users.list();
-        for (const user of userList) fs.mkdirSync(path.join(paths.USER_DATA_ROOT, user.username), { recursive: true });
+    // ensure at least users home dirs
+    const userList = await users.list();
+    for (const user of userList) fs.mkdirSync(path.join(paths.USER_DATA_ROOT, user.username), { recursive: true });
 
-        // refresh data in background
-        diskusage.calculate();
-        recoll.index();
-    } catch (error) {
-        console.error(error);
-        process.exit(1);
-    }
-})();
+    // refresh data in background
+    diskusage.calculate();
+    recoll.index();
+} catch (error) {
+    console.error(error);
+    process.exit(1);
+}

@@ -8,15 +8,6 @@ import activity from './activity.js';
 
 const debugLog = debug('cubby:relocate');
 
-function storageToResourcePrefix(owner, filePath) {
-    if (owner.indexOf('groupfolder-') === 0) {
-        const groupId = owner.slice('groupfolder-'.length);
-        return `/groupfolders/${groupId}${filePath}`;
-    }
-
-    return `/home${filePath}`;
-}
-
 async function relocate({ actor, fromOwner, fromPath, toOwner, toPath }) {
     assert.strictEqual(typeof fromOwner, 'string');
     assert.strictEqual(typeof fromPath, 'string');
@@ -35,11 +26,7 @@ async function relocate({ actor, fromOwner, fromPath, toOwner, toPath }) {
 
     await favorites.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
-    await recent.relocateResourcePaths({
-        fromResourcePrefix: storageToResourcePrefix(fromOwner, fromPath),
-        toResourcePrefix: storageToResourcePrefix(toOwner, toPath),
-        isDirectory
-    });
+    await recent.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
     await activity.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 

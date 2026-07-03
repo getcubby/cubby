@@ -129,7 +129,7 @@ function getEntryIdentifier(entry) {
 }
 
 /**
- * Build a virtual resource path from a favorite row returned by the API.
+ * Build a virtual resource path from a favorite or recent row returned by the API.
  */
 function toResourcePath(favorite) {
     if (favorite.shareId) {

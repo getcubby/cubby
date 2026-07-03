@@ -162,12 +162,12 @@ async function getRecent(req, res, next) {
 
     let entries = [];
     try {
-        entries = await recent.get(req.user.username, daysAgo, maxFiles);
+        entries = await recent.list(req.user.username, daysAgo, maxFiles);
     } catch (error) {
         return next(new HttpError(500, error));
     }
 
-    next(new HttpSuccess(200, { entries }));
+    next(new HttpSuccess(200, { recents: entries }));
 }
 
 async function search(req, res, next) {

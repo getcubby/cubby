@@ -1,5 +1,6 @@
 import { fetcher } from '@cloudron/pankow';
-import { API_ORIGIN } from '../utils';
+import { API_ORIGIN, parseResourcePath, toResourcePath } from '../utils.js';
+import DirectoryModel from './DirectoryModel.js';
 
 let configCache = {};
 
@@ -139,21 +140,35 @@ async function recent() {
 
   if (error || result.status !== 200) throw new Error('Failed to fetch recent', { cause: error || result })
 
-  const entries = result.body.entries;
+  const entries = [];
 
-  // only needed for local development
-  entries.forEach((e) => {
-    e.previewUrl = `${API_ORIGIN}${e.previewUrl}`;
-    if (e.share) {
-      // check for direct file share, where we have no parent
-      if (e.filePath === '/') e.parentFolderUrl = null;
-      else e.parentFolderUrl = `#files/shares/${e.share.id}${e.filePath.slice(0, -e.fileName.length)}`;
-    } else if (e.group) {
-      e.parentFolderUrl = `#files/groupfolders/${e.group.id}${e.filePath.slice(0, -e.fileName.length)}`;
-    } else {
-      e.parentFolderUrl = `#files/home${e.filePath.slice(0, -e.fileName.length)}`;
+  for (const recentRow of result.body.recents) {
+    const resource = parseResourcePath(toResourcePath(recentRow));
+    if (!resource) continue;
+
+    let entry;
+    try {
+      entry = await DirectoryModel.get(resource);
+    } catch (e) {
+      continue;
     }
-  });
+
+    entry.atime = new Date(recentRow.accessedAt);
+    entry.recent = recentRow;
+    entry.previewUrl = `${API_ORIGIN}${entry.previewUrl}`;
+    entry.href = `#files${entry.resourcePath}`;
+
+    if (entry.share) {
+      if (entry.filePath === '/') entry.parentFolderUrl = null;
+      else entry.parentFolderUrl = `#files/shares/${entry.share.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
+    } else if (entry.group) {
+      entry.parentFolderUrl = `#files/groupfolders/${entry.group.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
+    } else {
+      entry.parentFolderUrl = `#files/home${entry.filePath.slice(0, -entry.fileName.length)}`;
+    }
+
+    entries.push(entry);
+  }
 
   return entries;
 }

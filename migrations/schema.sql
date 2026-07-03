@@ -94,14 +94,22 @@ CREATE TABLE IF NOT EXISTS favorites(
 CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_share_path ON favorites (username, share_id, file_path) WHERE share_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_owner_path ON favorites (username, owner_username, owner_groupfolder, file_path) WHERE share_id IS NULL;
 
-# recents records who opened a file (opener) and the virtual resource path
+# recents records who opened a file; share_id + relative file_path, or owner + storage file_path
 CREATE TABLE IF NOT EXISTS recents(
     opener VARCHAR(128) NOT NULL,
-    resource_path VARCHAR(512) NOT NULL,
+    share_id VARCHAR(128),
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(512) NOT NULL,
     accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY(opener) REFERENCES users(username),
-    PRIMARY KEY(opener, resource_path));
+    FOREIGN KEY(share_id) REFERENCES shares(id) ON DELETE CASCADE,
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id));
+
+CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_share_path ON recents (opener, share_id, file_path) WHERE share_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_owner_path ON recents (opener, owner_username, owner_groupfolder, file_path) WHERE share_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS file_activity(
     id VARCHAR(128) PRIMARY KEY,

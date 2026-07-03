@@ -107,9 +107,9 @@ describe('relocate', function () {
         const favorite = await favorites.get(favoriteId);
         assert.equal(favorite.filePath, '/docs/report-renamed.txt');
 
-        const recents = await recent.get(admin.username, 10, 10);
+        const recents = await recent.list(admin.username, 10, 10);
         assert.equal(recents.length, 1);
-        assert.equal(recents[0].fileName, 'report-renamed.txt');
+        assert.equal(recents[0].filePath, '/docs/report-renamed.txt');
 
         assert.equal(await diskusage.getByUsernameAndDirectory(admin.username, '/docs/report.txt'), 0);
         assert.ok(await diskusage.getByUsernameAndDirectory(admin.username, '/docs') >= docsSizeBefore);
@@ -145,9 +145,9 @@ describe('relocate', function () {
         const movedFavorite = await favorites.get(favoriteId);
         assert.equal(movedFavorite.filePath, '/parent-b/new-dir/nested.txt');
 
-        const recents = await recent.get(admin.username, 10, 10);
+        const recents = await recent.list(admin.username, 10, 10);
         assert.equal(recents.length, 1);
-        assert.equal(recents[0].fileName, 'nested.txt');
+        assert.equal(recents[0].filePath, '/parent-b/new-dir/nested.txt');
 
         assert.equal(await diskusage.getByUsernameAndDirectory(admin.username, '/parent-a/old-dir'), 0);
         assert.ok(await diskusage.getByUsernameAndDirectory(admin.username, '/parent-b/new-dir') > 0);
@@ -186,9 +186,10 @@ describe('relocate', function () {
         assert.equal(favorite.filePath, '/cross.txt');
         assert.equal(favorite.owner, 'groupfolder-team');
 
-        const recents = await recent.get(admin.username, 10, 10);
+        const recents = await recent.list(admin.username, 10, 10);
         assert.equal(recents.length, 1);
-        assert.equal(recents[0].fileName, 'cross.txt');
+        assert.equal(recents[0].filePath, '/cross.txt');
+        assert.equal(recents[0].owner, 'groupfolder-team');
 
         assert.ok((await diskusage.getByUsername(admin.username)).used < homeUsedBefore);
         assert.ok((await diskusage.getByUsername('groupfolder-team')).used > 0);
@@ -227,9 +228,10 @@ describe('relocate', function () {
         assert.equal(favorite.filePath, '/back.txt');
         assert.equal(favorite.owner, admin.username);
 
-        const recents = await recent.get(admin.username, 10, 10);
+        const recents = await recent.list(admin.username, 10, 10);
         assert.equal(recents.length, 1);
-        assert.equal(recents[0].fileName, 'back.txt');
+        assert.equal(recents[0].filePath, '/back.txt');
+        assert.equal(recents[0].owner, admin.username);
 
         assert.ok((await diskusage.getByUsername('groupfolder-team')).used < groupUsedBefore);
         assert.ok((await diskusage.getByUsername(admin.username)).used > 0);

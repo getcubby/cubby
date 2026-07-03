@@ -42,11 +42,9 @@ async function query(sql, args) {
 
     if (!gConnectionPool) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
 
-    try {
-        return await gConnectionPool.query(sql, args);
-    } catch (error) {
-        throw new MainError(MainError.DATABASE_ERROR, error);
-    }
+    const [error, result] = await safe(gConnectionPool.query(sql, args));
+    if (error) throw new MainError(MainError.DATABASE_ERROR, error);
+    return result;
 }
 
 async function transaction(queries) {
@@ -54,15 +52,21 @@ async function transaction(queries) {
 
     if (!gConnectionPool) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
 
-    try {
-        await gConnectionPool.query('BEGIN');
-        for (const query of queries) {
-            await gConnectionPool.query(query.query, query.args);
+    const [beginError] = await safe(gConnectionPool.query('BEGIN'));
+    if (beginError) throw new MainError(MainError.DATABASE_ERROR, beginError);
+
+    for (const q of queries) {
+        const [error] = await safe(gConnectionPool.query(q.query, q.args));
+        if (error) {
+            await safe(gConnectionPool.query('ROLLBACK'));
+            throw new MainError(MainError.DATABASE_ERROR, error);
         }
-        await gConnectionPool.query('COMMIT');
-    } catch (error) {
-        await gConnectionPool.query('ROLLBACK');
-        throw new MainError(MainError.DATABASE_ERROR, error);
+    }
+
+    const [commitError] = await safe(gConnectionPool.query('COMMIT'));
+    if (commitError) {
+        await safe(gConnectionPool.query('ROLLBACK'));
+        throw new MainError(MainError.DATABASE_ERROR, commitError);
     }
 }
 

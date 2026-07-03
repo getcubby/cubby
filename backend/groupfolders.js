@@ -51,7 +51,6 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
     if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 
-    // ensure folder
     if (!folderPath) folderPath = path.join(paths.GROUPS_DATA_ROOT, idOrSlug);
     fs.mkdirSync(folderPath, { recursive: true });
 

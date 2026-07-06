@@ -9,12 +9,15 @@ import {
   Dialog,
   DirectoryView,
   FileUploader,
-  TextInput
+  TextInput,
+  useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
 import FavoriteModel from '../models/FavoriteModel.js';
 import PreviewPanel from './PreviewPanel.vue';
 import EmptyState from './EmptyState.vue';
+
+const { notify } = useNotify();
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
@@ -83,7 +86,7 @@ async function onToggleFavorite(favoriteEntry) {
 
 async function uploadJobPreFlightCheckHandler(job) {
   if (job.folder && await DirectoryModel.exists(parseResourcePath(job.targetFolder), job.folder)) {
-    window.pankow.notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
+    notify({ text: `Cannot upload. Folder ${job.folder} already exists.`, type: 'danger', timeout: 5000 });
     return false;
   }
 
@@ -334,9 +337,9 @@ async function extractHandler(item) {
     if (error.reason === DirectoryModelError.NO_AUTH) onInvalidSession();
     else if (error.reason === DirectoryModelError.PROCESSING_ERROR) {
       console.log(error);
-      window.pankow.notify({ text: 'Failed to extract file: ' + error.message, persistent: true, type: 'danger' });
+      notify({ text: 'Failed to extract file: ' + error.message, persistent: true, type: 'danger' });
     } else {
-      window.pankow.notify('Unknown error, check logs.');
+      notify('Unknown error, check logs.');
     }
 
     window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
@@ -531,7 +534,7 @@ async function loadPath(path, forceLoad = false) {
       return false;
     } else if (error.status === 404) {
       console.error('Failed to load entry', resource, error);
-      window.pankow.notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
+      notify({ text: `File or folder ${resource.path} does not exist`, type: 'danger', persistent: true });
       return false;
     } else {
       console.error(error);

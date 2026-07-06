@@ -2,7 +2,7 @@
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
 import { BASE_URL, parseResourcePath } from './utils.js';
-import { Button, Notification, SideBar, TopBar } from '@cloudron/pankow';
+import { Button, SideBar, TopBar } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
 import LoginView from './components/LoginView.vue';
 import SharesView from './components/SharesView.vue';
@@ -312,8 +312,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Notification/>
-
   <div v-show="ready" style="height: 100%;">
     <LoginView v-if="view === VIEWS.LOGIN"/>
     <div class="container" v-else>

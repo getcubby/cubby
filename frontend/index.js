@@ -1,8 +1,6 @@
 import { createApp } from 'vue';
 
-// this is only for local dev where the origins differ
-import { fetcher, tooltip } from '@cloudron/pankow';
-if (import.meta.env.DEV) fetcher.globalOptions.credentials = 'include';
+import pankow from '@cloudron/pankow';
 
 import '@fontsource/inter';
 
@@ -11,7 +9,5 @@ import './style.css';
 import Index from './Index.vue';
 
 const app = createApp(Index);
-
-app.directive('tooltip', tooltip);
-
+app.use(pankow, import.meta.env.DEV ? { fetcher: { credentials: 'include' } } : undefined);
 app.mount('#app');

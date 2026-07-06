@@ -9,11 +9,14 @@ import {
   Checkbox,
   SingleSelect,
   TabView,
-  InputGroup
+  InputGroup,
+  useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
 import ShareModel from '../models/ShareModel.js';
+
+const { notify } = useNotify();
 
 const profile = inject('profile');
 
@@ -80,7 +83,7 @@ async function onDeleteShare(share) {
 
 function copyShareIdLinkToClipboard(shareId) {
   copyToClipboard(ShareModel.getLink(shareId));
-  window.pankow.notify('Share link copied to clipboard');
+  notify('Share link copied to clipboard');
 }
 
 async function onCreateShareLink() {
@@ -88,7 +91,7 @@ async function onCreateShareLink() {
   if (shareLink.value.expires) {
     expiresAt = endOfLocalDayMs(shareLink.value.expiresDate);
     if (!expiresAt) {
-      window.pankow.notify('Invalid expiration date', { type: 'error' });
+      notify('Invalid expiration date', { type: 'error' });
       return;
     }
   }

@@ -15,7 +15,6 @@ import {
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
 import ShareModel from '../models/ShareModel.js';
-import FileDropModel from '../models/FileDropModel.js';
 
 const { notify } = useNotify();
 
@@ -29,15 +28,9 @@ const readonly = ref(false);
 const users = ref([]);
 const sharedWith = ref([]);
 const sharedLinks = ref([]);
-const filedrops = ref([]);
 const entry = ref({});
 const shareLinkReadonly = ref(true);
 const shareLink = ref({
-  expires: false,
-  expiresDate: '',
-});
-
-const filedropLink = ref({
   expires: false,
   expiresDate: '',
 });
@@ -61,17 +54,6 @@ async function refresh(item = null) {
 
   sharedWith.value = entry.value.sharedWith.filter((s) => s.receiverUsername);
   sharedLinks.value = entry.value.sharedWith.filter((s) => !s.receiverUsername);
-
-  try {
-    filedrops.value = await FileDropModel.list();
-    if (item) {
-      const folderPath = item.filePath || entry.value.filePath;
-      filedrops.value = filedrops.value.filter((fd) => fd.filePath === folderPath);
-    }
-  } catch (e) {
-    console.error('Failed to load filedrops', e);
-    filedrops.value = [];
-  }
 
   users.value.forEach((user) => {
     user.alreadyUsed = entry.value.sharedWith.find((share) => { return share.receiverUsername === user.username; });
@@ -123,35 +105,6 @@ async function onCreateShareLink() {
   await refresh();
 }
 
-async function onCreateFileDrop() {
-  let expiresAt = 0;
-  if (filedropLink.value.expires) {
-    expiresAt = endOfLocalDayMs(filedropLink.value.expiresDate);
-    if (!expiresAt) {
-      notify('Invalid expiration date', { type: 'error' });
-      return;
-    }
-  }
-  const ownerUsername = entry.value.group ? null : entry.value.owner;
-  const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
-
-  const filedropId = await FileDropModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, expiresAt });
-
-  copyFileDropLinkToClipboard(filedropId);
-
-  await refresh();
-}
-
-async function onDeleteFileDrop(filedrop) {
-  await FileDropModel.remove(filedrop.id);
-  refresh();
-}
-
-function copyFileDropLinkToClipboard(filedropId) {
-  copyToClipboard(FileDropModel.getLink(filedropId));
-  notify('File drop link copied to clipboard');
-}
-
 defineExpose({
   async open(item) {
     error.value = '';
@@ -160,8 +113,6 @@ defineExpose({
     shareLinkReadonly.value = true;
     shareLink.value.expires = false;
     shareLink.value.expiresDate = defaultExpiresDateStr();
-    filedropLink.value.expires = false;
-    filedropLink.value.expiresDate = defaultExpiresDateStr();
 
     // prepare available users for sharing
     users.value = (await MainModel.getUsers()).filter((u) => { return u.username !== profile.value.username; });
@@ -186,7 +137,7 @@ defineExpose({
       Sharing "{{ entry.fileName }}" with other users or via a link.
     </p>
     <div>
-          <TabView :tabs="{ user: 'With a user', link: 'Via link', filedrop: 'File Drop' }" default-active="user">
+          <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
         <template #user>
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedWith" class="shared-link" :key="link.id">
@@ -234,33 +185,6 @@ defineExpose({
               <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />
               <input type="date" v-model="shareLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expires"/>
               <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and copy link</Button>
-            </div>
-          </div>
-        </template>
-        <template #filedrop>
-          <div style="margin-bottom: 10px;">
-            <div v-for="filedrop in filedrops" class="shared-link" :key="filedrop.id">
-              <div>
-                <div>Created {{ prettyDate(filedrop.createdAt) }}</div>
-                <small style="color: var(--pankow-color-text-secondary)">
-                  <span v-if="filedrop.expiresAt">Expires {{ prettyDate(filedrop.expiresAt) }}</span>
-                  <span v-else>Never expires</span>
-                </small>
-              </div>
-              <div style="display: flex; gap: 5px">
-                <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyFileDropLinkToClipboard(filedrop.id)"/>
-                <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteFileDrop(filedrop)"/>
-              </div>
-            </div>
-            <div v-show="filedrops.length === 0" class="shared-link-empty">
-              No file drops yet
-            </div>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <Checkbox id="expireFileDropAt" label="Expire at" v-model="filedropLink.expires" />
-              <input type="date" v-model="filedropLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!filedropLink.expires"/>
-              <Button icon="fa-solid fa-cloud-arrow-up" success @click="onCreateFileDrop">Create file drop</Button>
             </div>
           </div>
         </template>

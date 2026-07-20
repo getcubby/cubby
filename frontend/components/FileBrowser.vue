@@ -21,7 +21,7 @@ const { notify } = useNotify();
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
 
-const emit = defineEmits(['invalid-session', 'share', 'close-viewer', 'open-file']);
+const emit = defineEmits(['invalid-session', 'share', 'filedrop', 'close-viewer', 'open-file']);
 
 const profile = inject('profile');
 
@@ -378,6 +378,10 @@ async function renameHandler(item, newName) {
 
 function shareHandler(item) {
   emit('share', item);
+}
+
+function fileDropHandler(item) {
+  emit('filedrop', item);
 }
 
 async function onRefreshCurrentDirectory() {

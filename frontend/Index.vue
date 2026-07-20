@@ -13,6 +13,7 @@ import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
 import ShareDialog from './components/ShareDialog.vue';
+import FileDropDialog from './components/FileDropDialog.vue';
 import ProfileMenuButton from './components/ProfileMenuButton.vue';
 
 const VIEWS = {
@@ -27,6 +28,7 @@ const VIEWS = {
 };
 
 const shareDialog = useTemplateRef('shareDialog');
+const fileDropDialog = useTemplateRef('fileDropDialog');
 const fileBrowser = useTemplateRef('fileBrowser');
 const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
 const sideBar = useTemplateRef('sideBar');
@@ -360,6 +362,7 @@ onBeforeUnmount(() => {
           ref="fileBrowser"
           @invalid-session="onInvalidSession"
           @share="(item) => shareDialog.open(item)"
+          @filedrop="(item) => fileDropDialog.open(item)"
           @close-viewer="onCloseViewer"
           @open-file="onOpenFile"
         />
@@ -368,6 +371,8 @@ onBeforeUnmount(() => {
   </div>
 
   <ShareDialog ref="shareDialog"/>
+
+  <FileDropDialog ref="fileDropDialog"/>
 
   <FileViewerOverlay
     ref="fileViewerOverlay"

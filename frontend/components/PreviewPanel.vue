@@ -83,6 +83,10 @@ function formatActivityAction(item) {
     const receiver = item.details?.receiverUsername || item.details?.receiverEmail || 'link';
     return `unshared with ${receiver}`;
   }
+  case 'filedrop_created':
+    return 'created file drop';
+  case 'filedrop_deleted':
+    return 'deleted file drop';
   default:
     return item.action;
   }

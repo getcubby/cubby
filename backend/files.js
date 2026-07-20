@@ -10,6 +10,7 @@ import exec from './exec.js';
 import mime from './mime.js';
 import Entry from './entry.js';
 import shares from './shares.js';
+import filedrops from './filedrops.js';
 import recoll from './recoll.js';
 import diskusage from './diskusage.js';
 import activity from './activity.js';
@@ -271,6 +272,12 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         file.sharedWith = await shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, file.filePath);
     }
 
+    // attach filedrops
+    const dirFileDrops = await filedrops.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath) || [];
+    for (const file of files) {
+        file.fileDrops = await filedrops.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, file.filePath) || [];
+    }
+
     // attach diskusage
     const size = await diskusage.getByUsernameAndDirectory(usernameOrGroupfolder, filePath);
     for (const file of files) {
@@ -301,6 +308,7 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
         favorites: favs,
         owner: usernameOrGroupfolder,
         sharedWith: sharedWith || [],
+        fileDrops: dirFileDrops,
         mimeType: 'inode/directory',
         files: files
     });
@@ -319,6 +327,9 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
 
     const [sharesError, sharesResult] = await safe(shares.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath));
     if (sharesError) console.error(sharesError);
+
+    const [filedropsError, filedropsResult] = await safe(filedrops.getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filePath));
+    if (filedropsError) console.error(filedropsError);
 
     let size = 0;
 
@@ -348,6 +359,7 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),
         sharedWith: sharesResult || [],
+        fileDrops: filedropsResult || [],
         owner: usernameOrGroupfolder,
         mimeType: stats.isDirectory() ? 'inode/directory' : mime(filePath)
     });

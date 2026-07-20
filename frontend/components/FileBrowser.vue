@@ -584,6 +584,25 @@ function onUp() {
 
 onMounted(() => {
   showSize.value = window.innerWidth >= 576;
+
+  const model = directoryView.value?.contextMenuModel;
+  if (!model) return;
+
+  const shareIdx = model.findIndex(i => i.id === 'share');
+  if (shareIdx === -1) return;
+
+  model.splice(shareIdx + 1, 0, {
+    id: 'filedrop',
+    label: 'File drop',
+    icon: 'fa-solid fa-cloud-arrow-up',
+    action: () => {
+      fileDropHandler(directoryView.value?.focusItem);
+    },
+    disabled: () => {
+      const item = directoryView.value?.focusItem;
+      return !item || item.isFile;
+    },
+  });
 });
 
 defineExpose({
@@ -638,6 +657,7 @@ defineExpose({
             :show-cut="!isReadonly"
             :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
             :share-indicator-property="'isSharedWith'"
+            :file-drop-indicator-property="'isFileDrop'"
             :editable="!isReadonly"
             :multi-download="true"
             @selection-changed="onSelectionChanged"

@@ -43,6 +43,8 @@ async function refresh() {
   try {
     const all = await FileDropModel.list();
     filedrops.value = all.filter((fd) => fd.filePath === entry.value.filePath);
+    entry.value.fileDrops = filedrops.value;
+    entry.value.isFileDrop = !!filedrops.value.length;
   } catch (e) {
     console.error('Failed to load filedrops', e);
     filedrops.value = [];
@@ -97,13 +99,10 @@ defineExpose({
 <template>
   <Dialog
     ref="dialog"
-    title="File Drop"
-    reject-label="Done"
+    :title="'File drop for ' + entry.fileName"
+    reject-label="Close"
     reject-style="secondary"
   >
-    <p v-show="entry.fileName">
-      File drop for <strong>{{ entry.fileName }}</strong>
-    </p>
     <div>
       <div style="margin-bottom: 10px;">
         <div v-for="filedrop in filedrops" class="filedrop-link" :key="filedrop.id">

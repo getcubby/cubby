@@ -55,6 +55,7 @@ async function get(resource) {
   entry.fullFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=raw`;
   entry.downloadFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=download`;
   entry.isSharedWith = !!entry.sharedWith.length;
+  entry.isFileDrop = entry.isDirectory && !!entry.fileDrops?.length;
   entry.favorite = entry.favorite || null;
   entry.star = !!entry.favorite;
   entry.extension = getExtension(entry);
@@ -79,6 +80,7 @@ async function get(resource) {
     child.fullFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=raw`;
     child.downloadFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=download`;
     child.isSharedWith = !!child.sharedWith.length;
+    child.isFileDrop = child.isDirectory && !!child.fileDrops?.length;
   });
 
   return entry;

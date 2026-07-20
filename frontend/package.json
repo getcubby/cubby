@@ -6,7 +6,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^4.3.5",
+    "@cloudron/pankow": "^4.3.6",
     "@tiptap/core": "^3.28.0",
     "@tiptap/extension-code-block-lowlight": "^3.28.0",
     "@tiptap/extension-collaboration": "^3.28.0",

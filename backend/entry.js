@@ -3,7 +3,7 @@ import mimeIcons from './mimeicons.js';
 import crypto from 'crypto';
 import preview from './preview.js';
 
-function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], share = null, group = null, favorites = null }) {
+function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, mimeType, files = [], sharedWith = [], fileDrops = [], share = null, group = null, favorites = null }) {
     assert(fullFilePath && typeof fullFilePath === 'string');
     assert(filePath && typeof filePath === 'string');
     assert(owner && typeof owner === 'string');
@@ -17,6 +17,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     assert.strictEqual(typeof isGroup, 'boolean');
     assert(mimeType && typeof mimeType === 'string');
     assert(Array.isArray(sharedWith));
+    assert(Array.isArray(fileDrops));
     assert.strictEqual(typeof share, 'object');
     assert.strictEqual(typeof group, 'object');
     assert.strictEqual(typeof favorites, 'object');
@@ -37,6 +38,7 @@ function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new 
     this.mimeType = mimeType;
     this.files = files;
     this.sharedWith = sharedWith;
+    this.fileDrops = fileDrops;
     this.isShare = isShare;     // true if virtual toplevel share item or the actual shared file/folder
     this.share = share;         // contains the share info of the share this item belongs to if any
     this.isGroup = isGroup;     // true if virtual toplevel group item or the actual group file/folder
@@ -111,6 +113,7 @@ Entry.prototype.withoutPrivate = function (username = null) {
         share: this.share,
         group: this.group,
         sharedWith: this.sharedWith || [],
+        fileDrops: this.fileDrops || [],
         previewUrl: this.getPreviewUrl()
     };
 };

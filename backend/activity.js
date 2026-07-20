@@ -8,7 +8,7 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:activity');
 
-const ACTIONS = new Set([ 'created', 'updated', 'moved', 'copied', 'deleted', 'shared', 'unshared' ]);
+const ACTIONS = new Set([ 'created', 'updated', 'moved', 'copied', 'deleted', 'shared', 'unshared', 'filedrop_created', 'filedrop_deleted' ]);
 const CONTENT_ACTIONS = [ 'created', 'updated', 'deleted', 'moved', 'copied' ];
 const CONTENT_ACTIONS_SQL = CONTENT_ACTIONS.map((a) => `'${a}'`).join(', ');
 

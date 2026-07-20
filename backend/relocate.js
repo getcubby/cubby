@@ -2,6 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import files from './files.js';
 import shares from './shares.js';
+import filedrops from './filedrops.js';
 import favorites from './favorites.js';
 import recent from './recent.js';
 import activity from './activity.js';
@@ -23,6 +24,8 @@ async function relocate({ actor, fromOwner, fromPath, toOwner, toPath }) {
     await files.move(fromOwner, fromPath, toOwner, toPath);
 
     await shares.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
+
+    await filedrops.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 
     await favorites.relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory });
 

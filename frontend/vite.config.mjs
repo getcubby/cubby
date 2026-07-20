@@ -34,6 +34,7 @@ export default defineConfig({
       input: {
         index: resolve('index.html'),
         office: resolve('office.html'),
+        filedrop: resolve('filedrop.html'),
       },
     },
     outDir: '../frontend-dist',

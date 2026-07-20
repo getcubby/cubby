@@ -12,6 +12,7 @@ import mobile from './routes/mobile.js';
 import office from './routes/office.js';
 import path from 'path';
 import shares from './routes/shares.js';
+import filedrops from './routes/filedrops.js';
 import users from './routes/users.js';
 import usersDb from './users.js';
 import webdav from './routes/webdav.js';
@@ -94,6 +95,16 @@ async function start() {
         router.del('/api/v1/shares', users.isAuthenticated, shares.removeShare);
 
         router.get('/api/v1/shares/:id', users.optionalAuth, shares.attachReceiver, shares.getShareLink);
+
+        router.post('/api/v1/filedrops', users.isAuthenticated, filedrops.createFiledrop);
+        router.get('/api/v1/filedrops', users.isAuthenticated, filedrops.listFiledrops);
+        router.del('/api/v1/filedrops', users.isAuthenticated, filedrops.removeFiledrop);
+        router.get('/api/v1/filedrops/:id', users.optionalAuth, filedrops.getFiledropInfo);
+        router.post('/api/v1/filedrops/:id', users.optionalAuth, filedrops.uploadToFiledrop);
+
+        router.get('/filedrop/:id', users.optionalAuth, (req, res) => {
+            res.sendFile(path.resolve(__dirname, '../frontend-dist/filedrop.html'));
+        });
 
         router.get('/api/v1/preview/:type/:id/:hash', users.optionalAuth, shares.optionalAttachReceiver, misc.getPreview);
 

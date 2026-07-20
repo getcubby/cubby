@@ -18,6 +18,16 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
       '/auth': 'http://localhost:3000',
+      '^/filedrop/[^/]+$': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        bypass: (req, _res, _options) => {
+          const accept = req.headers.accept || '';
+          if (accept.includes('text/html')) {
+            return '/filedrop.html';
+          }
+        },
+      },
       // y-websocket uses ws://host/<docId>; prefix so we do not steal Vite's own WS (e.g. HMR).
       '/__cubby_ws': {
         target: 'http://localhost:3000',

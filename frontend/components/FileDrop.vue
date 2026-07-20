@@ -18,10 +18,13 @@ const isDragging = ref(false);
 const uploading = ref(false);
 const uploadProgress = ref(0);
 const uploadFileName = ref('');
+const uploadSpeed = ref('');
 
 const successFile = ref(null);
 
 let beforeUnloadHandler = null;
+let lastLoaded = 0;
+let lastTime = 0;
 
 function extractFilledropId() {
   const path = window.location.pathname;
@@ -90,7 +93,10 @@ async function uploadFile(file) {
   uploading.value = true;
   uploadFileName.value = file.name;
   uploadProgress.value = 0;
+  uploadSpeed.value = '';
   successFile.value = null;
+  lastLoaded = 0;
+  lastTime = Date.now();
 
   addBeforeUnload();
 
@@ -124,7 +130,17 @@ async function uploadFile(file) {
 
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && event.total > 0) {
+          const now = Date.now();
+          const elapsed = now - lastTime;
           uploadProgress.value = Math.round((event.loaded / event.total) * 100);
+          if (elapsed >= 200) {
+            const delta = event.loaded - lastLoaded;
+            if (delta > 0 && elapsed > 0) {
+              uploadSpeed.value = formatSize((delta / elapsed) * 1000) + '/s';
+            }
+            lastLoaded = event.loaded;
+            lastTime = now;
+          }
         }
       });
 
@@ -142,6 +158,7 @@ async function uploadFile(file) {
   uploading.value = false;
   uploadFileName.value = '';
   uploadProgress.value = 0;
+  uploadSpeed.value = '';
 
   removeBeforeUnload();
 }
@@ -248,7 +265,7 @@ onBeforeUnmount(() => removeBeforeUnload());
             <div class="filedrop-progress">
               <div class="filedrop-progress-name">{{ uploadFileName }}</div>
               <ProgressBar mode="determinate" :value="uploadProgress" :slim="false" />
-              <div class="filedrop-progress-size">{{ uploadProgress }}%</div>
+              <div class="filedrop-progress-size">{{ uploadSpeed }}</div>
             </div>
           </template>
           <template v-else>

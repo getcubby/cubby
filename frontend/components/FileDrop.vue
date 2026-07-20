@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useNotify, Button, ProgressBar } from '@cloudron/pankow';
 
 const { notify } = useNotify();
@@ -17,8 +17,11 @@ const error = ref('');
 const isDragging = ref(false);
 const uploading = ref(false);
 const uploadProgress = ref(0);
-const uploadTotal = ref(0);
 const uploadFileName = ref('');
+
+const successFile = ref(null);
+
+let beforeUnloadHandler = null;
 
 function extractFilledropId() {
     const path = window.location.pathname;
@@ -62,6 +65,21 @@ function formatSize(bytes) {
     return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
 }
 
+function addBeforeUnload() {
+    if (beforeUnloadHandler) return;
+    beforeUnloadHandler = (e) => {
+        e.preventDefault();
+        e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+}
+
+function removeBeforeUnload() {
+    if (!beforeUnloadHandler) return;
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    beforeUnloadHandler = null;
+}
+
 async function uploadFiles(files) {
     for (const file of files) {
         await uploadFile(file);
@@ -72,7 +90,9 @@ async function uploadFile(file) {
     uploading.value = true;
     uploadFileName.value = file.name;
     uploadProgress.value = 0;
-    uploadTotal.value = file.size;
+    successFile.value = null;
+
+    addBeforeUnload();
 
     try {
         const result = await new Promise((resolve, reject) => {
@@ -84,7 +104,7 @@ async function uploadFile(file) {
                     try {
                         resolve(JSON.parse(xhr.response));
                     } catch (e) {
-                        resolve({ fileName: file.name });
+                        resolve({ fileName: file.name, size: file.size });
                     }
                 } else if (xhr.status === 404) {
                     expired.value = true;
@@ -103,9 +123,8 @@ async function uploadFile(file) {
             });
 
             xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable) {
-                    uploadProgress.value = event.loaded;
-                    uploadTotal.value = event.total;
+                if (event.lengthComputable && event.total > 0) {
+                    uploadProgress.value = Math.round((event.loaded / event.total) * 100);
                 }
             });
 
@@ -114,6 +133,7 @@ async function uploadFile(file) {
             xhr.send(file);
         });
 
+        successFile.value = { name: result.fileName, size: file.size };
         notify({ text: `"${result.fileName}" uploaded successfully`, type: 'success' });
     } catch (e) {
         notify({ text: e.message, type: 'danger' });
@@ -122,7 +142,12 @@ async function uploadFile(file) {
     uploading.value = false;
     uploadFileName.value = '';
     uploadProgress.value = 0;
-    uploadTotal.value = 0;
+
+    removeBeforeUnload();
+}
+
+function resetToUpload() {
+    successFile.value = null;
 }
 
 function onDragOver(e) {
@@ -144,16 +169,20 @@ function onDrop(e) {
     const dt = e.dataTransfer;
     if (!dt || !dt.files || dt.files.length === 0) return;
 
+    successFile.value = null;
     uploadFiles(dt.files);
 }
 
 function onFileInputChange(e) {
     if (!e.target.files || e.target.files.length === 0) return;
+    successFile.value = null;
     uploadFiles(e.target.files);
     e.target.value = '';
 }
 
 onMounted(loadFiledropInfo);
+
+onBeforeUnmount(() => removeBeforeUnload());
 
 </script>
 
@@ -195,7 +224,20 @@ onMounted(loadFiledropInfo);
                     <p class="filedrop-folder">Uploading to <strong>{{ folderName }}</strong></p>
                 </div>
 
+                <div v-if="successFile" class="filedrop-success">
+                    <div class="filedrop-success-icon">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h2>Upload complete</h2>
+                    <div class="filedrop-success-details">
+                        <div class="filedrop-success-name">{{ successFile.name }}</div>
+                        <div class="filedrop-success-size">{{ formatSize(successFile.size) }}</div>
+                    </div>
+                    <Button icon="fa-solid fa-cloud-arrow-up" @click="resetToUpload">Upload another file</Button>
+                </div>
+
                 <div
+                    v-else
                     class="filedrop-dropzone"
                     :class="{ 'filedrop-dropzone-active': isDragging, 'filedrop-dropzone-uploading': uploading }"
                     @dragover="onDragOver"
@@ -205,10 +247,8 @@ onMounted(loadFiledropInfo);
                     <template v-if="uploading">
                         <div class="filedrop-progress">
                             <div class="filedrop-progress-name">{{ uploadFileName }}</div>
-                            <ProgressBar mode="determinate" :value="uploadProgress" :max="uploadTotal" :slim="false" />
-                            <div class="filedrop-progress-size">
-                                {{ formatSize(uploadProgress) }} / {{ formatSize(uploadTotal) }}
-                            </div>
+                            <ProgressBar mode="determinate" :value="uploadProgress" :slim="false" />
+                            <div class="filedrop-progress-size">{{ uploadProgress }}%</div>
                         </div>
                     </template>
                     <template v-else>
@@ -350,6 +390,44 @@ onMounted(loadFiledropInfo);
 .filedrop-busy p {
     color: var(--pankow-color-text-secondary, #666);
     margin: 16px 0 0 0;
+}
+
+.filedrop-success {
+    text-align: center;
+    padding: 40px 24px;
+    border: 2px solid var(--pankow-color-success, #4caf50);
+    border-radius: 12px;
+    background: var(--pankow-color-background, #fff);
+}
+
+.filedrop-success-icon {
+    font-size: 48px;
+    color: var(--pankow-color-success, #4caf50);
+    margin-bottom: 16px;
+}
+
+.filedrop-success h2 {
+    font-size: 20px;
+    font-weight: var(--pankow-font-weight-bold, 600);
+    margin: 0 0 16px 0;
+    color: var(--pankow-color-text, #333);
+}
+
+.filedrop-success-details {
+    margin-bottom: 20px;
+}
+
+.filedrop-success-name {
+    font-size: 16px;
+    font-weight: var(--pankow-font-weight-bold, 600);
+    color: var(--pankow-color-text, #333);
+    word-break: break-all;
+    margin-bottom: 4px;
+}
+
+.filedrop-success-size {
+    font-size: 14px;
+    color: var(--pankow-color-text-secondary, #666);
 }
 
 </style>

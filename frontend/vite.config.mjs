@@ -3,11 +3,24 @@ import vue from '@vitejs/plugin-vue';
 import pankowPlugin from '@cloudron/pankow/vite-plugin';
 import { resolve } from 'path';
 
+function fixMonacoWorkerImports() {
+  return {
+    name: 'fix-monaco-worker-imports',
+    resolveId(source, importer) {
+      if (importer && importer.includes('@cloudron/pankow') && source.startsWith('monaco-editor/esm/vs/')) {
+        const rewritten = source.replace('monaco-editor/esm/vs/', 'monaco-editor/');
+        return this.resolve(rewritten, importer, { skipSelf: true });
+      }
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     pankowPlugin(),
-    vue()
+    vue(),
+    fixMonacoWorkerImports()
   ],
   server: {
     fs: {

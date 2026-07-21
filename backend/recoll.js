@@ -70,7 +70,7 @@ async function indexByUsername(username, schedule = false) {
     for (const groupFolder of await groupFolders.list(username)) {
         pathsToIndex.push(groupFolder.folderPath);
     }
-    fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}`);
+    fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\ntestmodifusemtime = 1`);
 
     const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
     if (indexError) {

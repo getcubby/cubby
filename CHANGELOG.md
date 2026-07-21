@@ -572,3 +572,11 @@
 * Do not show group folder folderPath
 * 
 
+[2.16.0]
+* Update cubby to 2.17.0
+* Add file activity log
+* Add file drop feature
+* Enable collaboration in office documents
+* Various recents and favorites fixes
+* Update dependencies
+

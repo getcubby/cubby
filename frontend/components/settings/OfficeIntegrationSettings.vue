@@ -65,7 +65,7 @@ onMounted(async () => {
       <label for="wopiHostnameInput">Editor URL</label>
       <InputGroup>
         <TextInput id="wopiHostnameInput" v-model="office.wopiHost" placeholder="https://office.domain.com" style="width: 100%; max-width: 300px" />
-        <Button id="wopiHostnameSubmitButtom" type="submit" :loading="office.busy" tool>Save</Button>
+        <Button id="wopiHostnameSubmitButtom" type="submit" :loading="office.busy" tool @click="onOfficeSubmit">Save</Button>
       </InputGroup>
       <small v-if="office.error" class="has-error"><i class="fa-solid fa-xmark"></i> {{ office.error }}</small>
       <small v-else-if="isOfficeWorking"><i class="fa-solid fa-check"></i> Working and set up.</small>

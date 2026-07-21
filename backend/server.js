@@ -12,6 +12,7 @@ import mobile from './routes/mobile.js';
 import office from './routes/office.js';
 import path from 'path';
 import shares from './routes/shares.js';
+import tokens from './tokens.js';
 import filedrops from './routes/filedrops.js';
 import users from './routes/users.js';
 import usersDb from './users.js';
@@ -26,9 +27,11 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
+const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 let gHttpServer = null;
 let gScimInterval = null;
+let gTokenCleanupInterval = null;
 
 async function start() {
     if (gHttpServer) return;
@@ -119,6 +122,7 @@ async function start() {
         router.get('/api/v1/office/wopi/files/:handleId', office.wopiAuth, office.checkFileInfo);
         router.get('/api/v1/office/wopi/files/:handleId/contents', office.wopiAuth, office.getFile);
         router.post('/api/v1/office/wopi/files/:handleId/contents', office.wopiAuth, express.raw({ type: '*/*', limit: '1gb' }), office.putFile);
+        router.post('/api/v1/office/wopi/files/:handleId', office.wopiAuth, office.postFile);
 
         router.get('/api/v1/mobile/config', mobile.getConfig);
         router.get('/api/v1/mobile/start', mobile.mobileStart);
@@ -184,12 +188,28 @@ async function start() {
             runScimSyncTick();
         }, SYNC_INTERVAL_MS);
     }
+
+    if (!constants.TEST) {
+        tokens.cleanup(TOKEN_MAX_AGE_MS).catch((err) => {
+            console.error('Initial token cleanup failed:', err);
+        });
+        gTokenCleanupInterval = setInterval(() => {
+            tokens.cleanup(TOKEN_MAX_AGE_MS).catch((err) => {
+                console.error('Token cleanup failed:', err);
+            });
+        }, 60 * 60 * 1000);
+    }
 }
 
 async function stop() {
     if (gScimInterval) {
         clearInterval(gScimInterval);
         gScimInterval = null;
+    }
+
+    if (gTokenCleanupInterval) {
+        clearInterval(gTokenCleanupInterval);
+        gTokenCleanupInterval = null;
     }
 
     if (!gHttpServer) return;

@@ -1,4 +1,5 @@
 import assert from 'assert';
+import constants from '../constants.js';
 import settings from '../settings.js';
 import crypto from 'crypto';
 import debug from 'debug';
@@ -15,7 +16,19 @@ import xpath from 'xpath';
 
 const debugLog = debug('cubby:routes:office');
 
+function cleanExpiredLocks() {
+    const now = Date.now();
+    for (const handleId of Object.keys(LOCKS)) {
+        if (now - LOCKS[handleId].createdAt > WOPI_LOCK_TTL) {
+            debugLog(`cleanExpiredLocks: removing expired lock for ${handleId}`);
+            delete LOCKS[handleId];
+        }
+    }
+}
+
 const HANDLES = {};
+const LOCKS = {};
+const WOPI_LOCK_TTL = 30 * 60 * 1000;
 
 function getAccessTokenFromRequest(req) {
     let accessToken = req.query.access_token || req.body?.accessToken || '';
@@ -99,6 +112,81 @@ async function getHandle(req, res, next) {
     });
 }
 
+async function postFile(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    const handleId = req.params.handleId;
+    if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
+
+    const handle = HANDLES[handleId];
+    if (!handle) return next(new HttpError(404, 'not found'));
+
+    const override = (req.headers['x-wopi-override'] || '').toUpperCase();
+    const wopiLock = req.headers['x-wopi-lock'] || '';
+    const wopiOldLock = req.headers['x-wopi-oldlock'] || '';
+
+    debugLog(`postFile: ${handleId} override=${override}`);
+
+    switch (override) {
+        case 'LOCK': {
+            const existingLock = LOCKS[handleId];
+            if (existingLock) {
+                if (wopiOldLock && existingLock.lockId === wopiOldLock) {
+                    const newLockId = crypto.randomUUID();
+                    LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
+                    res.set('X-WOPI-Lock', newLockId);
+                    return next(new HttpSuccess(200, {}));
+                }
+                if (wopiLock && existingLock.lockId === wopiLock) {
+                    existingLock.createdAt = Date.now();
+                    res.set('X-WOPI-Lock', wopiLock);
+                    return next(new HttpSuccess(200, {}));
+                }
+                res.set('X-WOPI-Lock', existingLock.lockId);
+                return next(new HttpError(409, 'Lock mismatch/Locked by another user'));
+            }
+            const newLockId = crypto.randomUUID();
+            LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
+            res.set('X-WOPI-Lock', newLockId);
+            return next(new HttpSuccess(200, {}));
+        }
+        case 'GET_LOCK': {
+            const existingLock = LOCKS[handleId];
+            res.set('X-WOPI-Lock', existingLock ? existingLock.lockId : '');
+            return next(new HttpSuccess(200, {}));
+        }
+        case 'REFRESH_LOCK': {
+            const existingLock = LOCKS[handleId];
+            if (!existingLock) {
+                res.set('X-WOPI-Lock', '');
+                return next(new HttpError(409, 'Lock mismatch'));
+            }
+            if (wopiLock !== existingLock.lockId) {
+                res.set('X-WOPI-Lock', existingLock.lockId);
+                return next(new HttpError(409, 'Lock mismatch'));
+            }
+            existingLock.createdAt = Date.now();
+            return next(new HttpSuccess(200, {}));
+        }
+        case 'UNLOCK': {
+            const existingLock = LOCKS[handleId];
+            if (!existingLock) {
+                res.set('X-WOPI-Lock', '');
+                return next(new HttpSuccess(200, {}));
+            }
+            if (wopiLock !== existingLock.lockId) {
+                res.set('X-WOPI-Lock', existingLock.lockId);
+                return next(new HttpError(409, 'Lock mismatch'));
+            }
+            delete LOCKS[handleId];
+            res.set('X-WOPI-Lock', '');
+            return next(new HttpSuccess(200, {}));
+        }
+        default:
+            return next(new HttpError(400, 'X-WOPI-Override header is required'));
+    }
+}
+
 /* *
  *  wopi CheckFileInfo endpoint
  *
@@ -131,7 +219,8 @@ async function checkFileInfo(req, res, next) {
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,
         UserFriendlyName: req.user.displayName || req.user.username,
-        UserCanWrite: !handle.readonly
+        UserCanWrite: !handle.readonly,
+        SupportsLocks: true
     }));
 }
 
@@ -185,6 +274,13 @@ async function putFile(req, res, next) {
     if (!handle)  return next(new HttpError(404, 'not found'));
     if (handle.readonly) return next(new HttpError(403, 'share is readonly'));
 
+    const wopiLock = req.headers['x-wopi-lock'] || '';
+    const existingLock = LOCKS[handleId];
+    if (existingLock && wopiLock !== existingLock.lockId) {
+        res.set('X-WOPI-Lock', existingLock.lockId);
+        return next(new HttpError(409, 'Lock mismatch'));
+    }
+
     const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: handle.actorUsername }));
     if (error) return next(MainError.toHttpError(error));
 
@@ -217,12 +313,17 @@ async function setSettings(req, res, next) {
     next(new HttpSuccess(200, {}));
 }
 
+if (!constants.TEST) {
+    setInterval(cleanExpiredLocks, 5 * 60 * 1000);
+}
+
 export default {
     wopiAuth,
     getHandle,
     checkFileInfo,
     getFile,
     putFile,
+    postFile,
     getSettings,
     setSettings
 };

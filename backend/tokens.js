@@ -31,8 +31,16 @@ async function remove(token) {
     await database.query('DELETE FROM tokens WHERE id = $1', [ token ]);
 }
 
+async function cleanup(maxAgeMs) {
+    assert.strictEqual(typeof maxAgeMs, 'number');
+
+    const cutoff = new Date(Date.now() - maxAgeMs);
+    await database.query('DELETE FROM tokens WHERE created_at < $1', [ cutoff ]);
+}
+
 export default {
     add,
     get,
-    remove
+    remove,
+    cleanup
 };

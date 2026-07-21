@@ -2,10 +2,6 @@ import assert from 'assert';
 import crypto from 'crypto';
 import database from './database.js';
 
-function postProcess(data) {
-    return data;
-}
-
 async function add(username) {
     assert.strictEqual(typeof username, 'string');
 
@@ -22,7 +18,7 @@ async function get(token) {
     const result = await database.query('SELECT * FROM tokens WHERE id = $1', [ token ]);
     if (result.rows.length === 0) return null;
 
-    return postProcess(result.rows[0]);
+    return result.rows[0];
 }
 
 async function remove(token) {

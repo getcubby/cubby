@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, onMounted, useTemplateRef } from 'vue';
+import { ref, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import { BASE_URL, parseResourcePath } from './utils.js';
 import MainModel from './models/MainModel.js';
 import DirectoryModel from './models/DirectoryModel.js';
@@ -99,9 +99,20 @@ onMounted(async () => {
     }
   }, false);
 
+  onBeforeUnmount(() => {
+    const iframe = officeViewer.value;
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Save' }), '*');
+      iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Close' }), '*');
+    } catch (e) {
+      console.error('Failed to send postMessage to WOPI editor', e);
+    }
+  });
+
   setTimeout(() => {
     wopiForm.value.submit();
-  }, 500);
+  }, 3000);
 });
 
 </script>
@@ -112,7 +123,7 @@ onMounted(async () => {
       <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
         <input name="ui_defaults" value="UIMode=compact;SavedUIState=false;TextSidebar=false" type="hidden"/>
         <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
-        <input name="access_token" :value="wopiToken" type="hidden" id="access-token"/>
+        <input name="access_token" :value="wopiToken" type="hidden"/>
         <input type="submit" value="" />
       </form>
     </div>
@@ -124,7 +135,6 @@ onMounted(async () => {
 <style scoped>
 
 .main {
-  height: 100%;
   height: 100%;
 }
 

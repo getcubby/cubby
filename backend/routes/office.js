@@ -26,12 +26,9 @@ function cleanExpiredLocks() {
     }
 }
 
-function generateHandleId(username, filePath) {
-    return 'hid-' + crypto.createHash('sha256').update(`${username}:${filePath}`).digest('hex');
-}
-
 const HANDLES = {};
 const LOCKS = {};
+const FILE_SESSION = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
 
 function getAccessTokenFromRequest(req) {
@@ -110,25 +107,39 @@ async function getHandle(req, res, next) {
         return res.status(200).json({ handleId, url: onlineUrl, token });
     }
 
-    const handleId = generateHandleId(subject.usernameOrGroupfolder, subject.filePath);
+    const fileKey = `${subject.usernameOrGroupfolder}:${subject.filePath}`;
+    const sessionHandleId = FILE_SESSION[fileKey];
+    const sessionHandle = sessionHandleId ? HANDLES[sessionHandleId] : null;
 
-    if (HANDLES[handleId]) {
-        HANDLES[handleId].users[req.user.username] = { readonly: subject.share?.readonly || false };
+    if (sessionHandle && !sessionHandle.users[req.user.username]) {
+        debugLog(`getHandle: ${req.user.username} joining existing session ${sessionHandleId}`);
         const token = await tokens.add(req.user.username);
-        return res.status(200).json({ handleId, url: onlineUrl, token });
+        sessionHandle.users[req.user.username] = { readonly: subject.share?.readonly || false, token };
+        return res.status(200).json({ handleId: sessionHandleId, url: onlineUrl, token });
     }
 
+    if (sessionHandle && sessionHandle.users[req.user.username]) {
+        if (Object.keys(sessionHandle.users).length > 1) {
+            debugLog(`getHandle: ${req.user.username} rejoining session ${sessionHandleId} with collaborators`);
+            const token = await tokens.add(req.user.username);
+            return res.status(200).json({ handleId: sessionHandleId, url: onlineUrl, token });
+        }
+    }
+
+    const newHandleId = 'hid-' + crypto.randomBytes(32).toString('hex');
+    debugLog(`getHandle: ${req.user.username} creating new handle ${newHandleId} for ${fileKey}`);
     const token = await tokens.add(req.user.username);
-    HANDLES[handleId] = {
+    HANDLES[newHandleId] = {
         username: subject.usernameOrGroupfolder,
         resourcePath: resourcePath,
         filePath: subject.filePath,
-        users: { [req.user.username]: { readonly: subject.share?.readonly || false } },
+        users: { [req.user.username]: { readonly: subject.share?.readonly || false, token } },
         token: null,
     };
+    FILE_SESSION[fileKey] = newHandleId;
 
     res.status(200).json({
-        handleId,
+        handleId: newHandleId,
         url: onlineUrl,
         token: token
     });
@@ -165,13 +176,16 @@ async function postFile(req, res, next) {
                     return next(new HttpSuccess(200, {}));
                 }
                 if (existingLock.username === req.user.username) {
-                    const newLockId = crypto.randomUUID();
-                    LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
-                    res.set('X-WOPI-Lock', newLockId);
+                    existingLock.createdAt = Date.now();
+                    res.set('X-WOPI-Lock', existingLock.lockId);
+                    return next(new HttpSuccess(200, {}));
+                }
+                if (handle.users[req.user.username]) {
+                    res.set('X-WOPI-Lock', existingLock.lockId);
                     return next(new HttpSuccess(200, {}));
                 }
                 res.set('X-WOPI-Lock', existingLock.lockId);
-                return next(new HttpError(409, 'Lock mismatch/Locked by another user'));
+                return next(new HttpError(409, 'Lock mismatch / Locked by another user'));
             }
             const newLockId = crypto.randomUUID();
             LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
@@ -189,7 +203,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', '');
                 return next(new HttpError(409, 'Lock mismatch'));
             }
-            if (wopiLock !== existingLock.lockId) {
+            if (wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch'));
             }
@@ -202,7 +216,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', '');
                 return next(new HttpSuccess(200, {}));
             }
-            if (wopiLock !== existingLock.lockId) {
+            if (wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch'));
             }
@@ -230,8 +244,6 @@ async function checkFileInfo(req, res, next) {
     const handleId = req.params.handleId;
     if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debugLog(`checkFileInfo: ${handleId}`);
-
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
@@ -239,6 +251,8 @@ async function checkFileInfo(req, res, next) {
     if (error) return next(MainError.toHttpError(error));
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
+
+    debugLog(`checkFileInfo: ${handleId} size=${result.size} mtime=${result.mtime.toISOString()}`);
 
     const userInfo = handle.users[req.user.username];
     next(new HttpSuccess(200, {
@@ -266,8 +280,6 @@ async function getFile(req, res, next) {
     const handleId = req.params.handleId;
     if (!handleId) return next(new HttpError(400, 'missing or invalid handleId'));
 
-    debugLog(`getFile: ${handleId}`);
-
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
@@ -275,6 +287,8 @@ async function getFile(req, res, next) {
     if (error) return next(MainError.toHttpError(error));
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
+
+    debugLog(`getFile: ${handleId} size=${result.size} file=${result._fullFilePath}`);
 
     return res.sendFile(result._fullFilePath, { dotfiles: 'allow' });
 }
@@ -307,13 +321,15 @@ async function putFile(req, res, next) {
 
     const wopiLock = req.headers['x-wopi-lock'] || '';
     const existingLock = LOCKS[handleId];
-    if (existingLock && wopiLock !== existingLock.lockId) {
+    if (existingLock && wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
         res.set('X-WOPI-Lock', existingLock.lockId);
         return next(new HttpError(409, 'Lock mismatch'));
     }
 
     const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: req.user.username }));
     if (error) return next(MainError.toHttpError(error));
+
+    debugLog(`putFile: ${handleId} wrote ${req.body.length} bytes, actor=${req.user.username}`);
 
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));
 }

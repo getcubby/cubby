@@ -340,10 +340,8 @@ onBeforeUnmount(() => {
         <TopBar :gap="false" :left-grow="true">
           <template #left>
             <div class="topbar-left-cluster">
-              <div class="topbar-new-slot">
-                <Button v-if="showTopBarNew" icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
-                <Button v-else-if="showTopBarBack" plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
-              </div>
+              <Button v-if="showTopBarNew" icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
+              <Button v-else-if="showTopBarBack" plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
               <SearchBar />
             </div>
           </template>
@@ -394,14 +392,8 @@ onBeforeUnmount(() => {
 .topbar-left-cluster {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
   flex-grow: 1;
-}
-
-.topbar-new-slot {
-  flex-shrink: 0;
-  width: 76px;
 }
 
 .side-bar-entry {

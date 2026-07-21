@@ -164,6 +164,12 @@ async function postFile(req, res, next) {
                     res.set('X-WOPI-Lock', wopiLock);
                     return next(new HttpSuccess(200, {}));
                 }
+                if (existingLock.username === req.user.username) {
+                    const newLockId = crypto.randomUUID();
+                    LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
+                    res.set('X-WOPI-Lock', newLockId);
+                    return next(new HttpSuccess(200, {}));
+                }
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch/Locked by another user'));
             }

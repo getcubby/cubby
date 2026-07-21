@@ -26,6 +26,10 @@ function cleanExpiredLocks() {
     }
 }
 
+function generateHandleId(username, filePath) {
+    return 'hid-' + crypto.createHash('sha256').update(`${username}:${filePath}`).digest('hex');
+}
+
 const HANDLES = {};
 const LOCKS = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
@@ -91,19 +95,37 @@ async function getHandle(req, res, next) {
     const nodes = xpath.select(`/wopi-discovery/net-zone/app[@name='${mimeType}']/action`, doc);
     if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
 
-    const token = req.user ? await tokens.add(req.user.username) : crypto.randomBytes(32).toString('hex');
+    const onlineUrl = nodes[0].getAttribute('urlsrc');
 
-    const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
+    if (!req.user) {
+        const token = crypto.randomBytes(32).toString('hex');
+        const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
+        HANDLES[handleId] = {
+            username: subject.usernameOrGroupfolder,
+            resourcePath: resourcePath,
+            filePath: subject.filePath,
+            users: { [subject.usernameOrGroupfolder]: { readonly: subject.share?.readonly || false } },
+            token: token,
+        };
+        return res.status(200).json({ handleId, url: onlineUrl, token });
+    }
+
+    const handleId = generateHandleId(subject.usernameOrGroupfolder, subject.filePath);
+
+    if (HANDLES[handleId]) {
+        HANDLES[handleId].users[req.user.username] = { readonly: subject.share?.readonly || false };
+        const token = await tokens.add(req.user.username);
+        return res.status(200).json({ handleId, url: onlineUrl, token });
+    }
+
+    const token = await tokens.add(req.user.username);
     HANDLES[handleId] = {
         username: subject.usernameOrGroupfolder,
         resourcePath: resourcePath,
         filePath: subject.filePath,
-        actorUsername: req.user?.username || null,
-        readonly: subject.share?.readonly || false,
-        token: req.user ? null : token,
+        users: { [req.user.username]: { readonly: subject.share?.readonly || false } },
+        token: null,
     };
-
-    const onlineUrl = nodes[0].getAttribute('urlsrc');
 
     res.status(200).json({
         handleId,
@@ -212,6 +234,7 @@ async function checkFileInfo(req, res, next) {
 
     if (result.isDirectory) return next(new HttpError(417, 'not supported for directories'));
 
+    const userInfo = handle.users[req.user.username];
     next(new HttpSuccess(200, {
         BaseFileName: result.fileName,
         Size: result.size,
@@ -219,7 +242,7 @@ async function checkFileInfo(req, res, next) {
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,
         UserFriendlyName: req.user.displayName || req.user.username,
-        UserCanWrite: !handle.readonly,
+        UserCanWrite: userInfo ? !userInfo.readonly : false,
         SupportsLocks: true
     }));
 }
@@ -272,7 +295,9 @@ async function putFile(req, res, next) {
 
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
-    if (handle.readonly) return next(new HttpError(403, 'share is readonly'));
+
+    const userInfo = handle.users[req.user.username];
+    if (userInfo && userInfo.readonly) return next(new HttpError(403, 'share is readonly'));
 
     const wopiLock = req.headers['x-wopi-lock'] || '';
     const existingLock = LOCKS[handleId];
@@ -281,7 +306,7 @@ async function putFile(req, res, next) {
         return next(new HttpError(409, 'Lock mismatch'));
     }
 
-    const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: handle.actorUsername }));
+    const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: req.user.username }));
     if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));

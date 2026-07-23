@@ -25,11 +25,12 @@ async function open(renameItem) {
 
   await nextTick();
 
-  const input = nameInput.value?.$el?.querySelector?.('input.pankow-text-input');
+  const input = nameInput.value?.$el;
   if (input) {
     input.focus();
+    const lastDotIndex = renameItem.name.lastIndexOf('.');
     input.selectionStart = 0;
-    input.selectionEnd = renameItem.name.lastIndexOf('.');
+    input.selectionEnd = lastDotIndex > 0 ? lastDotIndex : renameItem.name.length;
   }
 }
 

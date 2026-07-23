@@ -16,6 +16,7 @@ import DirectoryModel from '../models/DirectoryModel.js';
 import FavoriteModel from '../models/FavoriteModel.js';
 import PreviewPanel from './PreviewPanel.vue';
 import EmptyState from './EmptyState.vue';
+import RenameDialog from './RenameDialog.vue';
 
 const { notify } = useNotify();
 
@@ -103,6 +104,7 @@ const fileUploader = useTemplateRef('fileUploader');
 const directoryView = useTemplateRef('directoryView');
 const deleteDialog = useTemplateRef('deleteDialog');
 const newItemDialogElement = useTemplateRef('newItemDialog');
+const renameDialog = useTemplateRef('renameDialog');
 
 const deletePending = ref([]);
 const deleteBusy = ref(false);
@@ -362,26 +364,21 @@ async function pasteHandler(action, files, target) {
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
 }
 
-async function renameHandler(item, newName) {
-  item.name = newName;
-
-  const fromResource = item.resource;
-  const toResource = parseResourcePath(sanitize(currentResourcePath.value + '/' + newName));
-
-  if (fromResource.resourcePath === toResource.resourcePath) return;
-
-  await DirectoryModel.rename(fromResource, toResource);
-  await refresh();
-
-  directoryView.value.highlightByName(item.name);
-}
-
 function shareHandler(item) {
   emit('share', item);
 }
 
 function fileDropHandler(item) {
   emit('filedrop', item);
+}
+
+async function onRenameRequested(item) {
+  renameDialog.value.open(item);
+}
+
+function onRenamed(newName) {
+  refresh();
+  directoryView.value.highlightByName(newName);
 }
 
 async function onRefreshCurrentDirectory() {
@@ -662,11 +659,11 @@ defineExpose({
             :multi-download="true"
             @selection-changed="onSelectionChanged"
             @item-activated="onOpen"
+            @rename-requested="onRenameRequested"
             :refresh-handler="onRefreshCurrentDirectory"
             :delete-handler="deleteHandler"
             :share-handler="shareHandler"
             :star-handler="onToggleFavorite"
-            :rename-handler="renameHandler"
             :paste-handler="pasteHandler"
             :download-handler="downloadHandler"
             :extract-handler="extractHandler"
@@ -759,6 +756,8 @@ defineExpose({
         </ul>
       </template>
     </Dialog>
+
+    <RenameDialog ref="renameDialog" @rename="onRenamed" />
   </div>
 </template>
 

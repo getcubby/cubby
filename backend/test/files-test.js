@@ -63,6 +63,40 @@ describe('files', function () {
         assert.equal(missingError.reason, MainError.NOT_FOUND);
     });
 
+    it('move returns CONFLICT when target exists', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/move-conflict-source.txt', 'source');
+        await files.addDirectory(admin.username, '/move-conflict-dir');
+
+        const [fileOverDir] = await safe(files.move(admin.username, '/move-conflict-source.txt', admin.username, '/move-conflict-dir'));
+        assert.ok(fileOverDir);
+        assert.equal(fileOverDir.reason, MainError.CONFLICT);
+
+        await files.addDirectory(admin.username, '/move-conflict-src-dir');
+        await addUserFile(admin.username, '/move-conflict-target-file.txt', 'target');
+
+        const [dirOverFile] = await safe(files.move(admin.username, '/move-conflict-src-dir', admin.username, '/move-conflict-target-file.txt'));
+        assert.ok(dirOverFile);
+        assert.equal(dirOverFile.reason, MainError.CONFLICT);
+    });
+
+    it('move returns CONFLICT when source and destination are the same', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/same-file.txt', 'same');
+
+        const [error] = await safe(files.move(admin.username, '/same-file.txt', admin.username, '/same-file.txt'));
+        assert.ok(error);
+        assert.equal(error.reason, MainError.CONFLICT);
+    });
+
+    it('move returns NOT_FOUND when source does not exist', async function () {
+        await createUsers();
+
+        const [error] = await safe(files.move(admin.username, '/nonexistent.txt', admin.username, '/dest.txt'));
+        assert.ok(error);
+        assert.equal(error.reason, MainError.FS_ERROR);
+    });
+
     it('can add and list directories', async function () {
         await createUsers();
 

@@ -458,7 +458,7 @@ async function move(usernameOrGroupfolder, filePath, newUsernameOrGroupfolder, n
 
     const [renameError] = await safe(fsPromises.rename(fullFilePath, fullNewFilePath));
     if (renameError) {
-        if (renameError.code === 'EEXIST') throw new MainError(MainError.CONFLICT);
+        if (renameError.code === 'EEXIST' || renameError.code === 'EISDIR' || renameError.code === 'ENOTDIR' || renameError.code === 'ENOTEMPTY') throw new MainError(MainError.CONFLICT);
         throw new MainError(MainError.FS_ERROR, renameError);
     }
 }

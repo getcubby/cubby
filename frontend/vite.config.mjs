@@ -2,25 +2,23 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import pankowPlugin from '@cloudron/pankow/vite-plugin';
 import { resolve } from 'path';
-
-function fixMonacoWorkerImports() {
-  return {
-    name: 'fix-monaco-worker-imports',
-    resolveId(source, importer) {
-      if (importer && importer.includes('@cloudron/pankow') && source.startsWith('monaco-editor/esm/vs/')) {
-        const rewritten = source.replace('monaco-editor/esm/vs/', 'monaco-editor/');
-        return this.resolve(rewritten, importer, { skipSelf: true });
-      }
-    }
-  };
-}
+import { existsSync } from 'fs';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     pankowPlugin(),
     vue(),
-    fixMonacoWorkerImports()
+    {
+      name: 'resolve-monaco-worker-imports',
+      resolveId(source) {
+        if (source.includes('?worker') && source.startsWith('monaco-editor/')) {
+          const cleanId = source.replace(/\?worker$/, '');
+          const filePath = resolve('node_modules/', cleanId + '.js');
+          if (existsSync(filePath)) return filePath + '?worker';
+        }
+      },
+    },
   ],
   server: {
     fs: {

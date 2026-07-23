@@ -34,11 +34,6 @@ async function open(renameItem) {
   }
 }
 
-function onReject() {
-  error.value = '';
-  busy.value = false;
-}
-
 async function onConfirm() {
   if (busy.value) return;
 
@@ -59,7 +54,6 @@ async function onConfirm() {
 
   try {
     await DirectoryModel.rename(fromResource, toResource);
-    busy.value = false;
     dialog.value.close();
     emit('rename', trimmed);
   } catch (e) {
@@ -91,7 +85,6 @@ defineExpose({ open });
     :confirm-busy="busy"
     :confirm-active="!busy || !!newName.trim()"
     @confirm="onConfirm"
-    @reject="onReject"
   >
     <form @submit.prevent="onConfirm">
       <TextInput

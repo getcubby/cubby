@@ -40,6 +40,8 @@ function onReject() {
 }
 
 async function onConfirm() {
+  if (busy.value) return;
+
   const trimmed = newName.value.trim();
   if (!trimmed) return;
 
@@ -84,8 +86,10 @@ defineExpose({ open });
     reject-style="secondary"
     confirm-label="Rename"
     confirm-style="success"
+    :dismissable="!busy"
+    :reject-active="!busy"
     :confirm-busy="busy"
-    :confirm-active="!!newName.trim()"
+    :confirm-active="!busy || !!newName.trim()"
     @confirm="onConfirm"
     @reject="onReject"
   >
@@ -94,6 +98,7 @@ defineExpose({ open });
         ref="nameInput"
         v-model="newName"
         placeholder="New name"
+        :readonly="busy"
         style="width: 100%"
       />
       <p class="has-error" v-show="error">{{ error }}</p>

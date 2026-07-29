@@ -29,8 +29,8 @@
   "devDependencies": {
     "@cloudron/superagent": "^2.2.0",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.7.0",
-    "globals": "^17.7.0",
+    "eslint": "^10.8.0",
+    "globals": "^17.8.0",
     "mocha": "^11.7.6",
     "nock": "^14.0.16"
   }

@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    pankowPlugin(),
+    pankowPlugin({ versionCheck: true }),
     vue(),
     {
       name: 'resolve-monaco-worker-imports',

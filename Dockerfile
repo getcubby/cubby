@@ -1,4 +1,5 @@
-FROM cloudron/base:5.0.0@sha256:04fd70dbd8ad6149c19de39e35718e024417c3e01dc9c6637eaf4a41ec4e596c as base
+FROM cloudron/base:5.1.0@sha256:1c0666c9abe9e2090d33686826d4e97769b799124573118d41e0d7485135748e as base
+ENV PATH=/usr/local/node-24.19.0/bin:$PATH
 
 RUN mkdir -p /app/code
 WORKDIR /app/code
@@ -10,11 +11,6 @@ ARG CUBBY_COMMIT=56b1426624075685f8993dec5f7197fe0cbee5ef
 RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
-
-ARG NODE_VERSION=24.14.1
-RUN mkdir -p /usr/local/node-$NODE_VERSION && \
-    curl -L https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz | tar zxf - --strip-components 1 -C /usr/local/node-$NODE_VERSION
-ENV PATH=/usr/local/node-$NODE_VERSION/bin:$PATH
 
 # maybe check https://www.recoll.org/pages/features.html#doctypes.pdf also
 RUN apt-get update && \

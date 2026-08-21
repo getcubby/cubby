@@ -12,7 +12,7 @@
   "dependencies": {
     "@cloudron/connect-lastmile": "^3.0.0",
     "@cloudron/safetydance": "^3.1.0",
-    "@cloudron/tegel": "^1.3.2",
+    "@cloudron/tegel": "^1.4.1",
     "@fontsource/inter": "^5.3.0",
     "@y/websocket-server": "^0.1.5",
     "archiver": "^8.0.0",
@@ -30,8 +30,8 @@
   "devDependencies": {
     "@cloudron/superagent": "^2.2.0",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.8.1",
-    "globals": "^17.9.0",
+    "eslint": "^10.9.0",
+    "globals": "^17.11.0",
     "mocha": "^11.8.0",
     "nock": "^14.0.17"
   }

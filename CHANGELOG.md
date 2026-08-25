@@ -580,3 +580,7 @@
 * Various recents and favorites fixes
 * Update dependencies
 
+[2.16.1]
+* Update cubby to 2.16.1
+* Fix OpenID login issue
+

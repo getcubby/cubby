@@ -314,6 +314,28 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
     });
 }
 
+// detect binary files by sniffing the first few bytes for a null byte
+async function isBinaryFile(fullFilePath) {
+    assert.strictEqual(typeof fullFilePath, 'string');
+
+    let handle;
+    try {
+        handle = await fsPromises.open(fullFilePath, 'r');
+    } catch (error) {
+        // unreadable files are treated as binary so they get downloaded
+        debugLog(`isBinaryFile: cannot open ${fullFilePath}`, error);
+        return true;
+    }
+
+    try {
+        const buffer = Buffer.alloc(8000);
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+        return buffer.subarray(0, bytesRead).includes(0);
+    } finally {
+        await handle.close();
+    }
+}
+
 async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof fullFilePath, 'string');
@@ -347,6 +369,8 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     // attach favorites - rest api filters later and adds favorite property
     const favs = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, filePath);
 
+    const isBinary = stats.isDirectory() ? false : await isBinaryFile(fullFilePath);
+
     return new Entry({
         fullFilePath: fullFilePath,
         fileName: path.basename(fullFilePath),
@@ -358,6 +382,7 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         atime: stats.atime,
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),
+        isBinary: isBinary,
         sharedWith: sharesResult || [],
         fileDrops: filedropsResult || [],
         owner: usernameOrGroupfolder,

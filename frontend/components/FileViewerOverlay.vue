@@ -6,7 +6,7 @@ import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
 import MarkdownEditor from './MarkdownEditor.vue';
 
-defineProps({
+const props = defineProps({
   readonly: {
     type: Boolean,
     default: false,
@@ -68,6 +68,9 @@ async function openFile(item, resource, siblingEntries) {
     const textContent = typeof raw === 'string' ? raw : await raw.text();
     markdownEditor.value.open(item, textContent);
     viewer.value = 'markdown';
+  } else if (item.isBinary) {
+    if (props.downloadHandler) await props.downloadHandler([item]);
+    else window.location.href = item.downloadFileUrl;
   } else if (textViewer.value.canHandle(item)) {
     const raw = await DirectoryModel.getRawContent(resource);
     const textContent = typeof raw === 'string' ? raw : await raw.text();

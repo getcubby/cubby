@@ -63,6 +63,18 @@ describe('files', function () {
         assert.equal(missingError.reason, MainError.NOT_FOUND);
     });
 
+    it('detects binary files', async function () {
+        await createUsers();
+        await addUserFile(admin.username, '/text.txt', 'hello world');
+        await addUserFile(admin.username, '/binary.bin', 'hello\0world');
+
+        const textFile = await files.get(admin.username, '/text.txt');
+        assert.equal(textFile.isBinary, false);
+
+        const binaryFile = await files.get(admin.username, '/binary.bin');
+        assert.equal(binaryFile.isBinary, true);
+    });
+
     it('move returns CONFLICT when target exists', async function () {
         await createUsers();
         await addUserFile(admin.username, '/move-conflict-source.txt', 'source');

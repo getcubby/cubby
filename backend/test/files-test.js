@@ -68,11 +68,21 @@ describe('files', function () {
         await addUserFile(admin.username, '/text.txt', 'hello world');
         await addUserFile(admin.username, '/binary.bin', 'hello\0world');
 
-        const textFile = await files.get(admin.username, '/text.txt');
-        assert.equal(textFile.isBinary, false);
+        const textPath = files.getAbsolutePath(admin.username, '/text.txt');
+        const binaryPath = files.getAbsolutePath(admin.username, '/binary.bin');
 
-        const binaryFile = await files.get(admin.username, '/binary.bin');
-        assert.equal(binaryFile.isBinary, true);
+        assert.equal(await files.isBinaryFile(textPath), false);
+        assert.equal(await files.isBinaryFile(binaryPath), true);
+    });
+
+    it('isBinaryBuffer honors text BOMs', function () {
+        assert.equal(files.isBinaryBuffer(Buffer.from('hello')), false);
+        assert.equal(files.isBinaryBuffer(Buffer.from('hello\0world')), true);
+        assert.equal(files.isBinaryBuffer(Buffer.from([0xEF, 0xBB, 0xBF, 0x68, 0x69])), false);
+        assert.equal(files.isBinaryBuffer(Buffer.from([0xFF, 0xFE, 0x68, 0x00, 0x69, 0x00])), false);
+        assert.equal(files.isBinaryBuffer(Buffer.from([0xFE, 0xFF, 0x00, 0x68, 0x00, 0x69])), false);
+        assert.equal(files.isBinaryBuffer(Buffer.from([0xFF, 0xFE, 0x00, 0x00, 0x68, 0x00, 0x00, 0x00])), false);
+        assert.equal(files.isBinaryBuffer(Buffer.from([0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x68])), false);
     });
 
     it('move returns CONFLICT when target exists', async function () {

@@ -314,7 +314,21 @@ async function getDirectory(usernameOrGroupfolder, fullFilePath, filePath, stats
     });
 }
 
-// detect binary files by sniffing the first few bytes for a null byte
+// detect binary buffers by sniffing for a null byte, honoring text BOMs
+function isBinaryBuffer(buffer) {
+    assert(Buffer.isBuffer(buffer));
+
+    // UTF-8 BOM
+    if (buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) return false;
+    // UTF-16 LE/BE BOM
+    if (buffer.length >= 2 && ((buffer[0] === 0xFF && buffer[1] === 0xFE) || (buffer[0] === 0xFE && buffer[1] === 0xFF))) return false;
+    // UTF-32 LE/BE BOM
+    if (buffer.length >= 4 && buffer[0] === 0xFF && buffer[1] === 0xFE && buffer[2] === 0x00 && buffer[3] === 0x00) return false;
+    if (buffer.length >= 4 && buffer[0] === 0x00 && buffer[1] === 0x00 && buffer[2] === 0xFE && buffer[3] === 0xFF) return false;
+
+    return buffer.includes(0);
+}
+
 async function isBinaryFile(fullFilePath) {
     assert.strictEqual(typeof fullFilePath, 'string');
 
@@ -330,7 +344,11 @@ async function isBinaryFile(fullFilePath) {
     try {
         const buffer = Buffer.alloc(8000);
         const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-        return buffer.subarray(0, bytesRead).includes(0);
+        return isBinaryBuffer(buffer.subarray(0, bytesRead));
+    } catch (error) {
+        // treat unreadable content as binary so it gets downloaded
+        debugLog(`isBinaryFile: cannot read ${fullFilePath}`, error);
+        return true;
     } finally {
         await handle.close();
     }
@@ -369,8 +387,6 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
     // attach favorites - rest api filters later and adds favorite property
     const favs = await favorites.listByOwnerAndFilePath(usernameOrGroupfolder, filePath);
 
-    const isBinary = stats.isDirectory() ? false : await isBinaryFile(fullFilePath);
-
     return new Entry({
         fullFilePath: fullFilePath,
         fileName: path.basename(fullFilePath),
@@ -382,7 +398,6 @@ async function getFile(usernameOrGroupfolder, fullFilePath, filePath, stats) {
         atime: stats.atime,
         isDirectory: stats.isDirectory(),
         isFile: stats.isFile(),
-        isBinary: isBinary,
         sharedWith: sharesResult || [],
         fileDrops: filedropsResult || [],
         owner: usernameOrGroupfolder,
@@ -582,6 +597,8 @@ export default {
     getByAbsolutePath,
     get,
     head,
+    isBinaryFile,
+    isBinaryBuffer,
     move,
     copy,
     extract,

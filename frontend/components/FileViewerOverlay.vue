@@ -1,10 +1,10 @@
 <script setup>
 
-import { ref, useTemplateRef, inject } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
-import MarkdownEditor from './MarkdownEditor.vue';
+import MarkdownViewer from './MarkdownViewer.vue';
 
 const props = defineProps({
   readonly: {
@@ -23,13 +23,11 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-const profile = inject('profile');
-
 const viewer = ref('');
 
 const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
-const markdownEditor = useTemplateRef('markdownEditor');
+const markdownViewer = useTemplateRef('markdownViewer');
 const textViewer = useTemplateRef('textViewer');
 const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
@@ -63,10 +61,10 @@ async function openFile(item, resource, siblingEntries) {
   } else if (MainModel.canHandleWithOffice(item)) {
     window.open('/office.html#' + item.resourcePath, '_blank');
     window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
-  } else if (markdownEditor.value.canHandle(item)) {
+  } else if (markdownViewer.value.canHandle(item)) {
     const raw = await DirectoryModel.getRawContent(resource);
     const textContent = typeof raw === 'string' ? raw : await raw.text();
-    markdownEditor.value.open(item, textContent);
+    markdownViewer.value.open(item, textContent);
     viewer.value = 'markdown';
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
@@ -104,7 +102,7 @@ defineExpose({ openFile, close });
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
-      <MarkdownEditor ref="markdownEditor" @close="onViewerClose" :profile="profile" :save-handler="saveHandler" />
+      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

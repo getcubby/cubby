@@ -1,4 +1,3 @@
-import collab from './routes/collab.js';
 import constants from './constants.js';
 import cors from './cors.js';
 import activity from './routes/activity.js';
@@ -19,7 +18,6 @@ import usersDb from './users.js';
 import webdav from './routes/webdav.js';
 import { isScimEnabled, runScimSyncTick, SYNC_INTERVAL_MS } from './scimSync.js';
 import * as tegel from '@cloudron/tegel';
-import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -116,8 +114,6 @@ async function start() {
         router.get('/api/v1/download', users.isAuthenticated, misc.download);
         router.get('/api/v1/search', users.isAuthenticated, misc.search);
 
-        router.get('/api/v1/collab/handle', users.isAuthenticated, collab.getHandle);
-
         router.get('/api/v1/office/handle', users.optionalAuth, office.getHandle);
         router.get('/api/v1/office/wopi/files/:handleId', office.wopiAuth, office.checkFileInfo);
         router.get('/api/v1/office/wopi/files/:handleId/contents', office.wopiAuth, office.getFile);
@@ -143,7 +139,6 @@ async function start() {
         mainApp.use(app);
 
         const httpServer = http.createServer({ headersTimeout: 0, requestTimeout: 0 }, mainApp);
-        const wsServer = new WebSocketServer({ noServer: true });
         gHttpServer = httpServer;
 
         // When Windows (or other clients) send PUT with Expect: 100-continue, we must send
@@ -156,15 +151,6 @@ async function start() {
                 res.writeHead(417, { 'Content-Length': '0' });
                 res.end();
             }
-        });
-
-        wsServer.on('connection', collab.setupWSConnection);
-
-        httpServer.on('upgrade', (request, socket, head) => {
-            console.log('TODO: add websocket auth!');
-            wsServer.handleUpgrade(request, socket, head, /** @param {any} ws */ ws => {
-                wsServer.emit('connection', ws, request);
-            });
         });
 
     const host = constants.TEST ? '127.0.0.1' : undefined;

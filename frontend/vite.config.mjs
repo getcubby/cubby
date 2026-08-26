@@ -39,13 +39,6 @@ export default defineConfig({
           }
         },
       },
-      // y-websocket uses ws://host/<docId>; prefix so we do not steal Vite's own WS (e.g. HMR).
-      '/__cubby_ws': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        ws: true,
-        rewrite: (path) => path.replace(/^\/__cubby_ws/, '') || '/',
-      },
     },
   },
   // https://vitejs.dev/guide/build.html#multi-page-app

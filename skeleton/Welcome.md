@@ -22,7 +22,7 @@ Open a file to view or edit it in place:
 
 | Sample file | What to try |
 |-------------|-------------|
-| **Welcome.md** (this file) | Markdown editor with formatting toolbar and document outline |
+| **Welcome.md** (this file) | Markdown viewer with a document outline |
 | **Documents/Sample document.pdf** | PDF viewer — try searching for *slartibartfast* |
 | **Documents/sample-document.txt** | Text editor — edit and save plain text files |
 | **Videos/Sample video.mp4** | Video playback — rotating Earth visualization |
@@ -44,14 +44,9 @@ Right-click any file or folder (or use the share action) to:
 
 Shared items appear under **Shared with you** in the sidebar. Manage everything you have shared from **Shared by you** in the profile menu.
 
-## Collaborate on Markdown
+## View Markdown
 
-This file is a Markdown document. To try real-time collaboration:
-
-1. Share **Welcome.md** with another Cubby user (give them edit access)
-2. Both of you open the file — changes sync live, with each person's cursor visible
-
-The editor supports headings, lists, bold, italic, code blocks, images, and more. Use the outline panel on the left to jump between sections.
+This file is a Markdown document. Open it to see the built-in Markdown viewer, which renders the document with headings, lists, bold, italic, code blocks, images, and more. Use the outline on the right to jump between sections.
 
 ## Find files quickly
 

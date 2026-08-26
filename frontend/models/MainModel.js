@@ -114,22 +114,6 @@ async function getOfficeHandle(entry) {
   return [null, result.body];
 }
 
-async function getCollabHandle(entry) {
-  // TODO we may want to generate the ID this based on the resource path on the server to be able to check,
-  //      if the markdown file itself has changed on disk and we would need to discard the ydoc fragment (we would lose collab history though)
-
-  let error, result;
-  try {
-    result = await fetcher.get(`${API_ORIGIN}/api/v1/collab/handle`, { path: entry.resourcePath });
-  } catch (e) {
-    error = e;
-  }
-
-  if (error || !(result.status === 200 || result.status === 201)) throw new Error('Failed to get collab handle', { cause: error || result })
-
-  return { isNew: result.status === 201, id: result.body.id, fragmentName: result.body.fragmentName };
-}
-
 async function recent() {
   let error, result;
   try {
@@ -222,7 +206,6 @@ export default {
   canHandleWithOffice,
   isOfficeWorking,
   getOfficeHandle,
-  getCollabHandle,
   recent,
   activity,
   search,

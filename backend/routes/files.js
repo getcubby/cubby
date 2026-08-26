@@ -22,13 +22,13 @@ function boolLike(arg) {
     return true;
 }
 
-// sets isBinary on a single file (always) or on directory children (only when extended)
-async function attachBinaryFlags(entry, extended) {
+// sets isBinary on a single file (always) and on directory children (skipping text/* mime)
+async function attachBinaryFlags(entry) {
     if (entry.isFile) {
         entry.isBinary = await files.isBinaryFile(entry._fullFilePath);
-    } else if (entry.isDirectory && extended) {
+    } else if (entry.isDirectory) {
         for (const child of entry.files) {
-            if (child.isFile) child.isBinary = await files.isBinaryFile(child._fullFilePath);
+            if (child.isFile && !child.mimeType.startsWith('text/')) child.isBinary = await files.isBinaryFile(child._fullFilePath);
         }
     }
 
@@ -94,7 +94,6 @@ async function get(req, res, next) {
 
     const type = req.query.type;
     let filePath = req.query.path;
-    const extended = boolLike(req.query.extended);
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
     if (type && (type !== 'raw' && type !== 'download' && type !== 'json')) return next(new HttpError(400, 'type must be either empty, "download" or "raw"'));
@@ -123,7 +122,7 @@ async function get(req, res, next) {
             return res.download(result._fullFilePath, { dotfiles: 'allow' });
         }
 
-        await attachBinaryFlags(result, extended);
+        await attachBinaryFlags(result);
         next(new HttpSuccess(200, result.withoutPrivate(req.user.username)));
     } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
@@ -162,7 +161,7 @@ async function get(req, res, next) {
             // those files are always part of this share
             file.files.forEach(function (f) { f.share = share; });
             file.share = share;
-            await attachBinaryFlags(file, extended);
+            await attachBinaryFlags(file);
             let shareFile = file.asShare(share.filePath);
             await favorites.attachToShareTree(shareFile, shareId);
 
@@ -237,7 +236,7 @@ async function get(req, res, next) {
                 return res.download(file._fullFilePath, { dotfiles: 'allow' });
             }
 
-            await attachBinaryFlags(file, extended);
+            await attachBinaryFlags(file);
             next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.username)));
         } else {
             debugLog('listGroupFolders');

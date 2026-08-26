@@ -43,19 +43,15 @@ describe('files API', function () {
         assert.equal(text.body.isBinary, false);
     });
 
-    it('computes isBinary for directory children only with extended flag', async function () {
+    it('computes isBinary for directory children by default', async function () {
         await addUserFile(admin.username, '/extended/binary.bin', 'hello\0world');
         await addUserFile(admin.username, '/extended/plain.txt', 'hello world');
 
-        const normal = await withToken(superagent.get(`${serverUrl}/api/v1/files`), admin.token)
+        const listing = await withToken(superagent.get(`${serverUrl}/api/v1/files`), admin.token)
             .query({ path: '/home/extended/' });
-        assert.equal(normal.status, 200);
-        assert.equal(normal.body.files.find((f) => f.fileName === 'binary.bin').isBinary, false);
-
-        const extended = await withToken(superagent.get(`${serverUrl}/api/v1/files`), admin.token)
-            .query({ path: '/home/extended/', extended: true });
-        assert.equal(extended.status, 200);
-        assert.equal(extended.body.files.find((f) => f.fileName === 'binary.bin').isBinary, true);
+        assert.equal(listing.status, 200);
+        assert.equal(listing.body.files.find((f) => f.fileName === 'binary.bin').isBinary, true);
+        assert.equal(listing.body.files.find((f) => f.fileName === 'plain.txt').isBinary, false);
     });
 
     it('can head a file', async function () {

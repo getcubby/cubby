@@ -57,18 +57,59 @@ import { ref, useTemplateRef, nextTick, onBeforeUnmount } from 'vue';
 import { Button, utils } from '@cloudron/pankow';
 import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
-import hljs from 'highlight.js';
+import { common, createLowlight } from 'lowlight';
 import slugify from '../slugify.js';
+
+const lowlight = createLowlight(common);
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function hastToHtml(node) {
+  if (!node) return '';
+  if (node.type === 'text') return escapeHtml(node.value);
+  if (node.type === 'element') {
+    const tag = node.tagName;
+    const props = node.properties || {};
+    const attrs = Object.keys(props).map((key) => {
+      const value = props[key];
+      if (value === null || value === false || value === undefined) return '';
+      const name = key === 'className' ? 'class' : key;
+      if (value === true) return ` ${name}`;
+      if (Array.isArray(value)) return ` ${name}="${escapeHtml(value.join(' '))}"`;
+      return ` ${name}="${escapeHtml(value)}"`;
+    }).join('');
+    const children = (node.children || []).map(hastToHtml).join('');
+    return `<${tag}${attrs}>${children}</${tag}>`;
+  }
+  if (node.type === 'root') return (node.children || []).map(hastToHtml).join('');
+  return '';
+}
+
+function highlightCode(code, lang) {
+  try {
+    if (lang) return hastToHtml(lowlight.highlight(lang, code));
+  } catch (e) {
+    // unknown language, fall through to auto-detection
+  }
+  try {
+    return hastToHtml(lowlight.highlightAuto(code));
+  } catch (e) {
+    return escapeHtml(code);
+  }
+}
 
 const marked = new Marked();
 marked.use({
   renderer: {
     code(token) {
       const lang = (token.lang || '').split(/\s+/)[0];
-      const highlighted = lang && hljs.getLanguage(lang)
-        ? hljs.highlight(token.text, { language: lang }).value
-        : hljs.highlightAuto(token.text).value;
-      return `<pre><code class="hljs language-${lang || ''}">${highlighted}</code></pre>`;
+      return `<pre><code class="hljs language-${lang || ''}">${highlightCode(token.text, lang)}</code></pre>`;
     },
   },
 });
@@ -166,7 +207,14 @@ async function open(e, content) {
   if (!e || e.isDirectory || !canHandle(e)) return;
 
   entry.value = e;
-  html.value = DOMPurify.sanitize(marked.parse(content));
+
+  try {
+    html.value = DOMPurify.sanitize(marked.parse(content));
+  } catch (err) {
+    console.error('Failed to render markdown', err);
+    html.value = `<pre>${escapeHtml(String(content))}</pre>`;
+  }
+
   showFull.value = false;
   activeId.value = null;
 

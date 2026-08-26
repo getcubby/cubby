@@ -196,11 +196,6 @@ function resetNonFileViewState() {
 }
 
 function onOpen(item) {
-  if (item.isBinary) {
-    fileBrowser.value?.downloadHandler([item]);
-    return;
-  }
-
   if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
   else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
   else window.location.hash = `files/home${item.filePath}`;

@@ -69,6 +69,7 @@ async function openFile(item, resource, siblingEntries) {
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
     else window.location.href = item.downloadFileUrl;
+    history.replaceState(null, '', `#files${resource.parentResourcePath}`);
   } else if (textViewer.value.canHandle(item)) {
     const raw = await DirectoryModel.getRawContent(resource);
     const textContent = typeof raw === 'string' ? raw : await raw.text();

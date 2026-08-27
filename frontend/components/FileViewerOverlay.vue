@@ -118,32 +118,32 @@ defineExpose({ openFile, close, openWith });
 </script>
 
 <template>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'image'">
       <ImageViewer ref="imageViewer" @close="onViewerClose" :navigation-handler="onImageViewerNavigate" :download-handler="downloadHandler" />
     </div>
   </Transition>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'text'">
       <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="saveHandler" :readonly="readonly" />
     </div>
   </Transition>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'pdf'">
       <PdfViewer ref="pdfViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :open-with-handler="() => openWith('text')" />
     </div>
   </Transition>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'threed'">
       <ThreeDViewer ref="threeDViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="pankow-fade">
+  <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'generic'">
       <GenericViewer ref="genericViewer" @close="onViewerClose" />
     </div>
@@ -159,6 +159,17 @@ defineExpose({ openFile, close, openWith });
   height: 100%;
   top: 0;
   left: 0;
+}
+
+.viewer-slide-enter-active,
+.viewer-slide-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.viewer-slide-enter-from,
+.viewer-slide-leave-to {
+  opacity: 0;
+  transform: translateY(33.33%) scale(0.95);
 }
 
 </style>

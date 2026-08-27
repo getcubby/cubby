@@ -9,15 +9,15 @@
 
     <div class="editor-area">
       <div class="outline-wrapper">
-        <div v-if="headings.length > 0" class="document-outline" @mouseenter="showFull = true" @mouseleave="showFull = false">
-          <div class="outline-schematic">
+        <div v-if="headings.length > 0" class="document-outline" @mouseenter="onOutlineEnter" @mouseleave="onOutlineLeave">
+          <div class="outline-schematic" @click="onOutlineToggle">
             <div
               v-for="h in headings"
               :key="h.id"
               class="schematic-line"
               :class="{ 'schematic-line-active': h.id === activeId }"
               :style="{ width: getLineWidth(h.level) + 'px' }"
-              @click="scrollToHeading(h.id)"
+              @click.stop="scrollToHeading(h.id)"
             />
           </div>
 
@@ -109,7 +109,8 @@ marked.use({
   renderer: {
     code(token) {
       const lang = (token.lang || '').split(/\s+/)[0];
-      return `<pre><code class="hljs language-${lang || ''}">${highlightCode(token.text, lang)}</code></pre>`;
+      const langClass = lang ? ` language-${lang}` : '';
+      return `<pre><code class="hljs${langClass}">${highlightCode(token.text, lang)}</code></pre>`;
     },
   },
 });
@@ -125,6 +126,20 @@ const scrollAreaRef = useTemplateRef('scrollAreaRef');
 const headings = ref([]);
 const activeId = ref(null);
 const showFull = ref(false);
+
+const canHover = window.matchMedia('(hover: hover)').matches;
+
+function onOutlineEnter() {
+  if (canHover) showFull.value = true;
+}
+
+function onOutlineLeave() {
+  if (canHover) showFull.value = false;
+}
+
+function onOutlineToggle() {
+  showFull.value = !showFull.value;
+}
 
 let rafId = null;
 
@@ -200,6 +215,7 @@ function throttledUpdateActiveHeading() {
 }
 
 function canHandle(e) {
+  if (e.isBinary) return false;
   return e.fileName.endsWith('md');
 }
 
@@ -417,7 +433,7 @@ defineExpose({ canHandle, open });
 
 </style>
 
-<style>
+<style scoped>
 
 .markdown-body {
   padding: 4px 16px;
@@ -431,7 +447,7 @@ defineExpose({ canHandle, open });
   min-height: 100%;
 }
 
-.markdown-body pre {
+.markdown-body :deep(pre) {
   white-space: pre-wrap;
   background-color: #1e1e1e;
   color: #d4d4d4;
@@ -441,111 +457,111 @@ defineExpose({ canHandle, open });
   overflow-x: auto;
 }
 
-.markdown-body pre code {
+.markdown-body :deep(pre code) {
   background: none;
   padding: 0;
   font-size: 0.9em;
   color: inherit;
 }
 
-.markdown-body .hljs-comment,
-.markdown-body .hljs-quote { color: #6a9955; font-style: italic; }
-.markdown-body .hljs-keyword,
-.markdown-body .hljs-selector-tag,
-.markdown-body .hljs-addition { color: #569cd6; }
-.markdown-body .hljs-number,
-.markdown-body .hljs-string,
-.markdown-body .hljs-meta .hljs-meta-string,
-.markdown-body .hljs-literal,
-.markdown-body .hljs-doctag,
-.markdown-body .hljs-regexp { color: #ce9178; }
-.markdown-body .hljs-title,
-.markdown-body .hljs-section,
-.markdown-body .hljs-name,
-.markdown-body .hljs-selector-id,
-.markdown-body .hljs-selector-class { color: #dcdcaa; }
-.markdown-body .hljs-attribute,
-.markdown-body .hljs-attr,
-.markdown-body .hljs-variable,
-.markdown-body .hljs-template-variable,
-.markdown-body .hljs-class .hljs-title,
-.markdown-body .hljs-type { color: #4ec9b0; }
-.markdown-body .hljs-symbol,
-.markdown-body .hljs-bullet,
-.markdown-body .hljs-subst,
-.markdown-body .hljs-meta,
-.markdown-body .hljs-meta .hljs-keyword,
-.markdown-body .hljs-selector-attr,
-.markdown-body .hljs-selector-pseudo,
-.markdown-body .hljs-link { color: #d4d4d4; }
-.markdown-body .hljs-built_in,
-.markdown-body .hljs-deletion { color: #ce9178; }
-.markdown-body .hljs-function { color: #dcdcaa; }
-.markdown-body .hljs-params { color: #9cdcfe; }
-.markdown-body .hljs-property { color: #9cdcfe; }
-.markdown-body .hljs-punctuation { color: #d4d4d4; }
-.markdown-body .hljs-operator { color: #d4d4d4; }
-.markdown-body .hljs-tag { color: #569cd6; }
-.markdown-body .hljs-tag .hljs-attr { color: #9cdcfe; }
-.markdown-body .hljs-tag .hljs-string { color: #ce9178; }
+.markdown-body :deep(.hljs-comment),
+.markdown-body :deep(.hljs-quote) { color: #6a9955; font-style: italic; }
+.markdown-body :deep(.hljs-keyword),
+.markdown-body :deep(.hljs-selector-tag),
+.markdown-body :deep(.hljs-addition) { color: #569cd6; }
+.markdown-body :deep(.hljs-number),
+.markdown-body :deep(.hljs-string),
+.markdown-body :deep(.hljs-meta .hljs-meta-string),
+.markdown-body :deep(.hljs-literal),
+.markdown-body :deep(.hljs-doctag),
+.markdown-body :deep(.hljs-regexp) { color: #ce9178; }
+.markdown-body :deep(.hljs-title),
+.markdown-body :deep(.hljs-section),
+.markdown-body :deep(.hljs-name),
+.markdown-body :deep(.hljs-selector-id),
+.markdown-body :deep(.hljs-selector-class) { color: #dcdcaa; }
+.markdown-body :deep(.hljs-attribute),
+.markdown-body :deep(.hljs-attr),
+.markdown-body :deep(.hljs-variable),
+.markdown-body :deep(.hljs-template-variable),
+.markdown-body :deep(.hljs-class .hljs-title),
+.markdown-body :deep(.hljs-type) { color: #4ec9b0; }
+.markdown-body :deep(.hljs-symbol),
+.markdown-body :deep(.hljs-bullet),
+.markdown-body :deep(.hljs-subst),
+.markdown-body :deep(.hljs-meta),
+.markdown-body :deep(.hljs-meta .hljs-keyword),
+.markdown-body :deep(.hljs-selector-attr),
+.markdown-body :deep(.hljs-selector-pseudo),
+.markdown-body :deep(.hljs-link) { color: #d4d4d4; }
+.markdown-body :deep(.hljs-built_in),
+.markdown-body :deep(.hljs-deletion) { color: #ce9178; }
+.markdown-body :deep(.hljs-function) { color: #dcdcaa; }
+.markdown-body :deep(.hljs-params) { color: #9cdcfe; }
+.markdown-body :deep(.hljs-property) { color: #9cdcfe; }
+.markdown-body :deep(.hljs-punctuation) { color: #d4d4d4; }
+.markdown-body :deep(.hljs-operator) { color: #d4d4d4; }
+.markdown-body :deep(.hljs-tag) { color: #569cd6; }
+.markdown-body :deep(.hljs-tag .hljs-attr) { color: #9cdcfe; }
+.markdown-body :deep(.hljs-tag .hljs-string) { color: #ce9178; }
 
-.markdown-body li { position: relative; }
-.markdown-body img { max-width: 100%; display: block; }
+.markdown-body :deep(li) { position: relative; }
+.markdown-body :deep(img) { max-width: 100%; display: block; }
 
-.markdown-body a {
+.markdown-body :deep(a) {
   color: var(--pankow-color-primary);
 }
-.markdown-body a:hover {
+.markdown-body :deep(a:hover) {
   color: var(--pankow-color-primary-hover);
 }
 
-.markdown-body ul,
-.markdown-body ol {
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
   padding-left: 30px;
 }
 
-.markdown-body blockquote {
+.markdown-body :deep(blockquote) {
   padding-left: 1em;
   border-left: 3px solid var(--pankow-color-border);
   margin-left: 0;
   margin-right: 0;
 }
 
-.markdown-body p { margin-bottom: 1em; }
+.markdown-body :deep(p) { margin-bottom: 1em; }
 
-.markdown-body li p,
-.markdown-body li p:first-child {
+.markdown-body :deep(li p),
+.markdown-body :deep(li p:first-child) {
   margin-top: 0;
   margin-bottom: 0;
 }
 
-.markdown-body table {
+.markdown-body :deep(table) {
   border-collapse: collapse;
   width: 100%;
 }
 
-.markdown-body td,
-.markdown-body th {
+.markdown-body :deep(td),
+.markdown-body :deep(th) {
   border: 1px solid var(--pankow-color-border);
   padding: 6px 8px;
   vertical-align: top;
   box-sizing: border-box;
 }
 
-.markdown-body th {
+.markdown-body :deep(th) {
   font-weight: 600;
   background: var(--pankow-color-background-hover, rgba(0, 0, 0, 0.04));
   text-align: left;
 }
 
-.markdown-body h1 { font-size: 2em; }
-.markdown-body h2 { font-size: 1.5em; }
-.markdown-body h3 { font-size: 1.17em; }
-.markdown-body h4 { font-size: 1em; }
-.markdown-body h5 { font-size: 0.83em; }
-.markdown-body h6 { font-size: 0.67em; }
+.markdown-body :deep(h1) { font-size: 2em; }
+.markdown-body :deep(h2) { font-size: 1.5em; }
+.markdown-body :deep(h3) { font-size: 1.17em; }
+.markdown-body :deep(h4) { font-size: 1em; }
+.markdown-body :deep(h5) { font-size: 0.83em; }
+.markdown-body :deep(h6) { font-size: 0.67em; }
 
-.markdown-body hr {
+.markdown-body :deep(hr) {
   border: none;
   height: 2px;
   margin: 1.5em 0;
@@ -553,13 +569,13 @@ defineExpose({ canHandle, open });
   opacity: 0.3;
 }
 
-.markdown-body p:first-child,
-.markdown-body h1:first-child,
-.markdown-body h2:first-child,
-.markdown-body h3:first-child,
-.markdown-body h4:first-child,
-.markdown-body h5:first-child,
-.markdown-body h6:first-child {
+.markdown-body :deep(p:first-child),
+.markdown-body :deep(h1:first-child),
+.markdown-body :deep(h2:first-child),
+.markdown-body :deep(h3:first-child),
+.markdown-body :deep(h4:first-child),
+.markdown-body :deep(h5:first-child),
+.markdown-body :deep(h6:first-child) {
   margin-top: 16px;
 }
 

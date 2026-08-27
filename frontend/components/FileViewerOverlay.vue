@@ -92,10 +92,10 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
   } else if (threeDViewer.value.canHandle(item)) {
     threeDViewer.value.open(item, await DirectoryModel.getRawContent(resource));
     viewer.value = 'threed';
-  } else if (MainModel.canHandleWithOffice(item)) {
-    await openOffice(item, resource);
   } else if (markdownViewer.value.canHandle(item)) {
     await openMarkdown(item, resource);
+  } else if (MainModel.canHandleWithOffice(item)) {
+    await openOffice(item, resource);
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
     else window.location.href = item.downloadFileUrl;

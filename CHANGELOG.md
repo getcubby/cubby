@@ -584,3 +584,13 @@
 * Update cubby to 2.16.1
 * Fix OpenID login issue
 
+[2.17.0]
+* Update cubby to 2.17.0
+* New icon set for folder/files
+* Update pankow with new sidebar
+* Binary files which have no viewer do not open in text editor anymore but trigger a download
+* Support "open with..." for pdf and markdown
+* Remove markdown editor in favor of a markdown viewer. Edits can be made in the text editor
+* Auto-configure office according to Cloudron 10 default app setting
+* Improve some UI transitions
+

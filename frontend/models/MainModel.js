@@ -35,25 +35,6 @@ async function getConfig() {
   return configCache;
 }
 
-async function getWopiHost() {
-  let error, result;
-  try {
-    result = await fetcher.get(`${API_ORIGIN}/api/v1/settings/office`);
-  } catch (e) {
-    error = e;
-  }
-
-  if (error || result.status !== 200) throw new Error('Failed to get wopi host', { cause: error || result })
-
-  return result.body.host || '';
-}
-
-async function setWopiHost(wopiHost) {
-  const result = await fetcher.put(`${API_ORIGIN}/api/v1/settings/office`, { host: wopiHost });
-  if (result.status === 412) throw new Error(result.body.message);
-  if (result.status !== 200) throw new Error(`Unexptected ok status code ${result.status} ${result.statusText}`);
-}
-
 async function getUsers() {
   let error, result;
   try {
@@ -95,10 +76,6 @@ function canHandleWithOffice(entry) {
   if (!configCache.viewers.collabora.extensions) return false;
 
   return configCache.viewers.collabora.extensions.find(function (e) { return entry.fileName.endsWith(e); });
-}
-
-function isOfficeWorking() {
-  return canHandleWithOffice({ fileName: '.rtf'} );
 }
 
 async function getOfficeHandle(entry) {
@@ -198,13 +175,10 @@ async function logout() {
 export default {
   getProfile,
   getConfig,
-  getWopiHost,
-  setWopiHost,
   getUsers,
   setAdmin,
   removeUser,
   canHandleWithOffice,
-  isOfficeWorking,
   getOfficeHandle,
   recent,
   activity,

@@ -1,6 +1,5 @@
 import assert from 'assert';
 import { ZipArchive } from 'archiver';
-import settings from '../settings.js';
 import debug from 'debug';
 import files from '../files.js';
 import groupFolders from '../groupfolders.js';
@@ -24,8 +23,7 @@ async function getConfig(req, res, next) {
         viewers: {}
     };
 
-    const collabora = await settings.getJson(settings.COLLABORA_KEY);
-    const collaboraHost = collabora?.host || '';
+    const collaboraHost = await office.getWopiHost();
     if (collaboraHost) {
         const [error, extensions] = await safe(office.getSupportedExtensions(collaboraHost));
         if (error) console.error('Failed to get collabora config. Disabling office viewer.', error);

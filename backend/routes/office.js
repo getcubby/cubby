@@ -1,6 +1,5 @@
 import assert from 'assert';
 import constants from '../constants.js';
-import settings from '../settings.js';
 import crypto from 'crypto';
 import debug from 'debug';
 import { DOMParser as Dom } from 'xmldom';
@@ -66,8 +65,7 @@ async function getHandle(req, res, next) {
     const resourcePath = decodeURIComponent(req.query.resourcePath);
     if (!resourcePath) return next(new HttpError(400, 'resourcePath must be a non-empty string'));
 
-    const collabora = await settings.getJson(settings.COLLABORA_KEY);
-    const collaboraHost = collabora?.host || '';
+    const collaboraHost = await office.getWopiHost();
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
@@ -334,32 +332,6 @@ async function putFile(req, res, next) {
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));
 }
 
-async function getSettings(req, res, next) {
-    const officeSettings = await settings.getJson(settings.COLLABORA_KEY);
-    return next(new HttpSuccess(200, officeSettings || { host: '' }));
-}
-
-async function setSettings(req, res, next) {
-    if (req.body.host) {
-        // basic host testing
-        const [error, result] = await safe(office.getSupportedExtensions(req.body.host));
-        if (error) {
-            console.error(`Failed to connect to WOPI host ${req.body.host}`, error);
-            return next(new HttpError(412, 'Cannot connect to WOPI host'));
-        }
-
-        if (result.length === 0) return next(new HttpError(412, 'Does not appear to be a supported WOPI host'));
-    }
-
-    const [error] = await safe(settings.setJson(settings.COLLABORA_KEY, { host: req.body.host || '' }));
-    if (error) {
-        console.error(error);
-        return next(new HttpError(500, 'failed to commit office settings'));
-    }
-
-    next(new HttpSuccess(200, {}));
-}
-
 if (!constants.TEST) {
     setInterval(cleanExpiredLocks, 5 * 60 * 1000);
 }
@@ -370,7 +342,5 @@ export default {
     checkFileInfo,
     getFile,
     putFile,
-    postFile,
-    getSettings,
-    setSettings
+    postFile
 };

@@ -3,7 +3,6 @@
 import { ref, inject, onMounted } from 'vue';
 import UsersSettings from './settings/UsersSettings.vue';
 import GroupFoldersSettings from './settings/GroupFoldersSettings.vue';
-import OfficeIntegrationSettings from './settings/OfficeIntegrationSettings.vue';
 import MainModel from '../models/MainModel.js';
 
 const profile = inject('profile');
@@ -43,7 +42,6 @@ onMounted(async () => {
 
         <UsersSettings :profile="profile" :users="users" :busy="usersBusy" @users-changed="onUsersChanged" />
         <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
-        <OfficeIntegrationSettings />
       </div>
     </div>
   </div>

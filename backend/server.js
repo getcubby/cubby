@@ -65,9 +65,6 @@ async function start() {
 
         router.get('/api/v1/profile', users.isAuthenticated, users.profile);
 
-        router.get('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.getSettings);
-        router.put('/api/v1/settings/office', users.isAuthenticated, users.isAdmin, office.setSettings);
-
         router.post('/api/v1/settings/groupfolders', users.isAuthenticated, users.isAdmin, groupFolders.add);
         router.get('/api/v1/settings/groupfolders', users.isAuthenticated, users.isAdmin, groupFolders.list);
         router.get('/api/v1/settings/groupfolders/:id', users.isAuthenticated, users.isAdmin, groupFolders.get);

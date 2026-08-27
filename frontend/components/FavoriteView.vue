@@ -26,7 +26,7 @@ async function onUnFavorite(entry) {
 }
 
 function iconError(event, entry) {
-  event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
+  event.target.src = `${API_ORIGIN}/mime-types/application-x-generic.svg`;
 
   setTimeout(() => {
     if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;

@@ -699,7 +699,7 @@ defineExpose({
             :upload-folder-handler="openUploadFolder"
             :drop-handler="onDrop"
             :items="entries"
-            :fallback-icon="`${BASE_URL}mime-types/none.svg`"
+            :fallback-icon="`${BASE_URL}mime-types/application-x-generic.svg`"
           >
             <template #empty>
               <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" description="Create new or upload existing files" />

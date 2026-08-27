@@ -69,7 +69,7 @@ Entry.prototype.asGroup = function () {
 };
 
 Entry.prototype.getPreviewUrl = function () {
-    if (!this.mimeType) return '/mime-types/application-octet-stream.svg';
+    if (!this.mimeType) return '/mime-types/application-x-generic.svg';
     if (this.mimeType === 'inode/recent') return '/folder-temp.svg';
     if (this.mimeType === 'inode/share') return '/folder-network.svg';
 
@@ -90,10 +90,10 @@ Entry.prototype.getPreviewUrl = function () {
 
     const mime = this.mimeType.split('/');
 
-    if (mimeIcons[mime[0] + '-' + mime[1]]) return '/mime-types/' + mime[0] + '-' + mime[1] + '.svg';
-    if (mimeIcons[mime[0] + '-x-generic']) return '/mime-types/' + mime[0] + '-x-generic.svg';
+    if (mimeIcons[mime[0] + '-' + mime[1]]) return '/mime-types/' + mimeIcons[mime[0] + '-' + mime[1]];
+    if (mimeIcons[mime[0] + '-x-generic']) return '/mime-types/' + mimeIcons[mime[0] + '-x-generic'];
 
-    return '/mime-types/application-octet-stream.svg';
+    return '/mime-types/application-x-generic.svg';
 };
 
 Entry.prototype.withoutPrivate = function (username = null) {

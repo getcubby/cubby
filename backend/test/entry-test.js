@@ -77,6 +77,6 @@ describe('entry', function () {
 
     it('returns a mime icon preview url for regular files', function () {
         const entry = makeEntry({ mimeType: 'text/plain' });
-        assert.equal(entry.getPreviewUrl(), '/mime-types/text-plain.svg');
+        assert.equal(entry.getPreviewUrl(), '/mime-types/text-x-generic.svg');
     });
 });

@@ -46,7 +46,7 @@ function onActivateItem(entry) {
 }
 
 function iconError(event, entry) {
-  event.target.src = `${API_ORIGIN}/mime-types/none.svg`;
+  event.target.src = `${API_ORIGIN}/mime-types/application-x-generic.svg`;
 
   setTimeout(() => {
     if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
@@ -63,8 +63,8 @@ function iconError(event, entry) {
   <div class="recent">
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="buckets" v-else>
-      <div class="no-recents">
-        <EmptyState v-if="buckets.length === 0" icon="fa-regular fa-clock" title="No recent files" description="Files you open will show up here" />
+      <div class="no-recents" v-if="buckets.length === 0">
+        <EmptyState icon="fa-regular fa-clock" title="No recent files" description="Files you open will show up here" />
       </div>
       <div class="bucket" v-for="bucket in buckets" :key="bucket.label">
         <h2>{{ bucket.label }}</h2>

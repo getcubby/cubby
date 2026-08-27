@@ -36,7 +36,6 @@ const sideBar = useTemplateRef('sideBar');
 const ready = ref(false);
 const view = ref('');
 const profile = ref({});
-const config = ref({});
 const currentHash = ref('');
 
 const profileMenu = computed(() => {
@@ -181,13 +180,12 @@ async function fileViewerSaveHandler(item, content, done) {
 
 async function refreshConfig() {
   try {
-    config.value = await MainModel.getConfig();
+    await MainModel.getConfig();
   } catch (e) {
     if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
   }
 }
 
-provide('refreshConfig', refreshConfig);
 provide('profile', profile);
 
 function resetNonFileViewState() {

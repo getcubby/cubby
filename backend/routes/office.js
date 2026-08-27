@@ -29,6 +29,7 @@ const HANDLES = {};
 const LOCKS = {};
 const FILE_SESSION = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 5000;
 
 function getAccessTokenFromRequest(req) {
     let accessToken = req.query.access_token || req.body?.accessToken || '';
@@ -71,7 +72,7 @@ async function getHandle(req, res, next) {
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
-    const [fetchError, discoveryRes] = await safe(fetch(`${collaboraHost}/hosting/discovery`));
+    const [fetchError, discoveryRes] = await safe(fetch(`${collaboraHost}/hosting/discovery`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }));
     if (fetchError) {
         if (fetchError.code === 'ENOTFOUND') return next(new HttpError(412, 'office endpoint not configured'));
         return next(new HttpError(500, fetchError));

@@ -1,7 +1,7 @@
 # Cubby
 
 Cubby is a pure filesharing app with some built-in viewers (text, code, pdf, images, ...).
-It further supports an external collabora office installation.
+It can open and edit office documents through the office app configured on your Cloudron (Collabora Online or OnlyOffice).
 
 The app is mainly developed by the [Cloudron](https://cloudron.io) team to provide an open source file sharing application.
 

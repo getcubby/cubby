@@ -125,10 +125,6 @@ CREATE TABLE IF NOT EXISTS file_activity(
     FOREIGN KEY(owner_username) REFERENCES users(username),
     FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id));
 
-CREATE TABLE IF NOT EXISTS settings(
-    name VARCHAR(128) NOT NULL PRIMARY KEY,
-    value TEXT);
-
 # a file drop provides a public upload-only link for a specific folder
 CREATE TABLE IF NOT EXISTS filedrops(
     id VARCHAR(128) NOT NULL UNIQUE,

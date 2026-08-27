@@ -1,17 +1,14 @@
 import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
-import common from './common.js';
 import nock from 'nock';
 import office from '../office.js';
 
 describe('office', function () {
-    const { databaseSetup, cleanup } = common;
-
-    beforeEach(async function () {
-        await databaseSetup();
+    beforeEach(function () {
+        nock.cleanAll();
     });
-    after(async function () {
-        await cleanup();
+    after(function () {
+        nock.cleanAll();
     });
 
     it('returns empty string when no default office app is set', async function () {

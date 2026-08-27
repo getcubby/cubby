@@ -162,8 +162,8 @@ function onFileViewerClose() {
   window.location.hash = `files${resource.resourcePath}`;
 }
 
-async function onOpenFile({ item, resource, siblingEntries }) {
-  await fileViewerOverlay.value?.openFile(item, resource, siblingEntries);
+async function onOpenFile({ item, resource, siblingEntries, viewer }) {
+  await fileViewerOverlay.value?.openFile(item, resource, siblingEntries, viewer);
 }
 
 function onCloseViewer() {

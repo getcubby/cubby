@@ -17,6 +17,7 @@ import FavoriteModel from '../models/FavoriteModel.js';
 import PreviewPanel from './PreviewPanel.vue';
 import EmptyState from './EmptyState.vue';
 import RenameDialog from './RenameDialog.vue';
+import { OPEN_WITH_VIEWERS, getOpenWithViewers } from '../viewers.js';
 
 const { notify } = useNotify();
 
@@ -47,6 +48,7 @@ const breadCrumbHome = ref({
   route: '#files'
 });
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
+const pendingViewer = ref(null);
 
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
@@ -549,7 +551,8 @@ async function loadPath(path, forceLoad = false) {
   else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
 
   if (!item.isDirectory) {
-    emit('open-file', { item, resource, siblingEntries: entries.value });
+    emit('open-file', { item, resource, siblingEntries: entries.value, viewer: pendingViewer.value });
+    pendingViewer.value = null;
   } else {
     emit('close-viewer');
     clearSelection();
@@ -565,6 +568,12 @@ function onOpen(item) {
   if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
   else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
   else window.location.hash = `files/home${item.filePath}`;
+}
+
+function openWith(item, viewerId) {
+  if (!item) return;
+  pendingViewer.value = viewerId;
+  onOpen(item);
 }
 
 function onUp() {
@@ -599,6 +608,23 @@ onMounted(() => {
       const item = directoryView.value?.focusItem;
       return !item || item.isFile;
     },
+  });
+
+  const openIdx = model.findIndex(i => i.id === 'open');
+  if (openIdx === -1) return;
+
+  OPEN_WITH_VIEWERS.forEach((def, index) => {
+    model.splice(openIdx + 1 + index, 0, {
+      id: `open-with-${def.id}`,
+      label: def.label,
+      action: () => {
+        openWith(directoryView.value?.focusItem, def.id);
+      },
+      visible: () => {
+        const item = directoryView.value?.focusItem;
+        return !!getOpenWithViewers(item).find((v) => v.id === def.id);
+      },
+    });
   });
 });
 

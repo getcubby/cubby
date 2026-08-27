@@ -3,6 +3,7 @@
     <div class="viewer-header">
       <div class="viewer-title">{{ entry.fileName }}</div>
       <div class="viewer-actions">
+        <Button v-if="openWithHandler" icon="fa-solid fa-pencil" outline @click="openWithHandler">Edit</Button>
         <Button icon="fa-solid fa-xmark" @click="onClose">{{ utils.translation('main.dialog.close') }}</Button>
       </div>
     </div>
@@ -116,6 +117,13 @@ marked.use({
 });
 
 const emit = defineEmits(['close']);
+
+const props = defineProps({
+  openWithHandler: {
+    type: Function,
+    default: null,
+  },
+});
 
 const entry = ref({});
 const html = ref('');

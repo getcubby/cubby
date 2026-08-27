@@ -24,6 +24,9 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const viewer = ref('');
+const currentItem = ref(null);
+const currentResource = ref(null);
+const currentSiblingEntries = ref([]);
 
 const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
@@ -45,11 +48,42 @@ function onImageViewerNavigate(entry) {
   history.replaceState(null, '', `#files${entry.resourcePath}`);
 }
 
-async function openFile(item, resource, siblingEntries) {
+async function openOffice(item, resource) {
+  window.open('/office.html#' + item.resourcePath, '_blank');
+  window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
+}
+
+async function openMarkdown(item, resource) {
+  const raw = await DirectoryModel.getRawContent(resource);
+  const textContent = typeof raw === 'string' ? raw : await raw.text();
+  markdownViewer.value.open(item, textContent);
+  viewer.value = 'markdown';
+}
+
+async function openText(item, resource) {
+  const raw = await DirectoryModel.getRawContent(resource);
+  const textContent = typeof raw === 'string' ? raw : await raw.text();
+  textViewer.value.open(item, textContent);
+  viewer.value = 'text';
+}
+
+async function openFile(item, resource, siblingEntries, preferredViewer) {
   close();
 
+  currentItem.value = item;
+  currentResource.value = resource;
+  currentSiblingEntries.value = siblingEntries || [];
+
+  if (preferredViewer === 'office' && MainModel.canHandleWithOffice(item)) {
+    await openOffice(item, resource);
+    return;
+  } else if (preferredViewer === 'text' && textViewer.value.canHandle(item)) {
+    await openText(item, resource);
+    return;
+  }
+
   if (imageViewer.value.canHandle(item)) {
-    const otherSupportedEntries = siblingEntries.filter((e) => imageViewer.value.canHandle(e));
+    const otherSupportedEntries = (siblingEntries || []).filter((e) => imageViewer.value.canHandle(e));
     imageViewer.value.open(item, otherSupportedEntries);
     viewer.value = 'image';
   } else if (pdfViewer.value.canHandle(item)) {
@@ -59,29 +93,27 @@ async function openFile(item, resource, siblingEntries) {
     threeDViewer.value.open(item, await DirectoryModel.getRawContent(resource));
     viewer.value = 'threed';
   } else if (MainModel.canHandleWithOffice(item)) {
-    window.open('/office.html#' + item.resourcePath, '_blank');
-    window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
+    await openOffice(item, resource);
   } else if (markdownViewer.value.canHandle(item)) {
-    const raw = await DirectoryModel.getRawContent(resource);
-    const textContent = typeof raw === 'string' ? raw : await raw.text();
-    markdownViewer.value.open(item, textContent);
-    viewer.value = 'markdown';
+    await openMarkdown(item, resource);
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
     else window.location.href = item.downloadFileUrl;
     history.replaceState(null, '', `#files${resource.parentResourcePath}`);
   } else if (textViewer.value.canHandle(item)) {
-    const raw = await DirectoryModel.getRawContent(resource);
-    const textContent = typeof raw === 'string' ? raw : await raw.text();
-    textViewer.value.open(item, textContent);
-    viewer.value = 'text';
+    await openText(item, resource);
   } else {
     viewer.value = 'generic';
     genericViewer.value.open(item);
   }
 }
 
-defineExpose({ openFile, close });
+async function openWith(viewerId) {
+  if (!currentItem.value || !currentResource.value) return;
+  await openFile(currentItem.value, currentResource.value, currentSiblingEntries.value, viewerId);
+}
+
+defineExpose({ openFile, close, openWith });
 
 </script>
 
@@ -103,7 +135,7 @@ defineExpose({ openFile, close });
   </Transition>
   <Transition name="pankow-fade">
     <div class="viewer-container" v-show="viewer === 'markdown'">
-      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" />
+      <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :open-with-handler="() => openWith('text')" />
     </div>
   </Transition>
   <Transition name="pankow-fade">

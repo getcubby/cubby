@@ -17,10 +17,12 @@ const debugLog = debug('cubby:routes:misc');
 
 // This is a public route, be careful what to send
 async function getConfig(req, res, next) {
-    // currently we only send configs for collabora
+    const webadminOrigin = process.env.CLOUDRON_WEBADMIN_ORIGIN || '';
 
     const tmp = {
-        viewers: {}
+        viewers: {},
+        // Cloudron dashboard profile (App passwords live at /#/profile)
+        appPasswordsUrl: webadminOrigin ? `${webadminOrigin}/#/profile` : ''
     };
 
     const collaboraHost = await office.getWopiHost();

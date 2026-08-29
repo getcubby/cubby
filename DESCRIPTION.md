@@ -15,4 +15,5 @@ for team collaboration—from document viewing to rich media playback is built-i
 * **Office integration**: Seamlessly connects with Collabora Online or OnlyOffice to handle spreadsheets and presentations.
 * **Built-in viewers**: Preview PDFs, images, media, text, and source code directly inside the browser.
 * **Flexible sharing**: Share files seamlessly with internal users, external guests, or collaborate out of independent group folders.
+* **WebDAV**: Open your files from a file manager, tablet, or backup app.
 

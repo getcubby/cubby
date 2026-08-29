@@ -73,9 +73,42 @@ This will also print the frontend asset builder and watcher command to be run in
 
 During development the user directory is a list of hardcoded users to test with and provided as a mock OpenID provider.
 
-## Windows Notes
+## WebDAV
 
-To enable Windows to accept WebDav with basic authentication, the following registry key needs to be set:
+Cubby exposes a WebDAV endpoint so you can open files from a file manager, tablet, or backup app.
+
+```
+https://<your-cubby-domain>/webdav/<username>/
+```
+
+`<username>` must match the account you authenticate as. After login the root lists `home/` (personal files), `shares/` (shared with you), and `groupfolders/`.
+
+On Cloudron, create an **App password** in the dashboard under **Profile → App passwords**, then use your Cloudron username and that password in the WebDAV client. Browser SSO is not used for WebDAV.
+
+In the app, the profile menu item **WebDAV** shows the URL and a link to create an app password.
+
+Example mounts:
+
+* GNOME Files: `davs://<your-cubby-domain>/webdav/<username>/`
+* KDE Dolphin: `webdavs://<your-cubby-domain>/webdav/<username>/`
+* macOS Finder: **Go → Connect to Server** with the `https://` URL above
+
+rclone:
+
+```
+rclone config
+# type: webdav
+# url: https://<your-cubby-domain>/webdav/<username>/
+# vendor: other
+# user: <username>
+# pass: <app password>
+```
+
+During local development (`CLOUDRON` unset), any username works as long as it matches the path, and the password is `password`.
+
+### Windows
+
+To enable Windows to accept WebDAV with basic authentication, the following registry key needs to be set:
 See: <https://docs.nextcloud.com/server/latest/user_manual/en/files/access_webdav.html#accessing-files-using-microsoft-windows>
 
 You can create a .reg file with the following content and import it into the registry:

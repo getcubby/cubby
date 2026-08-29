@@ -62,9 +62,9 @@ If your team uses **Group folders**, you will see shared team spaces in the side
 
 Right-click a `.zip` or other supported archive and choose **Extract** to unpack it into the current folder.
 
-## Connect from your desktop
+## WebDAV
 
-Cubby supports **WebDAV**, so you can mount your files as a network drive in your operating system's file manager. Ask your administrator for the WebDAV URL and your login details.
+Cubby supports **WebDAV**, so you can open your files from a file manager, tablet, or backup app. Open your profile menu and choose **WebDAV** for the URL and login details.
 
 ---
 

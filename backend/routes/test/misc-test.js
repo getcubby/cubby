@@ -18,5 +18,6 @@ describe('misc API', function () {
         const response = await superagent.get(`${serverUrl}/api/v1/config`);
         assert.equal(response.status, 200);
         assert.ok(response.body.viewers);
+        assert.equal(typeof response.body.appPasswordsUrl, 'string');
     });
 });

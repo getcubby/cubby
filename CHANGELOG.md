@@ -593,4 +593,5 @@
 * Remove markdown editor in favor of a markdown viewer. Edits can be made in the text editor
 * Auto-configure office according to Cloudron 10 default app setting
 * Improve some UI transitions
+* Add WebDAV dialog with URL and Cloudron app password link
 

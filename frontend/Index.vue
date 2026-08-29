@@ -15,6 +15,7 @@ import SearchBar from './components/SearchBar.vue';
 import ShareDialog from './components/ShareDialog.vue';
 import FileDropDialog from './components/FileDropDialog.vue';
 import ProfileMenuButton from './components/ProfileMenuButton.vue';
+import WebDavDialog from './components/WebDavDialog.vue';
 
 const VIEWS = {
   LOGIN: 'login',
@@ -29,6 +30,7 @@ const VIEWS = {
 
 const shareDialog = useTemplateRef('shareDialog');
 const fileDropDialog = useTemplateRef('fileDropDialog');
+const webDavDialog = useTemplateRef('webDavDialog');
 const fileBrowser = useTemplateRef('fileBrowser');
 const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
 const sideBar = useTemplateRef('sideBar');
@@ -39,15 +41,19 @@ const profile = ref({});
 const currentHash = ref('');
 
 const profileMenu = computed(() => {
-  const items = [];
+  const items = [{
+    label: 'WebDAV',
+    icon: 'fa-solid fa-network-wired',
+    action: () => { webDavDialog.value?.open(); },
+  }];
   if (profile.value.admin) {
     items.push({
       label: 'Settings',
       icon: 'fa-solid fa-cog',
       action: () => { window.location.href = '#settings'; },
     });
-    items.push({ separator: true });
   }
+  items.push({ separator: true });
   items.push({
     label: 'Log out',
     icon: 'fa-solid fa-right-from-bracket',
@@ -369,6 +375,8 @@ onBeforeUnmount(() => {
   <ShareDialog ref="shareDialog"/>
 
   <FileDropDialog ref="fileDropDialog"/>
+
+  <WebDavDialog ref="webDavDialog"/>
 
   <FileViewerOverlay
     ref="fileViewerOverlay"

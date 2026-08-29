@@ -28,8 +28,9 @@ async function getConfig() {
 
   configCache = {
     viewers: {
-      collabora: result.body.viewers.collabora || {}
-    }
+      collabora: result.body.viewers?.collabora || {}
+    },
+    appPasswordsUrl: result.body.appPasswordsUrl || ''
   };
 
   return configCache;

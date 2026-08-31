@@ -141,7 +141,12 @@ defineExpose({
         <template #user>
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedWith" class="shared-link" :key="link.id">
-              <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
+              <div>
+                <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
+                <small style="color: var(--pankow-color-text-secondary)">
+                  {{ link.readonly ? 'Read only' : 'Read & write' }}
+                </small>
+              </div>
               <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
             </div>
             <div v-show="sharedWith.length === 0" class="shared-link-empty">
@@ -156,6 +161,9 @@ defineExpose({
               <SingleSelect v-model="receiverUsername" :options="users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
               <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!receiverUsername">Create share</Button>
             </InputGroup>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+              <Checkbox id="shareReadonly" label="Read only" v-model="readonly" />
+            </div>
           </form>
         </template>
         <template #link>

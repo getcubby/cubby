@@ -23,7 +23,6 @@ const profile = inject('profile');
 
 const dialog = useTemplateRef('dialog');
 
-const error = ref('');
 const receiverUsername = ref('');
 const readonly = ref(false);
 const users = ref([]);
@@ -50,25 +49,25 @@ function endOfLocalDayMs(ymd) {
   return new Date(y, m - 1, day, 23, 59, 59, 999).getTime();
 }
 
+function entryOwner() {
+  return entry.value.group
+    ? { ownerUsername: null, ownerGroupfolder: entry.value.group.id }
+    : { ownerUsername: entry.value.owner, ownerGroupfolder: null };
+}
+
 async function refresh(item = null) {
   entry.value = await DirectoryModel.get(item || entry.value);
 
   sharedWith.value = entry.value.sharedWith.filter((s) => s.receiverUsername);
   sharedLinks.value = entry.value.sharedWith.filter((s) => !s.receiverUsername);
-
-  users.value.forEach((user) => {
-    user.alreadyUsed = entry.value.sharedWith.find((share) => { return share.receiverUsername === user.username; });
-  });
 }
 
 async function onCreateShare() {
-  const ownerUsername = entry.value.group ? null : entry.value.owner;
-  const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
+  const { ownerUsername, ownerGroupfolder } = entryOwner();
 
   await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUsername: receiverUsername.value });
 
   // reset the form
-  error.value = '';
   receiverUsername.value = '';
   readonly.value = false;
 
@@ -96,8 +95,7 @@ async function onCreateShareLink() {
       return;
     }
   }
-  const ownerUsername = entry.value.group ? null : entry.value.owner;
-  const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
+  const { ownerUsername, ownerGroupfolder } = entryOwner();
 
   const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt });
 
@@ -108,7 +106,6 @@ async function onCreateShareLink() {
 
 defineExpose({
   async open(item) {
-    error.value = '';
     receiverUsername.value = '';
     readonly.value = false;
     shareLinkReadonly.value = true;
@@ -159,8 +156,6 @@ defineExpose({
           </div>
 
           <form @submit="onCreateShare" @submit.prevent>
-            <!-- TODO optionDisabled="alreadyUsed"  -->
-            <small v-show="error">{{ error }}</small>
             <InputGroup>
               <SingleSelect v-model="receiverUsername" :options="users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
               <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!receiverUsername">Create share</Button>

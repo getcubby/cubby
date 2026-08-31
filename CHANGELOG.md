@@ -600,3 +600,8 @@
 * Add webdav info dialog
 * Fix tags
 
+[2.17.2]
+* Update cubby to 2.17.2
+* Fix search regression
+* Implement read-only shares with other users
+

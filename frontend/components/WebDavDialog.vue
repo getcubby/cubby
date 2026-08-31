@@ -31,10 +31,10 @@ defineExpose({
 <template>
   <Dialog
     ref="dialog"
-    class="webdav-dialog"
     title="WebDAV"
     reject-label="Close"
     reject-style="secondary"
+    :style="{ width: 'min(560px, calc(100% - 20px))', maxWidth: 'min(560px, calc(100% - 20px))' }"
   >
     <p>
       Use this URL in a file manager, tablet, or backup app. Authenticate with your username and an
@@ -75,15 +75,6 @@ defineExpose({
   margin-top: 16px;
   margin-bottom: 0;
   color: var(--pankow-color-text-secondary);
-}
-
-</style>
-
-<style>
-
-.webdav-dialog {
-  width: min(560px, calc(100% - 20px));
-  max-width: min(560px, calc(100% - 20px));
 }
 
 </style>

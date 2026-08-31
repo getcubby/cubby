@@ -17,8 +17,11 @@
     "file",
     "sharing",
     "documents",
+    "drive",
+    "onedrive",
     "dropbox",
-    "cloud"
+    "pcloud",
+    "nextcloud"
   ],
   "changelog": "file://CHANGELOG.md",
   "httpPort": 3000,

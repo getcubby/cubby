@@ -7,6 +7,7 @@ import {
   Button,
   Dialog,
   Checkbox,
+  ListItem,
   SingleSelect,
   TabView,
   InputGroup,
@@ -139,16 +140,19 @@ defineExpose({
     <div>
       <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
         <template #user>
-          <div style="margin-bottom: 10px;">
-            <div v-for="link in sharedWith" class="shared-link" :key="link.id">
-              <div>
-                <div><b>{{ link.receiverUsername || link.receiverEmail }}</b></div>
-                <small style="color: var(--pankow-color-text-secondary)">
-                  {{ link.readonly ? 'Read only' : 'Read & write' }}
-                </small>
-              </div>
-              <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-            </div>
+          <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <ListItem
+              v-for="link in sharedWith"
+              :key="link.id"
+              :label="link.receiverUsername || link.receiverEmail"
+              :subtext="link.readonly ? 'Read only' : 'Read & write'"
+              :actions="[{
+                label: 'Delete',
+                icon: 'fa-solid fa-trash',
+                action: () => onDeleteShare(link),
+                quickAction: true,
+              }]"
+            />
             <div v-show="sharedWith.length === 0" class="shared-link-empty">
               Not shared with anyone yet
             </div>
@@ -167,20 +171,28 @@ defineExpose({
           </form>
         </template>
         <template #link>
-          <div style="margin-bottom: 10px;">
-            <div v-for="link in sharedLinks" class="shared-link" :key="link.id">
-              <div>
-                <div>Created {{ prettyDate(link.createdAt) }}</div>
-                <small style="color: var(--pankow-color-text-secondary)">
-                  {{ link.readonly ? 'Read only' : 'Read & write' }}
-                  <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
-                </small>
-              </div>
-              <div style="display: flex; gap: 5px">
-                <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyShareIdLinkToClipboard(link.id)"/>
-                <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDeleteShare(link)"/>
-              </div>
-            </div>
+          <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <ListItem
+              v-for="link in sharedLinks"
+              :key="link.id"
+              :label="'Created ' + prettyDate(link.createdAt)"
+              :actions="[{
+                label: 'Copy to clipboard',
+                icon: 'fa-regular fa-copy',
+                action: () => copyShareIdLinkToClipboard(link.id),
+                quickAction: true,
+              }, {
+                label: 'Delete',
+                icon: 'fa-solid fa-trash',
+                action: () => onDeleteShare(link),
+                quickAction: true,
+              }]"
+            >
+              <template #subtext>
+                {{ link.readonly ? 'Read only' : 'Read & write' }}
+                <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
+              </template>
+            </ListItem>
             <div v-show="sharedLinks.length === 0" class="shared-link-empty">
               No shared links yet
             </div>
@@ -203,15 +215,11 @@ defineExpose({
 
 <style scoped>
 
-.shared-link, .shared-link-empty {
+.shared-link-empty {
   display: flex;
   justify-content: space-between;
   padding: 6px;
   align-items: center;
-}
-
-.shared-link:hover {
-  background-color: var(--pankow-color-background-hover);
 }
 
 </style>

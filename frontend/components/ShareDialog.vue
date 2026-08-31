@@ -137,7 +137,7 @@ defineExpose({
       Sharing "{{ entry.fileName }}" with other users or via a link.
     </p>
     <div>
-          <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
+      <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
         <template #user>
           <div style="margin-bottom: 10px;">
             <div v-for="link in sharedWith" class="shared-link" :key="link.id">

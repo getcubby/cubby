@@ -151,7 +151,7 @@ async function activity(path, { limit = 50 } = {}) {
 async function search(query, { signal } = {}) {
   let error, result;
   try {
-    result = await fetcher.get(`${API_ORIGIN}/api/v1/search`, { query }, signal ? { signal } : {});
+    result = await fetcher.get(`${API_ORIGIN}/api/v1/search`, { query: { query } }, signal ? { signal } : {});
   } catch (e) {
     if (e && e.name === 'AbortError') throw e;
     error = e;

@@ -595,3 +595,8 @@
 * Improve some UI transitions
 * Add WebDAV dialog with URL and Cloudron app password link
 
+[2.17.1]
+* Update cubby to 2.17.1
+* Add webdav info dialog
+* Fix tags
+

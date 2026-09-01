@@ -421,8 +421,7 @@ onBeforeUnmount(() => {
 .sidebar-title-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 10px;
+  gap: 6px;
   text-decoration: none;
   color: white;
   cursor: pointer;

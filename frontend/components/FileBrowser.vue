@@ -18,6 +18,7 @@ import PreviewPanel from './PreviewPanel.vue';
 import EmptyState from './EmptyState.vue';
 import RenameDialog from './RenameDialog.vue';
 import { OPEN_WITH_VIEWERS, getOpenWithViewers } from '../viewers.js';
+import { ROLES } from '../roles.js';
 
 const { notify } = useNotify();
 
@@ -59,7 +60,7 @@ const isReadonly = computed(() => {
   if (currentShare.value) return currentShare.value.readonly;
   if (currentGroup.value) {
     const member = currentGroup.value.members.find((m) => m.username === profile.value?.username);
-    return member?.role === 'viewer';
+    return member?.role === ROLES.VIEWER;
   }
   return false;
 });

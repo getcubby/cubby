@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import debug from 'debug';
 import { DOMParser as Dom } from 'xmldom';
 import files from '../files.js';
+import groupFolders from '../groupfolders.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
@@ -72,6 +73,8 @@ async function getHandle(req, res, next) {
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
+    const isReadonly = subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER;
+
     const [fetchError, discoveryRes] = await safe(fetch(`${collaboraHost}/hosting/discovery`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }));
     if (fetchError) {
         if (fetchError.code === 'ENOTFOUND') return next(new HttpError(412, 'office endpoint not configured'));
@@ -100,7 +103,7 @@ async function getHandle(req, res, next) {
             username: subject.usernameOrGroupfolder,
             resourcePath: resourcePath,
             filePath: subject.filePath,
-            users: { [subject.usernameOrGroupfolder]: { readonly: subject.share?.readonly || false } },
+            users: { [subject.usernameOrGroupfolder]: { readonly: isReadonly } },
             token: token,
         };
         return res.status(200).json({ handleId, url: onlineUrl, token });
@@ -113,7 +116,7 @@ async function getHandle(req, res, next) {
     if (sessionHandle && !sessionHandle.users[req.user.username]) {
         debugLog(`getHandle: ${req.user.username} joining existing session ${sessionHandleId}`);
         const token = await tokens.add(req.user.username);
-        sessionHandle.users[req.user.username] = { readonly: subject.share?.readonly || false, token };
+        sessionHandle.users[req.user.username] = { readonly: isReadonly, token };
         return res.status(200).json({ handleId: sessionHandleId, url: onlineUrl, token });
     }
 
@@ -132,7 +135,7 @@ async function getHandle(req, res, next) {
         username: subject.usernameOrGroupfolder,
         resourcePath: resourcePath,
         filePath: subject.filePath,
-        users: { [req.user.username]: { readonly: subject.share?.readonly || false, token } },
+        users: { [req.user.username]: { readonly: isReadonly, token } },
         token: null,
     };
     FILE_SESSION[fileKey] = newHandleId;

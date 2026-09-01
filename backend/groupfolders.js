@@ -196,10 +196,6 @@ function isOwner(groupFolder, username) {
     return getRole(groupFolder, username) === ROLES.OWNER;
 }
 
-function canWrite(role) {
-    return role === ROLES.OWNER || role === ROLES.EDITOR;
-}
-
 export default {
     ROLES,
     isValidRole,
@@ -211,6 +207,5 @@ export default {
 
     getRole,
     isPartOf,
-    isOwner,
-    canWrite
+    isOwner
 };

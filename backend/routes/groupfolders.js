@@ -12,10 +12,23 @@ const debugLog = debug('cubby:routes:groupfolders');
 function validateMembers(members) {
     if (!Array.isArray(members)) return false;
 
+    const seen = new Set();
     for (const member of members) {
         if (typeof member !== 'object' || member === null) return false;
         if (typeof member.username !== 'string' || !member.username) return false;
         if (!groupFolders.isValidRole(member.role)) return false;
+        if (seen.has(member.username)) return false;
+        seen.add(member.username);
+    }
+
+    return true;
+}
+
+function validateMemberUsernames(members) {
+    if (!Array.isArray(members)) return false;
+
+    for (const username of members) {
+        if (typeof username !== 'string' || !username) return false;
     }
 
     return true;
@@ -29,7 +42,8 @@ async function add(req, res, next) {
     const members = req.body.members || [];
     const slug = req.body.slug || '';
 
-    // TODO validate args
+    if (typeof name !== 'string' || !name) return next(new HttpError(400, 'name must be a non-empty string'));
+    if (!validateMemberUsernames(members)) return next(new HttpError(400, 'members must be an array of usernames'));
 
     debugLog(`add: ${name} at ${folderPath || path.join(paths.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
 

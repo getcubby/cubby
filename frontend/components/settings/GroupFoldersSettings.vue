@@ -5,6 +5,7 @@ import { Button, Dialog, FormGroup, InputDialog, ListItem, MultiSelect, SingleSe
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
+import { ROLES, roleOptions } from '../../roles.js';
 
 const props = defineProps({
   users: {
@@ -16,12 +17,6 @@ const props = defineProps({
 const emit = defineEmits(['groupfolders-changed']);
 
 const profile = inject('profile');
-
-const roleOptions = [
-  { label: 'Owner', value: 'owner' },
-  { label: 'Editor', value: 'editor' },
-  { label: 'Viewer', value: 'viewer' },
-];
 
 const groupFolderTableColumns = {
   name: {
@@ -64,7 +59,7 @@ const groupFolderEdit = ref({
   name: '',
   members: [],
   newMember: '',
-  newMemberRole: 'editor',
+  newMemberRole: ROLES.EDITOR,
 });
 
 const userOptions = computed(() => props.users.map((u) => ({
@@ -94,7 +89,7 @@ function onAddMember() {
 
   groupFolderEdit.value.members.push({ username, role });
   groupFolderEdit.value.newMember = '';
-  groupFolderEdit.value.newMemberRole = 'editor';
+  groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
 }
 
 async function refreshGroupFolders() {
@@ -148,7 +143,7 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.name = groupFolder.name;
   groupFolderEdit.value.members = groupFolder.members.map((m) => ({ username: m.username, role: m.role }));
   groupFolderEdit.value.newMember = '';
-  groupFolderEdit.value.newMemberRole = 'editor';
+  groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
   editGroupFolderDialog.value.open();
 }
 
@@ -281,13 +276,13 @@ onMounted(refreshGroupFolders);
             icon: 'fa-solid fa-pen',
             action: () => onEditGroupFolder(slotProps),
             quickAction: true,
-            visible: currentUserRole(slotProps) === 'owner',
+            visible: currentUserRole(slotProps) === ROLES.OWNER,
           }, {
             label: 'Remove',
             icon: 'fa-solid fa-trash',
             action: () => onRemoveGroupFolder(slotProps),
             quickAction: true,
-            visible: currentUserRole(slotProps) === 'owner',
+            visible: currentUserRole(slotProps) === ROLES.OWNER,
           }]"
         />
       </template>

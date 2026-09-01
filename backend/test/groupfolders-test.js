@@ -53,9 +53,6 @@ describe('groupfolders', function () {
         assert.equal(groupfolders.getRole(folder, 'nobody'), null);
         assert.ok(groupfolders.isOwner(folder, alice.username));
         assert.equal(groupfolders.isOwner(folder, user.username), false);
-        assert.ok(groupfolders.canWrite('owner'));
-        assert.ok(groupfolders.canWrite('editor'));
-        assert.equal(groupfolders.canWrite('viewer'), false);
     });
 
     it('rejects duplicate groupfolder ids', async function () {

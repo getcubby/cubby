@@ -11,7 +11,6 @@ const debugLog = debug('cubby:routes:groupfolders');
 
 async function add(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
-    assert(req.user.admin === true);
 
     const name = req.body.name;
     const folderPath = req.body.path || '';
@@ -30,7 +29,6 @@ async function add(req, res, next) {
 
 async function list(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
-    assert(req.user.admin === true);
 
     debugLog(`list:`);
 
@@ -42,7 +40,6 @@ async function list(req, res, next) {
 
 async function get(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
-    assert(req.user.admin === true);
 
     const id = req.params.id;
 
@@ -53,7 +50,6 @@ async function get(req, res, next) {
 
 async function update(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
-    assert(req.user.admin === true);
 
     const id = req.params.id;
     const name = req.body.name;
@@ -71,7 +67,6 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
-    assert(req.user.admin === true);
 
     const id = req.params.id;
 

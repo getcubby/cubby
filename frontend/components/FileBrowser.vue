@@ -50,6 +50,8 @@ const breadCrumbHome = ref({
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 const pendingViewer = ref(null);
 
+const isGroupFoldersRoot = computed(() => activeResourceType.value === 'groupfolders' && breadCrumbs.value.length === 0);
+
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
   if (currentResourcePath.value === '/groupfolders/') return true;
@@ -652,6 +654,7 @@ defineExpose({
           <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
           <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           <div style="flex-grow: 1"></div>
+          <Button v-if="isGroupFoldersRoot" icon="fa-solid fa-gear" href="#settings" plain>Manage group folders</Button>
           <ButtonGroup style="margin-right: 40px">
             <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
             <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
@@ -703,15 +706,13 @@ defineExpose({
           >
             <template #empty>
               <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" description="Create new or upload existing files" />
-              <EmptyState v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && !profile.admin" icon="fa-solid fa-user-group" title="Not part of any group folder" description="Ask an admin to add you to a group folder" />
               <EmptyState
-                v-else-if="activeResourceType === 'groupfolders' && !breadCrumbs.length && profile.admin"
+                v-else-if="isGroupFoldersRoot"
                 icon="fa-solid fa-user-group"
                 title="No group folders"
+                description="Create a group folder to collaborate with others"
               >
-                <template #description>
-                  Create <a href="#settings">group folders in Settings</a>
-                </template>
+                <Button icon="fa-solid fa-plus" href="#settings">Create group folder</Button>
               </EmptyState>
               <EmptyState v-else-if="activeResourceType === 'shares' && !breadCrumbs.length" icon="fa-solid fa-share-nodes" title="Nothing shared with you" description="Files and folders others shared with you will show up here" />
             </template>

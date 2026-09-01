@@ -30,6 +30,17 @@ describe('groupfolders API', function () {
         ]);
     });
 
+    it('only lists group folders the user is a member of', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'private', name: 'Private', members: [] });
+
+        const userList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
+        assert.ok(userList.body.groupFolder.find((g) => g.id === 'private'));
+
+        const aliceList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);
+        assert.equal(aliceList.body.groupFolder.find((g) => g.id === 'private'), undefined);
+    });
+
     it('only owners can update or remove a groupfolder', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
             .send({ slug: 'manage', name: 'Team', members: [ alice.username ] });

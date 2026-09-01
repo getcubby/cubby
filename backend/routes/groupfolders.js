@@ -58,7 +58,7 @@ async function list(req, res, next) {
 
     debugLog(`list:`);
 
-    const [error, result] = await safe(groupFolders.list());
+    const [error, result] = await safe(groupFolders.list(req.user.username));
     if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, { groupFolder: result }));

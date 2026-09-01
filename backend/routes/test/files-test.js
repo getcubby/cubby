@@ -2,9 +2,10 @@ import { describe, it, before, after } from 'mocha';
 import assert from 'node:assert/strict';
 import common from './common.js';
 import superagent from '@cloudron/superagent';
+import groupfolders from '../../groupfolders.js';
 
 describe('files API', function () {
-    const { setup, cleanup, serverUrl, alice, withToken, addUserFile } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
 
     before(setup);
     after(cleanup);
@@ -74,5 +75,24 @@ describe('files API', function () {
             .query({ path: '/home/delete.txt' })
             .ok(() => true);
         assert.equal(missing.status, 404);
+    });
+
+    it('viewer cannot write to a group folder but owner can', async function () {
+        await groupfolders.add('team', 'Team', '', [ alice.username, user.username ], alice.username);
+        await groupfolders.update('team', 'Team', [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'viewer' }
+        ]);
+
+        const viewerWrite = await withToken(superagent.post(`${serverUrl}/api/v1/files`), user.token)
+            .query({ path: '/groupfolders/team/blocked.txt', overwrite: true })
+            .send(Buffer.from('blocked'))
+            .ok(() => true);
+        assert.equal(viewerWrite.status, 403);
+
+        const ownerWrite = await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/groupfolders/team/allowed.txt', overwrite: true })
+            .send(Buffer.from('allowed'));
+        assert.equal(ownerWrite.status, 200);
     });
 });

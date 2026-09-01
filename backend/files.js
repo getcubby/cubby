@@ -65,7 +65,7 @@ async function translateResourcePath(username, resourcePath) {
         if (!groupFolders.isPartOf(group, username)) return null;
 
         // actual path is without groupfolder/<groupId>/
-        return { resource, resourcePath, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: '/' + filePath.split('/').slice(2).join('/') };
+        return { resource, resourcePath, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: '/' + filePath.split('/').slice(2).join('/'), role: groupFolders.getRole(group, username) };
     } else {
         return null;
     }

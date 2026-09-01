@@ -88,7 +88,7 @@ async function indexByGroupFolder(groupFolder, schedule = false) {
     debugLog(`indexByGroupFolder: ${groupFolder} ...`);
 
     const folder = await groupFolders.get(groupFolder);
-    for (const member of folder.members) await indexByUsername(member, schedule);
+    for (const member of folder.members) await indexByUsername(member.username, schedule);
 
     debugLog(`indexByGroupFolder: ${groupFolder} done`);
 }

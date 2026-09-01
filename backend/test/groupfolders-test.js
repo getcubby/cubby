@@ -27,7 +27,10 @@ describe('groupfolders', function () {
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
-        assert.deepEqual(folder.members.sort(), [ alice.username, user.username ].sort());
+        assert.deepEqual(folder.members, [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'editor' }
+        ]);
         assert.ok(fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')));
 
         const all = await groupfolders.list();
@@ -37,6 +40,22 @@ describe('groupfolders', function () {
         assert.equal(forUser.length, 1);
         assert.ok(groupfolders.isPartOf(forUser[0], user.username));
         assert.equal(groupfolders.isPartOf(forUser[0], 'nobody'), false);
+    });
+
+    it('assigns roles and helpers', async function () {
+        await createUsers();
+
+        await groupfolders.add('team', 'Team', '', [ alice.username, user.username ], alice.username);
+
+        const folder = await groupfolders.get('team');
+        assert.equal(groupfolders.getRole(folder, alice.username), 'owner');
+        assert.equal(groupfolders.getRole(folder, user.username), 'editor');
+        assert.equal(groupfolders.getRole(folder, 'nobody'), null);
+        assert.ok(groupfolders.isOwner(folder, alice.username));
+        assert.equal(groupfolders.isOwner(folder, user.username), false);
+        assert.ok(groupfolders.canWrite('owner'));
+        assert.ok(groupfolders.canWrite('editor'));
+        assert.equal(groupfolders.canWrite('viewer'), false);
     });
 
     it('rejects duplicate groupfolder ids', async function () {
@@ -59,11 +78,17 @@ describe('groupfolders', function () {
         await createUsers();
 
         await groupfolders.add('team', 'Team', '', [ alice.username ]);
-        await groupfolders.update('team', 'Updated Team', [ user.username ]);
+        await groupfolders.update('team', 'Updated Team', [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'viewer' }
+        ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Updated Team');
-        assert.deepEqual(folder.members, [ user.username ]);
+        assert.deepEqual(folder.members, [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'viewer' }
+        ]);
     });
 
     it('can remove a groupfolder', async function () {

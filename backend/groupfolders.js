@@ -13,6 +13,16 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:groupfolders');
 
+const ROLES = {
+    OWNER: 'owner',
+    EDITOR: 'editor',
+    VIEWER: 'viewer'
+};
+
+function isValidRole(role) {
+    return role === ROLES.OWNER || role === ROLES.EDITOR || role === ROLES.VIEWER;
+}
+
 function postProcess(data) {
     data.folderPath = data.folder_path;
     delete data.folder_path;
@@ -22,27 +32,41 @@ function postProcess(data) {
     return data;
 }
 
+async function getMembers(id) {
+    assert.strictEqual(typeof id, 'string');
+
+    const result = await database.query('SELECT username, role FROM groupfolders_members WHERE groupfolder_id = $1 ORDER BY username', [ id ]);
+    return result.rows.map((m) => ({ username: m.username, role: m.role }));
+}
+
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(idOrSlug, name, folderPath = '', members = []) {
+async function add(idOrSlug, name, folderPath = '', members = [], ownerUsername = '') {
     assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
     assert.strictEqual(typeof folderPath, 'string');
     assert(Array.isArray(members));
+    assert.strictEqual(typeof ownerUsername, 'string');
 
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    debugLog(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${members}`);
+    // owner defaults to the first member if not provided
+    if (!ownerUsername && members.length) ownerUsername = members[0];
+
+    const memberList = members.map((username) => ({ username, role: username === ownerUsername ? ROLES.OWNER : ROLES.EDITOR }));
+    if (ownerUsername && !memberList.some((m) => m.username === ownerUsername)) memberList.push({ username: ownerUsername, role: ROLES.OWNER });
+
+    debugLog(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${JSON.stringify(memberList)}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name, folder_path) VALUES ($1, $2, $3)',
         args: [ idOrSlug, name, folderPath ]
     }];
 
-    for (const username of members) {
+    for (const member of memberList) {
         queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username) VALUES ($1, $2)',
-            args: [ idOrSlug, username ]
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
+            args: [ idOrSlug, member.username, member.role ]
         });
     }
 
@@ -56,8 +80,8 @@ async function add(idOrSlug, name, folderPath = '', members = []) {
 
     // kick off indexer in background
     if (!constants.TEST) {
-        for (const username of members) {
-            recoll.indexByUsername(username);
+        for (const member of memberList) {
+            recoll.indexByUsername(member.username);
         }
     }
 }
@@ -71,10 +95,7 @@ async function get(id) {
     if (result.rows.length === 0) return null;
 
     const groupFolder = result.rows[0];
-
-// maybe use 'SELECT ' + GROUPS_FIELDS + ',GROUP_CONCAT(groupMembers.userId) AS userIds ' +
-    result = await database.query('SELECT * FROM groupfolders_members WHERE groupfolder_id = $1', [ id ]);
-    groupFolder.members = result.rows.map((m) => m.username);
+    groupFolder.members = await getMembers(id);
 
     return postProcess(groupFolder);
 }
@@ -82,7 +103,7 @@ async function get(id) {
 async function list(username = '') {
     assert.strictEqual(typeof username, 'string');
 
-    let query = 'SELECT * FROM groupfolders';
+    let query = 'SELECT groupfolders.* FROM groupfolders';
     const args = [];
 
     if (username) {
@@ -96,8 +117,7 @@ async function list(username = '') {
     folders.forEach(postProcess);
 
     for (const folder of folders) {
-        const result = await database.query('SELECT * FROM groupfolders_members WHERE groupfolder_id = $1', [ folder.id ]);
-        folder.members = result.rows.map((m) => m.username);
+        folder.members = await getMembers(folder.id);
     }
 
     return folders;
@@ -108,7 +128,7 @@ async function update(id, name, members) {
     assert.strictEqual(typeof name, 'string');
     assert(Array.isArray(members));
 
-    debugLog(`update: ${id} by name ${name} with members ${members}`);
+    debugLog(`update: ${id} by name ${name} with members ${JSON.stringify(members)}`);
 
     const queries = [{
         query: 'UPDATE groupfolders set name=$1 WHERE id=$2',
@@ -120,10 +140,10 @@ async function update(id, name, members) {
         args: [ id ]
     });
 
-    for (const username of members) {
+    for (const member of members) {
         queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username) VALUES ($1, $2)',
-            args: [ id, username ]
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
+            args: [ id, member.username, member.role ]
         });
     }
 
@@ -160,19 +180,37 @@ async function remove(id) {
     recoll.index();
 }
 
-function isPartOf(groupFolder, username) {
+function getRole(groupFolder, username) {
     assert.strictEqual(typeof groupFolder, 'object');
     assert.strictEqual(typeof username, 'string');
 
-    return !!groupFolder.members.find((u) => u === username);
+    const member = groupFolder.members.find((m) => m.username === username);
+    return member ? member.role : null;
+}
+
+function isPartOf(groupFolder, username) {
+    return getRole(groupFolder, username) !== null;
+}
+
+function isOwner(groupFolder, username) {
+    return getRole(groupFolder, username) === ROLES.OWNER;
+}
+
+function canWrite(role) {
+    return role === ROLES.OWNER || role === ROLES.EDITOR;
 }
 
 export default {
+    ROLES,
+    isValidRole,
     add,
     get,
     list,
     update,
     remove,
 
-    isPartOf
+    getRole,
+    isPartOf,
+    isOwner,
+    canWrite
 };

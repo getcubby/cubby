@@ -15,28 +15,54 @@ describe('groupfolders API', function () {
         assert.equal(response.body.groupFolder.length, 0);
     });
 
-    it('can add, list, update, and remove groupfolders', async function () {
+    it('adds the creator as owner and other members as editor', async function () {
         const addResponse = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'team', name: 'Team', members: [ user.username ] });
+            .send({ slug: 'team', name: 'Team', members: [ alice.username ] });
         assert.equal(addResponse.status, 200);
 
         const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
         assert.equal(listResponse.status, 200);
-        assert.equal(listResponse.body.groupFolder.length, 1);
-        assert.equal(listResponse.body.groupFolder[0].id, 'team');
+        const team = listResponse.body.groupFolder.find((g) => g.id === 'team');
+        assert.ok(team);
+        assert.deepEqual(team.members, [
+            { username: alice.username, role: 'editor' },
+            { username: user.username, role: 'owner' }
+        ]);
+    });
 
-        const updateResponse = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/team`), user.token)
-            .send({ name: 'Updated Team', members: [ alice.username, user.username ] });
-        assert.equal(updateResponse.status, 200);
+    it('only owners can update or remove a groupfolder', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'manage', name: 'Team', members: [ alice.username ] });
+
+        const updateDenied = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/manage`), alice.token)
+            .send({ name: 'Hacked', members: [ { username: alice.username, role: 'owner' } ] })
+            .ok(() => true);
+        assert.equal(updateDenied.status, 403);
+
+        const removeDenied = await withToken(superagent.del(`${serverUrl}/api/v1/settings/groupfolders/manage`), alice.token)
+            .ok(() => true);
+        assert.equal(removeDenied.status, 403);
+
+        const update = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/manage`), user.token)
+            .send({ name: 'Updated Team', members: [ { username: alice.username, role: 'editor' }, { username: user.username, role: 'owner' } ] });
+        assert.equal(update.status, 200);
 
         const updatedList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
-        assert.equal(updatedList.body.groupFolder[0].name, 'Updated Team');
-        assert.equal(updatedList.body.groupFolder[0].members.length, 2);
+        const team = updatedList.body.groupFolder.find((g) => g.id === 'manage');
+        assert.equal(team.name, 'Updated Team');
+        assert.equal(team.members.length, 2);
 
-        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/settings/groupfolders/team`), user.token);
-        assert.equal(removeResponse.status, 200);
+        const remove = await withToken(superagent.del(`${serverUrl}/api/v1/settings/groupfolders/manage`), user.token);
+        assert.equal(remove.status, 200);
+    });
 
-        const emptyList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
-        assert.equal(emptyList.body.groupFolder.length, 0);
+    it('an owner cannot change their own role', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'selfrole', name: 'Team', members: [ alice.username ] });
+
+        const response = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/selfrole`), user.token)
+            .send({ name: 'Team', members: [ { username: user.username, role: 'editor' } ] })
+            .ok(() => true);
+        assert.equal(response.status, 403);
     });
 });

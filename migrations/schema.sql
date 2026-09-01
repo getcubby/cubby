@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS groupfolders(
 CREATE TABLE groupfolders_members(
     groupfolder_id VARCHAR(128) REFERENCES groupfolders(id),
     username VARCHAR(128) REFERENCES users(username),
+    role VARCHAR(16) NOT NULL DEFAULT 'editor',
 
     UNIQUE (groupfolder_id, username));
 

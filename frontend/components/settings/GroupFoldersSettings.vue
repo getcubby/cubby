@@ -1,7 +1,7 @@
 <script setup>
 
-import { ref, computed, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, FormGroup, InputDialog, MultiSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
+import { ref, computed, inject, onMounted, useTemplateRef } from 'vue';
+import { Button, Dialog, FormGroup, InputDialog, ListItem, MultiSelect, SingleSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
@@ -14,6 +14,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['groupfolders-changed']);
+
+const profile = inject('profile');
+
+const roleOptions = [
+  { label: 'Owner', value: 'owner' },
+  { label: 'Editor', value: 'editor' },
+  { label: 'Viewer', value: 'viewer' },
+];
 
 const groupFolderTableColumns = {
   name: {
@@ -52,14 +60,42 @@ const groupFolderAdd = ref({
 const groupFolderEdit = ref({
   error: '',
   busy: false,
+  id: '',
   name: '',
   members: [],
+  newMember: '',
+  newMemberRole: 'editor',
 });
 
 const userOptions = computed(() => props.users.map((u) => ({
   ...u,
   label: u.username || u.email,
 })));
+
+const availableUserOptions = computed(() => {
+  const existing = new Set(groupFolderEdit.value.members.map((m) => m.username));
+  return userOptions.value.filter((u) => !existing.has(u.username));
+});
+
+function currentUserRole(groupFolder) {
+  const member = groupFolder.members.find((m) => m.username === profile.value?.username);
+  return member ? member.role : null;
+}
+
+function roleLabel(role) {
+  return roleOptions.find((o) => o.value === role)?.label || role;
+}
+
+function onAddMember() {
+  const username = groupFolderEdit.value.newMember;
+  const role = groupFolderEdit.value.newMemberRole;
+  if (!username || !role) return;
+  if (groupFolderEdit.value.members.some((m) => m.username === username)) return;
+
+  groupFolderEdit.value.members.push({ username, role });
+  groupFolderEdit.value.newMember = '';
+  groupFolderEdit.value.newMemberRole = 'editor';
+}
 
 async function refreshGroupFolders() {
   groupFoldersBusy.value = true;
@@ -110,8 +146,16 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.error = '';
   groupFolderEdit.value.id = groupFolder.id;
   groupFolderEdit.value.name = groupFolder.name;
-  groupFolderEdit.value.members = [...groupFolder.members];
+  groupFolderEdit.value.members = groupFolder.members.map((m) => ({ username: m.username, role: m.role }));
+  groupFolderEdit.value.newMember = '';
+  groupFolderEdit.value.newMemberRole = 'editor';
   editGroupFolderDialog.value.open();
+}
+
+function onRemoveMember(index) {
+  const member = groupFolderEdit.value.members[index];
+  if (!member || member.username === profile.value?.username) return;
+  groupFolderEdit.value.members.splice(index, 1);
 }
 
 async function onEditGroupFolderSubmit() {
@@ -120,7 +164,7 @@ async function onEditGroupFolderSubmit() {
   try {
     await GroupFolderModel.update(groupFolderEdit.value.id, {
       name: groupFolderEdit.value.name,
-      members: groupFolderEdit.value.members,
+      members: groupFolderEdit.value.members.map((m) => ({ username: m.username, role: m.role })),
     });
   } catch (e) {
     groupFolderEdit.value.error = e.message;
@@ -154,6 +198,7 @@ async function onRemoveGroupFolder(groupFolder) {
 }
 
 onMounted(refreshGroupFolders);
+
 </script>
 
 <template>
@@ -204,12 +249,31 @@ onMounted(refreshGroupFolders);
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
       <FormGroup>
         <label>Members</label>
-        <MultiSelect v-model="groupFolderEdit.members" :options="userOptions" option-key="username" :search-threshold="20" style="width: 100%;" />
+        <ListItem v-for="(member, index) in groupFolderEdit.members" :key="member.username">
+          <template #left>
+            <i class="fa-solid fa-circle-user member-avatar"></i>
+          </template>
+          <template #label>
+            <div class="member-label-row">
+              <span>{{ member.username }}</span>
+              <span v-if="member.username === profile?.username" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
+              <span v-else class="member-role-controls">
+                <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
+                <Button icon="fa-solid fa-xmark" plain tool @click="onRemoveMember(index)" />
+              </span>
+            </div>
+          </template>
+        </ListItem>
+        <div class="add-member-row">
+          <SingleSelect v-model="groupFolderEdit.newMember" :options="availableUserOptions" option-key="username" placeholder="Select user" style="flex-grow: 1;" />
+          <SingleSelect v-model="groupFolderEdit.newMemberRole" :options="roleOptions" option-key="value" style="width: 120px;" />
+          <Button icon="fa-solid fa-plus" :disabled="!groupFolderEdit.newMember" @click="onAddMember()">Add</Button>
+        </div>
       </FormGroup>
     </Dialog>
 
     <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" :busy="groupFoldersBusy" placeholder="No group folders">
-      <template #members="{ item: slotProps }">{{ slotProps.members.join(', ') }}</template>
+      <template #members="{ item: slotProps }">{{ slotProps.members.map((m) => m.username).join(', ') }}</template>
       <template #action="{ item: slotProps }">
         <TableViewActionBar
           :actions="[{
@@ -217,14 +281,53 @@ onMounted(refreshGroupFolders);
             icon: 'fa-solid fa-pen',
             action: () => onEditGroupFolder(slotProps),
             quickAction: true,
+            visible: currentUserRole(slotProps) === 'owner',
           }, {
             label: 'Remove',
             icon: 'fa-solid fa-trash',
             action: () => onRemoveGroupFolder(slotProps),
             quickAction: true,
+            visible: currentUserRole(slotProps) === 'owner',
           }]"
         />
       </template>
     </TableView>
   </Section>
 </template>
+
+<style scoped>
+
+.member-avatar {
+  font-size: 24px;
+  color: var(--pankow-color-text-secondary);
+}
+
+.member-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.member-role-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+}
+
+.member-self-role {
+  font-weight: normal;
+  font-size: 13px;
+  color: var(--pankow-color-text-secondary);
+}
+
+.add-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+</style>

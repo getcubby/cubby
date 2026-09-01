@@ -392,7 +392,7 @@ async function handlePut(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    if (subject.share?.readonly) {
+    if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
     }
@@ -515,7 +515,7 @@ async function handleMkcol(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    if (subject.share?.readonly) {
+    if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
     }
@@ -550,7 +550,7 @@ async function handleDelete(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    if (subject.share?.readonly) {
+    if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
     }
@@ -607,7 +607,7 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    if (subject.share?.readonly || destSubject.share?.readonly) {
+    if (subject.share?.readonly || destSubject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER || destSubject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
     }
@@ -649,7 +649,7 @@ async function handleMove(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    if (subject.share?.readonly || destSubject.share?.readonly) {
+    if (subject.share?.readonly || destSubject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER || destSubject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
     }

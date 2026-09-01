@@ -41,6 +41,7 @@ const entries = ref([]);
 const selectedEntries = ref([]);
 const currentResourcePath = ref('');
 const currentShare = ref(null);
+const currentGroup = ref(null);
 const breadCrumbs = ref([]);
 const breadCrumbHome = ref({
   label: 'My files',
@@ -55,8 +56,12 @@ const isGroupFoldersRoot = computed(() => activeResourceType.value === 'groupfol
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
   if (currentResourcePath.value === '/groupfolders/') return true;
-  if (!currentShare.value) return false;
-  return currentShare.value.readonly;
+  if (currentShare.value) return currentShare.value.readonly;
+  if (currentGroup.value) {
+    const member = currentGroup.value.members.find((m) => m.username === profile.value?.username);
+    return member?.role === 'viewer';
+  }
+  return false;
 });
 
 function setViewMode(mode) {
@@ -205,6 +210,7 @@ function reset() {
   activeResourceType.value = '';
   currentResourcePath.value = '';
   currentShare.value = null;
+  currentGroup.value = null;
 }
 
 function onSelectionChanged(selectedItems) {
@@ -448,6 +454,7 @@ async function loadMainDirectory(path, item, forceLoad = false) {
   activeResourceType.value = resource.type;
   currentResourcePath.value = resource.resourcePath;
   currentShare.value = item.share || null;
+  currentGroup.value = item.group || null;
 
   if (resource.type === 'home') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {

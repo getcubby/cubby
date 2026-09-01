@@ -47,6 +47,7 @@ async function add(req, res, next) {
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
@@ -303,6 +304,7 @@ async function update(req, res, next) {
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly || newSubject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.role === groupFolders.ROLES.VIEWER || newSubject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !newSubject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`update: [${action}] ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath} -> ${newSubject.resource} ${newSubject.usernameOrGroupfolder} ${newSubject.filePath}`);
@@ -336,6 +338,7 @@ async function remove(req, res, next) {
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
     debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);

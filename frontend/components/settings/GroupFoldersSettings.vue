@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, computed, inject, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, FormGroup, InputDialog, ListItem, MultiSelect, SingleSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
+import { Button, Checkbox, Dialog, FormGroup, InputDialog, ListItem, MultiSelect, SingleSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
@@ -49,8 +49,9 @@ const groupFolderAdd = ref({
   busy: false,
   name: '',
   slug: '',
-  folderPath: '',
   members: [],
+  customPath: false,
+  customPathSuffix: '',
 });
 const groupFolderEdit = ref({
   error: '',
@@ -111,7 +112,8 @@ async function onAddGroupFolder() {
   groupFolderAdd.value.name = '';
   groupFolderAdd.value.slug = '';
   groupFolderAdd.value.members = [];
-  groupFolderAdd.value.folderPath = '';
+  groupFolderAdd.value.customPath = false;
+  groupFolderAdd.value.customPathSuffix = '';
   addGroupFolderDialog.value.open();
 }
 
@@ -122,7 +124,7 @@ async function onAddGroupFolderSubmit() {
     await GroupFolderModel.add({
       name: groupFolderAdd.value.name,
       slug: groupFolderAdd.value.slug,
-      path: groupFolderAdd.value.folderPath,
+      path: groupFolderAdd.value.customPath ? '/media/' + groupFolderAdd.value.customPathSuffix : '',
       members: groupFolderAdd.value.members,
     });
   } catch (e) {
@@ -220,8 +222,13 @@ onMounted(refreshGroupFolders);
       <TextInput v-model="groupFolderAdd.name" style="width: 100%;" @change="groupFolderAdd.slug = slugify(groupFolderAdd.name)"/>
       <label>Slug (cannot be changed later)</label>
       <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
-      <label v-show="false">Disk storage path</label>
-      <TextInput v-show="false" v-model="groupFolderAdd.folderPath" placeholder="Absolute path or leave empty for default" style="width: 100%;" />
+      <FormGroup>
+        <Checkbox v-model="groupFolderAdd.customPath" label="Custom filesystem path (cannot be changed later)" />
+        <div v-if="groupFolderAdd.customPath" class="path-input-row">
+          <span class="path-prefix">/media/</span>
+          <TextInput v-model="groupFolderAdd.customPathSuffix" placeholder="subfolder" style="flex-grow: 1;" />
+        </div>
+      </FormGroup>
       <FormGroup>
         <label>Members</label>
         <MultiSelect v-model="groupFolderAdd.members" :options="userOptions" option-key="username" :search-threshold="20" style="width: 100%;" />
@@ -323,6 +330,18 @@ onMounted(refreshGroupFolders);
   align-items: center;
   gap: 8px;
   margin-top: 10px;
+}
+
+.path-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.path-prefix {
+  font-size: 13px;
+  color: var(--pankow-color-text-secondary);
 }
 
 </style>

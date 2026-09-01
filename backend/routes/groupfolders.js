@@ -34,6 +34,13 @@ function validateMemberUsernames(members) {
     return true;
 }
 
+function validateFolderPath(folderPath) {
+    if (!folderPath) return true;
+
+    const resolved = path.resolve(folderPath);
+    return resolved === paths.MEDIA_ROOT || resolved.startsWith(paths.MEDIA_ROOT + path.sep);
+}
+
 async function add(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
@@ -44,6 +51,7 @@ async function add(req, res, next) {
 
     if (typeof name !== 'string' || !name) return next(new HttpError(400, 'name must be a non-empty string'));
     if (!validateMemberUsernames(members)) return next(new HttpError(400, 'members must be an array of usernames'));
+    if (!validateFolderPath(folderPath)) return next(new HttpError(400, `path must be within ${paths.MEDIA_ROOT}`));
 
     debugLog(`add: ${name} at ${folderPath || path.join(paths.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
 

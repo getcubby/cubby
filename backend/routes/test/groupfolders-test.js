@@ -41,6 +41,18 @@ describe('groupfolders API', function () {
         assert.equal(aliceList.body.groupFolder.find((g) => g.id === 'private'), undefined);
     });
 
+    it('rejects a custom path outside /media', async function () {
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'evil', name: 'Evil', path: '/etc/foo', members: [] })
+            .ok(() => true);
+        assert.equal(response.status, 400);
+
+        const traversal = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'evil2', name: 'Evil2', path: '/media/../../etc', members: [] })
+            .ok(() => true);
+        assert.equal(traversal.status, 400);
+    });
+
     it('only owners can update or remove a groupfolder', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
             .send({ slug: 'manage', name: 'Team', members: [ alice.username ] });

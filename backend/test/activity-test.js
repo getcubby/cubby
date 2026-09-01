@@ -197,7 +197,7 @@ describe('activity', function () {
 
     it('relocatePaths updates owner on cross-root move', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await addUserFile(alice.username, '/cross-activity.txt', 'cross');
 
         await activity.log({

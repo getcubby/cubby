@@ -6,15 +6,11 @@ import { API_ORIGIN } from '../utils';
 async function add(data) {
   const tmp = {
     name: data.name,
-    slug: data.slug,
-    path: data.path,
-    members: data.members
+    slug: data.slug
   };
 
   const result = await fetcher.post(`${API_ORIGIN}/api/v1/settings/groupfolders`, tmp);
   if (result.status !== 200) throw result.body;
-
-  return result.body.groupFolderId;
 }
 
 async function list() {

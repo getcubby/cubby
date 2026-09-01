@@ -41,7 +41,7 @@ describe('recoll', function () {
 
         const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
         for (const groupFolder of await groupfolders.list(username)) {
-            pathsToIndex.push(groupFolder.folderPath);
+            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
         }
 
         fs.writeFileSync(path.join(configPath, 'recoll.conf'), `topdirs = ${pathsToIndex.join(' ')}`);
@@ -75,7 +75,7 @@ describe('recoll', function () {
 
         await users.add(alice);
         await users.add(user);
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await addUserFile('groupfolder-team', '/team-doc.txt', marker);
         await indexUser(user.username);
 
@@ -101,7 +101,7 @@ describe('recoll', function () {
         const marker = `recoll-groupfolder-marker-${Date.now()}`;
 
         await users.add(user);
-        await groupfolders.add('shared', 'Shared', '', [ user.username ]);
+        await groupfolders.add('shared', 'Shared', user.username);
         await addUserFile('groupfolder-shared', '/shared-doc.txt', marker);
         await indexUser(user.username);
 

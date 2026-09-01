@@ -50,7 +50,7 @@ describe('relocate', function () {
 
     it('can move a file across storage roots', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await addUserFile(alice.username, '/cross-root.txt', 'payload');
 
         await relocate.relocate({
@@ -155,7 +155,7 @@ describe('relocate', function () {
 
     it('end-to-end: home to groupfolder updates all metadata', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ user.username, alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await addUserFile(alice.username, '/cross.txt', 'cross');
 
         const shareId = await shares.create({
@@ -197,7 +197,7 @@ describe('relocate', function () {
 
     it('end-to-end: groupfolder to home updates all metadata', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await addUserFile('groupfolder-team', '/back.txt', 'back');
 
         const shareId = await shares.create({

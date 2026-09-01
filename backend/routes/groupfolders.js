@@ -1,10 +1,8 @@
 import assert from 'assert';
 import debug from 'debug';
-import paths from '../paths.js';
 import groupFolders from '../groupfolders.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import MainError from '../mainerror.js';
-import path from 'path';
 import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:routes:groupfolders');
@@ -24,38 +22,18 @@ function validateMembers(members) {
     return true;
 }
 
-function validateMemberUsernames(members) {
-    if (!Array.isArray(members)) return false;
-
-    for (const username of members) {
-        if (typeof username !== 'string' || !username) return false;
-    }
-
-    return true;
-}
-
-function validateFolderPath(folderPath) {
-    if (!folderPath) return true;
-
-    const resolved = path.resolve(folderPath);
-    return resolved === paths.MEDIA_ROOT || resolved.startsWith(paths.MEDIA_ROOT + path.sep);
-}
-
 async function add(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
     const name = req.body.name;
-    const folderPath = req.body.path || '';
-    const members = req.body.members || [];
     const slug = req.body.slug || '';
 
     if (typeof name !== 'string' || !name) return next(new HttpError(400, 'name must be a non-empty string'));
-    if (!validateMemberUsernames(members)) return next(new HttpError(400, 'members must be an array of usernames'));
-    if (!validateFolderPath(folderPath)) return next(new HttpError(400, `path must be within ${paths.MEDIA_ROOT}`));
+    if (slug && !/^[a-z0-9][a-z0-9-]*$/.test(slug)) return next(new HttpError(400, 'slug must contain only lowercase letters, digits, and hyphens'));
 
-    debugLog(`add: ${name} at ${folderPath || path.join(paths.GROUPS_DATA_ROOT, name)} for members ${members.join(',')}`);
+    debugLog(`add: ${name}`);
 
-    const [error] = await safe(groupFolders.add(slug, name, folderPath, members, req.user.username));
+    const [error] = await safe(groupFolders.add(slug, name, req.user.username));
     if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));

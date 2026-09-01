@@ -15,9 +15,9 @@ describe('groupfolders API', function () {
         assert.equal(response.body.groupFolder.length, 0);
     });
 
-    it('adds the creator as owner and other members as editor', async function () {
+    it('adds the creator as owner', async function () {
         const addResponse = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'team', name: 'Team', members: [ alice.username ] });
+            .send({ slug: 'team', name: 'Team' });
         assert.equal(addResponse.status, 200);
 
         const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
@@ -25,14 +25,13 @@ describe('groupfolders API', function () {
         const team = listResponse.body.groupFolder.find((g) => g.id === 'team');
         assert.ok(team);
         assert.deepEqual(team.members, [
-            { username: alice.username, role: 'editor' },
             { username: user.username, role: 'owner' }
         ]);
     });
 
     it('only lists group folders the user is a member of', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'private', name: 'Private', members: [] });
+            .send({ slug: 'private', name: 'Private' });
 
         const userList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
         assert.ok(userList.body.groupFolder.find((g) => g.id === 'private'));
@@ -41,21 +40,21 @@ describe('groupfolders API', function () {
         assert.equal(aliceList.body.groupFolder.find((g) => g.id === 'private'), undefined);
     });
 
-    it('rejects a custom path outside /media', async function () {
+    it('rejects an invalid slug', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'evil', name: 'Evil', path: '/etc/foo', members: [] })
+            .send({ slug: '../../etc', name: 'Evil' })
             .ok(() => true);
         assert.equal(response.status, 400);
 
-        const traversal = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'evil2', name: 'Evil2', path: '/media/../../etc', members: [] })
+        const uppercase = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'Team', name: 'Team' })
             .ok(() => true);
-        assert.equal(traversal.status, 400);
+        assert.equal(uppercase.status, 400);
     });
 
     it('only owners can update or remove a groupfolder', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'manage', name: 'Team', members: [ alice.username ] });
+            .send({ slug: 'manage', name: 'Team' });
 
         const updateDenied = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/manage`), alice.token)
             .send({ name: 'Hacked', members: [ { username: alice.username, role: 'owner' } ] })
@@ -81,7 +80,7 @@ describe('groupfolders API', function () {
 
     it('an owner cannot change their own role', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'selfrole', name: 'Team', members: [ alice.username ] });
+            .send({ slug: 'selfrole', name: 'Team' });
 
         const response = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/selfrole`), user.token)
             .send({ name: 'Team', members: [ { username: user.username, role: 'editor' } ] })

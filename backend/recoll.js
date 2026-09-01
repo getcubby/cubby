@@ -68,7 +68,7 @@ async function indexByUsername(username, schedule = false) {
     // collect all paths we want to index and write config file
     const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
     for (const groupFolder of await groupFolders.list(username)) {
-        pathsToIndex.push(groupFolder.folderPath);
+        pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
     }
     fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\ntestmodifusemtime = 1`);
 

@@ -23,7 +23,11 @@ describe('groupfolders', function () {
     it('can add, get, and list groupfolders', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team Folder', '', [ alice.username, user.username ]);
+        await groupfolders.add('team', 'Team Folder', alice.username);
+        await groupfolders.update('team', 'Team Folder', [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'editor' }
+        ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
@@ -45,7 +49,11 @@ describe('groupfolders', function () {
     it('assigns roles and helpers', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ alice.username, user.username ], alice.username);
+        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.update('team', 'Team', [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'editor' }
+        ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(groupfolders.getRole(folder, alice.username), 'owner');
@@ -58,15 +66,15 @@ describe('groupfolders', function () {
     it('rejects duplicate groupfolder ids', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
 
-        const [error] = await safe(groupfolders.add('team', 'Team Again', '', [ alice.username ]));
+        const [error] = await safe(groupfolders.add('team', 'Team Again', alice.username));
         assert.ok(error);
         assert.equal(error.reason, MainError.ALREADY_EXISTS);
     });
 
-    it('rejects unknown members', async function () {
-        const [error] = await safe(groupfolders.add('team', 'Team', '', [ 'missing-user' ]));
+    it('rejects unknown owner', async function () {
+        const [error] = await safe(groupfolders.add('team', 'Team', 'missing-user'));
         assert.ok(error);
         assert.equal(error.reason, MainError.NOT_FOUND);
     });
@@ -74,7 +82,7 @@ describe('groupfolders', function () {
     it('can update members and name', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await groupfolders.update('team', 'Updated Team', [
             { username: alice.username, role: 'owner' },
             { username: user.username, role: 'viewer' }
@@ -91,7 +99,7 @@ describe('groupfolders', function () {
     it('can remove a groupfolder', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await groupfolders.remove('team');
 
         assert.equal(await groupfolders.get('team'), null);

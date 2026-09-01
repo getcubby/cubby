@@ -135,7 +135,7 @@ describe('recent', function () {
 
     it('relocatePaths updates owner on cross-root move', async function () {
         await users.add(alice);
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await addUserFile(alice.username, '/cross.txt', 'cross');
 
         await recent.add(alice.username, '/home/cross.txt');

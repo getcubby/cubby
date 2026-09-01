@@ -78,7 +78,7 @@ describe('files API', function () {
     });
 
     it('viewer cannot write to a group folder but owner can', async function () {
-        await groupfolders.add('team', 'Team', '', [ alice.username, user.username ], alice.username);
+        await groupfolders.add('team', 'Team', alice.username);
         await groupfolders.update('team', 'Team', [
             { username: alice.username, role: 'owner' },
             { username: user.username, role: 'viewer' }

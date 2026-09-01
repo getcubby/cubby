@@ -161,7 +161,7 @@ describe('favorites', function () {
     it('relocatePaths updates owner on cross-root move', async function () {
         await users.add(alice);
         await users.add(user);
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await addUserFile(alice.username, '/cross.txt', 'cross');
 
         await favorites.create(user.username, { owner: alice.username, filePath: '/cross.txt' });

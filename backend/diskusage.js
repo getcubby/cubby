@@ -14,11 +14,10 @@ const debugLog = debug('cubby:diskusage');
 // { username: { used: int, directories: { filepath: size }}
 const gCache = {};
 
-async function getFolderRoot(usernameOrGroupFolder) {
+function getFolderRoot(usernameOrGroupFolder) {
     if (files.isGroupfolder(usernameOrGroupFolder)) {
         const id = usernameOrGroupFolder.slice('groupfolder-'.length);
-        const groupFolder = await groupFolders.get(id);
-        return groupFolder.folderPath;
+        return path.join(paths.GROUPS_DATA_ROOT, id);
     }
 
     return path.join(paths.USER_DATA_ROOT, usernameOrGroupFolder);
@@ -94,7 +93,7 @@ async function refreshDirectorySubtree(usernameOrGroupFolder, directoryPath) {
     const absoluteDirectoryPath = files.getAbsolutePath(usernameOrGroupFolder, directoryPath);
     if (!absoluteDirectoryPath) return;
 
-    const folderRoot = await getFolderRoot(usernameOrGroupFolder);
+    const folderRoot = getFolderRoot(usernameOrGroupFolder);
     const cache = ensureCache(usernameOrGroupFolder);
 
     pruneDirectoryFromCache(cache, directoryPath);
@@ -118,7 +117,7 @@ async function refreshDirectorySummary(usernameOrGroupFolder, directoryPath) {
     const absoluteDirectoryPath = files.getAbsolutePath(usernameOrGroupFolder, directoryPath);
     if (!absoluteDirectoryPath) return;
 
-    const folderRoot = await getFolderRoot(usernameOrGroupFolder);
+    const folderRoot = getFolderRoot(usernameOrGroupFolder);
     const cache = ensureCache(usernameOrGroupFolder);
 
     const [error, out] = await safe(exec('du', [ '-sb', absoluteDirectoryPath ]));

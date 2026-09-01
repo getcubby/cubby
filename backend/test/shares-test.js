@@ -134,7 +134,7 @@ describe('shares', function () {
 
     it('can create a groupfolder share', async function () {
         await users.add(alice);
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
         await files.addOrOverwriteFileContents('groupfolder-team', '/team.txt', Buffer.from('team file'), null, true);
 
         const shareId = await shares.create({
@@ -213,7 +213,7 @@ describe('shares', function () {
     it('relocatePaths updates owner columns on cross-root move', async function () {
         await users.add(alice);
         await users.add(user);
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await addUserFile(alice.username, '/cross.txt', 'cross');
 
         const shareId = await shares.create({

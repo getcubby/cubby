@@ -23,15 +23,6 @@ function isValidRole(role) {
     return role === ROLES.OWNER || role === ROLES.EDITOR || role === ROLES.VIEWER;
 }
 
-function postProcess(data) {
-    data.folderPath = data.folder_path;
-    delete data.folder_path;
-
-    if (!data.folderPath) data.folderPath = path.join(paths.GROUPS_DATA_ROOT, data.id);
-
-    return data;
-}
-
 async function getMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
@@ -40,49 +31,34 @@ async function getMembers(id) {
 }
 
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(idOrSlug, name, folderPath = '', members = [], ownerUsername = '') {
+async function add(idOrSlug, name, ownerUsername) {
     assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
-    assert.strictEqual(typeof folderPath, 'string');
-    assert(Array.isArray(members));
     assert.strictEqual(typeof ownerUsername, 'string');
 
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    // owner defaults to the first member if not provided
-    if (!ownerUsername && members.length) ownerUsername = members[0];
-
-    const memberList = members.map((username) => ({ username, role: username === ownerUsername ? ROLES.OWNER : ROLES.EDITOR }));
-    if (ownerUsername && !memberList.some((m) => m.username === ownerUsername)) memberList.push({ username: ownerUsername, role: ROLES.OWNER });
-
-    debugLog(`add: ${idOrSlug} by name ${name} at ${folderPath} with members ${JSON.stringify(memberList)}`);
+    debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUsername}`);
 
     const queries = [{
-        query: 'INSERT INTO groupfolders (id, name, folder_path) VALUES ($1, $2, $3)',
-        args: [ idOrSlug, name, folderPath ]
+        query: 'INSERT INTO groupfolders (id, name) VALUES ($1, $2)',
+        args: [ idOrSlug, name ]
+    }, {
+        query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
+        args: [ idOrSlug, ownerUsername, ROLES.OWNER ]
     }];
-
-    for (const member of memberList) {
-        queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
-            args: [ idOrSlug, member.username, member.role ]
-        });
-    }
 
     const [error] = await safe(database.transaction(queries));
     if (error?.nestedError?.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
     if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 
-    if (!folderPath) folderPath = path.join(paths.GROUPS_DATA_ROOT, idOrSlug);
-    fs.mkdirSync(folderPath, { recursive: true });
+    fs.mkdirSync(path.join(paths.GROUPS_DATA_ROOT, idOrSlug), { recursive: true });
 
     // kick off indexer in background
     if (!constants.TEST) {
-        for (const member of memberList) {
-            recoll.indexByUsername(member.username);
-        }
+        recoll.indexByUsername(ownerUsername);
     }
 }
 
@@ -97,7 +73,7 @@ async function get(id) {
     const groupFolder = result.rows[0];
     groupFolder.members = await getMembers(id);
 
-    return postProcess(groupFolder);
+    return groupFolder;
 }
 
 async function list(username = '') {
@@ -113,8 +89,6 @@ async function list(username = '') {
 
     const result = await database.query(query, args);
     const folders = result.rows;
-
-    folders.forEach(postProcess);
 
     for (const folder of folders) {
         folder.members = await getMembers(folder.id);

@@ -40,7 +40,7 @@ describe('search API', function () {
 
         const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
         for (const groupFolder of await groupfolders.list(username)) {
-            pathsToIndex.push(groupFolder.folderPath);
+            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
         }
 
         fs.writeFileSync(path.join(configPath, 'recoll.conf'), `topdirs = ${pathsToIndex.join(' ')}`);

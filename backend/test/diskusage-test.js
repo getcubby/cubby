@@ -28,7 +28,7 @@ describe('diskusage', function () {
 
     it('updates both owners after cross-root move', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await addUserFile(alice.username, '/move-me.txt', 'payload');
 
         await relocate.relocate({

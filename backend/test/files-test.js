@@ -188,7 +188,7 @@ describe('files', function () {
 
     it('can resolve groupfolder resource paths', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ user.username ]);
+        await groupfolders.add('team', 'Team', user.username);
         await files.addOrOverwriteFileContents('groupfolder-team', '/team.txt', Buffer.from('team'), null, true);
 
         const subject = await files.translateResourcePath(user.username, '/groupfolders/team/team.txt');
@@ -199,7 +199,7 @@ describe('files', function () {
 
     it('rejects groupfolder paths for non-members', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ alice.username ]);
+        await groupfolders.add('team', 'Team', alice.username);
 
         const subject = await files.translateResourcePath(user.username, '/groupfolders/team/file.txt');
         assert.equal(subject, null);

@@ -63,7 +63,6 @@ CREATE TABLE group_members(
 CREATE TABLE IF NOT EXISTS groupfolders(
     id VARCHAR(128) NOT NULL UNIQUE,
     name VARCHAR(256) NOT NULL,
-    folder_path VARCHAR(512) NOT NULL,
 
     PRIMARY KEY(id));
 

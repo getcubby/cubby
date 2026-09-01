@@ -21,7 +21,7 @@ function hasCommand(command) {
 const RECOLL_AVAILABLE = hasCommand('recoll') && hasCommand('recollindex');
 
 describe('search API', function () {
-    const { setup, cleanup, serverUrl, admin, user, withToken, addUserFile } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
 
     before(function () {
         if (!RECOLL_AVAILABLE) this.skip();
@@ -56,7 +56,7 @@ describe('search API', function () {
     });
 
     it('requires a non-empty query', async function () {
-        const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), admin.token)
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), alice.token)
             .ok(() => true);
         assert.equal(response.status, 400);
     });
@@ -64,10 +64,10 @@ describe('search API', function () {
     it('can search indexed files', async function () {
         const marker = `search-route-marker-${Date.now()}`;
 
-        await addUserFile(admin.username, '/search-route.txt', marker);
-        await indexUser(admin.username);
+        await addUserFile(alice.username, '/search-route.txt', marker);
+        await indexUser(alice.username);
 
-        const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), admin.token)
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), alice.token)
             .query({ query: marker });
         assert.equal(response.status, 200);
         assert.ok(response.body.results.length >= 1);

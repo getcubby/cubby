@@ -1,36 +1,22 @@
 <script setup>
 
-import { ref, inject, onMounted } from 'vue';
-import UsersSettings from './settings/UsersSettings.vue';
+import { ref, onMounted } from 'vue';
 import GroupFoldersSettings from './settings/GroupFoldersSettings.vue';
 import MainModel from '../models/MainModel.js';
-
-const profile = inject('profile');
 
 const emit = defineEmits(['groupfolders-changed']);
 
 const users = ref([]);
-const usersBusy = ref(true);
 
-async function refreshUsers() {
-  usersBusy.value = true;
-
+async function loadUsers() {
   try {
     users.value = await MainModel.getUsers();
   } catch (error) {
     console.error('Failed to list users.', error);
   }
-
-  usersBusy.value = false;
 }
 
-async function onUsersChanged() {
-  await refreshUsers();
-}
-
-onMounted(async () => {
-  await refreshUsers();
-});
+onMounted(loadUsers);
 
 </script>
 
@@ -40,7 +26,6 @@ onMounted(async () => {
       <div class="settings-content content">
         <h1 class="settings-page-header">Settings</h1>
 
-        <UsersSettings :profile="profile" :users="users" :busy="usersBusy" @users-changed="onUsersChanged" />
         <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
       </div>
     </div>

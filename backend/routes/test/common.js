@@ -35,7 +35,7 @@ function withToken(req, token) {
 }
 
 export default {
-    admin: modelCommon.admin,
+    alice: modelCommon.alice,
     user: modelCommon.user,
     serverUrl,
     setup,

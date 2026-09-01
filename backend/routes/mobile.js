@@ -118,8 +118,7 @@ async function codeToToken(req, res, next) {
         user: {
             username: user.username,
             email: user.email,
-            displayName: user.displayName,
-            admin: user.admin
+            displayName: user.displayName
         }
     }));
 }

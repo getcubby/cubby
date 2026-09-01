@@ -4,34 +4,34 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('shares API', function () {
-    const { setup, cleanup, serverUrl, admin, user, withToken, addUserFile } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
 
     before(setup);
     after(cleanup);
 
     it('can create and list shares', async function () {
-        await addUserFile(admin.username, '/shared-api.txt', 'shared via api');
+        await addUserFile(alice.username, '/shared-api.txt', 'shared via api');
 
-        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), admin.token)
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
             .send({
-                ownerUsername: admin.username,
+                ownerUsername: alice.username,
                 path: '/shared-api.txt',
                 receiverUsername: user.username
             });
         assert.equal(createResponse.status, 200);
         assert.ok(createResponse.body.shareId);
 
-        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), admin.token);
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
         assert.equal(listResponse.body.shares.length, 1);
         assert.equal(listResponse.body.shares[0].id, createResponse.body.shareId);
     });
 
     it('can access a public share link', async function () {
-        await addUserFile(admin.username, '/public.txt', 'public share');
+        await addUserFile(alice.username, '/public.txt', 'public share');
 
-        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), admin.token)
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
             .send({
-                ownerUsername: admin.username,
+                ownerUsername: alice.username,
                 path: '/public.txt',
                 readonly: true
             });
@@ -44,37 +44,37 @@ describe('shares API', function () {
     });
 
     it('can remove a share', async function () {
-        await addUserFile(admin.username, '/remove-share.txt', 'remove share');
+        await addUserFile(alice.username, '/remove-share.txt', 'remove share');
 
-        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), admin.token)
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
             .send({
-                ownerUsername: admin.username,
+                ownerUsername: alice.username,
                 path: '/remove-share.txt',
                 receiverEmail: 'guest@test.local'
             });
 
-        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), admin.token)
+        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), alice.token)
             .query({ shareId: createResponse.body.shareId });
         assert.equal(removeResponse.status, 200);
 
-        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), admin.token);
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
         assert.equal(listResponse.body.shares.some((share) => share.id === createResponse.body.shareId), false);
     });
 
     it('logs unshared when a share is removed', async function () {
-        await addUserFile(admin.username, '/unshare-activity.txt', 'unshare activity');
+        await addUserFile(alice.username, '/unshare-activity.txt', 'unshare activity');
 
-        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), admin.token)
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
             .send({
-                ownerUsername: admin.username,
+                ownerUsername: alice.username,
                 path: '/unshare-activity.txt',
                 receiverUsername: user.username
             });
 
-        await withToken(superagent.del(`${serverUrl}/api/v1/shares`), admin.token)
+        await withToken(superagent.del(`${serverUrl}/api/v1/shares`), alice.token)
             .query({ shareId: createResponse.body.shareId });
 
-        const activityResponse = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), admin.token)
+        const activityResponse = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), alice.token)
             .query({ path: '/home/unshare-activity.txt' });
         assert.equal(activityResponse.status, 200);
         assert.equal(activityResponse.body.activity[0].action, 'unshared');

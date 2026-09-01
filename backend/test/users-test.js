@@ -7,19 +7,18 @@ import tokens from '../tokens.js';
 import users from '../users.js';
 
 describe('users', function () {
-    const { databaseSetup, cleanup, admin, user } = common;
+    const { databaseSetup, cleanup, alice, user } = common;
 
     beforeEach(databaseSetup);
     after(cleanup);
 
     it('can add and get a user', async function () {
-        await users.add(admin);
+        await users.add(alice);
 
-        const result = await users.get(admin.username);
-        assert.equal(result.username, admin.username);
-        assert.equal(result.email, admin.email);
-        assert.equal(result.displayName, admin.displayName);
-        assert.equal(result.admin, false);
+        const result = await users.get(alice.username);
+        assert.equal(result.username, alice.username);
+        assert.equal(result.email, alice.email);
+        assert.equal(result.displayName, alice.displayName);
     });
 
     it('rejects duplicate usernames', async function () {
@@ -31,22 +30,12 @@ describe('users', function () {
     });
 
     it('can list users', async function () {
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
 
         const result = await users.list();
         assert.equal(result.length, 2);
-        assert.deepEqual(result.map((u) => u.username).sort(), [ admin.username, user.username ].sort());
-    });
-
-    it('promotes the first ensureUser login to admin', async function () {
-        const ensured = await users.ensureUser({
-            username: 'firstlogin',
-            email: 'first@test.local',
-            displayName: 'First Login'
-        });
-
-        assert.equal(ensured.admin, true);
+        assert.deepEqual(result.map((u) => u.username).sort(), [ alice.username, user.username ].sort());
     });
 
     it('resolves users by access token', async function () {
@@ -57,16 +46,14 @@ describe('users', function () {
         assert.equal(result.username, user.username);
     });
 
-    it('can update and check admin status', async function () {
+    it('can update a user', async function () {
         await users.add(user);
 
         await users.update(user.username, { email: 'updated@test.local', displayName: 'Updated User' });
-        await users.setAdmin(user.username, true);
 
         const result = await users.get(user.username);
         assert.equal(result.email, 'updated@test.local');
         assert.equal(result.displayName, 'Updated User');
-        assert.equal(result.admin, true);
         assert.equal(await users.exists(user.username), true);
     });
 
@@ -82,12 +69,5 @@ describe('users', function () {
         const result = await users.get('scimuser');
         assert.equal(result.email, 'scim-new@test.local');
         assert.equal(result.displayName, 'Scim Updated');
-    });
-
-    it('can remove a user', async function () {
-        await users.add(user);
-        await users.remove(user.username);
-
-        assert.equal(await users.get(user.username), null);
     });
 });

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import paths from './paths.js';
-import { cp, rm } from 'node:fs/promises';
+import { cp } from 'node:fs/promises';
 import debug from 'debug';
 import database from './database.js';
 import path from 'path';
@@ -23,9 +23,8 @@ async function add(user) {
     const username = user.username;
     const email = user.email;
     const displayName = user.displayName;
-    const admin = false;
 
-    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name, admin) VALUES ($1, $2, $3, $4)', [ username, email, displayName, admin ]));
+    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name) VALUES ($1, $2, $3)', [ username, email, displayName ]));
     if (error?.nestedError?.detail?.includes('already exists') && error?.nestedError?.detail?.includes('username')) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
     if (error) throw error;
 
@@ -66,30 +65,11 @@ async function list() {
     return users.rows;
 }
 
-async function hasAnyAdmin() {
-    const result = await database.query('SELECT EXISTS (SELECT 1 FROM users WHERE admin = TRUE) AS ok');
-    return Boolean(result.rows[0]?.ok);
-}
-
 async function update(username, user) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof user, 'object');
 
     await database.query('UPDATE users SET email = $1, display_name = $2 WHERE username = $3', [ user.email, user.displayName, username ]);
-}
-
-async function setAdmin(username, admin) {
-    assert.strictEqual(typeof username, 'string');
-    assert.strictEqual(typeof admin, 'boolean');
-
-    await database.query('UPDATE users SET admin = $1 WHERE username = $2', [ admin, username ]);
-}
-
-async function remove(username) {
-    assert.strictEqual(typeof username, 'string');
-
-    await database.query('DELETE FROM users WHERE username = $1', [ username ]);
-    await rm(path.join(paths.USER_DATA_ROOT, username), { recursive: true, force: true });
 }
 
 async function ensureUser(data) {
@@ -98,12 +78,6 @@ async function ensureUser(data) {
     debugLog(`ensureUser: ${username}`);
     const [error] = await safe(add({ username, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
-
-    // First OIDC login becomes admin if the install has none yet (e.g. users pre-provisioned via SCIM).
-    if (!(await hasAnyAdmin())) {
-        debugLog(`ensureUser: no admin yet. Making ${username} the admin.`);
-        await setAdmin(username, true);
-    }
 
     return await get(username);
 }
@@ -145,8 +119,6 @@ export default {
     getByAccessToken,
     list,
     update,
-    setAdmin,
-    remove,
     ensureUser,
     upsertFromScim
 };

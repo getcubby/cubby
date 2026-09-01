@@ -17,11 +17,11 @@ describe('database', function () {
     });
 
     it('rolls back failed transactions', async function () {
-        await database.query('INSERT INTO users (username, email, display_name, admin) VALUES ($1, $2, $3, $4)', [ 'txuser', 'tx@test.local', 'Tx User', false ]);
+        await database.query('INSERT INTO users (username, email, display_name) VALUES ($1, $2, $3)', [ 'txuser', 'tx@test.local', 'Tx User' ]);
 
         const [error] = await safe(database.transaction([
             { query: 'UPDATE users SET email = $1 WHERE username = $2', args: [ 'changed@test.local', 'txuser' ] },
-            { query: 'INSERT INTO users (username, email, display_name, admin) VALUES ($1, $2, $3, $4)', args: [ 'txuser', 'dup@test.local', 'Dup User', false ] }
+            { query: 'INSERT INTO users (username, email, display_name) VALUES ($1, $2, $3)', args: [ 'txuser', 'dup@test.local', 'Dup User' ] }
         ]));
         assert.ok(error);
         assert.equal(error.reason, MainError.DATABASE_ERROR);

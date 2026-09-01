@@ -38,16 +38,6 @@ async function list(req, res, next) {
     return next(new HttpSuccess(200, { groupFolder: result }));
 }
 
-async function get(req, res, next) {
-    assert.strictEqual(typeof req.user, 'object');
-
-    const id = req.params.id;
-
-    debugLog(`get: ${id}`);
-
-    next(MainError.toHttpError(new MainError(MainError.NOT_IMPLEMENTED, 'not implemented')));
-}
-
 async function update(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
@@ -81,7 +71,6 @@ async function remove(req, res, next) {
 export default {
     add,
     list,
-    get,
     update,
     remove
 };

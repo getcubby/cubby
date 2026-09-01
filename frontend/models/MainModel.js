@@ -11,8 +11,7 @@ async function getProfile() {
   return {
     username: result.body.username,
     email: result.body.email,
-    displayName: result.body.displayName,
-    admin: !!result.body.admin
+    displayName: result.body.displayName
   };
 }
 
@@ -47,28 +46,6 @@ async function getUsers() {
   if (error || result.status !== 200) throw new Error('Failed to get users', { cause: error || result })
 
   return result.body.users;
-}
-
-async function setAdmin(username, isAdmin) {
-  let error, result;
-  try {
-    result = await fetcher.put(`${API_ORIGIN}/api/v1/users/${username}/admin`, { admin: isAdmin });
-  } catch (e) {
-    error = e;
-  }
-
-  if (error || result.status !== 200) throw new Error('Failed to set admin status', { cause: error || result })
-}
-
-async function removeUser(username) {
-    let error, result;
-    try {
-        result = await fetcher.del(`${API_ORIGIN}/api/v1/users/${username}`);
-    } catch (e) {
-        error = e;
-    }
-
-    if (error || result.status !== 200) throw new Error('Failed to remove user', { cause: error || result });
 }
 
 function canHandleWithOffice(entry) {
@@ -177,8 +154,6 @@ export default {
   getProfile,
   getConfig,
   getUsers,
-  setAdmin,
-  removeUser,
   canHandleWithOffice,
   getOfficeHandle,
   recent,

@@ -4,16 +4,16 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('favorites API', function () {
-    const { setup, cleanup, serverUrl, admin, user, withToken, addUserFile } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
 
     before(setup);
     after(cleanup);
 
     it('can create, list, get, and remove favorites', async function () {
-        await addUserFile(admin.username, '/favorite-api.txt', 'favorite me');
+        await addUserFile(alice.username, '/favorite-api.txt', 'favorite me');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), user.token)
-            .send({ path: '/favorite-api.txt', owner: admin.username });
+            .send({ path: '/favorite-api.txt', owner: alice.username });
         assert.equal(createResponse.status, 200);
         const favoriteId = createResponse.body.id;
         assert.match(favoriteId, /^[0-9a-f-]{36}$/);
@@ -22,7 +22,7 @@ describe('favorites API', function () {
         assert.equal(listResponse.status, 200);
         assert.equal(listResponse.body.favorites.length, 1);
         assert.equal(listResponse.body.favorites[0].filePath, '/favorite-api.txt');
-        assert.equal(listResponse.body.favorites[0].owner, admin.username);
+        assert.equal(listResponse.body.favorites[0].owner, alice.username);
 
         const getResponse = await withToken(superagent.get(`${serverUrl}/api/v1/favorites/${favoriteId}`), user.token);
         assert.equal(getResponse.status, 200);

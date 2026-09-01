@@ -45,14 +45,11 @@ const profileMenu = computed(() => {
     label: 'WebDAV',
     icon: 'fa-solid fa-network-wired',
     action: () => { webDavDialog.value?.open(); },
+  }, {
+    label: 'Settings',
+    icon: 'fa-solid fa-cog',
+    action: () => { window.location.href = '#settings'; },
   }];
-  if (profile.value.admin) {
-    items.push({
-      label: 'Settings',
-      icon: 'fa-solid fa-cog',
-      action: () => { window.location.href = '#settings'; },
-    });
-  }
   items.push({ separator: true });
   items.push({
     label: 'Log out',
@@ -243,8 +240,7 @@ onMounted(async () => {
       }
       resetNonFileViewState();
       view.value = VIEWS.FAVORITES;
-    } else if ((hash.indexOf('users') === 0 || hash.indexOf('settings') === 0) && profile.value?.username && profile.value.admin) {
-      if (hash.indexOf('users') === 0) window.location.hash = 'settings';
+    } else if (hash.indexOf('settings') === 0 && profile.value?.username) {
       resetNonFileViewState();
       view.value = VIEWS.SETTINGS;
       onCloseSidebar();

@@ -4,7 +4,7 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('groupfolders API', function () {
-    const { setup, cleanup, serverUrl, admin, user, withToken } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken } = common;
 
     before(setup);
     after(cleanup);
@@ -26,7 +26,7 @@ describe('groupfolders API', function () {
         assert.equal(listResponse.body.groupFolder[0].id, 'team');
 
         const updateResponse = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/team`), user.token)
-            .send({ name: 'Updated Team', members: [ admin.username, user.username ] });
+            .send({ name: 'Updated Team', members: [ alice.username, user.username ] });
         assert.equal(updateResponse.status, 200);
 
         const updatedList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
@@ -38,10 +38,5 @@ describe('groupfolders API', function () {
 
         const emptyList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
         assert.equal(emptyList.body.groupFolder.length, 0);
-    });
-
-    it('returns not implemented for get by id', async function () {
-        const response = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders/missing`), admin.token).ok(() => true);
-        assert.equal(response.status, 409);
     });
 });

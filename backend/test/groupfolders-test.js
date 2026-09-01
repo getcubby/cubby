@@ -10,24 +10,24 @@ import safe from '@cloudron/safetydance';
 import users from '../users.js';
 
 describe('groupfolders', function () {
-    const { databaseSetup, cleanup, admin, user } = common;
+    const { databaseSetup, cleanup, alice, user } = common;
 
     beforeEach(databaseSetup);
     after(cleanup);
 
     async function createUsers() {
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
     }
 
     it('can add, get, and list groupfolders', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team Folder', '', [ admin.username, user.username ]);
+        await groupfolders.add('team', 'Team Folder', '', [ alice.username, user.username ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
-        assert.deepEqual(folder.members.sort(), [ admin.username, user.username ].sort());
+        assert.deepEqual(folder.members.sort(), [ alice.username, user.username ].sort());
         assert.ok(fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')));
 
         const all = await groupfolders.list();
@@ -42,9 +42,9 @@ describe('groupfolders', function () {
     it('rejects duplicate groupfolder ids', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ admin.username ]);
+        await groupfolders.add('team', 'Team', '', [ alice.username ]);
 
-        const [error] = await safe(groupfolders.add('team', 'Team Again', '', [ admin.username ]));
+        const [error] = await safe(groupfolders.add('team', 'Team Again', '', [ alice.username ]));
         assert.ok(error);
         assert.equal(error.reason, MainError.ALREADY_EXISTS);
     });
@@ -58,7 +58,7 @@ describe('groupfolders', function () {
     it('can update members and name', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ admin.username ]);
+        await groupfolders.add('team', 'Team', '', [ alice.username ]);
         await groupfolders.update('team', 'Updated Team', [ user.username ]);
 
         const folder = await groupfolders.get('team');
@@ -69,7 +69,7 @@ describe('groupfolders', function () {
     it('can remove a groupfolder', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', '', [ admin.username ]);
+        await groupfolders.add('team', 'Team', '', [ alice.username ]);
         await groupfolders.remove('team');
 
         assert.equal(await groupfolders.get('team'), null);

@@ -22,7 +22,7 @@ function hasCommand(command) {
 const RECOLL_AVAILABLE = hasCommand('recoll') && hasCommand('recollindex');
 
 describe('recoll', function () {
-    const { databaseSetup, cleanup, admin, user, addUserFile } = common;
+    const { databaseSetup, cleanup, alice, user, addUserFile } = common;
 
     before(function () {
         if (!RECOLL_AVAILABLE) this.skip();
@@ -62,9 +62,9 @@ describe('recoll', function () {
 
     it('can index and search user files', async function () {
         const marker = `recoll-user-marker-${Date.now()}`;
-        await createUserWithIndexedFile(admin.username, '/search-me.txt', marker);
+        await createUserWithIndexedFile(alice.username, '/search-me.txt', marker);
 
-        const results = await recoll.searchByUsername(admin.username, marker);
+        const results = await recoll.searchByUsername(alice.username, marker);
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'search-me.txt');
         assert.ok(results[0].entry.filePath.endsWith('search-me.txt'));
@@ -73,7 +73,7 @@ describe('recoll', function () {
     it('can index and search groupfolder files', async function () {
         const marker = `recoll-group-marker-${Date.now()}`;
 
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
         await groupfolders.add('team', 'Team', '', [ user.username ]);
         await addUserFile('groupfolder-team', '/team-doc.txt', marker);
@@ -87,12 +87,12 @@ describe('recoll', function () {
     it('builds an index on demand when searching', async function () {
         const marker = `recoll-ondemand-marker-${Date.now()}`;
 
-        await users.add(admin);
-        await addUserFile(admin.username, '/ondemand.txt', marker);
-        assert.equal(fs.existsSync(indexDbPath(admin.username)), false);
+        await users.add(alice);
+        await addUserFile(alice.username, '/ondemand.txt', marker);
+        assert.equal(fs.existsSync(indexDbPath(alice.username)), false);
 
-        const results = await recoll.searchByUsername(admin.username, marker);
-        assert.ok(fs.existsSync(indexDbPath(admin.username)), 'recoll index was not created');
+        const results = await recoll.searchByUsername(alice.username, marker);
+        assert.ok(fs.existsSync(indexDbPath(alice.username)), 'recoll index was not created');
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'ondemand.txt');
     });

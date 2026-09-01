@@ -4,7 +4,7 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('users API', function () {
-    const { setup, cleanup, serverUrl, admin, user, withToken } = common;
+    const { setup, cleanup, serverUrl, user, withToken } = common;
 
     before(setup);
     after(cleanup);
@@ -24,28 +24,5 @@ describe('users API', function () {
         const response = await withToken(superagent.get(`${serverUrl}/api/v1/users`), user.token);
         assert.equal(response.status, 200);
         assert.ok(response.body.users.length >= 2);
-    });
-
-    it('cannot set admin status without admin', async function () {
-        const response = await withToken(superagent.put(`${serverUrl}/api/v1/users/${user.username}/admin`), user.token)
-            .send({ admin: true })
-            .ok(() => true);
-        assert.equal(response.status, 403);
-    });
-
-    it('can set admin status', async function () {
-        const response = await withToken(superagent.put(`${serverUrl}/api/v1/users/${user.username}/admin`), admin.token)
-            .send({ admin: true });
-        assert.equal(response.status, 200);
-
-        const profile = await withToken(superagent.get(`${serverUrl}/api/v1/profile`), user.token);
-        assert.equal(profile.body.admin, true);
-    });
-
-    it('cannot set admin status on self', async function () {
-        const response = await withToken(superagent.put(`${serverUrl}/api/v1/users/${admin.username}/admin`), admin.token)
-            .send({ admin: false })
-            .ok(() => true);
-        assert.equal(response.status, 403);
     });
 });

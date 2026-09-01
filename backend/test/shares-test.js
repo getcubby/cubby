@@ -9,15 +9,15 @@ import shares from '../shares.js';
 import users from '../users.js';
 
 describe('shares', function () {
-    const { databaseSetup, cleanup, admin, user, addUserFile } = common;
+    const { databaseSetup, cleanup, alice, user, addUserFile } = common;
 
     beforeEach(databaseSetup);
     after(cleanup);
 
     async function createUsersWithFile() {
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
-        await addUserFile(admin.username, '/shared.txt', 'shared content');
+        await addUserFile(alice.username, '/shared.txt', 'shared content');
     }
 
     it('detects expired shares', function () {
@@ -31,7 +31,7 @@ describe('shares', function () {
         await createUsersWithFile();
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverUsername: user.username,
             readonly: true
@@ -39,7 +39,7 @@ describe('shares', function () {
 
         const share = await shares.get(shareId);
         assert.ok(share);
-        assert.equal(share.ownerUsername, admin.username);
+        assert.equal(share.ownerUsername, alice.username);
         assert.equal(share.filePath, '/shared.txt');
         assert.equal(share.receiverUsername, user.username);
         assert.equal(share.readonly, true);
@@ -49,7 +49,7 @@ describe('shares', function () {
         await createUsersWithFile();
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             readonly: false
         });
@@ -60,10 +60,10 @@ describe('shares', function () {
     });
 
     it('rejects path traversal', async function () {
-        await users.add(admin);
+        await users.add(alice);
 
         const [error] = await safe(shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/../escape.txt',
             receiverEmail: 'guest@test.local'
         }));
@@ -75,24 +75,24 @@ describe('shares', function () {
         await createUsersWithFile();
 
         await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverUsername: user.username
         });
 
-        const owned = await shares.list(admin.username);
+        const owned = await shares.list(alice.username);
         assert.equal(owned.length, 1);
 
         const sharedWith = await shares.listSharedWith(user.username);
         assert.equal(sharedWith.length, 1);
-        assert.equal(sharedWith[0].ownerUsername, admin.username);
+        assert.equal(sharedWith[0].ownerUsername, alice.username);
     });
 
     it('excludes expired shares from listSharedWith', async function () {
         await createUsersWithFile();
 
         await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverUsername: user.username,
             expiresAt: Date.now() - 1000
@@ -105,12 +105,12 @@ describe('shares', function () {
         await createUsersWithFile();
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverEmail: 'guest@test.local'
         });
 
-        const result = await shares.getByOwnerAndFilepath(admin.username, null, '/shared.txt');
+        const result = await shares.getByOwnerAndFilepath(alice.username, null, '/shared.txt');
         assert.equal(result.length, 1);
         assert.equal(result[0].id, shareId);
     });
@@ -119,22 +119,22 @@ describe('shares', function () {
         await createUsersWithFile();
 
         await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/docs/report.txt',
             receiverUsername: user.username
         });
-        await addUserFile(admin.username, '/docs/report.txt', 'report');
+        await addUserFile(alice.username, '/docs/report.txt', 'report');
 
-        const exact = await shares.getByOwnerAndReceiverAndFilepath(admin.username, null, user.username, '/docs/report.txt', true);
+        const exact = await shares.getByOwnerAndReceiverAndFilepath(alice.username, null, user.username, '/docs/report.txt', true);
         assert.equal(exact.length, 1);
 
-        const prefix = await shares.getByOwnerAndReceiverAndFilepath(admin.username, null, user.username, '/docs', false);
+        const prefix = await shares.getByOwnerAndReceiverAndFilepath(alice.username, null, user.username, '/docs', false);
         assert.equal(prefix.length, 1);
     });
 
     it('can create a groupfolder share', async function () {
-        await users.add(admin);
-        await groupfolders.add('team', 'Team', '', [ admin.username ]);
+        await users.add(alice);
+        await groupfolders.add('team', 'Team', '', [ alice.username ]);
         await files.addOrOverwriteFileContents('groupfolder-team', '/team.txt', Buffer.from('team file'), null, true);
 
         const shareId = await shares.create({
@@ -152,7 +152,7 @@ describe('shares', function () {
         await createUsersWithFile();
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverUsername: user.username
         });
@@ -165,15 +165,15 @@ describe('shares', function () {
         await createUsersWithFile();
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared.txt',
             receiverUsername: user.username
         });
 
         await shares.relocatePaths({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/shared.txt',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/renamed.txt',
             isDirectory: false
         });
@@ -184,24 +184,24 @@ describe('shares', function () {
 
     it('relocatePaths updates folder shares and descendants', async function () {
         await createUsersWithFile();
-        await files.addDirectory(admin.username, '/shared-dir');
-        await addUserFile(admin.username, '/shared-dir/nested.txt', 'nested');
+        await files.addDirectory(alice.username, '/shared-dir');
+        await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
 
         const folderShareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared-dir',
             receiverUsername: user.username
         });
         const nestedShareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/shared-dir/nested.txt',
             receiverEmail: 'guest@test.local'
         });
 
         await shares.relocatePaths({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/shared-dir',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/moved-dir',
             isDirectory: true
         });
@@ -211,19 +211,19 @@ describe('shares', function () {
     });
 
     it('relocatePaths updates owner columns on cross-root move', async function () {
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
         await groupfolders.add('team', 'Team', '', [ user.username ]);
-        await addUserFile(admin.username, '/cross.txt', 'cross');
+        await addUserFile(alice.username, '/cross.txt', 'cross');
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/cross.txt',
             receiverUsername: user.username
         });
 
         await shares.relocatePaths({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/cross.txt',
             toOwner: 'groupfolder-team',
             toPath: '/cross.txt',

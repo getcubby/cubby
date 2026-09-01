@@ -67,15 +67,10 @@ async function start() {
 
         router.post('/api/v1/settings/groupfolders', users.isAuthenticated, groupFolders.add);
         router.get('/api/v1/settings/groupfolders', users.isAuthenticated, groupFolders.list);
-        router.get('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.get);
         router.put('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.update);
         router.del('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.remove);
 
         router.get('/api/v1/users', users.isAuthenticated, users.list);
-
-        router.put('/api/v1/users/:username/admin', users.isAuthenticated, users.isAdmin, users.setAdmin);
-
-        router.del('/api/v1/users/:username', users.isAuthenticated, users.isAdmin, users.removeUser);
 
         router.head('/api/v1/files', users.optionalAuth, files.head);
         router.get('/api/v1/files', users.optionalAuth, files.get);

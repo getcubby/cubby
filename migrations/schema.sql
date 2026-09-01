@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS users(
     display_name VARCHAR(512) DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     source VARCHAR(128) DEFAULT '',
-    admin BOOLEAN DEFAULT FALSE,
 
     PRIMARY KEY(username));
 

@@ -6,11 +6,10 @@ import paths from '../paths.js';
 import tokens from '../tokens.js';
 import users from '../users.js';
 
-const admin = {
-    username: 'testadmin',
-    email: 'admin@test.local',
-    displayName: 'Test Admin',
-    admin: false,
+const alice = {
+    username: 'alice',
+    email: 'alice@test.local',
+    displayName: 'Alice',
     token: null
 };
 
@@ -18,7 +17,6 @@ const user = {
     username: 'testuser',
     email: 'user@test.local',
     displayName: 'Test User',
-    admin: false,
     token: null
 };
 
@@ -38,9 +36,8 @@ async function databaseSetup() {
 async function setup() {
     await databaseSetup();
 
-    await users.add(admin);
-    await users.setAdmin(admin.username, true);
-    admin.token = await tokens.add(admin.username);
+    await users.add(alice);
+    alice.token = await tokens.add(alice.username);
 
     await users.add(user);
     user.token = await tokens.add(user.username);
@@ -67,7 +64,7 @@ async function cleanup() {
 }
 
 export default {
-    admin,
+    alice,
     user,
     databaseSetup,
     setup,

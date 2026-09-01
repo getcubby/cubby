@@ -14,35 +14,35 @@ import MainError from '../mainerror.js';
 import safe from '@cloudron/safetydance';
 
 describe('relocate', function () {
-    const { databaseSetup, cleanup, admin, user, addUserFile } = common;
+    const { databaseSetup, cleanup, alice, user, addUserFile } = common;
 
     beforeEach(databaseSetup);
     after(cleanup);
 
     async function createUsers() {
-        await users.add(admin);
+        await users.add(alice);
         await users.add(user);
     }
 
     it('can move a file within the same owner', async function () {
         await createUsers();
-        await addUserFile(admin.username, '/relocate.txt', 'payload');
+        await addUserFile(alice.username, '/relocate.txt', 'payload');
 
         await relocate.relocate({
-            actor: admin.username,
-            fromOwner: admin.username,
+            actor: alice.username,
+            fromOwner: alice.username,
             fromPath: '/relocate.txt',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/renamed.txt'
         });
 
-        const [missingError] = await safe(files.get(admin.username, '/relocate.txt'));
+        const [missingError] = await safe(files.get(alice.username, '/relocate.txt'));
         assert.equal(missingError.reason, MainError.NOT_FOUND);
 
-        const file = await files.get(admin.username, '/renamed.txt');
+        const file = await files.get(alice.username, '/renamed.txt');
         assert.equal(file.fileName, 'renamed.txt');
 
-        const activityItems = await activity.listByPath(admin.username, '/renamed.txt');
+        const activityItems = await activity.listByPath(alice.username, '/renamed.txt');
         assert.equal(activityItems.length, 1);
         assert.equal(activityItems[0].action, 'moved');
         assert.equal(activityItems[0].details.toPath, '/renamed.txt');
@@ -51,16 +51,16 @@ describe('relocate', function () {
     it('can move a file across storage roots', async function () {
         await createUsers();
         await groupfolders.add('team', 'Team', '', [ user.username ]);
-        await addUserFile(admin.username, '/cross-root.txt', 'payload');
+        await addUserFile(alice.username, '/cross-root.txt', 'payload');
 
         await relocate.relocate({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/cross-root.txt',
             toOwner: 'groupfolder-team',
             toPath: '/cross-root.txt'
         });
 
-        const [missingError] = await safe(files.get(admin.username, '/cross-root.txt'));
+        const [missingError] = await safe(files.get(alice.username, '/cross-root.txt'));
         assert.equal(missingError.reason, MainError.NOT_FOUND);
 
         const file = await files.get('groupfolder-team', '/cross-root.txt');
@@ -69,74 +69,74 @@ describe('relocate', function () {
 
     it('can move a directory tree', async function () {
         await createUsers();
-        await files.addDirectory(admin.username, '/tree');
-        await addUserFile(admin.username, '/tree/leaf.txt', 'leaf');
+        await files.addDirectory(alice.username, '/tree');
+        await addUserFile(alice.username, '/tree/leaf.txt', 'leaf');
 
         await relocate.relocate({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/tree',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/moved-tree'
         });
 
-        const [missingError] = await safe(files.get(admin.username, '/tree/leaf.txt'));
+        const [missingError] = await safe(files.get(alice.username, '/tree/leaf.txt'));
         assert.equal(missingError.reason, MainError.NOT_FOUND);
 
-        const leaf = await files.get(admin.username, '/moved-tree/leaf.txt');
+        const leaf = await files.get(alice.username, '/moved-tree/leaf.txt');
         assert.equal(leaf.fileName, 'leaf.txt');
     });
 
     it('end-to-end: rename in home updates favorites, recent, and diskusage', async function () {
         await createUsers();
-        await files.addDirectory(admin.username, '/docs');
-        await addUserFile(admin.username, '/docs/report.txt', 'report-content');
+        await files.addDirectory(alice.username, '/docs');
+        await addUserFile(alice.username, '/docs/report.txt', 'report-content');
 
-        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/docs/report.txt' });
-        await recent.add(admin.username, '/home/docs/report.txt');
+        const favoriteId = await favorites.create(user.username, { owner: alice.username, filePath: '/docs/report.txt' });
+        await recent.add(alice.username, '/home/docs/report.txt');
 
-        await diskusage.getByUsernameAndDirectory(admin.username, '/docs');
-        const docsSizeBefore = await diskusage.getByUsernameAndDirectory(admin.username, '/docs');
+        await diskusage.getByUsernameAndDirectory(alice.username, '/docs');
+        const docsSizeBefore = await diskusage.getByUsernameAndDirectory(alice.username, '/docs');
 
         await relocate.relocate({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/docs/report.txt',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/docs/report-renamed.txt'
         });
 
         const favorite = await favorites.get(favoriteId);
         assert.equal(favorite.filePath, '/docs/report-renamed.txt');
 
-        const recents = await recent.list(admin.username, 10, 10);
+        const recents = await recent.list(alice.username, 10, 10);
         assert.equal(recents.length, 1);
         assert.equal(recents[0].filePath, '/docs/report-renamed.txt');
 
-        assert.equal(await diskusage.getByUsernameAndDirectory(admin.username, '/docs/report.txt'), 0);
-        assert.ok(await diskusage.getByUsernameAndDirectory(admin.username, '/docs') >= docsSizeBefore);
+        assert.equal(await diskusage.getByUsernameAndDirectory(alice.username, '/docs/report.txt'), 0);
+        assert.ok(await diskusage.getByUsernameAndDirectory(alice.username, '/docs') >= docsSizeBefore);
     });
 
     it('end-to-end: folder move updates shares, favorites, recent, and diskusage', async function () {
         await createUsers();
-        await files.addDirectory(admin.username, '/parent-a');
-        await files.addDirectory(admin.username, '/parent-a/old-dir');
-        await files.addDirectory(admin.username, '/parent-b');
-        await addUserFile(admin.username, '/parent-a/old-dir/nested.txt', 'nested');
+        await files.addDirectory(alice.username, '/parent-a');
+        await files.addDirectory(alice.username, '/parent-a/old-dir');
+        await files.addDirectory(alice.username, '/parent-b');
+        await addUserFile(alice.username, '/parent-a/old-dir/nested.txt', 'nested');
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/parent-a/old-dir',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/parent-a/old-dir/nested.txt' });
-        await recent.add(admin.username, '/home/parent-a/old-dir/nested.txt');
+        const favoriteId = await favorites.create(user.username, { owner: alice.username, filePath: '/parent-a/old-dir/nested.txt' });
+        await recent.add(alice.username, '/home/parent-a/old-dir/nested.txt');
 
-        await diskusage.getByUsernameAndDirectory(admin.username, '/parent-a/old-dir');
-        await diskusage.getByUsernameAndDirectory(admin.username, '/parent-b');
+        await diskusage.getByUsernameAndDirectory(alice.username, '/parent-a/old-dir');
+        await diskusage.getByUsernameAndDirectory(alice.username, '/parent-b');
 
         await relocate.relocate({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/parent-a/old-dir',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/parent-b/new-dir'
         });
 
@@ -145,33 +145,33 @@ describe('relocate', function () {
         const movedFavorite = await favorites.get(favoriteId);
         assert.equal(movedFavorite.filePath, '/parent-b/new-dir/nested.txt');
 
-        const recents = await recent.list(admin.username, 10, 10);
+        const recents = await recent.list(alice.username, 10, 10);
         assert.equal(recents.length, 1);
         assert.equal(recents[0].filePath, '/parent-b/new-dir/nested.txt');
 
-        assert.equal(await diskusage.getByUsernameAndDirectory(admin.username, '/parent-a/old-dir'), 0);
-        assert.ok(await diskusage.getByUsernameAndDirectory(admin.username, '/parent-b/new-dir') > 0);
+        assert.equal(await diskusage.getByUsernameAndDirectory(alice.username, '/parent-a/old-dir'), 0);
+        assert.ok(await diskusage.getByUsernameAndDirectory(alice.username, '/parent-b/new-dir') > 0);
     });
 
     it('end-to-end: home to groupfolder updates all metadata', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ user.username, admin.username ]);
-        await addUserFile(admin.username, '/cross.txt', 'cross');
+        await groupfolders.add('team', 'Team', '', [ user.username, alice.username ]);
+        await addUserFile(alice.username, '/cross.txt', 'cross');
 
         const shareId = await shares.create({
-            ownerUsername: admin.username,
+            ownerUsername: alice.username,
             filePath: '/cross.txt',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(user.username, { owner: admin.username, filePath: '/cross.txt' });
-        await recent.add(admin.username, '/home/cross.txt');
+        const favoriteId = await favorites.create(user.username, { owner: alice.username, filePath: '/cross.txt' });
+        await recent.add(alice.username, '/home/cross.txt');
 
-        await diskusage.getByUsernameAndDirectory(admin.username, '/');
+        await diskusage.getByUsernameAndDirectory(alice.username, '/');
         await diskusage.getByUsernameAndDirectory('groupfolder-team', '/');
-        const homeUsedBefore = (await diskusage.getByUsername(admin.username)).used;
+        const homeUsedBefore = (await diskusage.getByUsername(alice.username)).used;
 
         await relocate.relocate({
-            fromOwner: admin.username,
+            fromOwner: alice.username,
             fromPath: '/cross.txt',
             toOwner: 'groupfolder-team',
             toPath: '/cross.txt'
@@ -186,18 +186,18 @@ describe('relocate', function () {
         assert.equal(favorite.filePath, '/cross.txt');
         assert.equal(favorite.owner, 'groupfolder-team');
 
-        const recents = await recent.list(admin.username, 10, 10);
+        const recents = await recent.list(alice.username, 10, 10);
         assert.equal(recents.length, 1);
         assert.equal(recents[0].filePath, '/cross.txt');
         assert.equal(recents[0].owner, 'groupfolder-team');
 
-        assert.ok((await diskusage.getByUsername(admin.username)).used < homeUsedBefore);
+        assert.ok((await diskusage.getByUsername(alice.username)).used < homeUsedBefore);
         assert.ok((await diskusage.getByUsername('groupfolder-team')).used > 0);
     });
 
     it('end-to-end: groupfolder to home updates all metadata', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', '', [ admin.username ]);
+        await groupfolders.add('team', 'Team', '', [ alice.username ]);
         await addUserFile('groupfolder-team', '/back.txt', 'back');
 
         const shareId = await shares.create({
@@ -205,35 +205,35 @@ describe('relocate', function () {
             filePath: '/back.txt',
             receiverUsername: user.username
         });
-        const favoriteId = await favorites.create(admin.username, { owner: 'groupfolder-team', filePath: '/back.txt' });
-        await recent.add(admin.username, '/groupfolders/team/back.txt');
+        const favoriteId = await favorites.create(alice.username, { owner: 'groupfolder-team', filePath: '/back.txt' });
+        await recent.add(alice.username, '/groupfolders/team/back.txt');
 
         await diskusage.getByUsernameAndDirectory('groupfolder-team', '/');
-        await diskusage.getByUsernameAndDirectory(admin.username, '/');
+        await diskusage.getByUsernameAndDirectory(alice.username, '/');
         const groupUsedBefore = (await diskusage.getByUsername('groupfolder-team')).used;
 
         await relocate.relocate({
             fromOwner: 'groupfolder-team',
             fromPath: '/back.txt',
-            toOwner: admin.username,
+            toOwner: alice.username,
             toPath: '/back.txt'
         });
 
         const share = await shares.get(shareId);
         assert.equal(share.filePath, '/back.txt');
-        assert.equal(share.ownerUsername, admin.username);
+        assert.equal(share.ownerUsername, alice.username);
         assert.equal(share.ownerGroupfolder, null);
 
         const favorite = await favorites.get(favoriteId);
         assert.equal(favorite.filePath, '/back.txt');
-        assert.equal(favorite.owner, admin.username);
+        assert.equal(favorite.owner, alice.username);
 
-        const recents = await recent.list(admin.username, 10, 10);
+        const recents = await recent.list(alice.username, 10, 10);
         assert.equal(recents.length, 1);
         assert.equal(recents[0].filePath, '/back.txt');
-        assert.equal(recents[0].owner, admin.username);
+        assert.equal(recents[0].owner, alice.username);
 
         assert.ok((await diskusage.getByUsername('groupfolder-team')).used < groupUsedBefore);
-        assert.ok((await diskusage.getByUsername(admin.username)).used > 0);
+        assert.ok((await diskusage.getByUsername(alice.username)).used > 0);
     });
 });

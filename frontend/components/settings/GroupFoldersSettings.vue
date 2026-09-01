@@ -153,10 +153,7 @@ async function onRemoveGroupFolder(groupFolder) {
   await refreshGroupFolders();
 }
 
-defineExpose({ refreshGroupFolders });
-
 onMounted(refreshGroupFolders);
-
 </script>
 
 <template>

@@ -22,7 +22,7 @@ const addGroupFolderDialog = useTemplateRef('addGroupFolderDialog');
 const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
 const settingsInputDialog = useTemplateRef('settingsInputDialog');
 
-const groupFolderTableModel = ref([]);
+const groupFolders = ref([]);
 const groupFoldersBusy = ref(true);
 const groupFolderAdd = ref({
   error: '',
@@ -59,6 +59,22 @@ function roleLabel(role) {
   return roleOptions.find((o) => o.value === role)?.label || role;
 }
 
+function groupFolderActions(groupFolder) {
+  if (currentUserRole(groupFolder) !== ROLES.OWNER) return [];
+
+  return [{
+    label: 'Edit',
+    icon: 'fa-solid fa-pen',
+    action: () => onEditGroupFolder(groupFolder),
+    quickAction: true,
+  }, {
+    label: 'Remove',
+    icon: 'fa-solid fa-trash',
+    action: () => onRemoveGroupFolder(groupFolder),
+    quickAction: true,
+  }];
+}
+
 function onAddMember() {
   const username = groupFolderEdit.value.newMember;
   const role = groupFolderEdit.value.newMemberRole;
@@ -74,7 +90,7 @@ async function refreshGroupFolders() {
   groupFoldersBusy.value = true;
 
   try {
-    groupFolderTableModel.value = await GroupFolderModel.list();
+    groupFolders.value = await GroupFolderModel.list();
   } catch (error) {
     console.error('Failed to list groupFolder.', error);
   }
@@ -214,7 +230,7 @@ onMounted(refreshGroupFolders);
         <label>Members</label>
         <ListItem v-for="(member, index) in groupFolderEdit.members" :key="member.username">
           <template #left>
-            <i class="fa-solid fa-circle-user member-avatar"></i>
+            <i class="fa-solid fa-circle-user item-icon"></i>
           </template>
           <template #label>
             <div class="member-label-row">
@@ -236,24 +252,10 @@ onMounted(refreshGroupFolders);
     </Dialog>
 
     <ProgressBar v-if="groupFoldersBusy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false" />
-    <div v-else-if="groupFolderTableModel.length" class="group-folder-list">
-      <ListItem
-        v-for="groupFolder in groupFolderTableModel" :key="groupFolder.id" :actions="[{
-          label: 'Edit',
-          icon: 'fa-solid fa-pen',
-          action: () => onEditGroupFolder(groupFolder),
-          quickAction: true,
-          visible: currentUserRole(groupFolder) === ROLES.OWNER,
-        }, {
-          label: 'Remove',
-          icon: 'fa-solid fa-trash',
-          action: () => onRemoveGroupFolder(groupFolder),
-          quickAction: true,
-          visible: currentUserRole(groupFolder) === ROLES.OWNER,
-        }]"
-      >
+    <div v-else-if="groupFolders.length" class="group-folder-list">
+      <ListItem v-for="groupFolder in groupFolders" :key="groupFolder.id" :actions="groupFolderActions(groupFolder)">
         <template #left>
-          <i class="fa-solid fa-user-group group-folder-icon"></i>
+          <i class="fa-solid fa-user-group item-icon"></i>
         </template>
         <template #label>{{ groupFolder.name }}</template>
         <template #subtext>
@@ -276,7 +278,7 @@ onMounted(refreshGroupFolders);
   gap: 6px;
 }
 
-.group-folder-icon {
+.item-icon {
   font-size: 24px;
   color: var(--pankow-color-text-secondary);
 }
@@ -294,11 +296,6 @@ onMounted(refreshGroupFolders);
   color: var(--pankow-color-text-secondary);
   text-align: center;
   padding: 20px 0;
-}
-
-.member-avatar {
-  font-size: 24px;
-  color: var(--pankow-color-text-secondary);
 }
 
 .member-label-row {

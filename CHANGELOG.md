@@ -605,3 +605,11 @@
 * Fix search regression
 * Implement read-only shares with other users
 
+[2.17.3]
+* Update cubby to 2.17.3
+* Group folders can be created by all users
+* Remove internal user management
+* Remove now unnecessary admin status
+* Fix bug which allowed read-only users edit documents via the WOPI office integration
+* Update dependencies
+

@@ -257,12 +257,11 @@ onMounted(refreshGroupFolders);
         <template #left>
           <i class="fa-solid fa-user-group item-icon"></i>
         </template>
-        <template #label>{{ groupFolder.name }}</template>
+        <template #label>
+          {{ groupFolder.name }} <span v-if="groupFolder.name.toUpperCase() !== groupFolder.id.toUpperCase()" class="group-folder-slug">- {{ groupFolder.id }}/</span>
+        </template>
         <template #subtext>
-          <div class="group-folder-subtext">
-            <span class="group-folder-slug">{{ groupFolder.id }}/</span>
-            <span v-if="groupFolder.members.length">{{ groupFolder.members.map((m) => m.username).join(', ') }}</span>
-          </div>
+          <div class="group-folder-subtext">{{ groupFolder.members.map((m) => m.username).join(', ') }}</div>
         </template>
       </ListItem>
     </div>
@@ -290,6 +289,7 @@ onMounted(refreshGroupFolders);
 
 .group-folder-slug {
   color: var(--pankow-color-text-secondary);
+  font-size: 12px;
 }
 
 .group-folder-empty {

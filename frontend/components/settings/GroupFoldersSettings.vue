@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, computed, inject, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, FormGroup, InputDialog, ListItem, SingleSelect, TableView, TableViewActionBar, TextInput } from '@cloudron/pankow';
+import { Button, Dialog, FormGroup, InputDialog, ListItem, ProgressBar, SingleSelect, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import slugify from '../../slugify.js';
@@ -17,26 +17,6 @@ const props = defineProps({
 const emit = defineEmits(['groupfolders-changed']);
 
 const profile = inject('profile');
-
-const groupFolderTableColumns = {
-  name: {
-    label: 'Name',
-    sort: true,
-  },
-  id: {
-    label: 'Slug',
-    sort: true,
-  },
-  members: {
-    label: 'Members',
-    sort: false,
-  },
-  action: {
-    label: '',
-    width: '100px',
-    sort: false,
-  },
-};
 
 const addGroupFolderDialog = useTemplateRef('addGroupFolderDialog');
 const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
@@ -255,30 +235,66 @@ onMounted(refreshGroupFolders);
       </FormGroup>
     </Dialog>
 
-    <TableView :columns="groupFolderTableColumns" :model="groupFolderTableModel" :busy="groupFoldersBusy" placeholder="No group folders">
-      <template #members="{ item: slotProps }">{{ slotProps.members.map((m) => m.username).join(', ') }}</template>
-      <template #action="{ item: slotProps }">
-        <TableViewActionBar
-          :actions="[{
-            label: 'Edit',
-            icon: 'fa-solid fa-pen',
-            action: () => onEditGroupFolder(slotProps),
-            quickAction: true,
-            visible: currentUserRole(slotProps) === ROLES.OWNER,
-          }, {
-            label: 'Remove',
-            icon: 'fa-solid fa-trash',
-            action: () => onRemoveGroupFolder(slotProps),
-            quickAction: true,
-            visible: currentUserRole(slotProps) === ROLES.OWNER,
-          }]"
-        />
-      </template>
-    </TableView>
+    <ProgressBar v-if="groupFoldersBusy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false" />
+    <div v-else-if="groupFolderTableModel.length" class="group-folder-list">
+      <ListItem
+        v-for="groupFolder in groupFolderTableModel" :key="groupFolder.id" :actions="[{
+          label: 'Edit',
+          icon: 'fa-solid fa-pen',
+          action: () => onEditGroupFolder(groupFolder),
+          quickAction: true,
+          visible: currentUserRole(groupFolder) === ROLES.OWNER,
+        }, {
+          label: 'Remove',
+          icon: 'fa-solid fa-trash',
+          action: () => onRemoveGroupFolder(groupFolder),
+          quickAction: true,
+          visible: currentUserRole(groupFolder) === ROLES.OWNER,
+        }]"
+      >
+        <template #left>
+          <i class="fa-solid fa-user-group group-folder-icon"></i>
+        </template>
+        <template #label>{{ groupFolder.name }}</template>
+        <template #subtext>
+          <div class="group-folder-subtext">
+            <span class="group-folder-slug">{{ groupFolder.id }}/</span>
+            <span v-if="groupFolder.members.length">{{ groupFolder.members.map((m) => m.username).join(', ') }}</span>
+          </div>
+        </template>
+      </ListItem>
+    </div>
+    <div v-else class="group-folder-empty">No group folders</div>
   </Section>
 </template>
 
 <style scoped>
+
+.group-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.group-folder-icon {
+  font-size: 24px;
+  color: var(--pankow-color-text-secondary);
+}
+
+.group-folder-subtext {
+  display: flex;
+  gap: 8px;
+}
+
+.group-folder-slug {
+  color: var(--pankow-color-text-secondary);
+}
+
+.group-folder-empty {
+  color: var(--pankow-color-text-secondary);
+  text-align: center;
+  padding: 20px 0;
+}
 
 .member-avatar {
   font-size: 24px;

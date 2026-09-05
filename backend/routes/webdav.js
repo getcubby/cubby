@@ -79,7 +79,7 @@ function webdavSegmentsToResource(segments) {
  * Authenticate request via Basic auth. Returns user object or null.
  */
 async function verifyCloudronCredentials(identifier, password) {
-    const url = `http://${process.env.CLOUDRON_PROXY_IP}:3006/verify-credentials`;
+    const url = `http://${process.env.CLOUDRON_PROXY_IP}:3006/verify-app-password`;
     const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

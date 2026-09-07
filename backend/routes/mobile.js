@@ -10,7 +10,7 @@ const debugLog = debug('cubby:routes:mobile');
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 const USE_APP_LINKS = !!process.env.ANDROID_CERT_SHA256;
-const REDIRECT_URI = USE_APP_LINKS ? `${APP_ORIGIN}/api/v1/mobile/callback` : 'org.getcubby://auth/callback';
+const REDIRECT_URI = USE_APP_LINKS ? `${APP_ORIGIN}/api/v1/mobile/callback` : 'io.cloudron.cubby://auth/callback';
 
 const pendingStates = new Map(); // oidc state -> timestamp
 
@@ -126,7 +126,7 @@ async function codeToToken(req, res, next) {
 // Serves landing page for when app is not installed (App Link should intercept this) . this can happen if someone manually
 // started the auth flow
 function callbackLandingFallback(req, res) {
-    res.send('Please install the mobile app - https://play.google.com/store/apps/details?id=org.getcubby.app');
+    res.send('Please install the mobile app - https://play.google.com/store/apps/details?id=io.cloudron.cubby');
 }
 
 function assetLinks(req, res) {
@@ -136,7 +136,7 @@ function assetLinks(req, res) {
         relation: ['delegate_permission/common.handle_all_urls'],
         target: {
             namespace: 'android_app',
-            package_name: 'org.getcubby.app',
+            package_name: 'io.cloudron.cubby',
             sha256_cert_fingerprints: sha256Fingerprints
         }
     }]);

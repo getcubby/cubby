@@ -39,6 +39,8 @@ function extractFilledropId() {
 }
 
 async function loadFiledropInfo() {
+  busy.value = true;
+
   filedropId.value = extractFilledropId();
   if (!filedropId.value) {
     notFound.value = true;
@@ -59,7 +61,7 @@ async function loadFiledropInfo() {
       return;
     }
     const data = await response.json();
-    if (data.passwordProtected) {
+    if (!data.folderName) {
       passwordRequired.value = true;
     } else {
       folderName.value = data.folderName;

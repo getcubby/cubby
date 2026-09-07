@@ -8,6 +8,7 @@ import {
   Dialog,
   Checkbox,
   ListItem,
+  PasswordInput,
   SingleSelect,
   TabView,
   InputGroup,
@@ -195,13 +196,13 @@ defineExpose({
               No shared links yet
             </div>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="share-link-form">
             <div style="display: flex; align-items: center; gap: 10px;">
               <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <label for="shareLinkPassword" style="white-space: nowrap;">Password</label>
-              <input id="shareLinkPassword" type="password" v-model="shareLink.password" placeholder="Optional password" style="flex: 1;" />
+              <PasswordInput id="shareLinkPassword" v-model="shareLink.password" placeholder="Optional password" style="flex: 1;" />
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />
@@ -222,6 +223,16 @@ defineExpose({
   justify-content: space-between;
   padding: 6px;
   align-items: center;
+}
+
+.share-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--pankow-color-border);
 }
 
 </style>

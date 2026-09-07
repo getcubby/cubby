@@ -7,6 +7,7 @@ import {
   Button,
   Dialog,
   Checkbox,
+  PasswordInput,
   useNotify
 } from '@cloudron/pankow';
 import FileDropModel from '../models/FileDropModel.js';
@@ -125,10 +126,10 @@ defineExpose({
           No file drops yet
         </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="filedrop-form">
         <div style="display: flex; align-items: center; gap: 10px;">
           <label for="filedropPassword" style="white-space: nowrap;">Password</label>
-          <input id="filedropPassword" type="password" v-model="filedropLink.password" placeholder="Optional password" style="flex: 1;" />
+          <PasswordInput id="filedropPassword" v-model="filedropLink.password" placeholder="Optional password" style="flex: 1;" />
         </div>
         <div style="display: flex; align-items: center; justify-content: space-between;">
           <Checkbox id="expireFileDropAt" label="Expire at" v-model="filedropLink.expires" />
@@ -151,6 +152,16 @@ defineExpose({
 
 .filedrop-link:hover {
   background-color: var(--pankow-color-background-hover);
+}
+
+.filedrop-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--pankow-color-border);
 }
 
 </style>

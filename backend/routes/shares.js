@@ -7,6 +7,7 @@ import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
+import { parseExpiresAtMs } from './utils.js';
 
 const debugLog = debug('cubby:routes:shares');
 
@@ -16,23 +17,6 @@ function boolLike(arg) {
     if (typeof arg === 'string' && arg.toLowerCase() === 'false') return false;
 
     return true;
-}
-
-/** `expiresAt` is always milliseconds since Unix epoch (finite number), or omitted / null / 0 for no expiration. */
-function parseExpiresAtMs(raw) {
-    if (raw === undefined || raw === null || raw === 0) return { expiresAtMs: null };
-
-    if (typeof raw !== 'number' || !Number.isFinite(raw)) return { error: 'expiresAt must be a finite number (milliseconds) or omitted' };
-
-    if (raw < 0) return { error: 'expiresAt must be non-negative' };
-
-    const now = Date.now();
-    if (raw <= now) return { error: 'expiresAt must be in the future' };
-
-    const max = now + 10 * 365 * 24 * 60 * 60 * 1000;
-    if (raw > max) return { error: 'expiresAt is too far in the future' };
-
-    return { expiresAtMs: raw };
 }
 
 async function optionalAttachReceiver(req, res, next) {
@@ -139,9 +123,14 @@ async function createShare(req, res, next) {
     if (parsed.error) return next(new HttpError(400, parsed.error));
     const expiresAt = parsed.expiresAtMs;
 
-    const password = req.body.password;
+    let password = req.body.password;
     if (password !== undefined && password !== null && typeof password !== 'string') return next(new HttpError(400, 'password must be a string'));
-    if (password === '') return next(new HttpError(400, 'password must be a non-empty string'));
+    if (typeof password === 'string') {
+        password = password.trim();
+        if (!password) return next(new HttpError(400, 'password must be a non-empty string'));
+    } else {
+        password = null;
+    }
 
     debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || 'link'}`);
 
@@ -155,7 +144,7 @@ async function createShare(req, res, next) {
         }
     }
 
-    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt, password: password || null }));
+    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt, password }));
     if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;

@@ -59,9 +59,7 @@ function isExpired(share) {
 }
 
 function isUnlocked(req, shareId) {
-    assert.strictEqual(typeof shareId, 'string');
-
-    return !!(req.session && req.session.shareUnlock && req.session.shareUnlock[shareId]);
+    return passwords.isUnlocked(req, 'shareUnlock', shareId);
 }
 
 async function listSharedWith(username) {
@@ -113,7 +111,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 
     // passwords only apply to public link shares (no receiver)
     const isLinkShare = !receiverUsername && !receiverEmail;
-    const passwordHash = isLinkShare && password ? passwords.hashPassword(password) : null;
+    const passwordHash = isLinkShare && password ? await passwords.hashPassword(password) : null;
 
     await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [
         shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAtDb, passwordHash
@@ -147,7 +145,7 @@ async function verifyPassword(shareId, candidatePassword) {
 
     if (result.rows.length === 0 || !result.rows[0].password_hash) return false;
 
-    return passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
+    return await passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
 async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {

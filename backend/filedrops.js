@@ -40,9 +40,7 @@ function isExpired(filedrop) {
 }
 
 function isUnlocked(req, filedropId) {
-    assert.strictEqual(typeof filedropId, 'string');
-
-    return !!(req.session && req.session.filedropUnlock && req.session.filedropUnlock[filedropId]);
+    return passwords.isUnlocked(req, 'filedropUnlock', filedropId);
 }
 
 async function list(username) {
@@ -73,7 +71,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = n
 
     const filedropId = 'fdp-' + crypto.randomBytes(32).toString('hex');
 
-    const passwordHash = password ? passwords.hashPassword(password) : null;
+    const passwordHash = password ? await passwords.hashPassword(password) : null;
 
     await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6)', [
         filedropId, ownerUsername || null, ownerGroupfolder || null, filePath, expiresAtDb, passwordHash
@@ -104,7 +102,7 @@ async function verifyPassword(filedropId, candidatePassword) {
 
     if (result.rows.length === 0 || !result.rows[0].password_hash) return false;
 
-    return passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
+    return await passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
 async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {

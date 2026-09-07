@@ -3,19 +3,21 @@ import assert from 'node:assert/strict';
 import password from '../password.js';
 
 describe('password', function () {
-    it('hashes and verifies a password', function () {
-        const stored = password.hashPassword('hunter2');
+    it('hashes and verifies a password', async function () {
+        const stored = await password.hashPassword('hunter2');
         assert.ok(stored.includes(':'));
         assert.notEqual(stored, 'hunter2');
-        assert.equal(password.verifyPassword('hunter2', stored), true);
+        assert.equal(await password.verifyPassword('hunter2', stored), true);
     });
 
-    it('rejects an incorrect password', function () {
-        const stored = password.hashPassword('correct-horse');
-        assert.equal(password.verifyPassword('wrong', stored), false);
+    it('rejects an incorrect password', async function () {
+        const stored = await password.hashPassword('correct-horse');
+        assert.equal(await password.verifyPassword('wrong', stored), false);
     });
 
-    it('produces distinct hashes for the same password', function () {
-        assert.notEqual(password.hashPassword('secret'), password.hashPassword('secret'));
+    it('produces distinct hashes for the same password', async function () {
+        const a = await password.hashPassword('secret');
+        const b = await password.hashPassword('secret');
+        assert.notEqual(a, b);
     });
 });

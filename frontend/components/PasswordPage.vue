@@ -3,7 +3,7 @@
 import { ref } from 'vue';
 import PasswordPrompt from './PasswordPrompt.vue';
 
-const props = defineProps({
+defineProps({
   title: {
     type: String,
     default: 'Password required'

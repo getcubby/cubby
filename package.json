@@ -19,7 +19,7 @@
     "debug": "^4.4.3",
     "pg": "^8.23.0",
     "handlebars": "^4.7.9",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.1",
     "nodemailer-smtp-transport": "^2.7.4",
     "xmldom": "^0.6.0",
     "xpath": "0.0.34"
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@cloudron/superagent": "^2.3.0",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.9.1",
+    "eslint": "^10.10.0",
     "globals": "^17.12.0",
     "mocha": "^12.0.0",
     "nock": "^14.0.17"

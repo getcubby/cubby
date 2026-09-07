@@ -6,11 +6,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^4.4.12",
+    "@cloudron/pankow": "^4.4.14",
     "@vitejs/plugin-vue": "^6.0.8",
-    "dompurify": "^3.4.14",
-    "eslint": "^10.9.1",
-    "eslint-plugin-vue": "^10.10.0",
+    "dompurify": "^3.4.15",
+    "eslint": "^10.10.0",
+    "eslint-plugin-vue": "^10.11.0",
     "lowlight": "^3.3.0",
     "marked": "^18.0.11",
     "moment": "^2.30.1",

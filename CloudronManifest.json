@@ -33,7 +33,7 @@
       "supportsDisplayName": true
     },
     "oidc": {
-      "loginRedirectUri": "/auth/callback,/api/v1/mobile/callback,org.io.cloudron.cubby://auth/callback"
+      "loginRedirectUri": "/auth/callback,/api/v1/mobile/callback,io.cloudron.cubby://auth/callback"
     },
     "scim": {}
   },

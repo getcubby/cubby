@@ -30,6 +30,7 @@ async function create(data) {
   // API: expiresAt is Unix time in milliseconds (finite number), or omit for no expiration
   if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
   if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
+  if (data.password) tmp.password = data.password;
 
   let error, result;
   try {
@@ -41,6 +42,17 @@ async function create(data) {
   if (error || result.status !== 200) throw new Error('Failed to create shared', { cause: error || result })
 
   return result.body.shareId;
+}
+
+async function unlock(shareId, password) {
+  let error, result;
+  try {
+    result = await fetcher.post(`${API_ORIGIN}/api/v1/shares/${shareId}/unlock`, { password });
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to unlock share', { cause: error || result });
 }
 
 async function remove(shareId) {
@@ -62,5 +74,6 @@ export default {
   list,
   create,
   remove,
+  unlock,
   getLink,
 };

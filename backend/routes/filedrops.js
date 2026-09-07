@@ -38,9 +38,13 @@ async function createFiledrop(req, res, next) {
     if (parsed.error) return next(new HttpError(400, parsed.error));
     const expiresAt = parsed.expiresAtMs;
 
+    const password = req.body.password;
+    if (password !== undefined && password !== null && typeof password !== 'string') return next(new HttpError(400, 'password must be a string'));
+    if (password === '') return next(new HttpError(400, 'password must be a non-empty string'));
+
     debugLog(`createFiledrop: ${filePath}`);
 
-    const [error, filedropId] = await safe(filedrops.create({ ownerUsername, ownerGroupfolder, filePath, expiresAt }));
+    const [error, filedropId] = await safe(filedrops.create({ ownerUsername, ownerGroupfolder, filePath, expiresAt, password: password || null }));
     if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
@@ -95,6 +99,11 @@ async function getFiledropInfo(req, res, next) {
 
     if (filedrops.isExpired(filedrop)) return next(new HttpError(404, 'not found'));
 
+    // don't leak folder name or expiry before the password has been verified
+    if (filedrop.passwordProtected && !filedrops.isUnlocked(req, filedrop.id)) {
+        return next(new HttpSuccess(200, { id: filedrop.id, passwordProtected: true }));
+    }
+
     const owner = filedrop.ownerUsername || `groupfolder-${filedrop.ownerGroupfolder}`;
 
     const [fileError, targetFolder] = await safe(files.head(owner, filedrop.filePath));
@@ -104,8 +113,33 @@ async function getFiledropInfo(req, res, next) {
         id: filedrop.id,
         folderName: targetFolder.fileName,
         createdAt: filedrop.createdAt,
-        expiresAt: filedrop.expiresAt
+        expiresAt: filedrop.expiresAt,
+        passwordProtected: filedrop.passwordProtected
     }));
+}
+
+async function unlockFiledrop(req, res, next) {
+    assert.strictEqual(typeof req.params.id, 'string');
+
+    const filedropId = req.params.id;
+    const candidatePassword = req.body?.password;
+
+    if (typeof candidatePassword !== 'string' || !candidatePassword) return next(new HttpError(400, 'password must be a non-empty string'));
+
+    const [getError, filedrop] = await safe(filedrops.get(filedropId));
+    if (getError) return next(MainError.toHttpError(getError));
+    if (!filedrop) return next(new HttpError(404, 'not found'));
+
+    if (filedrops.isExpired(filedrop)) return next(new HttpError(404, 'not found'));
+
+    const [verifyError, ok] = await safe(filedrops.verifyPassword(filedropId, candidatePassword));
+    if (verifyError) return next(MainError.toHttpError(verifyError));
+
+    if (!ok) return next(new HttpError(401, 'Invalid password'));
+
+    req.session.filedropUnlock = { ...(req.session.filedropUnlock || {}), [filedropId]: true };
+
+    next(new HttpSuccess(200, {}));
 }
 
 async function uploadToFiledrop(req, res, next) {
@@ -123,6 +157,8 @@ async function uploadToFiledrop(req, res, next) {
     if (!filedrop) return next(new HttpError(404, 'not found'));
 
     if (filedrops.isExpired(filedrop)) return next(new HttpError(404, 'not found'));
+
+    if (filedrop.passwordProtected && !filedrops.isUnlocked(req, filedrop.id)) return next(new HttpError(423, 'password required'));
 
     const owner = filedrop.ownerUsername || `groupfolder-${filedrop.ownerGroupfolder}`;
 
@@ -161,5 +197,6 @@ export default {
     listFiledrops,
     removeFiledrop,
     getFiledropInfo,
+    unlockFiledrop,
     uploadToFiledrop
 };

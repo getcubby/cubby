@@ -5,6 +5,7 @@ import database from './database.js';
 import crypto from 'crypto';
 import mailer from './mailer.js';
 import MainError from './mainerror.js';
+import passwords from './password.js';
 import users from './users.js';
 
 const debugLog = debug('cubby:shares');
@@ -42,6 +43,9 @@ function postProcess(data) {
     data.receiverEmail = data.receiver_email;
     delete data.receiver_email;
 
+    data.passwordProtected = !!data.password_hash;
+    delete data.password_hash;
+
     return data;
 }
 
@@ -52,6 +56,12 @@ function isExpired(share) {
     if (Number.isNaN(t)) return false;
 
     return t <= Date.now();
+}
+
+function isUnlocked(req, shareId) {
+    assert.strictEqual(typeof shareId, 'string');
+
+    return !!(req.session && req.session.shareUnlock && req.session.shareUnlock[shareId]);
 }
 
 async function listSharedWith(username) {
@@ -79,7 +89,7 @@ async function list(username) {
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = null }) {
+async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = null, password = null }) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
@@ -87,6 +97,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
     assert(typeof receiverEmail === 'string' || !receiverEmail);
     assert(typeof readonly === 'undefined' || typeof readonly === 'boolean');
     assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
+    assert(password === null || typeof password === 'string');
 
     // ensure we have a bool with false as fallback
     readonly = !!readonly;
@@ -100,8 +111,12 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
-    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [
-        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAtDb
+    // passwords only apply to public link shares (no receiver)
+    const isLinkShare = !receiverUsername && !receiverEmail;
+    const passwordHash = isLinkShare && password ? passwords.hashPassword(password) : null;
+
+    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [
+        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAtDb, passwordHash
     ]);
 
     const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
@@ -120,6 +135,19 @@ async function get(shareId) {
     if (result.rows.length === 0) return null;
 
     return postProcess(result.rows[0]);
+}
+
+async function verifyPassword(shareId, candidatePassword) {
+    assert.strictEqual(typeof shareId, 'string');
+    assert.strictEqual(typeof candidatePassword, 'string');
+
+    debugLog(`verifyPassword: ${shareId}`);
+
+    const result = await database.query('SELECT password_hash FROM shares WHERE id = $1', [ shareId ]);
+
+    if (result.rows.length === 0 || !result.rows[0].password_hash) return false;
+
+    return passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
 async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {
@@ -208,9 +236,11 @@ export default {
     listSharedWith,
     get,
     create,
+    verifyPassword,
     getByOwnerAndFilepath,
     getByOwnerAndReceiverAndFilepath,
     relocatePaths,
     remove,
-    isExpired
+    isExpired,
+    isUnlocked
 };

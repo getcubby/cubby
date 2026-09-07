@@ -24,6 +24,7 @@ const error = ref('');
 const filedropLink = ref({
   expires: false,
   expiresDate: '',
+  password: '',
 });
 
 function defaultExpiresDateStr() {
@@ -63,7 +64,7 @@ async function onCreate() {
   const ownerUsername = entry.value.group ? null : entry.value.owner;
   const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
 
-  const filedropId = await FileDropModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, expiresAt });
+  const filedropId = await FileDropModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, expiresAt, password: filedropLink.value.password || null });
 
   copyToClipboard(FileDropModel.getLink(filedropId));
   notify('File drop link copied to clipboard');
@@ -87,6 +88,7 @@ defineExpose({
     error.value = '';
     filedropLink.value.expires = false;
     filedropLink.value.expiresDate = defaultExpiresDateStr();
+    filedropLink.value.password = '';
 
     await refresh();
 
@@ -109,8 +111,9 @@ defineExpose({
           <div>
             <div>Created {{ prettyDate(filedrop.createdAt) }}</div>
             <small style="color: var(--pankow-color-text-secondary)">
-              <span v-if="filedrop.expiresAt">Expires {{ prettyDate(filedrop.expiresAt) }}</span>
-              <span v-else>Never expires</span>
+              <span v-if="filedrop.passwordProtected"><i class="fa-solid fa-lock"/> Password protected</span>
+              <span v-if="filedrop.expiresAt"> · Expires {{ prettyDate(filedrop.expiresAt) }}</span>
+              <span v-else-if="!filedrop.passwordProtected">Never expires</span>
             </small>
           </div>
           <div style="display: flex; gap: 5px">
@@ -123,6 +126,10 @@ defineExpose({
         </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label for="filedropPassword" style="white-space: nowrap;">Password</label>
+          <input id="filedropPassword" type="password" v-model="filedropLink.password" placeholder="Optional password" style="flex: 1;" />
+        </div>
         <div style="display: flex; align-items: center; justify-content: space-between;">
           <Checkbox id="expireFileDropAt" label="Expire at" v-model="filedropLink.expires" />
           <input type="date" v-model="filedropLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!filedropLink.expires"/>

@@ -4,6 +4,7 @@ import files from './files.js';
 import database from './database.js';
 import crypto from 'crypto';
 import MainError from './mainerror.js';
+import passwords from './password.js';
 
 const debugLog = debug('cubby:filedrops');
 
@@ -23,6 +24,9 @@ function postProcess(data) {
     data.expiresAt = data.expires_at;
     delete data.expires_at;
 
+    data.passwordProtected = !!data.password_hash;
+    delete data.password_hash;
+
     return data;
 }
 
@@ -33,6 +37,12 @@ function isExpired(filedrop) {
     if (Number.isNaN(t)) return false;
 
     return t <= Date.now();
+}
+
+function isUnlocked(req, filedropId) {
+    assert.strictEqual(typeof filedropId, 'string');
+
+    return !!(req.session && req.session.filedropUnlock && req.session.filedropUnlock[filedropId]);
 }
 
 async function list(username) {
@@ -47,11 +57,12 @@ async function list(username) {
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = null }) {
+async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = null, password = null }) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
     assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
+    assert(password === null || typeof password === 'string');
 
     const expiresAtDb = expiresAt ? new Date(expiresAt) : null;
 
@@ -62,8 +73,10 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = n
 
     const filedropId = 'fdp-' + crypto.randomBytes(32).toString('hex');
 
-    await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)', [
-        filedropId, ownerUsername || null, ownerGroupfolder || null, filePath, expiresAtDb
+    const passwordHash = password ? passwords.hashPassword(password) : null;
+
+    await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6)', [
+        filedropId, ownerUsername || null, ownerGroupfolder || null, filePath, expiresAtDb, passwordHash
     ]);
 
     return filedropId;
@@ -79,6 +92,19 @@ async function get(filedropId) {
     if (result.rows.length === 0) return null;
 
     return postProcess(result.rows[0]);
+}
+
+async function verifyPassword(filedropId, candidatePassword) {
+    assert.strictEqual(typeof filedropId, 'string');
+    assert.strictEqual(typeof candidatePassword, 'string');
+
+    debugLog(`verifyPassword: ${filedropId}`);
+
+    const result = await database.query('SELECT password_hash FROM filedrops WHERE id = $1', [ filedropId ]);
+
+    if (result.rows.length === 0 || !result.rows[0].password_hash) return false;
+
+    return passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
 async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {
@@ -140,8 +166,10 @@ export default {
     list,
     create,
     get,
+    verifyPassword,
     getByOwnerAndFilepath,
     remove,
     relocatePaths,
-    isExpired
+    isExpired,
+    isUnlocked
 };

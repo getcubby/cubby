@@ -9,11 +9,13 @@ import {
   Dialog,
   DirectoryView,
   FileUploader,
+  PasswordInput,
   TextInput,
   useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
 import FavoriteModel from '../models/FavoriteModel.js';
+import ShareModel from '../models/ShareModel.js';
 import PreviewPanel from './PreviewPanel.vue';
 import EmptyState from './EmptyState.vue';
 import RenameDialog from './RenameDialog.vue';
@@ -115,6 +117,52 @@ const directoryView = useTemplateRef('directoryView');
 const deleteDialog = useTemplateRef('deleteDialog');
 const newItemDialogElement = useTemplateRef('newItemDialog');
 const renameDialog = useTemplateRef('renameDialog');
+const sharePasswordDialog = useTemplateRef('sharePasswordDialog');
+
+const sharePasswordForm = ref({
+  shareId: '',
+  resourcePath: '',
+  password: '',
+  error: '',
+  busy: false
+});
+
+function openSharePassword(shareId, resourcePath = null) {
+  sharePasswordForm.value.shareId = shareId;
+  sharePasswordForm.value.resourcePath = resourcePath || `/shares/${shareId}/`;
+  sharePasswordForm.value.password = '';
+  sharePasswordForm.value.error = '';
+  sharePasswordForm.value.busy = false;
+  sharePasswordDialog.value.open();
+}
+
+async function onSharePasswordSubmit() {
+  if (sharePasswordForm.value.busy) return;
+
+  const password = sharePasswordForm.value.password;
+  if (!password) return;
+
+  sharePasswordForm.value.busy = true;
+  sharePasswordForm.value.error = '';
+
+  try {
+    await ShareModel.unlock(sharePasswordForm.value.shareId, password);
+  } catch (error) {
+    sharePasswordForm.value.busy = false;
+    if (error?.cause?.status === 401) {
+      sharePasswordForm.value.error = 'Invalid password.';
+      return;
+    }
+    sharePasswordForm.value.error = 'Something went wrong. Please try again.';
+    return;
+  }
+
+  sharePasswordForm.value.busy = false;
+  sharePasswordDialog.value.close();
+
+  // retry loading the current path
+  await loadPath(sharePasswordForm.value.resourcePath, true);
+}
 
 const deletePending = ref([]);
 const deleteBusy = ref(false);
@@ -446,7 +494,10 @@ async function loadMainDirectory(path, item, forceLoad = false) {
       entries.value = [];
       item = {};
 
-      if (error.status === 401) return onInvalidSession();
+      if (error.status === 423) {
+        if (resource.type === 'shares' && resource.shareId) openSharePassword(resource.shareId, resource.resourcePath);
+        return;
+      } else if (error.status === 401) return onInvalidSession();
       else if (error.status === 404) return uiError.value = 'Does not exist';
       else return console.error(error);
     }
@@ -542,7 +593,10 @@ async function loadPath(path, forceLoad = false) {
     entries.value = [];
     entry.value = {};
 
-    if (error.status === 401 || error.status === 403) {
+    if (error.status === 423) {
+      if (resource.type === 'shares' && resource.shareId) openSharePassword(resource.shareId, resource.resourcePath);
+      return false;
+    } else if (error.status === 401 || error.status === 403) {
       onInvalidSession();
       return false;
     } else if (error.status === 404) {
@@ -793,6 +847,31 @@ defineExpose({
     </Dialog>
 
     <RenameDialog ref="renameDialog" @rename="onRenamed" />
+
+    <Dialog
+      ref="sharePasswordDialog"
+      title="Password required"
+      reject-label="Cancel"
+      reject-style="secondary"
+      confirm-label="Unlock"
+      confirm-style="success"
+      :confirm-busy="sharePasswordForm.busy"
+      :confirm-active="!!sharePasswordForm.password"
+      @confirm="onSharePasswordSubmit"
+    >
+      <p>This share is protected. Enter the password to continue.</p>
+      <form @submit.prevent="onSharePasswordSubmit">
+        <PasswordInput
+          id="sharePasswordInput"
+          v-model="sharePasswordForm.password"
+          placeholder="Password"
+          autofocus
+          style="width: 100%"
+          @update:model-value="sharePasswordForm.error = ''"
+        />
+        <p class="has-error" v-show="sharePasswordForm.error">{{ sharePasswordForm.error }}</p>
+      </form>
+    </Dialog>
   </div>
 </template>
 

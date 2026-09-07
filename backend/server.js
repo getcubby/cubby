@@ -88,12 +88,14 @@ async function start() {
         router.del('/api/v1/shares', users.isAuthenticated, shares.removeShare);
 
         router.get('/api/v1/shares/:id', users.optionalAuth, shares.attachReceiver, shares.getShareLink);
+        router.post('/api/v1/shares/:id/unlock', users.optionalAuth, shares.unlockShare);
 
         router.post('/api/v1/filedrops', users.isAuthenticated, filedrops.createFiledrop);
         router.get('/api/v1/filedrops', users.isAuthenticated, filedrops.listFiledrops);
         router.del('/api/v1/filedrops', users.isAuthenticated, filedrops.removeFiledrop);
         router.get('/api/v1/filedrops/:id', users.optionalAuth, filedrops.getFiledropInfo);
         router.post('/api/v1/filedrops/:id', users.optionalAuth, filedrops.uploadToFiledrop);
+        router.post('/api/v1/filedrops/:id/unlock', users.optionalAuth, filedrops.unlockFiledrop);
 
         router.get('/filedrop/:id', users.optionalAuth, (req, res) => {
             res.sendFile(path.resolve(__dirname, '../frontend-dist/filedrop.html'));

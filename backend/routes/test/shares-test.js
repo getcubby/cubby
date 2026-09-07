@@ -80,4 +80,49 @@ describe('shares API', function () {
         assert.equal(activityResponse.body.activity[0].action, 'unshared');
         assert.equal(activityResponse.body.activity[0].details.shareId, createResponse.body.shareId);
     });
+
+    it('protects a public link share with a password', async function () {
+        await addUserFile(alice.username, '/secret.txt', 'password protected');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({
+                ownerUsername: alice.username,
+                path: '/secret.txt',
+                readonly: true,
+                password: 'hunter2'
+            });
+        assert.equal(createResponse.status, 200);
+        const shareId = createResponse.body.shareId;
+
+        // locked without a session unlock
+        const lockedResponse = await superagent.get(`${serverUrl}/api/v1/shares/${shareId}`)
+            .query({ path: '' })
+            .ok(() => true);
+        assert.equal(lockedResponse.status, 423);
+
+        // wrong password is rejected
+        const wrongResponse = await superagent.post(`${serverUrl}/api/v1/shares/${shareId}/unlock`)
+            .send({ password: 'wrong' })
+            .ok(() => true);
+        assert.equal(wrongResponse.status, 401);
+
+        // correct password unlocks and sets a session cookie
+        const unlockResponse = await superagent.post(`${serverUrl}/api/v1/shares/${shareId}/unlock`)
+            .send({ password: 'hunter2' });
+        assert.equal(unlockResponse.status, 200);
+        const cookie = (unlockResponse.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+        assert.ok(cookie);
+
+        // now the share can be accessed with the session cookie
+        const unlockedResponse = await superagent.get(`${serverUrl}/api/v1/shares/${shareId}`)
+            .query({ path: '' })
+            .set('cookie', cookie);
+        assert.equal(unlockedResponse.status, 200);
+        assert.equal(unlockedResponse.body.fileName, 'secret.txt');
+
+        // the share is reported as protected in the owner's list
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        const share = listResponse.body.shares.find((s) => s.id === shareId);
+        assert.equal(share.passwordProtected, true);
+    });
 });

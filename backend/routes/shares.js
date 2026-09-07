@@ -7,6 +7,7 @@ import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
+import passwordPage from '../share-password-page.js';
 
 const debugLog = debug('cubby:routes:shares');
 
@@ -56,6 +57,8 @@ async function optionalAttachReceiver(req, res, next) {
 
     if (req.user && req.share.receiverUsername && req.share.receiverUsername !== req.user.username) return next(new HttpError(403, 'not allowed'));
 
+    if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
+
     next();
 }
 
@@ -87,6 +90,14 @@ async function getShareLink(req, res, next) {
     const type = req.query.type;
 
     if (type && (type !== 'raw' && type !== 'download')) return next(new HttpError(400, 'type must be either empty, "download" or "raw"'));
+
+    if (req.share.passwordProtected && !shares.isUnlocked(req, req.share.id)) {
+        if (type === 'raw' || type === 'download') {
+            res.set('Content-Type', 'text/html');
+            return res.send(passwordPage.renderPasswordPage({ shareId: req.share.id, returnTo: req.originalUrl }));
+        }
+        return next(new HttpError(423, 'password required'));
+    }
 
     debugLog(`get: ${req.share.id} path:${filePath} type:${type || 'json'}`);
 
@@ -129,6 +140,10 @@ async function createShare(req, res, next) {
     if (parsed.error) return next(new HttpError(400, parsed.error));
     const expiresAt = parsed.expiresAtMs;
 
+    const password = req.body.password;
+    if (password !== undefined && password !== null && typeof password !== 'string') return next(new HttpError(400, 'password must be a string'));
+    if (password === '') return next(new HttpError(400, 'password must be a non-empty string'));
+
     debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || 'link'}`);
 
     if (receiverEmail || receiverUsername) {
@@ -141,7 +156,7 @@ async function createShare(req, res, next) {
         }
     }
 
-    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt }));
+    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt, password: password || null }));
     if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
@@ -172,6 +187,49 @@ async function listShares(req, res, next) {
     next(new HttpSuccess(200, { shares: validShares }));
 }
 
+async function unlockShare(req, res, next) {
+    assert.strictEqual(typeof req.params.id, 'string');
+
+    const shareId = req.params.id;
+    const candidatePassword = req.body?.password;
+    const returnTo = req.body?.returnTo || req.query.returnTo;
+
+    if (typeof candidatePassword !== 'string' || !candidatePassword) {
+        if (returnTo) {
+            res.set('Content-Type', 'text/html');
+            return res.send(passwordPage.renderPasswordPage({ shareId, returnTo, error: 'Password is required' }));
+        }
+        return next(new HttpError(400, 'password must be a non-empty string'));
+    }
+
+    const [getError, share] = await safe(shares.get(shareId));
+    if (getError) return next(MainError.toHttpError(getError));
+    if (!share) return next(new HttpError(404, 'share not found'));
+
+    if (shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
+
+    const [verifyError, ok] = await safe(shares.verifyPassword(shareId, candidatePassword));
+    if (verifyError) return next(MainError.toHttpError(verifyError));
+
+    if (!ok) {
+        if (returnTo) {
+            res.set('Content-Type', 'text/html');
+            return res.send(passwordPage.renderPasswordPage({ shareId, returnTo, error: 'Invalid password' }));
+        }
+        return next(new HttpError(401, 'Invalid password'));
+    }
+
+    req.session.shareUnlock = { ...(req.session.shareUnlock || {}), [shareId]: true };
+
+    if (returnTo) {
+        // only allow redirects back to local paths to avoid open redirects
+        if (typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')) return res.redirect(returnTo);
+        return res.redirect('/');
+    }
+
+    next(new HttpSuccess(200, {}));
+}
+
 async function removeShare(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
@@ -200,5 +258,6 @@ export default {
     getShareLink,
     listShares,
     createShare,
+    unlockShare,
     removeShare
 };

@@ -22,6 +22,7 @@ async function create(data) {
   if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
   if (data.ownerGroupfolder) tmp.ownerGroupfolder = data.ownerGroupfolder;
   if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
+  if (data.password) tmp.password = data.password;
 
   let error, result;
   try {
@@ -33,6 +34,17 @@ async function create(data) {
   if (error || result.status !== 200) throw new Error('Failed to create filedrop', { cause: error || result });
 
   return result.body.filedropId;
+}
+
+async function unlock(filedropId, password) {
+  let error, result;
+  try {
+    result = await fetcher.post(`${API_ORIGIN}/api/v1/filedrops/${filedropId}/unlock`, { password });
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to unlock filedrop', { cause: error || result });
 }
 
 async function remove(filedropId) {
@@ -54,5 +66,6 @@ export default {
   list,
   create,
   remove,
+  unlock,
   getLink,
 };

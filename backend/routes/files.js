@@ -47,6 +47,7 @@ async function add(req, res, next) {
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
     if (subject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
@@ -72,6 +73,8 @@ async function head(req, res, next) {
     const subject = await files.translateResourcePath(req.user?.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
+
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
 
     debugLog(`head: ${subject.resource} ${subject.filePath}`);
 
@@ -138,6 +141,8 @@ async function get(req, res, next) {
 
             // if not a public share the login session has to match
             if (share.receiverUsername && req.user && req.user.username !== share.receiverUsername)  return next(new HttpError(403, 'not allowed'));
+
+            if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
             // actual path is without shares/<shareId>/
             const shareFilePath = filePath.split('/').slice(2).join('/');
@@ -304,6 +309,8 @@ async function update(req, res, next) {
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly || newSubject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
+    if (newSubject.share?.passwordProtected && !shares.isUnlocked(req, newSubject.share.id)) return next(new HttpError(423, 'password required'));
     if (subject.role === groupFolders.ROLES.VIEWER || newSubject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !newSubject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
@@ -338,6 +345,7 @@ async function remove(req, res, next) {
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     if (subject.share?.readonly) return next(new HttpError(403, 'share is read-only'));
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
     if (subject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 

@@ -111,7 +111,7 @@ echo "   Or with local psql: PGPASSWORD=... psql -h ${POSTGRESQL_HOST} -U ${POST
 echo ""
 
 # for up/down testing
-# DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate down
+# DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
 
 export DEBUG="cubby*"
 export VITE_DEV_PORT=3000

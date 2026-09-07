@@ -91,6 +91,7 @@ onMounted(refresh);
             <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
             <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
             {{ slotProps.receiverUsername }}
+            <Icon icon="fa-solid fa-lock" v-show="slotProps.passwordProtected" v-tooltip.top="'Password protected'"/>
           </template>
           <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
           <template #action="{ item:slotProps }">

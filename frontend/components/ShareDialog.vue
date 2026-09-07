@@ -33,6 +33,7 @@ const shareLinkReadonly = ref(true);
 const shareLink = ref({
   expires: false,
   expiresDate: '',
+  password: '',
 });
 
 function defaultExpiresDateStr() {
@@ -97,7 +98,7 @@ async function onCreateShareLink() {
   }
   const { ownerUsername, ownerGroupfolder } = entryOwner();
 
-  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt });
+  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt, password: shareLink.value.password || null });
 
   copyShareIdLinkToClipboard(shareId);
 
@@ -111,6 +112,7 @@ defineExpose({
     shareLinkReadonly.value = true;
     shareLink.value.expires = false;
     shareLink.value.expiresDate = defaultExpiresDateStr();
+    shareLink.value.password = '';
 
     // prepare available users for sharing
     users.value = (await MainModel.getUsers()).filter((u) => { return u.username !== profile.value.username; });
@@ -185,6 +187,7 @@ defineExpose({
             >
               <template #subtext>
                 {{ link.readonly ? 'Read only' : 'Read & write' }}
+                <span v-if="link.passwordProtected"> - <i class="fa-solid fa-lock"/> Password protected</span>
                 <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
               </template>
             </ListItem>
@@ -195,6 +198,10 @@ defineExpose({
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label for="shareLinkPassword" style="white-space: nowrap;">Password</label>
+              <input id="shareLinkPassword" type="password" v-model="shareLink.password" placeholder="Optional password" style="flex: 1;" />
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />

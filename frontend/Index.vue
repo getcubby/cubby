@@ -276,8 +276,6 @@ onMounted(async () => {
     }
   }
 
-  if (!profile.value.username) view.value = VIEWS.LOGIN;
-
   await refreshConfig();
 
   const urlHash = window.location.hash.slice(1);
@@ -288,6 +286,8 @@ onMounted(async () => {
   localStorage.returnTo = '';
 
   await handleHash(hash);
+
+  if (!profile.value.username && view.value === '') view.value = VIEWS.LOGIN;
 
   window.addEventListener('hashchange', () => {
     if (currentHash.value === decodeURIComponent(window.location.hash)) return;

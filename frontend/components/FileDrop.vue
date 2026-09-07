@@ -350,11 +350,10 @@ onBeforeUnmount(() => removeBeforeUnload());
 
 .filedrop-page {
   display: flex;
-  align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 20px;
-  background: var(--pankow-color-background, #f5f5f5);
+  padding: 96px 20px 20px;
+  background: var(--pankow-body-background-color, white);
 }
 
 .filedrop-container {

@@ -125,4 +125,30 @@ describe('shares API', function () {
         const share = listResponse.body.shares.find((s) => s.id === shareId);
         assert.equal(share.passwordProtected, true);
     });
+
+    it('redirects protected raw links to the password page', async function () {
+        await addUserFile(alice.username, '/secret-raw.txt', 'password protected raw');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({
+                ownerUsername: alice.username,
+                path: '/secret-raw.txt',
+                readonly: true,
+                password: 'hunter2'
+            });
+        const shareId = createResponse.body.shareId;
+
+        const redirectResponse = await superagent.get(`${serverUrl}/api/v1/shares/${shareId}`)
+            .query({ type: 'raw' })
+            .redirects(0)
+            .ok(() => true);
+        assert.equal(redirectResponse.status, 302);
+        assert.ok(redirectResponse.headers.location.startsWith(`/share-password/${shareId}?returnTo=`));
+
+        // the password page itself is served
+        const pageResponse = await superagent.get(`${serverUrl}/share-password/${shareId}`)
+            .ok(() => true);
+        assert.equal(pageResponse.status, 200);
+        assert.match(pageResponse.headers['content-type'], /text\/html/);
+    });
 });

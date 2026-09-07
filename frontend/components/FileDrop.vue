@@ -2,10 +2,13 @@
 
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useNotify, Button, ProgressBar } from '@cloudron/pankow';
+import PasswordPage from './PasswordPage.vue';
 
 const { notify } = useNotify();
 
 const API_ORIGIN = '';
+
+const passwordPrompt = ref(null);
 
 const filedropId = ref('');
 const folderName = ref('');
@@ -14,7 +17,6 @@ const expired = ref(false);
 const notFound = ref(false);
 const error = ref('');
 const passwordRequired = ref(false);
-const password = ref('');
 const passwordBusy = ref(false);
 const passwordError = ref('');
 
@@ -69,8 +71,10 @@ async function loadFiledropInfo() {
   }
 }
 
-async function unlock() {
-  if (!password.value) {
+async function unlock(candidate) {
+  if (passwordBusy.value) return;
+
+  if (!candidate) {
     passwordError.value = 'Please enter the password.';
     return;
   }
@@ -83,11 +87,12 @@ async function unlock() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value })
+      body: JSON.stringify({ password: candidate })
     });
     if (response.status === 401) {
       passwordError.value = 'Invalid password.';
       passwordBusy.value = false;
+      passwordPrompt.value?.clear();
       return;
     }
     if (!response.ok) {
@@ -97,7 +102,6 @@ async function unlock() {
     }
 
     passwordRequired.value = false;
-    password.value = '';
     passwordBusy.value = false;
     await loadFiledropInfo();
   } catch (e) {
@@ -249,7 +253,17 @@ onBeforeUnmount(() => removeBeforeUnload());
 </script>
 
 <template>
-  <div class="filedrop-page">
+  <PasswordPage
+    v-if="passwordRequired"
+    ref="passwordPrompt"
+    title="Password required"
+    description="This file drop is protected. Enter the password to continue."
+    input-id="filedropPasswordInput"
+    :busy="passwordBusy"
+    :error="passwordError"
+    @submit="unlock"
+  />
+  <div v-else class="filedrop-page">
     <div class="filedrop-container">
       <div v-if="busy" class="filedrop-busy">
         <ProgressBar mode="indeterminate" :show-label="false" :slim="true" />
@@ -281,65 +295,50 @@ onBeforeUnmount(() => removeBeforeUnload());
       </div>
 
       <template v-else>
-        <div v-if="passwordRequired" class="filedrop-password">
-          <div class="filedrop-password-icon">
-            <i class="fa-solid fa-lock"></i>
-          </div>
-          <h2>Password required</h2>
-          <p>This file drop is protected. Enter the password to continue.</p>
-          <p v-if="passwordError" class="filedrop-password-error">{{ passwordError }}</p>
-          <form @submit.prevent="unlock">
-            <input type="password" v-model="password" placeholder="Password" />
-            <Button icon="fa-solid fa-lock" :disabled="passwordBusy" @click="unlock">Unlock</Button>
-          </form>
+        <div class="filedrop-header">
+          <h1>File Drop</h1>
+          <p class="filedrop-folder">Uploading to <strong>{{ folderName }}</strong></p>
         </div>
 
-        <template v-else>
-          <div class="filedrop-header">
-            <h1>File Drop</h1>
-            <p class="filedrop-folder">Uploading to <strong>{{ folderName }}</strong></p>
+        <div v-if="successFile" class="filedrop-success">
+          <div class="filedrop-success-icon">
+            <i class="fa-solid fa-circle-check"></i>
           </div>
+          <h2>Upload complete</h2>
+          <div class="filedrop-success-details">
+            <div class="filedrop-success-name">{{ successFile.name }}</div>
+            <div class="filedrop-success-size">{{ formatSize(successFile.size) }}</div>
+          </div>
+          <Button icon="fa-solid fa-cloud-arrow-up" @click="resetToUpload">Upload another file</Button>
+        </div>
 
-          <div v-if="successFile" class="filedrop-success">
-            <div class="filedrop-success-icon">
-              <i class="fa-solid fa-circle-check"></i>
+        <div
+          v-else
+          class="filedrop-dropzone"
+          :class="{ 'filedrop-dropzone-active': isDragging, 'filedrop-dropzone-uploading': uploading }"
+          @dragover="onDragOver"
+          @dragleave="onDragLeave"
+          @drop="onDrop"
+        >
+          <template v-if="uploading">
+            <div class="filedrop-progress">
+              <div class="filedrop-progress-name">{{ uploadFileName }}</div>
+              <ProgressBar mode="determinate" :value="uploadProgress" :slim="false" />
+              <div class="filedrop-progress-size">{{ uploadSpeed }}</div>
             </div>
-            <h2>Upload complete</h2>
-            <div class="filedrop-success-details">
-              <div class="filedrop-success-name">{{ successFile.name }}</div>
-              <div class="filedrop-success-size">{{ formatSize(successFile.size) }}</div>
+          </template>
+          <template v-else>
+            <div class="filedrop-dropzone-icon">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
-            <Button icon="fa-solid fa-cloud-arrow-up" @click="resetToUpload">Upload another file</Button>
-          </div>
-
-          <div
-            v-else
-            class="filedrop-dropzone"
-            :class="{ 'filedrop-dropzone-active': isDragging, 'filedrop-dropzone-uploading': uploading }"
-            @dragover="onDragOver"
-            @dragleave="onDragLeave"
-            @drop="onDrop"
-          >
-            <template v-if="uploading">
-              <div class="filedrop-progress">
-                <div class="filedrop-progress-name">{{ uploadFileName }}</div>
-                <ProgressBar mode="determinate" :value="uploadProgress" :slim="false" />
-                <div class="filedrop-progress-size">{{ uploadSpeed }}</div>
-              </div>
-            </template>
-            <template v-else>
-              <div class="filedrop-dropzone-icon">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-              </div>
-              <p class="filedrop-dropzone-text">Drag & drop files here</p>
-              <p class="filedrop-dropzone-or">or</p>
-              <label class="filedrop-browse-button">
-                <Button tag="span" icon="fa-solid fa-folder-open">Browse files</Button>
-                <input type="file" multiple @change="onFileInputChange" class="filedrop-file-input" />
-              </label>
-            </template>
-          </div>
-        </template>
+            <p class="filedrop-dropzone-text">Drag & drop files here</p>
+            <p class="filedrop-dropzone-or">or</p>
+            <label class="filedrop-browse-button">
+              <Button tag="span" icon="fa-solid fa-folder-open">Browse files</Button>
+              <input type="file" multiple @change="onFileInputChange" class="filedrop-file-input" />
+            </label>
+          </template>
+        </div>
       </template>
     </div>
   </div>
@@ -505,51 +504,6 @@ onBeforeUnmount(() => removeBeforeUnload());
 .filedrop-success-size {
   font-size: 14px;
   color: var(--pankow-color-text-secondary, #666);
-}
-
-.filedrop-password {
-  text-align: center;
-  padding: 40px 24px;
-  border: 2px solid var(--pankow-color-border, #ccc);
-  border-radius: 12px;
-  background: var(--pankow-color-background, #fff);
-}
-
-.filedrop-password-icon {
-  font-size: 48px;
-  color: var(--pankow-color-text-secondary, #999);
-  margin-bottom: 16px;
-}
-
-.filedrop-password h2 {
-  font-size: 20px;
-  font-weight: var(--pankow-font-weight-bold, 600);
-  margin: 0 0 8px 0;
-  color: var(--pankow-color-text, #333);
-}
-
-.filedrop-password p {
-  color: var(--pankow-color-text-secondary, #666);
-  margin: 0 0 16px 0;
-}
-
-.filedrop-password form {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.filedrop-password input[type="password"] {
-  flex: 1;
-  max-width: 260px;
-  padding: 10px 12px;
-  font-size: 15px;
-  border: 1px solid var(--pankow-color-border, #ccc);
-  border-radius: 6px;
-}
-
-.filedrop-password-error {
-  color: var(--pankow-color-danger, #d33) !important;
 }
 
 </style>

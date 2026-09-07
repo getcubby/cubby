@@ -39,6 +39,16 @@ export default defineConfig({
           }
         },
       },
+      '^/share-password/[^/]+$': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        bypass: (req, _res, _options) => {
+          const accept = req.headers.accept || '';
+          if (accept.includes('text/html')) {
+            return '/share-password.html';
+          }
+        },
+      },
     },
   },
   // https://vitejs.dev/guide/build.html#multi-page-app
@@ -49,6 +59,7 @@ export default defineConfig({
         index: resolve('index.html'),
         office: resolve('office.html'),
         filedrop: resolve('filedrop.html'),
+        sharePassword: resolve('share-password.html'),
       },
     },
     outDir: '../frontend-dist',

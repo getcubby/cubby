@@ -101,6 +101,10 @@ async function start() {
             res.sendFile(path.resolve(__dirname, '../frontend-dist/filedrop.html'));
         });
 
+        router.get('/share-password/:id', users.optionalAuth, (req, res) => {
+            res.sendFile(path.resolve(__dirname, '../frontend-dist/share-password.html'));
+        });
+
         router.get('/api/v1/preview/:type/:id/:hash', users.optionalAuth, shares.optionalAttachReceiver, misc.getPreview);
 
         router.get('/api/v1/recent', users.isAuthenticated, misc.getRecent);

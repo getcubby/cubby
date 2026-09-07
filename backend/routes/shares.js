@@ -7,7 +7,6 @@ import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
-import passwordPage from '../share-password-page.js';
 
 const debugLog = debug('cubby:routes:shares');
 
@@ -93,8 +92,8 @@ async function getShareLink(req, res, next) {
 
     if (req.share.passwordProtected && !shares.isUnlocked(req, req.share.id)) {
         if (type === 'raw' || type === 'download') {
-            res.set('Content-Type', 'text/html');
-            return res.send(passwordPage.renderPasswordPage({ shareId: req.share.id, returnTo: req.originalUrl }));
+            const returnTo = encodeURIComponent(req.originalUrl);
+            return res.redirect(`/share-password/${req.share.id}?returnTo=${returnTo}`);
         }
         return next(new HttpError(423, 'password required'));
     }
@@ -192,15 +191,8 @@ async function unlockShare(req, res, next) {
 
     const shareId = req.params.id;
     const candidatePassword = req.body?.password;
-    const returnTo = req.body?.returnTo || req.query.returnTo;
 
-    if (typeof candidatePassword !== 'string' || !candidatePassword) {
-        if (returnTo) {
-            res.set('Content-Type', 'text/html');
-            return res.send(passwordPage.renderPasswordPage({ shareId, returnTo, error: 'Password is required' }));
-        }
-        return next(new HttpError(400, 'password must be a non-empty string'));
-    }
+    if (typeof candidatePassword !== 'string' || !candidatePassword) return next(new HttpError(400, 'password must be a non-empty string'));
 
     const [getError, share] = await safe(shares.get(shareId));
     if (getError) return next(MainError.toHttpError(getError));
@@ -211,21 +203,9 @@ async function unlockShare(req, res, next) {
     const [verifyError, ok] = await safe(shares.verifyPassword(shareId, candidatePassword));
     if (verifyError) return next(MainError.toHttpError(verifyError));
 
-    if (!ok) {
-        if (returnTo) {
-            res.set('Content-Type', 'text/html');
-            return res.send(passwordPage.renderPasswordPage({ shareId, returnTo, error: 'Invalid password' }));
-        }
-        return next(new HttpError(401, 'Invalid password'));
-    }
+    if (!ok) return next(new HttpError(401, 'Invalid password'));
 
     req.session.shareUnlock = { ...(req.session.shareUnlock || {}), [shareId]: true };
-
-    if (returnTo) {
-        // only allow redirects back to local paths to avoid open redirects
-        if (typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')) return res.redirect(returnTo);
-        return res.redirect('/');
-    }
 
     next(new HttpSuccess(200, {}));
 }

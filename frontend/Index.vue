@@ -1,10 +1,9 @@
 <script setup>
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
-import { BASE_URL, parseResourcePath } from './utils.js';
-import { Button, SideBar, TopBar } from '@cloudron/pankow';
+import { BASE_URL, parseResourcePath, API_ORIGIN } from './utils.js';
+import { Button, SideBar, TopBar, LoginView } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
-import LoginView from './components/LoginView.vue';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
 import FileBrowser from './components/FileBrowser.vue';
@@ -39,6 +38,9 @@ const ready = ref(false);
 const view = ref('');
 const profile = ref({});
 const currentHash = ref('');
+const loginProviderName = ref('Cloudron');
+
+const loginLabel = computed(() => `Log in with ${loginProviderName.value || 'Cloudron'}`);
 
 const profileMenu = computed(() => {
   const items = [{
@@ -98,9 +100,13 @@ function onCloseSidebar() {
   sideBar.value.close();
 }
 
-async function onLogin() {
+function onLogin() {
   view.value = VIEWS.LOGIN;
 }
+
+const redirectToLogin = () => {
+  window.location.href = API_ORIGIN + '/auth/login';
+};
 
 async function onLogout() {
   await MainModel.logout();
@@ -183,7 +189,8 @@ async function fileViewerSaveHandler(item, content, done) {
 
 async function refreshConfig() {
   try {
-    await MainModel.getConfig();
+    const config = await MainModel.getConfig();
+    if (config.oidcProviderName) loginProviderName.value = config.oidcProviderName;
   } catch (e) {
     if (e.cause && e.cause.status !== 401) return console.error('Failed to get config.', e);
   }
@@ -315,7 +322,16 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-show="ready" style="height: 100%;">
-    <LoginView v-if="view === VIEWS.LOGIN"/>
+    <div v-if="view === VIEWS.LOGIN" class="login-wrapper">
+      <LoginView
+        icon-url="/logo.svg"
+        title="Cubby"
+        :login-label="loginLabel"
+        message="The painless file sharing solution"
+        footer="By Cloudron"
+        @login="redirectToLogin"
+      />
+    </div>
     <div class="container" v-else>
       <SideBar class="side-bar" ref="sideBar">
         <div class="sidebar-title">
@@ -474,4 +490,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
-</style>
+.login-wrapper {
+  height: 100%;
+  min-height: 100vh;
+}</style>

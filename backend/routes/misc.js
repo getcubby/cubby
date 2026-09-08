@@ -21,6 +21,7 @@ async function getConfig(req, res, next) {
 
     const tmp = {
         viewers: {},
+        oidcProviderName: process.env.CLOUDRON_OIDC_PROVIDER_NAME || 'Cloudron',
         // Cloudron dashboard profile (App passwords live at /#/profile)
         appPasswordsUrl: webadminOrigin ? `${webadminOrigin}/#/profile` : ''
     };

@@ -29,6 +29,7 @@ async function getConfig() {
     viewers: {
       collabora: result.body.viewers?.collabora || {}
     },
+    oidcProviderName: result.body.oidcProviderName || 'Cloudron',
     appPasswordsUrl: result.body.appPasswordsUrl || ''
   };
 

@@ -11,7 +11,7 @@
   "dependencies": {
     "@cloudron/connect-lastmile": "^3.0.0",
     "@cloudron/safetydance": "^3.1.0",
-    "@cloudron/tegel": "^1.5.0",
+    "@cloudron/tegel": "^1.6.0",
     "@fontsource/inter": "^5.3.0",
     "archiver": "^8.0.0",
     "db-migrate": "^0.11.14",

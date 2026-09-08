@@ -2,6 +2,7 @@
 
 import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
+import MainModel from '../models/MainModel.js';
 import EmptyState from './EmptyState.vue';
 import { Button, Icon, InputDialog, ProgressBar, TableView } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
@@ -39,12 +40,17 @@ const busy = ref(true);
 async function refresh() {
   busy.value = true;
 
-  tableModel.value = await ShareModel.list();
+  const [shares, groups] = await Promise.all([ ShareModel.list(), MainModel.getGroups() ]);
+  const groupNameById = {};
+  groups.forEach((g) => { groupNameById[g.id] = g.name; });
+
+  tableModel.value = shares;
 
   // set properties for sorting the table
   tableModel.value.forEach((s) => {
     s.target = s.file.filePath.toLowerCase();
-    s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
+    if (s.receiverGroup) s.receiver = groupNameById[s.receiverGroup] || s.receiverGroup;
+    else s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
   });
 
   busy.value = false;
@@ -88,9 +94,10 @@ onMounted(refresh);
             {{ slotProps.file.filePath.slice(1) }}
           </template>
           <template #receiver="{ item:slotProps }">
-            <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername"/>
+            <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername && !slotProps.receiverGroup"/>
             <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
-            {{ slotProps.receiverUsername }}
+            <Icon icon="fa-solid fa-user-group" v-show="slotProps.receiverGroup"/>
+            {{ slotProps.receiver }}
             <Icon icon="fa-solid fa-lock" v-show="slotProps.passwordProtected" v-tooltip.top="'Password protected'"/>
           </template>
           <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>

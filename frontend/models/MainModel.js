@@ -49,6 +49,19 @@ async function getUsers() {
   return result.body.users;
 }
 
+async function getGroups() {
+  let error, result;
+  try {
+    result = await fetcher.get(`${API_ORIGIN}/api/v1/groups`);
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to get groups', { cause: error || result })
+
+  return result.body.groups;
+}
+
 function canHandleWithOffice(entry) {
   if (!configCache.viewers) return false;
   if (!configCache.viewers.collabora) return false;
@@ -155,6 +168,7 @@ export default {
   getProfile,
   getConfig,
   getUsers,
+  getGroups,
   canHandleWithOffice,
   getOfficeHandle,
   recent,

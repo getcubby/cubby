@@ -23,7 +23,8 @@ async function list() {
 async function update(id, data) {
   const tmp = {
     name: data.name,
-    members: data.members
+    members: data.members,
+    groupMembers: data.groupMembers || []
   };
 
   const result = await fetcher.put(`${API_ORIGIN}/api/v1/settings/groupfolders/${id}`, tmp);

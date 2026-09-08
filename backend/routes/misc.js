@@ -61,7 +61,10 @@ async function getPreview(req, res, next) {
 
         return next(new HttpError(412, 'try again later'));
     } else if (type === 'groups') {
-        // TODO check permissions if user has access to this group
+        if (!req.user) return next(new HttpError(401, 'not authorized'));
+
+        const group = await groupFolders.get(id);
+        if (!group || !await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(404, 'not found')); // do not leak
 
         const localPreviewPath = preview.getLocalPath(hash);
         if (localPreviewPath) return res.sendFile(localPreviewPath, { dotfiles: 'allow' });
@@ -103,7 +106,7 @@ async function download(req, res, next) {
         if (!resource) return next(new HttpError(400, 'invalid resource'));
         const filePath = resourcePath.slice(resource.length+1);
 
-        let getArgs = null;
+        let getArgs;
 
         if (resource === 'home') {
             getArgs = [ req.user.username, filePath ];
@@ -116,6 +119,8 @@ async function download(req, res, next) {
 
             if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
+            if (!await shares.isReceiverAllowed(share, req.user.username)) return next(new HttpError(403, 'not allowed'));
+
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
             getArgs = [ share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
         } else if (resource === 'groupfolders') {
@@ -124,6 +129,8 @@ async function download(req, res, next) {
 
             const groupFolder = await groupFolders.get(groupFolderSlug);
             if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
+
+            if (!await groupFolders.isPartOf(groupFolder, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
             getArgs = [ 'groupfolder-' + groupFolderSlug, actualFilePath ];

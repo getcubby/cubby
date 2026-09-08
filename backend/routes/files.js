@@ -136,11 +136,8 @@ async function get(req, res, next) {
 
             if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
-            // receiverUsername is set, so this is not a public share
-            if (share.receiverUsername && !req.user) return next(new HttpError(403, 'not allowed'));
-
-            // if not a public share the login session has to match
-            if (share.receiverUsername && req.user && req.user.username !== share.receiverUsername)  return next(new HttpError(403, 'not allowed'));
+            // ensure the current user is an allowed receiver (public link/email/group aware)
+            if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
 
             if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
@@ -168,7 +165,7 @@ async function get(req, res, next) {
             file.files.forEach(function (f) { f.share = share; });
             file.share = share;
             await attachBinaryFlags(file);
-            let shareFile = file.asShare(share.filePath);
+            const shareFile = file.asShare(share.filePath);
             await favorites.attachToShareTree(shareFile, shareId);
 
             next(new HttpSuccess(200, shareFile.withoutPrivate(req.user ? req.user.username : null)));
@@ -195,7 +192,7 @@ async function get(req, res, next) {
 
                 file.isShare = true;
                 file.share = share;
-                let shareEntry = file.asShare(share.filePath);
+                const shareEntry = file.asShare(share.filePath);
                 shareEntry.id = share.id;
 
                 sharedFiles.push(shareEntry);
@@ -223,7 +220,7 @@ async function get(req, res, next) {
             const group = await groupFolders.get(groupFolderId);
             if (!group) return next(new HttpError(404, 'no such groupfolder'));
 
-            if (!groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
             // actual path is without groupfolder/<groupId>/
             const groupFilePath = '/' + filePath.split('/').slice(2).join('/');
@@ -262,7 +259,7 @@ async function get(req, res, next) {
                 file.fileName = group.name;
                 file.isShare = false;
                 file.isGroup = true;
-                let groupEntry = file.asGroup('/');
+                const groupEntry = file.asGroup('/');
                 groupEntry.id = group.id;
 
                 memberOfGroups.push(groupEntry);

@@ -30,6 +30,7 @@ async function create(data) {
   // API: expiresAt is Unix time in milliseconds (finite number), or omit for no expiration
   if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
   if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
+  if (data.receiverGroup) tmp.receiverGroup = data.receiverGroup;
   if (data.password) tmp.password = data.password;
 
   let error, result;

@@ -38,7 +38,7 @@ async function optionalAttachReceiver(req, res, next) {
 
     req.share = share;
 
-    if (req.user && req.share.receiverUsername && req.share.receiverUsername !== req.user.username) return next(new HttpError(403, 'not allowed'));
+    if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
 
     if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
@@ -61,7 +61,7 @@ async function attachReceiver(req, res, next) {
 
     req.share = share;
 
-    if (req.user && req.share.receiverUsername && req.share.receiverUsername !== req.user.username) return next(new HttpError(403, 'not allowed'));
+    if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
 
     next();
 }
@@ -118,6 +118,7 @@ async function createShare(req, res, next) {
     const filePath = req.body.path.replace(/\/+/g, '/');
     const receiverUsername = req.body.receiverUsername || null;
     const receiverEmail = req.body.receiverEmail || null;
+    const receiverGroup = req.body.receiverGroup || null;
     const readonly = boolLike(req.body.readonly);
     const parsed = parseExpiresAtMs(req.body.expiresAt);
     if (parsed.error) return next(new HttpError(400, parsed.error));
@@ -132,10 +133,10 @@ async function createShare(req, res, next) {
         password = null;
     }
 
-    debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || 'link'}`);
+    debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || receiverGroup || 'link'}`);
 
-    if (receiverEmail || receiverUsername) {
-        const [error, existingShares] = await safe(shares.getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiverUsername || receiverEmail, filePath, true /* exact match */));
+    if (receiverEmail || receiverUsername || receiverGroup) {
+        const [error, existingShares] = await safe(shares.getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiverUsername || receiverEmail || receiverGroup, filePath, true /* exact match */));
         if (error) return next(MainError.toHttpError(error));
 
         if (existingShares && existingShares.length) {
@@ -144,11 +145,11 @@ async function createShare(req, res, next) {
         }
     }
 
-    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt, password }));
+    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, receiverGroup, readonly, expiresAt, password }));
     if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath, action: 'shared', details: { shareId, receiverUsername, receiverEmail } });
+    await activity.log({ actor: req.user.username, owner, filePath, action: 'shared', details: { shareId, receiverUsername, receiverEmail, receiverGroup } });
 
     next(new HttpSuccess(200, { shareId }));
 }
@@ -216,7 +217,7 @@ async function removeShare(req, res, next) {
     if (error) return next(MainError.toHttpError(error));
 
     const owner = share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUsername: share.receiverUsername, receiverEmail: share.receiverEmail } });
+    await activity.log({ actor: req.user.username, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUsername: share.receiverUsername, receiverEmail: share.receiverEmail, receiverGroup: share.receiverGroup } });
 
     next(new HttpSuccess(200, {}));
 }

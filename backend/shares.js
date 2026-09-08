@@ -3,6 +3,7 @@ import debug from 'debug';
 import files from './files.js';
 import database from './database.js';
 import crypto from 'crypto';
+import groups from './groups.js';
 import mailer from './mailer.js';
 import MainError from './mainerror.js';
 import passwords from './password.js';
@@ -43,6 +44,9 @@ function postProcess(data) {
     data.receiverEmail = data.receiver_email;
     delete data.receiver_email;
 
+    data.receiverGroup = data.receiver_group;
+    delete data.receiver_group;
+
     data.passwordProtected = !!data.password_hash;
     delete data.password_hash;
 
@@ -67,12 +71,12 @@ async function listSharedWith(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE receiver_username = $1', [ username ]);
+    const result = await database.query('SELECT * FROM shares WHERE receiver_username = $1 OR receiver_group IN (SELECT group_id FROM group_members WHERE username = $1)', [ username ]);
 
     result.rows.forEach(postProcess);
 
     // only return non link shares
-    return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail; }).filter(function (share) { return !isExpired(share); });
+    return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail || share.receiverGroup; }).filter(function (share) { return !isExpired(share); });
 }
 
 async function list(username) {
@@ -87,12 +91,13 @@ async function list(username) {
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, readonly, expiresAt = null, password = null }) {
+async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, receiverGroup = null, readonly, expiresAt = null, password = null }) {
     assert(typeof ownerUsername === 'string' || !ownerUsername);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
     assert(typeof receiverUsername === 'string' || !receiverUsername);
     assert(typeof receiverEmail === 'string' || !receiverEmail);
+    assert(typeof receiverGroup === 'string' || !receiverGroup);
     assert(typeof readonly === 'undefined' || typeof readonly === 'boolean');
     assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
     assert(password === null || typeof password === 'string');
@@ -102,7 +107,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 
     const expiresAtDb = expiresAt ? new Date(expiresAt) : null;
 
-    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || 'link'} readonly:${readonly} expiresAt:${expiresAtDb || 'none'}`);
+    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || receiverGroup || 'link'} readonly:${readonly} expiresAt:${expiresAtDb || 'none'}`);
 
     const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -110,13 +115,14 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
     // passwords only apply to public link shares (no receiver)
-    const isLinkShare = !receiverUsername && !receiverEmail;
+    const isLinkShare = !receiverUsername && !receiverEmail && !receiverGroup;
     const passwordHash = isLinkShare && password ? await passwords.hashPassword(password) : null;
 
-    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, readonly, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [
-        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, readonly, expiresAtDb, passwordHash
+    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, receiver_group, readonly, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)', [
+        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, receiverGroup || null, readonly, expiresAtDb, passwordHash
     ]);
 
+    // group shares just show up for members, no per-member email
     const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
     if (notifyEmail) await mailer.newShare(notifyEmail, shareId);
 
@@ -177,8 +183,8 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
 
     let result;
 
-    if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path = $4', [ receiver, ownerUsername, ownerGroupfolder, filepath ]);
-    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path ~ $4', [ receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1 OR receiver_group = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path = $4', [ receiver, ownerUsername, ownerGroupfolder, filepath ]);
+    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = $1 OR receiver_username = $1 OR receiver_group = $1) AND (owner_username = $2 OR owner_groupfolder = $3) AND file_path ~ $4', [ receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 
@@ -229,6 +235,30 @@ async function remove(shareId) {
     await database.query('DELETE FROM shares WHERE id = $1', [ shareId ]);
 }
 
+/**
+ * Whether the given username is allowed to access a share.
+ * Public link shares and email shares follow the existing (no username binding) model.
+ * @param {object} share
+ * @param {string} username
+ * @returns {Promise<boolean>}
+ */
+async function isReceiverAllowed(share, username) {
+    assert.strictEqual(typeof share, 'object');
+
+    if (!share.receiverUsername && !share.receiverEmail && !share.receiverGroup) return true;
+
+    if (share.receiverUsername) return share.receiverUsername === username;
+
+    if (share.receiverGroup) {
+        if (!username) return false;
+        const groupIds = await groups.getMembershipGroupIds(username);
+        return groupIds.includes(share.receiverGroup);
+    }
+
+    // email shares keep the current behavior (no username check)
+    return true;
+}
+
 export default {
     list,
     listSharedWith,
@@ -240,5 +270,6 @@ export default {
     relocatePaths,
     remove,
     isExpired,
-    isUnlocked
+    isUnlocked,
+    isReceiverAllowed
 };

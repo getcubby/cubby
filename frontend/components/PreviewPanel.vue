@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { Button, TabView } from '@cloudron/pankow';
 import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize, prettyDate } from '@cloudron/pankow/utils';
@@ -59,6 +59,20 @@ function onToggle() {
 
 const activityItems = ref([]);
 
+const groups = ref([]);
+const groupNameById = computed(() => {
+  const map = {};
+  groups.value.forEach((g) => { map[g.id] = g.name; });
+  return map;
+});
+
+function receiverLabel(details) {
+  if (details?.receiverUsername) return details.receiverUsername;
+  if (details?.receiverGroup) return groupNameById.value[details.receiverGroup] || details.receiverGroup;
+  if (details?.receiverEmail) return details.receiverEmail;
+  return 'link';
+}
+
 function formatActivityAction(item) {
   switch (item.action) {
   case 'created':
@@ -75,14 +89,10 @@ function formatActivityAction(item) {
     const from = item.details?.fromPath || '';
     return from ? `copied from ${from}` : 'copied';
   }
-  case 'shared': {
-    const receiver = item.details?.receiverUsername || item.details?.receiverEmail || 'link';
-    return `shared with ${receiver}`;
-  }
-  case 'unshared': {
-    const receiver = item.details?.receiverUsername || item.details?.receiverEmail || 'link';
-    return `unshared with ${receiver}`;
-  }
+  case 'shared':
+    return `shared with ${receiverLabel(item.details)}`;
+  case 'unshared':
+    return `unshared with ${receiverLabel(item.details)}`;
   case 'filedrop_created':
     return 'created file drop';
   case 'filedrop_deleted':
@@ -113,6 +123,16 @@ async function loadActivity() {
 }
 
 watch(() => props.selectedEntries, loadActivity, { deep: true, immediate: true });
+
+async function loadGroups() {
+  try {
+    groups.value = await MainModel.getGroups();
+  } catch (e) {
+    groups.value = [];
+  }
+}
+
+onMounted(loadGroups);
 
 </script>
 
@@ -153,7 +173,7 @@ watch(() => props.selectedEntries, loadActivity, { deep: true, immediate: true }
           </div>
           <div class="detail" v-show="selectedEntries.length <= 1 && entry.sharedWith && entry.sharedWith.length">
             <p>Shared with</p>
-            <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ share.receiverUsername || 'link' }}</div>
+            <div class="detail-shared-width" v-for="share in entry.sharedWith" :key="share.id">{{ receiverLabel({ receiverUsername: share.receiverUsername, receiverGroup: share.receiverGroup, receiverEmail: share.receiverEmail }) }}</div>
           </div>
           <div class="detail" v-show="showActions">
             <p>Actions</p>

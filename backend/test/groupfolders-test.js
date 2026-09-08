@@ -4,6 +4,7 @@ import paths from '../paths.js';
 import common from './common.js';
 import fs from 'node:fs';
 import groupfolders from '../groupfolders.js';
+import groups from '../groups.js';
 import MainError from '../mainerror.js';
 import path from 'node:path';
 import safe from '@cloudron/safetydance';
@@ -42,8 +43,8 @@ describe('groupfolders', function () {
 
         const forUser = await groupfolders.list(user.username);
         assert.equal(forUser.length, 1);
-        assert.ok(groupfolders.isPartOf(forUser[0], user.username));
-        assert.equal(groupfolders.isPartOf(forUser[0], 'nobody'), false);
+        assert.ok(await groupfolders.isPartOf(forUser[0], user.username));
+        assert.equal(await groupfolders.isPartOf(forUser[0], 'nobody'), false);
     });
 
     it('assigns roles and helpers', async function () {
@@ -56,11 +57,11 @@ describe('groupfolders', function () {
         ]);
 
         const folder = await groupfolders.get('team');
-        assert.equal(groupfolders.getRole(folder, alice.username), 'owner');
-        assert.equal(groupfolders.getRole(folder, user.username), 'editor');
-        assert.equal(groupfolders.getRole(folder, 'nobody'), null);
-        assert.ok(groupfolders.isOwner(folder, alice.username));
-        assert.equal(groupfolders.isOwner(folder, user.username), false);
+        assert.equal(await groupfolders.getRole(folder, alice.username), 'owner');
+        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+        assert.equal(await groupfolders.getRole(folder, 'nobody'), null);
+        assert.ok(await groupfolders.isOwner(folder, alice.username));
+        assert.equal(await groupfolders.isOwner(folder, user.username), false);
     });
 
     it('rejects duplicate groupfolder ids', async function () {
@@ -104,5 +105,26 @@ describe('groupfolders', function () {
 
         assert.equal(await groupfolders.get('team'), null);
         assert.equal(!fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')), true);
+    });
+
+    it('resolves membership via groups', async function () {
+        await createUsers();
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+
+        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.update('team', 'Team', [
+            { username: alice.username, role: 'owner' }
+        ], [
+            { groupId: 'gid-1', role: 'editor' }
+        ]);
+
+        const folder = await groupfolders.get('team');
+        assert.equal(await groupfolders.isPartOf(folder, user.username), true);
+        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+
+        const forUser = await groupfolders.list(user.username);
+        assert.equal(forUser.length, 1);
+
+        assert.deepEqual(await groupfolders.getMemberUsernames('team'), [ alice.username, user.username ]);
     });
 });

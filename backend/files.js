@@ -50,8 +50,8 @@ async function translateResourcePath(username, resourcePath) {
 
         if (shares.isExpired(share)) return null;
 
-        // check if this share is a public link or only for a specific user
-        if (share.receiverUsername && share.receiverUsername !== username) return null;
+        // check if this share is a public link or only for a specific user/group
+        if (!await shares.isReceiverAllowed(share, username)) return null;
 
         // actual path is without shares/<shareId>/
         return { resource, resourcePath, usernameOrGroupfolder: share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, filePath: path.join(share.filePath, filePath.split('/').slice(2).join('/')), share };
@@ -61,11 +61,11 @@ async function translateResourcePath(username, resourcePath) {
 
         const group = await groupFolders.get(groupId);
 
-        // check if the user is part of the group
-        if (!groupFolders.isPartOf(group, username)) return null;
+        // check if the user is part of the group (directly or via a group)
+        if (!await groupFolders.isPartOf(group, username)) return null;
 
         // actual path is without groupfolder/<groupId>/
-        return { resource, resourcePath, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: '/' + filePath.split('/').slice(2).join('/'), role: groupFolders.getRole(group, username) };
+        return { resource, resourcePath, usernameOrGroupfolder: `groupfolder-${group.id}`, filePath: '/' + filePath.split('/').slice(2).join('/'), role: await groupFolders.getRole(group, username) };
     } else {
         return null;
     }

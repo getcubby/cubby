@@ -4,6 +4,7 @@ import activity from './routes/activity.js';
 import favorites from './routes/favorites.js';
 import files from './routes/files.js';
 import groupFolders from './routes/groupfolders.js';
+import groups from './routes/groups.js';
 import http from 'http';
 import { lastMile } from '@cloudron/connect-lastmile';
 import misc from './routes/misc.js';
@@ -71,6 +72,8 @@ async function start() {
         router.del('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.remove);
 
         router.get('/api/v1/users', users.isAuthenticated, users.list);
+
+        router.get('/api/v1/groups', users.isAuthenticated, groups.list);
 
         router.head('/api/v1/files', users.optionalAuth, files.head);
         router.get('/api/v1/files', users.optionalAuth, files.get);

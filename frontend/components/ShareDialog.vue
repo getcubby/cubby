@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, useTemplateRef, inject } from 'vue';
+import { ref, computed, useTemplateRef, inject } from 'vue';
 import { prettyDate } from '@cloudron/pankow/utils';
 import { copyToClipboard } from '../utils.js';
 import {
@@ -24,9 +24,10 @@ const profile = inject('profile');
 
 const dialog = useTemplateRef('dialog');
 
-const receiverUsername = ref('');
+const receiver = ref('');
 const readonly = ref(false);
 const users = ref([]);
+const groups = ref([]);
 const sharedWith = ref([]);
 const sharedLinks = ref([]);
 const entry = ref({});
@@ -35,6 +36,28 @@ const shareLink = ref({
   expires: false,
   expiresDate: '',
   password: '',
+});
+
+const receiverOptions = computed(() => {
+  const options = [];
+
+  if (users.value.length) {
+    options.push({ label: 'Users', separator: true });
+    users.value.forEach((u) => { options.push({ id: `user:${u.username}`, label: u.userAndDisplayName, username: u.username, type: 'user' }); });
+  }
+
+  if (groups.value.length) {
+    options.push({ label: 'Groups', separator: true });
+    groups.value.forEach((g) => { options.push({ id: `group:${g.id}`, label: g.name, groupId: g.id, type: 'group' }); });
+  }
+
+  return options;
+});
+
+const groupNameById = computed(() => {
+  const map = {};
+  groups.value.forEach((g) => { map[g.id] = g.name; });
+  return map;
 });
 
 function defaultExpiresDateStr() {
@@ -57,20 +80,31 @@ function entryOwner() {
     : { ownerUsername: entry.value.owner, ownerGroupfolder: null };
 }
 
+function receiverLabel(share) {
+  if (share.receiverUsername) return share.receiverUsername;
+  if (share.receiverGroup) return groupNameById.value[share.receiverGroup] || share.receiverGroup;
+  return share.receiverEmail || '';
+}
+
 async function refresh(item = null) {
   entry.value = await DirectoryModel.get(item || entry.value);
 
-  sharedWith.value = entry.value.sharedWith.filter((s) => s.receiverUsername);
-  sharedLinks.value = entry.value.sharedWith.filter((s) => !s.receiverUsername);
+  sharedWith.value = entry.value.sharedWith.filter((s) => s.receiverUsername || s.receiverGroup);
+  sharedLinks.value = entry.value.sharedWith.filter((s) => !s.receiverUsername && !s.receiverGroup);
 }
 
 async function onCreateShare() {
+  const selected = receiverOptions.value.find((o) => o.id === receiver.value);
+  if (!selected) return;
+
+  const receiverUsername = selected.type === 'user' ? selected.username : null;
+  const receiverGroup = selected.type === 'group' ? selected.groupId : null;
   const { ownerUsername, ownerGroupfolder } = entryOwner();
 
-  await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUsername: receiverUsername.value });
+  await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUsername, receiverGroup });
 
   // reset the form
-  receiverUsername.value = '';
+  receiver.value = '';
   readonly.value = false;
 
   // refresh the entry
@@ -108,16 +142,17 @@ async function onCreateShareLink() {
 
 defineExpose({
   async open(item) {
-    receiverUsername.value = '';
+    receiver.value = '';
     readonly.value = false;
     shareLinkReadonly.value = true;
     shareLink.value.expires = false;
     shareLink.value.expiresDate = defaultExpiresDateStr();
     shareLink.value.password = '';
 
-    // prepare available users for sharing
+    // prepare available users and groups for sharing
     users.value = (await MainModel.getUsers()).filter((u) => { return u.username !== profile.value.username; });
     users.value.forEach((u) => { u.userAndDisplayName = u.displayName + ' ( ' + u.username + ' )'; });
+    groups.value = await MainModel.getGroups();
 
     await refresh(item);
 
@@ -138,13 +173,13 @@ defineExpose({
       Sharing "{{ entry.fileName }}" with other users or via a link.
     </p>
     <div>
-      <TabView :tabs="{ user: 'With a user', link: 'Via link' }" default-active="user">
+      <TabView :tabs="{ user: 'With a user or group', link: 'Via link' }" default-active="user">
         <template #user>
           <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
             <ListItem
               v-for="link in sharedWith"
               :key="link.id"
-              :label="link.receiverUsername || link.receiverEmail"
+              :label="receiverLabel(link)"
               :subtext="link.readonly ? 'Read only' : 'Read & write'"
               :actions="[{
                 label: 'Delete',
@@ -160,8 +195,8 @@ defineExpose({
 
           <form @submit="onCreateShare" @submit.prevent>
             <InputGroup>
-              <SingleSelect v-model="receiverUsername" :options="users" option-key="username" option-label="userAndDisplayName" placeholder="Select a user"/>
-              <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!receiverUsername">Create share</Button>
+              <SingleSelect v-model="receiver" :options="receiverOptions" option-key="id" option-label="label" placeholder="Select a user or group"/>
+              <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!receiver">Create share</Button>
             </InputGroup>
             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
               <Checkbox id="shareReadonly" label="Read only" v-model="readonly" />

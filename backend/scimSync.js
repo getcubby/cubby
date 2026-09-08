@@ -1,4 +1,6 @@
 import users from './users.js';
+import groups from './groups.js';
+import recoll from './recoll.js';
 import safe from '@cloudron/safetydance';
 
 const SCIM_ORIGIN = process.env.CLOUDRON_SCIM_ORIGIN || '';
@@ -29,16 +31,17 @@ function getDisplayName(user) {
 }
 
 /**
- * Fetch all users from SCIM endpoint, handling pagination.
+ * Fetch all resources from a SCIM endpoint, handling pagination.
+ * @param {string} endpoint - e.g. '/v2/Users' or '/v2/Groups'
  * @returns {Promise<Array>}
  */
-async function fetchScimUsers() {
-    const allUsers = [];
+async function fetchScimResources(endpoint) {
+    const allResources = [];
     let startIndex = 1;
     const count = 100;
 
     while (true) {
-        const url = new URL('/v2/Users', SCIM_ORIGIN);
+        const url = new URL(endpoint, SCIM_ORIGIN);
         url.searchParams.set('startIndex', String(startIndex));
         url.searchParams.set('count', String(count));
 
@@ -62,7 +65,7 @@ async function fetchScimUsers() {
 
         const data = await res.json();
         const resources = data.Resources || [];
-        allUsers.push(...resources);
+        allResources.push(...resources);
 
         const totalResults = data.totalResults || 0;
         const itemsPerPage = data.itemsPerPage || resources.length;
@@ -73,21 +76,30 @@ async function fetchScimUsers() {
         startIndex += itemsPerPage;
     }
 
-    return allUsers;
+    return allResources;
+}
+
+async function fetchScimUsers() {
+    return await fetchScimResources('/v2/Users');
+}
+
+async function fetchScimGroups() {
+    return await fetchScimResources('/v2/Groups');
 }
 
 /**
- * @returns {Promise<{ created: number, updated: number, skipped: number }>}
+ * @returns {Promise<{ created: number, updated: number, skipped: number, idToUsername: Map<string, string> }>}
  */
 export async function syncScimUsers() {
     if (!isScimEnabled()) {
-        return { created: 0, updated: 0, skipped: 0 };
+        return { created: 0, updated: 0, skipped: 0, idToUsername: new Map() };
     }
 
     const scimUsers = await fetchScimUsers();
     let created = 0;
     let updated = 0;
     let skipped = 0;
+    const idToUsername = new Map();
 
     for (const user of scimUsers) {
         const userName = user.userName ? String(user.userName).trim() : '';
@@ -101,6 +113,8 @@ export async function syncScimUsers() {
             continue;
         }
 
+        if (user.id) idToUsername.set(String(user.id), userName);
+
         const displayName = getDisplayName(user);
         const email = getPrimaryEmail(user.emails) || userName;
 
@@ -112,20 +126,86 @@ export async function syncScimUsers() {
         }
     }
 
-    return { created, updated, skipped };
+    return { created, updated, skipped, idToUsername };
+}
+
+/**
+ * @param {Map<string, string>} idToUsername
+ * @returns {Promise<{ created: number, updated: number, removed: number, skipped: number }>}
+ */
+export async function syncScimGroups(idToUsername) {
+    if (!isScimEnabled()) {
+        return { created: 0, updated: 0, removed: 0, skipped: 0 };
+    }
+
+    const scimGroups = await fetchScimGroups();
+    let created = 0;
+    let updated = 0;
+    let removed = 0;
+    let skipped = 0;
+    const seenIds = new Set();
+
+    for (const group of scimGroups) {
+        const id = group.id ? String(group.id).trim() : '';
+        if (!id) {
+            skipped += 1;
+            continue;
+        }
+
+        seenIds.add(id);
+
+        const name = group.displayName ? String(group.displayName).trim() : id;
+        const memberUsernames = new Set();
+        for (const member of (group.members || [])) {
+            const userId = member && member.value ? String(member.value) : '';
+            const username = idToUsername.get(userId);
+            if (username) memberUsernames.add(username);
+        }
+
+        const result = await groups.upsertFromScim(id, name, Array.from(memberUsernames));
+        if (result.created) {
+            created += 1;
+        } else if (result.updated) {
+            updated += 1;
+        }
+    }
+
+    // remove scim groups that no longer exist upstream
+    for (const group of await groups.list()) {
+        if (group.source !== groups.SOURCES.SCIM) continue;
+        if (seenIds.has(group.id)) continue;
+
+        await groups.remove(group.id);
+        removed += 1;
+    }
+
+    return { created, updated, removed, skipped };
 }
 
 export async function runScimSyncTick() {
     if (!isScimEnabled()) return;
 
-    const [error, stats] = await safe(syncScimUsers());
-    if (error) {
-        console.error('SCIM sync failed:', error.message || error);
+    const [usersError, userStats] = await safe(syncScimUsers());
+    if (usersError) {
+        console.error('SCIM sync failed:', usersError.message || usersError);
         return;
     }
 
-    if (stats.created > 0 || stats.updated > 0) {
-        console.log(`SCIM sync: created=${stats.created} updated=${stats.updated} skipped=${stats.skipped}`);
+    if (userStats.created > 0 || userStats.updated > 0) {
+        console.log(`SCIM sync: users created=${userStats.created} updated=${userStats.updated} skipped=${userStats.skipped}`);
+    }
+
+    const [groupsError, groupStats] = await safe(syncScimGroups(userStats.idToUsername));
+    if (groupsError) {
+        console.error('SCIM group sync failed:', groupsError.message || groupsError);
+        return;
+    }
+
+    if (groupStats.created > 0 || groupStats.updated > 0 || groupStats.removed > 0) {
+        console.log(`SCIM sync: groups created=${groupStats.created} updated=${groupStats.updated} removed=${groupStats.removed} skipped=${groupStats.skipped}`);
+
+        // group membership affects which groupfolders a user can access and search
+        recoll.index().catch((err) => console.error('SCIM sync reindex failed:', err));
     }
 }
 

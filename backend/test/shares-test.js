@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import common from './common.js';
 import files from '../files.js';
 import groupfolders from '../groupfolders.js';
+import groups from '../groups.js';
 import MainError from '../mainerror.js';
 import safe from '@cloudron/safetydance';
 import shares from '../shares.js';
@@ -158,6 +159,46 @@ describe('shares', function () {
         });
 
         await shares.remove(shareId);
+        assert.equal(await shares.get(shareId), null);
+    });
+
+    it('can create and list a group share', async function () {
+        await createUsersWithFile();
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+
+        const shareId = await shares.create({
+            ownerUsername: alice.username,
+            filePath: '/shared.txt',
+            receiverGroup: 'gid-1'
+        });
+
+        const share = await shares.get(shareId);
+        assert.equal(share.receiverGroup, 'gid-1');
+
+        // members of the group can see the share
+        const sharedWith = await shares.listSharedWith(user.username);
+        assert.equal(sharedWith.length, 1);
+        assert.equal(sharedWith[0].id, shareId);
+
+        // non-members cannot
+        assert.equal((await shares.listSharedWith('intruder')).length, 0);
+
+        assert.equal(await shares.isReceiverAllowed(share, user.username), true);
+        assert.equal(await shares.isReceiverAllowed(share, 'intruder'), false);
+    });
+
+    it('removes group shares when the group is deleted', async function () {
+        await createUsersWithFile();
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+
+        const shareId = await shares.create({
+            ownerUsername: alice.username,
+            filePath: '/shared.txt',
+            receiverGroup: 'gid-1'
+        });
+
+        await groups.remove('gid-1');
+
         assert.equal(await shares.get(shareId), null);
     });
 

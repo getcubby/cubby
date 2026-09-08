@@ -42,20 +42,24 @@ CREATE TABLE IF NOT EXISTS shares(
     readonly BOOLEAN NOT NULL DEFAULT FALSE,
     receiver_username VARCHAR(128),
     receiver_email VARCHAR(128),
+    receiver_group VARCHAR(128),
+    password_hash VARCHAR(255),
 
     FOREIGN KEY(receiver_username) REFERENCES users(username),
     FOREIGN KEY(owner_username) REFERENCES users(username),
     ownerGroupConstraint FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
+    receiverGroupConstraint FOREIGN KEY(receiver_group) REFERENCES groups(id) ON DELETE CASCADE,
     PRIMARY KEY(id));
 
 CREATE TABLE IF NOT EXISTS groups(
     id VARCHAR(128) NOT NULL UNIQUE,
     name VARCHAR(256) NOT NULL,
+    source VARCHAR(16) NOT NULL DEFAULT '',
 
     PRIMARY KEY(id));
 
 CREATE TABLE group_members(
-    group_id VARCHAR(128) REFERENCES groups(id).
+    group_id VARCHAR(128) REFERENCES groups(id),
     username VARCHAR(128) REFERENCES users(username),
 
     UNIQUE (group_id, username));
@@ -72,6 +76,13 @@ CREATE TABLE groupfolders_members(
     role VARCHAR(16) NOT NULL DEFAULT 'editor',
 
     UNIQUE (groupfolder_id, username));
+
+CREATE TABLE groupfolders_group_members(
+    groupfolder_id VARCHAR(128) REFERENCES groupfolders(id) ON DELETE CASCADE,
+    group_id VARCHAR(128) REFERENCES groups(id) ON DELETE CASCADE,
+    role VARCHAR(16) NOT NULL DEFAULT 'editor',
+
+    UNIQUE (groupfolder_id, group_id));
 
 # favorites has a username component allowing shared files or group folder files to be favorited
 # when share_id is set, file_path is relative to that share root

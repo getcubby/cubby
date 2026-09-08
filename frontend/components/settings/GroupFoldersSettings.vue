@@ -4,6 +4,7 @@ import { ref, computed, inject, onMounted, useTemplateRef } from 'vue';
 import { Button, Dialog, FormGroup, InputDialog, ListItem, ProgressBar, SingleSelect, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
+import MainModel from '../../models/MainModel.js';
 import slugify from '../../slugify.js';
 import { ROLES, roleOptions } from '../../roles.js';
 
@@ -22,6 +23,7 @@ const addGroupFolderDialog = useTemplateRef('addGroupFolderDialog');
 const editGroupFolderDialog = useTemplateRef('editGroupFolderDialog');
 const settingsInputDialog = useTemplateRef('settingsInputDialog');
 
+const groups = ref([]);
 const groupFolders = ref([]);
 const groupFoldersBusy = ref(true);
 const groupFolderAdd = ref({
@@ -36,6 +38,7 @@ const groupFolderEdit = ref({
   id: '',
   name: '',
   members: [],
+  groupMembers: [],
   newMember: '',
   newMemberRole: ROLES.EDITOR,
 });
@@ -45,18 +48,46 @@ const userOptions = computed(() => props.users.map((u) => ({
   label: u.username || u.email,
 })));
 
-const availableUserOptions = computed(() => {
-  const existing = new Set(groupFolderEdit.value.members.map((m) => m.username));
-  return userOptions.value.filter((u) => !existing.has(u.username));
+const groupNameById = computed(() => {
+  const map = {};
+  groups.value.forEach((g) => { map[g.id] = g.name; });
+  return map;
+});
+
+const memberOptions = computed(() => {
+  const options = [];
+
+  const existingUsers = new Set(groupFolderEdit.value.members.map((m) => m.username));
+  const availableUsers = userOptions.value.filter((u) => !existingUsers.has(u.username));
+  if (availableUsers.length) {
+    options.push({ label: 'Users', separator: true });
+    availableUsers.forEach((u) => { options.push({ id: `user:${u.username}`, label: u.label, username: u.username, type: 'user' }); });
+  }
+
+  const existingGroups = new Set(groupFolderEdit.value.groupMembers.map((m) => m.groupId));
+  const availableGroups = groups.value.filter((g) => !existingGroups.has(g.id));
+  if (availableGroups.length) {
+    options.push({ label: 'Groups', separator: true });
+    availableGroups.forEach((g) => { options.push({ id: `group:${g.id}`, label: g.name, groupId: g.id, type: 'group' }); });
+  }
+
+  return options;
 });
 
 function currentUserRole(groupFolder) {
-  const member = groupFolder.members.find((m) => m.username === profile.value?.username);
-  return member ? member.role : null;
+  return groupFolder.myRole || null;
 }
 
 function roleLabel(role) {
   return roleOptions.find((o) => o.value === role)?.label || role;
+}
+
+function groupFolderMemberLabels(groupFolder) {
+  const labels = groupFolder.members.map((m) => m.username);
+  for (const gm of (groupFolder.groupMembers || [])) {
+    labels.push(groupNameById.value[gm.groupId] || gm.groupId);
+  }
+  return labels.join(', ');
 }
 
 function groupFolderActions(groupFolder) {
@@ -76,14 +107,31 @@ function groupFolderActions(groupFolder) {
 }
 
 function onAddMember() {
-  const username = groupFolderEdit.value.newMember;
+  const id = groupFolderEdit.value.newMember;
   const role = groupFolderEdit.value.newMemberRole;
-  if (!username || !role) return;
-  if (groupFolderEdit.value.members.some((m) => m.username === username)) return;
+  if (!id || !role) return;
 
-  groupFolderEdit.value.members.push({ username, role });
+  const option = memberOptions.value.find((o) => o.id === id);
+  if (!option) return;
+
+  if (option.type === 'user') {
+    if (groupFolderEdit.value.members.some((m) => m.username === option.username)) return;
+    groupFolderEdit.value.members.push({ username: option.username, role });
+  } else {
+    if (groupFolderEdit.value.groupMembers.some((m) => m.groupId === option.groupId)) return;
+    groupFolderEdit.value.groupMembers.push({ groupId: option.groupId, role });
+  }
+
   groupFolderEdit.value.newMember = '';
   groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
+}
+
+async function loadGroups() {
+  try {
+    groups.value = await MainModel.getGroups();
+  } catch (error) {
+    console.error('Failed to list groups.', error);
+  }
 }
 
 async function refreshGroupFolders() {
@@ -132,6 +180,7 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.id = groupFolder.id;
   groupFolderEdit.value.name = groupFolder.name;
   groupFolderEdit.value.members = groupFolder.members.map((m) => ({ username: m.username, role: m.role }));
+  groupFolderEdit.value.groupMembers = (groupFolder.groupMembers || []).map((m) => ({ groupId: m.groupId, role: m.role }));
   groupFolderEdit.value.newMember = '';
   groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
   editGroupFolderDialog.value.open();
@@ -143,6 +192,10 @@ function onRemoveMember(index) {
   groupFolderEdit.value.members.splice(index, 1);
 }
 
+function onRemoveGroupMember(index) {
+  groupFolderEdit.value.groupMembers.splice(index, 1);
+}
+
 async function onEditGroupFolderSubmit() {
   groupFolderEdit.value.busy = true;
 
@@ -150,6 +203,7 @@ async function onEditGroupFolderSubmit() {
     await GroupFolderModel.update(groupFolderEdit.value.id, {
       name: groupFolderEdit.value.name,
       members: groupFolderEdit.value.members.map((m) => ({ username: m.username, role: m.role })),
+      groupMembers: groupFolderEdit.value.groupMembers.map((m) => ({ groupId: m.groupId, role: m.role })),
     });
   } catch (e) {
     groupFolderEdit.value.error = e.message;
@@ -182,7 +236,7 @@ async function onRemoveGroupFolder(groupFolder) {
   await refreshGroupFolders();
 }
 
-onMounted(refreshGroupFolders);
+onMounted(() => { loadGroups(); refreshGroupFolders(); });
 
 </script>
 
@@ -228,7 +282,7 @@ onMounted(refreshGroupFolders);
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
       <FormGroup>
         <label>Members</label>
-        <ListItem v-for="(member, index) in groupFolderEdit.members" :key="member.username">
+        <ListItem v-for="(member, index) in groupFolderEdit.members" :key="`u-${member.username}`">
           <template #left>
             <i class="fa-solid fa-circle-user item-icon"></i>
           </template>
@@ -243,8 +297,22 @@ onMounted(refreshGroupFolders);
             </div>
           </template>
         </ListItem>
+        <ListItem v-for="(member, index) in groupFolderEdit.groupMembers" :key="`g-${member.groupId}`">
+          <template #left>
+            <i class="fa-solid fa-user-group item-icon"></i>
+          </template>
+          <template #label>
+            <div class="member-label-row">
+              <span>{{ groupNameById[member.groupId] || member.groupId }}</span>
+              <span class="member-role-controls">
+                <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
+                <Button icon="fa-solid fa-xmark" plain tool @click="onRemoveGroupMember(index)" />
+              </span>
+            </div>
+          </template>
+        </ListItem>
         <div class="add-member-row">
-          <SingleSelect v-model="groupFolderEdit.newMember" :options="availableUserOptions" option-key="username" placeholder="Select user" style="flex-grow: 1;" />
+          <SingleSelect v-model="groupFolderEdit.newMember" :options="memberOptions" option-key="id" option-label="label" placeholder="Select user or group" style="flex-grow: 1;" />
           <SingleSelect v-model="groupFolderEdit.newMemberRole" :options="roleOptions" option-key="value" style="width: 120px;" />
           <Button icon="fa-solid fa-plus" :disabled="!groupFolderEdit.newMember" @click="onAddMember()">Add</Button>
         </div>
@@ -261,7 +329,7 @@ onMounted(refreshGroupFolders);
           {{ groupFolder.name }} <span v-if="groupFolder.name.toUpperCase() !== groupFolder.id.toUpperCase()" class="group-folder-slug">- {{ groupFolder.id }}/</span>
         </template>
         <template #subtext>
-          <div class="group-folder-subtext">{{ groupFolder.members.map((m) => m.username).join(', ') }}</div>
+          <div class="group-folder-subtext">{{ groupFolderMemberLabels(groupFolder) }}</div>
         </template>
       </ListItem>
     </div>

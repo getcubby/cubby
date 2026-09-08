@@ -613,3 +613,8 @@
 * Fix bug which allowed read-only users edit documents via the WOPI office integration
 * Update dependencies
 
+[2.18.0]
+* Update cubby to 2.18.0
+* Fix share URLs to not redirect to login view
+* Add ability to use password protection for share URLs and file drops
+

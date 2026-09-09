@@ -12,6 +12,16 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:search');
 
+// username -> in-flight indexing Promise, to coalesce concurrent indexing of
+// the same user into a single recollindex run (recollindex takes an exclusive
+// flock per user config dir and fails if two run concurrently).
+const inflight = {};
+
+function isLockContention(error) {
+    return typeof error?.stderr === 'string'
+        && (error.stderr.includes('exclusive indexer') || error.stderr.includes('flock failed'));
+}
+
 async function index() {
     if (constants.TEST) return;
 
@@ -58,27 +68,42 @@ async function indexByUsername(username, schedule = false) {
 
     if (schedule) return scheduleIndexByUsername(username);
 
-    debugLog(`indexByUsername: ${username} ...`);
+    if (inflight[username]) return inflight[username];
 
-    const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
-    const configFilePath = path.join(configPath, 'recoll.conf');
+    const run = (async () => {
+        debugLog(`indexByUsername: ${username} ...`);
 
-    fs.mkdirSync(configPath, { recursive: true });
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
+        const configFilePath = path.join(configPath, 'recoll.conf');
 
-    // collect all paths we want to index and write config file
-    const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
-    for (const groupFolder of await groupFolders.list(username)) {
-        pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
+        fs.mkdirSync(configPath, { recursive: true });
+
+        // collect all paths we want to index and write config file
+        const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
+        for (const groupFolder of await groupFolders.list(username)) {
+            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
+        }
+        fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\ntestmodifusemtime = 1`);
+
+        const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
+        if (indexError) {
+            if (isLockContention(indexError)) {
+                debugLog(`Skipped indexing ${username}: another recollindex is already running`);
+            } else {
+                debugLog('Failed to create or update recoll index for user.', indexError);
+                if (!constants.TEST) console.error('Failed to create or update recoll index for user.', indexError);
+            }
+        }
+
+        debugLog(`indexByUsername: ${username} done`);
+    })();
+
+    inflight[username] = run;
+    try {
+        await run;
+    } finally {
+        delete inflight[username];
     }
-    fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\ntestmodifusemtime = 1`);
-
-    const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
-    if (indexError) {
-        debugLog('Failed to create or update recoll index for user.', indexError);
-        if (!constants.TEST) console.error('Failed to create or update recoll index for user.', indexError);
-    }
-
-    debugLog(`indexByUsername: ${username} done`);
 }
 
 async function indexByGroupFolder(groupFolder, schedule = false) {

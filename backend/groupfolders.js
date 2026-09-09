@@ -40,14 +40,14 @@ function higherRole(a, b) {
 async function getMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query('SELECT username, role FROM groupfolders_members WHERE groupfolder_id = $1 ORDER BY username', [ id ]);
+    const result = await database.query('SELECT username, role FROM groupfolders_members WHERE groupfolder_id = ? ORDER BY username', [ id ]);
     return result.rows.map((m) => ({ username: m.username, role: m.role }));
 }
 
 async function getGroupMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query('SELECT group_id, role FROM groupfolders_group_members WHERE groupfolder_id = $1 ORDER BY group_id', [ id ]);
+    const result = await database.query('SELECT group_id, role FROM groupfolders_group_members WHERE groupfolder_id = ? ORDER BY group_id', [ id ]);
     return result.rows.map((m) => ({ groupId: m.group_id, role: m.role }));
 }
 
@@ -75,16 +75,16 @@ async function add(idOrSlug, name, ownerUsername) {
     debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUsername}`);
 
     const queries = [{
-        query: 'INSERT INTO groupfolders (id, name) VALUES ($1, $2)',
+        query: 'INSERT INTO groupfolders (id, name) VALUES (?, ?)',
         args: [ idOrSlug, name ]
     }, {
-        query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
+        query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
         args: [ idOrSlug, ownerUsername, ROLES.OWNER ]
     }];
 
     const [error] = await safe(database.transaction(queries));
-    if (error?.nestedError?.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
-    if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
+    if (error?.nestedError?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') throw new MainError(MainError.NOT_FOUND, 'user not found');
+    if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 
     fs.mkdirSync(path.join(paths.GROUPS_DATA_ROOT, idOrSlug), { recursive: true });
@@ -100,7 +100,7 @@ async function get(id) {
 
     debugLog(`get: ${id}`);
 
-    const result = await database.query('SELECT * FROM groupfolders WHERE id = $1', [ id ]);
+    const result = await database.query('SELECT * FROM groupfolders WHERE id = ?', [ id ]);
     if (result.rows.length === 0) return null;
 
     const groupFolder = result.rows[0];
@@ -141,38 +141,37 @@ async function update(id, name, members, groupMembers = []) {
     debugLog(`update: ${id} by name ${name} with members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
 
     const queries = [{
-        query: 'UPDATE groupfolders set name=$1 WHERE id=$2',
+        query: 'UPDATE groupfolders set name=? WHERE id=?',
         args: [ name, id ]
     }];
 
     queries.push({
-        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id=$1',
+        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id=?',
         args: [ id ]
     });
 
     for (const member of members) {
         queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES ($1, $2, $3)',
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
             args: [ id, member.username, member.role ]
         });
     }
 
     queries.push({
-        query: 'DELETE FROM groupfolders_group_members WHERE groupfolder_id=$1',
+        query: 'DELETE FROM groupfolders_group_members WHERE groupfolder_id=?',
         args: [ id ]
     });
 
     for (const groupMember of groupMembers) {
         queries.push({
-            query: 'INSERT INTO groupfolders_group_members (groupfolder_id, group_id, role) VALUES ($1, $2, $3)',
+            query: 'INSERT INTO groupfolders_group_members (groupfolder_id, group_id, role) VALUES (?, ?, ?)',
             args: [ id, groupMember.groupId, groupMember.role ]
         });
     }
 
     const [error] = await safe(database.transaction(queries));
-    if (error?.nestedError?.constraint === 'groupfolders_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
-    if (error?.nestedError?.constraint === 'groupfolders_group_members_group_id_fkey') throw new MainError(MainError.NOT_FOUND, 'group not found');
-    if (error?.nestedError?.constraint === 'groupfolders_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
+    if (error?.nestedError?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') throw new MainError(MainError.NOT_FOUND, 'user or group not found');
+    if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 
     // FIXME reindex for all for the moment until we know who got removed!
@@ -190,13 +189,13 @@ async function remove(id) {
     if (rmError) throw new MainError(MainError.FS_ERROR, rmError);
 
     const queries = [{
-        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id = $1',
+        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id = ?',
         args: [ id ]
     }, {
-        query: 'DELETE FROM groupfolders_group_members WHERE groupfolder_id = $1',
+        query: 'DELETE FROM groupfolders_group_members WHERE groupfolder_id = ?',
         args: [ id ]
     }, {
-        query: 'DELETE FROM groupfolders WHERE id = $1',
+        query: 'DELETE FROM groupfolders WHERE id = ?',
         args: [ id ]
     }];
 

@@ -27,7 +27,13 @@
   "httpPort": 3000,
   "memoryLimit": 536870912,
   "addons": {
-    "localstorage": {},
+    "localstorage": {
+      "sqlite": {
+        "paths": [
+          "/app/data/cubby.db"
+        ]
+      }
+    },
     "postgresql": {},
     "sendmail": {
       "supportsDisplayName": true

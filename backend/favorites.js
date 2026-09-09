@@ -50,7 +50,7 @@ async function listByOwnerAndFilePath(owner, filePath) {
 
     debugLog(`listByOwnerAndFilePath: ${owner} ${filePath}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE share_id IS NULL AND (owner_username = $1 OR owner_groupfolder = $2) AND file_path = $3', [ ownerUsername, ownerGroupfolder, filePath ]);
+    const result = await database.query('SELECT * FROM favorites WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filePath ]);
 
     result.rows.forEach(postProcess);
 
@@ -63,7 +63,7 @@ async function listByShareAndFilePath(shareId, filePath) {
 
     debugLog(`listByShareAndFilePath: ${shareId} ${filePath}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE share_id = $1 AND file_path = $2', [ shareId, filePath ]);
+    const result = await database.query('SELECT * FROM favorites WHERE share_id = ? AND file_path = ?', [ shareId, filePath ]);
 
     result.rows.forEach(postProcess);
 
@@ -82,7 +82,7 @@ async function list(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE username = $1 ORDER BY created_at DESC', [ username ]);
+    const result = await database.query('SELECT * FROM favorites WHERE username = ? ORDER BY created_at DESC, rowid DESC', [ username ]);
 
     result.rows.forEach(postProcess);
 
@@ -91,11 +91,11 @@ async function list(username) {
 
 async function findExistingId(username, { shareId, ownerUsername, ownerGroupfolder, filePath }) {
     if (shareId) {
-        const result = await database.query('SELECT id FROM favorites WHERE username = $1 AND share_id = $2 AND file_path = $3', [ username, shareId, filePath ]);
+        const result = await database.query('SELECT id FROM favorites WHERE username = ? AND share_id = ? AND file_path = ?', [ username, shareId, filePath ]);
         return result.rows[0]?.id || null;
     }
 
-    const result = await database.query('SELECT id FROM favorites WHERE username = $1 AND share_id IS NULL AND owner_username IS NOT DISTINCT FROM $2 AND owner_groupfolder IS NOT DISTINCT FROM $3 AND file_path = $4', [
+    const result = await database.query('SELECT id FROM favorites WHERE username = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?', [
         username, ownerUsername, ownerGroupfolder, filePath
     ]);
     return result.rows[0]?.id || null;
@@ -143,7 +143,7 @@ async function create(username, { owner, filePath, shareId = null }) {
 
     const id = crypto.randomUUID();
 
-    const [error] = await safe(database.query('INSERT INTO favorites (id, username, share_id, owner_username, owner_groupfolder, file_path) VALUES ($1, $2, $3, $4, $5, $6)', [
+    const [error] = await safe(database.query('INSERT INTO favorites (id, username, share_id, owner_username, owner_groupfolder, file_path) VALUES (?, ?, ?, ?, ?, ?)', [
         id, username, shareId, ownerUsername, ownerGroupfolder, filePath
     ]));
     if (error) {
@@ -160,7 +160,7 @@ async function get(id) {
 
     debugLog(`get: ${id}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE id = $1', [ id ]);
+    const result = await database.query('SELECT * FROM favorites WHERE id = ?', [ id ]);
 
     if (result.rows.length === 0) return null;
 
@@ -172,7 +172,7 @@ async function remove(id) {
 
     debugLog(`remove: ${id}`);
 
-    await database.query('DELETE FROM favorites WHERE id = $1', [ id ]);
+    await database.query('DELETE FROM favorites WHERE id = ?', [ id ]);
 }
 
 function relativeFromCanonical(shareRoot, canonicalPath) {
@@ -203,11 +203,12 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = $3 OR file_path LIKE $3 || \'/%\')' : 'file_path = $3';
+    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
 
-    await database.query(`UPDATE favorites SET owner_username = $4, owner_groupfolder = $5, file_path = $6 || substring(file_path FROM length($3) + 1)
-        WHERE share_id IS NULL AND (owner_username = $1 OR owner_groupfolder = $2) AND ${pathCondition}`, [
-        from.ownerUsername, from.ownerGroupfolder, fromPath, to.ownerUsername, to.ownerGroupfolder, toPath
+    await database.query(`UPDATE favorites SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
     ]);
 
     const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
@@ -225,7 +226,7 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
         if (!share) continue;
 
         const newRelativePath = relativeFromCanonical(share.filePath, newCanonicalPath);
-        await database.query('UPDATE favorites SET file_path = $1 WHERE id = $2', [ newRelativePath, row.id ]);
+        await database.query('UPDATE favorites SET file_path = ? WHERE id = ?', [ newRelativePath, row.id ]);
     }
 }
 

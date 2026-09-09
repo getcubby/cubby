@@ -1,97 +1,125 @@
 import assert from 'assert';
 import MainError from './mainerror.js';
+import Database from 'better-sqlite3';
 import debug from 'debug';
-import pg from 'pg';
-import safe from '@cloudron/safetydance';
+import fs from 'fs';
+import path from 'path';
+import paths from './paths.js';
+import { initSchema } from './schema.js';
 
 const debugLog = debug('cubby:database');
 
-let gConnectionPool = null;
+let gDb = null;
 
-const gDatabase = {
-    hostname: process.env.POSTGRESQL_HOST || '127.0.0.1',
-    username: process.env.POSTGRESQL_USERNAME || 'root',
-    password: process.env.POSTGRESQL_PASSWORD || 'password',
-    port: process.env.POSTGRESQL_PORT || 3306,
-    name: process.env.POSTGRESQL_DATABASE || 'cubby'
-};
+function serializeArg(value) {
+    if (value === undefined) return null;
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'boolean') return value ? 1 : 0;
+    return value;
+}
+
+function serializeArgs(args) {
+    assert(typeof args === 'undefined' || Array.isArray(args));
+    if (!args) return [];
+    return args.map(serializeArg);
+}
+
+// SQLite stores booleans as 0/1 and better-sqlite3 rejects Date/boolean values,
+// so they are normalized on the way in. See serializeArg.
+function execute(db, sql, args) {
+    assert.strictEqual(typeof sql, 'string');
+
+    const values = serializeArgs(args);
+    const statement = db.prepare(sql);
+    const trimmed = sql.trimStart().toLowerCase();
+
+    if (trimmed.startsWith('select') || trimmed.startsWith('with') || trimmed.startsWith('pragma')) {
+        const rows = statement.all(...values);
+        return { rows, rowCount: rows.length };
+    }
+
+    const result = statement.run(...values);
+    return { rows: [], rowCount: result.changes };
+}
 
 function init() {
-    if (gConnectionPool !== null) return;
+    if (gDb !== null) return;
 
-    debugLog(`init: connecting to database ${gDatabase.name} on ${gDatabase.hostname}:${gDatabase.port}`);
+    debugLog(`init: opening sqlite database at ${paths.DATABASE_PATH}`);
 
-    gConnectionPool = new pg.Pool({
-        host: gDatabase.hostname,
-        user: gDatabase.username,
-        password: gDatabase.password,
-        database: gDatabase.name,
-        port: gDatabase.port,
+    fs.mkdirSync(path.dirname(paths.DATABASE_PATH), { recursive: true });
+
+    gDb = new Database(paths.DATABASE_PATH);
+    gDb.pragma('foreign_keys = ON');
+    gDb.pragma('busy_timeout = 5000');
+
+    // enables the REGEXP operator (used by shares.js for path prefix matching)
+    gDb.function('regexp', { deterministic: true }, (pattern, value) => {
+        if (value == null) return 0;
+        return new RegExp(pattern).test(String(value)) ? 1 : 0;
     });
 
-    // the pool will emit an error on behalf of any idle clients
-    // it contains if a backend error or network partition happens
-    gConnectionPool.on('error', function (error) {
-        console.error('Unexpected error on idle client', error);
-    });
+    initSchema(gDb);
 }
 
 async function query(sql, args) {
     assert.strictEqual(typeof sql, 'string');
     assert(typeof args === 'undefined' || Array.isArray(args));
 
-    if (!gConnectionPool) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
+    if (gDb === null) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
 
-    const [error, result] = await safe(gConnectionPool.query(sql, args));
-    if (error) throw new MainError(MainError.DATABASE_ERROR, error);
-    return result;
+    try {
+        return execute(gDb, sql, args);
+    } catch (error) {
+        throw new MainError(MainError.DATABASE_ERROR, error);
+    }
 }
 
 async function transaction(queries) {
     assert(Array.isArray(queries));
 
-    if (!gConnectionPool) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
+    if (gDb === null) throw new MainError(MainError.DATABASE_ERROR, 'database.js not initialized');
 
-    const [beginError] = await safe(gConnectionPool.query('BEGIN'));
-    if (beginError) throw new MainError(MainError.DATABASE_ERROR, beginError);
-
-    for (const q of queries) {
-        const [error] = await safe(gConnectionPool.query(q.query, q.args));
-        if (error) {
-            await safe(gConnectionPool.query('ROLLBACK'));
-            throw new MainError(MainError.DATABASE_ERROR, error);
-        }
-    }
-
-    const [commitError] = await safe(gConnectionPool.query('COMMIT'));
-    if (commitError) {
-        await safe(gConnectionPool.query('ROLLBACK'));
-        throw new MainError(MainError.DATABASE_ERROR, commitError);
+    try {
+        const runAll = gDb.transaction((queryList) => {
+            for (const q of queryList) {
+                execute(gDb, q.query, q.args);
+            }
+        });
+        runAll(queries);
+    } catch (error) {
+        throw new MainError(MainError.DATABASE_ERROR, error);
     }
 }
 
 async function uninitialize() {
-    if (!gConnectionPool) return;
+    if (gDb === null) return;
 
-    await safe(gConnectionPool.end());
-    gConnectionPool = null;
-    debugLog('pool closed');
+    gDb.close();
+    gDb = null;
+    debugLog('database closed');
 }
 
 async function clear() {
-    const result = await query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'migrations'`);
+    const result = await query(`SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'sqlite_sequence'`);
     if (result.rows.length === 0) return;
 
-    const names = result.rows.map((row) => `"${row.tablename}"`).join(', ');
-    await query(`TRUNCATE ${names} RESTART IDENTITY CASCADE`);
+    // disable FK checks while truncating so the (unordered) table list can be
+    // cleared in one pass
+    gDb.pragma('foreign_keys = OFF');
+    try {
+        for (const row of result.rows) {
+            await query(`DELETE FROM "${row.name}"`);
+        }
+    } finally {
+        gDb.pragma('foreign_keys = ON');
+    }
 }
-
-const _clear = clear;
 
 export default {
     init,
     uninitialize,
     query,
     transaction,
-    _clear
+    _clear: clear
 };

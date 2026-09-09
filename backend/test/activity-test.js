@@ -230,7 +230,7 @@ describe('activity', function () {
         assert.ok(last instanceof Date);
 
         const listed = await activity.listByPath(alice.username, '/mtime.txt');
-        assert.equal(last.getTime(), listed[0].createdAt.getTime());
+        assert.equal(last.getTime(), new Date(listed[0].createdAt).getTime());
         assert.equal(listed[0].action, 'updated');
     });
 
@@ -245,7 +245,7 @@ describe('activity', function () {
 
         const last = await activity.lastActivityAt(alice.username, '/share-mtime.txt');
         const listed = await activity.listByPath(alice.username, '/share-mtime.txt');
-        assert.equal(last.getTime(), listed.find((row) => row.action === 'updated').createdAt.getTime());
+        assert.equal(last.getTime(), new Date(listed.find((row) => row.action === 'updated').createdAt).getTime());
     });
 
     it('lastActivityAt includes descendant activity when recursive', async function () {
@@ -259,6 +259,6 @@ describe('activity', function () {
 
         const last = await activity.lastActivityAt(alice.username, '/mtime-parent', { recursive: true });
         const childActivity = await activity.listByPath(alice.username, '/mtime-parent/child.txt');
-        assert.equal(last.getTime(), childActivity[0].createdAt.getTime());
+        assert.equal(last.getTime(), new Date(childActivity[0].createdAt).getTime());
     });
 });

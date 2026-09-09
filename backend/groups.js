@@ -17,7 +17,7 @@ function postProcess(group) {
 async function get(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query('SELECT * FROM groups WHERE id = $1', [ id ]);
+    const result = await database.query('SELECT * FROM groups WHERE id = ?', [ id ]);
     if (result.rows.length === 0) return null;
 
     return postProcess(result.rows[0]);
@@ -34,7 +34,7 @@ async function list() {
 async function getMemberUsernames(groupId) {
     assert.strictEqual(typeof groupId, 'string');
 
-    const result = await database.query('SELECT username FROM group_members WHERE group_id = $1 ORDER BY username', [ groupId ]);
+    const result = await database.query('SELECT username FROM group_members WHERE group_id = ? ORDER BY username', [ groupId ]);
 
     return result.rows.map((m) => m.username);
 }
@@ -42,7 +42,7 @@ async function getMemberUsernames(groupId) {
 async function getMembershipGroupIds(username) {
     assert.strictEqual(typeof username, 'string');
 
-    const result = await database.query('SELECT group_id FROM group_members WHERE username = $1 ORDER BY group_id', [ username ]);
+    const result = await database.query('SELECT group_id FROM group_members WHERE username = ? ORDER BY group_id', [ username ]);
 
     return result.rows.map((m) => m.group_id);
 }
@@ -64,8 +64,8 @@ async function add(group) {
 
     const source = group.source || '';
 
-    const [error] = await safe(database.query('INSERT INTO groups (id, name, source) VALUES ($1, $2, $3)', [ group.id, group.name, source ]));
-    if (error?.nestedError?.constraint === 'groups_pkey') throw new MainError(MainError.ALREADY_EXISTS, 'group already exists');
+    const [error] = await safe(database.query('INSERT INTO groups (id, name, source) VALUES (?, ?, ?)', [ group.id, group.name, source ]));
+    if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'group already exists');
     if (error) throw error;
 }
 
@@ -73,7 +73,7 @@ async function update(id, name) {
     assert.strictEqual(typeof id, 'string');
     assert.strictEqual(typeof name, 'string');
 
-    await database.query('UPDATE groups SET name = $1 WHERE id = $2', [ name, id ]);
+    await database.query('UPDATE groups SET name = ? WHERE id = ?', [ name, id ]);
 }
 
 async function setMembers(groupId, usernames) {
@@ -81,20 +81,19 @@ async function setMembers(groupId, usernames) {
     assert(Array.isArray(usernames));
 
     const queries = [{
-        query: 'DELETE FROM group_members WHERE group_id = $1',
+        query: 'DELETE FROM group_members WHERE group_id = ?',
         args: [ groupId ]
     }];
 
     for (const username of usernames) {
         queries.push({
-            query: 'INSERT INTO group_members (group_id, username) VALUES ($1, $2)',
+            query: 'INSERT INTO group_members (group_id, username) VALUES (?, ?)',
             args: [ groupId, username ]
         });
     }
 
     const [error] = await safe(database.transaction(queries));
-    if (error?.nestedError?.constraint === 'group_members_username_fkey') throw new MainError(MainError.NOT_FOUND, 'user not found');
-    if (error?.nestedError?.constraint === 'group_members_group_id_fkey') throw new MainError(MainError.NOT_FOUND, 'group not found');
+    if (error?.nestedError?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') throw new MainError(MainError.NOT_FOUND, 'user or group not found');
     if (error) throw error;
 }
 
@@ -102,10 +101,10 @@ async function remove(id) {
     assert.strictEqual(typeof id, 'string');
 
     const queries = [{
-        query: 'DELETE FROM group_members WHERE group_id = $1',
+        query: 'DELETE FROM group_members WHERE group_id = ?',
         args: [ id ]
     }, {
-        query: 'DELETE FROM groups WHERE id = $1',
+        query: 'DELETE FROM groups WHERE id = ?',
         args: [ id ]
     }];
 

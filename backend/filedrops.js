@@ -48,7 +48,7 @@ async function list(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM filedrops WHERE owner_username = $1', [ username ]);
+    const result = await database.query('SELECT * FROM filedrops WHERE owner_username = ?', [ username ]);
 
     result.rows.forEach(postProcess);
 
@@ -73,7 +73,7 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = n
 
     const passwordHash = password ? await passwords.hashPassword(password) : null;
 
-    await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6)', [
+    await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?)', [
         filedropId, ownerUsername || null, ownerGroupfolder || null, filePath, expiresAtDb, passwordHash
     ]);
 
@@ -85,7 +85,7 @@ async function get(filedropId) {
 
     debugLog(`get: ${filedropId}`);
 
-    const result = await database.query('SELECT * FROM filedrops WHERE id = $1', [ filedropId ]);
+    const result = await database.query('SELECT * FROM filedrops WHERE id = ?', [ filedropId ]);
 
     if (result.rows.length === 0) return null;
 
@@ -98,7 +98,7 @@ async function verifyPassword(filedropId, candidatePassword) {
 
     debugLog(`verifyPassword: ${filedropId}`);
 
-    const result = await database.query('SELECT password_hash FROM filedrops WHERE id = $1', [ filedropId ]);
+    const result = await database.query('SELECT password_hash FROM filedrops WHERE id = ?', [ filedropId ]);
 
     if (result.rows.length === 0 || !result.rows[0].password_hash) return false;
 
@@ -112,7 +112,7 @@ async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) 
 
     debugLog(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
 
-    const result = await database.query('SELECT * FROM filedrops WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path = $3', [ ownerUsername, ownerGroupfolder, filepath ]);
+    const result = await database.query('SELECT * FROM filedrops WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filepath ]);
 
     if (result.rows.length === 0) return null;
 
@@ -126,7 +126,7 @@ async function remove(filedropId) {
 
     debugLog(`remove: ${filedropId}`);
 
-    await database.query('DELETE FROM filedrops WHERE id = $1', [ filedropId ]);
+    await database.query('DELETE FROM filedrops WHERE id = ?', [ filedropId ]);
 }
 
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
@@ -153,10 +153,11 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = $5 OR file_path LIKE $5 || \'/%\')' : 'file_path = $5';
+    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
 
-    await database.query(`UPDATE filedrops SET owner_username = $1, owner_groupfolder = $2, file_path = $6 || substring(file_path FROM length($5) + 1) WHERE (owner_username = $3 OR owner_groupfolder = $4) AND ${pathCondition}`, [
-        toOwnerUsername, toOwnerGroupfolder, fromOwnerUsername, fromOwnerGroupfolder, fromPath, toPath
+    await database.query(`UPDATE filedrops SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        toOwnerUsername, toOwnerGroupfolder, toPath, fromPath, fromOwnerUsername, fromOwnerGroupfolder, ...pathArgs
     ]);
 }
 

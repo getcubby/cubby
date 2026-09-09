@@ -59,7 +59,7 @@ async function log({ actor, owner, filePath, action, details = null }) {
 
     const id = 'act-' + crypto.randomBytes(16).toString('hex');
 
-    await database.query('INSERT INTO file_activity (id, actor, owner_username, owner_groupfolder, file_path, action, details) VALUES ($1, $2, $3, $4, $5, $6, $7)', [
+    await database.query('INSERT INTO file_activity (id, actor, owner_username, owner_groupfolder, file_path, action, details) VALUES (?, ?, ?, ?, ?, ?, ?)', [
         id, actor, ownerUsername, ownerGroupfolder, filePath, action, details ? JSON.stringify(details) : null
     ]);
 
@@ -74,7 +74,7 @@ async function clearByPath(owner, filePath) {
 
     debugLog(`clearByPath: ${owner}${filePath}`);
 
-    await database.query('DELETE FROM file_activity WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path = $3', [ ownerUsername, ownerGroupfolder, filePath ]);
+    await database.query('DELETE FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filePath ]);
 }
 
 async function listByPath(owner, filePath, { limit = 50 } = {}) {
@@ -98,10 +98,10 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
     let result;
 
     if (includeDescendants) {
-        result = await database.query(`SELECT * FROM file_activity WHERE (owner_username = $1 OR owner_groupfolder = $2) AND (file_path = $3 OR file_path LIKE $3 || '/%')
-            ORDER BY created_at DESC LIMIT $4`, [ ownerUsername, ownerGroupfolder, filePath, limit ]);
+        result = await database.query(`SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND (file_path = ? OR file_path LIKE ? || '/%')
+            ORDER BY created_at DESC, rowid DESC LIMIT ?`, [ ownerUsername, ownerGroupfolder, filePath, filePath, limit ]);
     } else {
-        result = await database.query('SELECT * FROM file_activity WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path = $3 ORDER BY created_at DESC LIMIT $4', [
+        result = await database.query('SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? ORDER BY created_at DESC, rowid DESC LIMIT ?', [
             ownerUsername, ownerGroupfolder, filePath, limit
         ]);
     }
@@ -124,10 +124,10 @@ async function lastActivityAt(owner, filePath, { recursive = false } = {}) {
 
     if (recursive) {
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
-            WHERE (owner_username = $1 OR owner_groupfolder = $2) AND (file_path = $3 OR file_path LIKE $3 || '/%') AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath ]);
+            WHERE (owner_username = ? OR owner_groupfolder = ?) AND (file_path = ? OR file_path LIKE ? || '/%') AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath, filePath ]);
     } else {
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
-            WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path = $3 AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath ]);
+            WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath ]);
     }
 
     const timestamp = result.rows[0]?.last_activity_at;
@@ -148,11 +148,12 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = $5 OR file_path LIKE $5 || \'/%\')' : 'file_path = $5';
+    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
 
-    await database.query(`UPDATE file_activity SET owner_username = $1, owner_groupfolder = $2, file_path = $6 || substring(file_path FROM length($5) + 1)
-        WHERE (owner_username = $3 OR owner_groupfolder = $4) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, from.ownerUsername, from.ownerGroupfolder, fromPath, toPath
+    await database.query(`UPDATE file_activity SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
     ]);
 }
 

@@ -106,26 +106,27 @@ function relocatedPath(filePath, fromPath, toPath, isDirectory) {
 }
 
 async function touch(opener, ref) {
+    // delete-then-insert so each touch gets a fresh rowid, which keeps "most
+    // recently accessed" ordering deterministic even when two touches happen
+    // within the same millisecond (SQLite timestamps have ms precision).
     if (ref.shareId) {
-        const updated = await database.query('UPDATE recents SET accessed_at = CURRENT_TIMESTAMP WHERE opener = $1 AND share_id = $2 AND file_path = $3', [
-            opener, ref.shareId, ref.filePath
-        ]);
-        if (updated.rowCount > 0) return;
-
-        await database.query('INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES ($1, $2, NULL, NULL, $3, CURRENT_TIMESTAMP)', [
-            opener, ref.shareId, ref.filePath
-        ]);
+        await database.transaction([{
+            query: 'DELETE FROM recents WHERE opener = ? AND share_id = ? AND file_path = ?',
+            args: [ opener, ref.shareId, ref.filePath ]
+        }, {
+            query: `INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES (?, ?, NULL, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+            args: [ opener, ref.shareId, ref.filePath ]
+        }]);
         return;
     }
 
-    const updated = await database.query('UPDATE recents SET accessed_at = CURRENT_TIMESTAMP WHERE opener = $1 AND share_id IS NULL AND owner_username IS NOT DISTINCT FROM $2 AND owner_groupfolder IS NOT DISTINCT FROM $3 AND file_path = $4', [
-        opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath
-    ]);
-    if (updated.rowCount > 0) return;
-
-    await database.query('INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES ($1, NULL, $2, $3, $4, CURRENT_TIMESTAMP)', [
-        opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath
-    ]);
+    await database.transaction([{
+        query: 'DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?',
+        args: [ opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath ]
+    }, {
+        query: `INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES (?, NULL, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+        args: [ opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath ]
+    }]);
 }
 
 async function add(opener, resourcePath) {
@@ -150,11 +151,11 @@ async function remove(opener, resourcePath) {
     debugLog(`remove: ${opener} share:${ref.shareId || 'none'} ${ref.filePath}`);
 
     if (ref.shareId) {
-        await database.query('DELETE FROM recents WHERE opener = $1 AND share_id = $2 AND file_path = $3', [ opener, ref.shareId, ref.filePath ]);
+        await database.query('DELETE FROM recents WHERE opener = ? AND share_id = ? AND file_path = ?', [ opener, ref.shareId, ref.filePath ]);
         return;
     }
 
-    await database.query('DELETE FROM recents WHERE opener = $1 AND share_id IS NULL AND owner_username IS NOT DISTINCT FROM $2 AND owner_groupfolder IS NOT DISTINCT FROM $3 AND file_path = $4', [
+    await database.query('DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?', [
         opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath
     ]);
 }
@@ -169,11 +170,11 @@ async function list(opener, daysAgo = 10, maxFiles = 100) {
     const now = Date.now();
     const result = [];
 
-    const rows = await database.query('SELECT * FROM recents WHERE opener = $1 ORDER BY accessed_at DESC', [ opener ]);
+    const rows = await database.query('SELECT * FROM recents WHERE opener = ? ORDER BY accessed_at DESC, rowid DESC', [ opener ]);
 
     for (const row of rows.rows) {
         const recent = postProcess(row);
-        if (now - recent.accessedAt.getTime() > MAX_AGE) break;
+        if (now - new Date(recent.accessedAt).getTime() > MAX_AGE) break;
         if (result.length >= maxFiles) break;
 
         result.push(recent);
@@ -183,7 +184,8 @@ async function list(opener, daysAgo = 10, maxFiles = 100) {
 }
 
 async function purge() {
-    await database.query('DELETE FROM recents WHERE accessed_at < NOW() - INTERVAL \'60 days\'');
+    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    await database.query('DELETE FROM recents WHERE accessed_at < ?', [ cutoff ]);
 }
 
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
@@ -198,11 +200,12 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = $3 OR file_path LIKE $3 || \'/%\')' : 'file_path = $3';
+    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
 
-    await database.query(`UPDATE recents SET owner_username = $4, owner_groupfolder = $5, file_path = $6 || substring(file_path FROM length($3) + 1)
-        WHERE share_id IS NULL AND (owner_username = $1 OR owner_groupfolder = $2) AND ${pathCondition}`, [
-        from.ownerUsername, from.ownerGroupfolder, fromPath, to.ownerUsername, to.ownerGroupfolder, toPath
+    await database.query(`UPDATE recents SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
     ]);
 
     const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
@@ -220,7 +223,7 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
         if (!share) continue;
 
         const newRelativePath = relativeFromCanonical(share.filePath, newCanonicalPath);
-        await database.query('UPDATE recents SET file_path = $1 WHERE opener = $2 AND share_id = $3 AND file_path = $4', [
+        await database.query('UPDATE recents SET file_path = ? WHERE opener = ? AND share_id = ? AND file_path = ?', [
             newRelativePath, row.opener, row.share_id, row.file_path
         ]);
     }

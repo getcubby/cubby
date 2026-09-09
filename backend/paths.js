@@ -14,6 +14,8 @@ const root = dataRoot();
 export default {
     dataRoot,
 
+    DATABASE_PATH: path.join(root, 'cubby.db'),
+
     USER_DATA_ROOT: path.join(root, 'data'),
     GROUPS_DATA_ROOT: path.join(root, 'groups'),
     THUMBNAIL_ROOT: path.join(root, 'thumbnails'),

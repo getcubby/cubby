@@ -20,8 +20,8 @@ RUN apt-get update && \
 
 COPY app.js package.json package-lock.json start.sh /app/code/
 COPY skeleton /app/code/skeleton
-COPY migrations /app/code/migrations
 COPY backend /app/code/backend
+COPY scripts /app/code/scripts
 
 RUN npm install --no-update-notifier --no-audit --no-fund --omit dev
 

@@ -24,8 +24,8 @@ async function add(user) {
     const email = user.email;
     const displayName = user.displayName;
 
-    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name) VALUES ($1, $2, $3)', [ username, email, displayName ]));
-    if (error?.nestedError?.detail?.includes('already exists') && error?.nestedError?.detail?.includes('username')) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
+    const [error] = await safe(database.query('INSERT INTO users (username, email, display_name) VALUES (?, ?, ?)', [ username, email, displayName ]));
+    if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code) && error.nestedError.message.includes('users.username')) throw new MainError(MainError.ALREADY_EXISTS, 'username already exists');
     if (error) throw error;
 
     // copy skeleton folder
@@ -36,7 +36,7 @@ async function add(user) {
 async function get(username) {
     assert.strictEqual(typeof username, 'string');
 
-    const result = await database.query('SELECT * FROM users WHERE username = $1', [ username ]);
+    const result = await database.query('SELECT * FROM users WHERE username = ?', [ username ]);
     if (result.rows.length === 0) return null;
 
     return postProcess(result.rows[0]);
@@ -69,7 +69,7 @@ async function update(username, user) {
     assert.strictEqual(typeof username, 'string');
     assert.strictEqual(typeof user, 'object');
 
-    await database.query('UPDATE users SET email = $1, display_name = $2 WHERE username = $3', [ user.email, user.displayName, username ]);
+    await database.query('UPDATE users SET email = ?, display_name = ? WHERE username = ?', [ user.email, user.displayName, username ]);
 }
 
 async function ensureUser(data) {

@@ -7,6 +7,10 @@
 //   - postgres is not configured (fresh install, or already deprovisioned), or
 //   - the data has already been migrated (marker present).
 //
+// The copy is atomic (single transaction) and idempotent (marker written only
+// after a successful, verified commit), so a failure exits non-zero and the
+// next restart retries cleanly rather than running the app on partial data.
+//
 // The postgresql addon, the `pg` dependency and this script can be removed in a
 // follow-up release once all instances have migrated.
 
@@ -16,6 +20,13 @@ import path from 'path';
 import pg from 'pg';
 import paths from '../backend/paths.js';
 import { initSchema } from '../backend/schema.js';
+
+// postgres `timestamp without time zone` values are stored as UTC wall-clock
+// (the app always ran with the server/session timezone set to UTC). node-pg's
+// default parser treats them as *local* time, which silently shifts every
+// timestamp if the migration process runs in a non-UTC timezone. Force UTC so
+// the round-trip is exact regardless of the container/host timezone.
+pg.types.setTypeParser(1114, (value) => new Date(`${String(value).replace(' ', 'T')}Z`));
 
 const DONE_MARKER = 'pg_to_sqlite_done';
 
@@ -46,6 +57,10 @@ function convertValue(value) {
     if (Buffer.isBuffer(value)) return value;
     if (typeof value === 'object') return JSON.stringify(value);
     return value;
+}
+
+function getTargetColumns(db, table) {
+    return db.prepare(`PRAGMA table_info("${table}")`).all().map((c) => c.name);
 }
 
 async function main() {
@@ -91,6 +106,16 @@ async function main() {
             data.push({ table, columns, rows: result.rows });
         }
 
+        // pre-flight: refuse to copy if the source and target schemas differ
+        for (const { table, columns } of data) {
+            const target = new Set(getTargetColumns(db, table));
+            const sourceOnly = columns.filter((c) => !target.has(c));
+            const targetOnly = [ ...target ].filter((c) => !columns.includes(c));
+            if (sourceOnly.length > 0 || targetOnly.length > 0) {
+                throw new Error(`schema mismatch for table "${table}": source-only columns [${sourceOnly.join(', ')}], target-only columns [${targetOnly.join(', ')}]`);
+            }
+        }
+
         const migrate = db.transaction(() => {
             // clear targets in reverse dependency order
             for (const { table } of [ ...data ].reverse()) {
@@ -99,11 +124,27 @@ async function main() {
 
             for (const { table, columns, rows } of data) {
                 if (rows.length === 0) continue;
+
+                console.log(`migrate-pg-to-sqlite: migrating ${table}: ${rows.length} rows`);
+
                 const columnList = columns.map((c) => `"${c}"`).join(', ');
                 const placeholders = columns.map(() => '?').join(', ');
                 const insert = db.prepare(`INSERT INTO ${table} (${columnList}) VALUES (${placeholders})`);
                 for (const row of rows) {
-                    insert.run(...columns.map((c) => convertValue(row[c])));
+                    try {
+                        insert.run(...columns.map((c) => convertValue(row[c])));
+                    } catch (error) {
+                        error.message = `table "${table}" insert failed: ${error.message}`;
+                        throw error;
+                    }
+                }
+            }
+
+            // verify every row made it; a mismatch throws and rolls back the transaction
+            for (const { table, rows } of data) {
+                const { count } = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get();
+                if (Number(count) !== rows.length) {
+                    throw new Error(`row count mismatch for table "${table}": postgres=${rows.length} sqlite=${count}`);
                 }
             }
         });

@@ -12,7 +12,7 @@ describe('office', function () {
     });
 
     it('returns empty string when no default office app is set', async function () {
-        nock('http://127.0.0.1:3001')
+        nock('http://172.18.0.1:3006')
             .get('/default-app/office')
             .reply(200, { domain: '' });
 
@@ -20,7 +20,7 @@ describe('office', function () {
     });
 
     it('returns the office origin of the default office app', async function () {
-        nock('http://127.0.0.1:3001')
+        nock('http://172.18.0.1:3006')
             .get('/default-app/office')
             .reply(200, { domain: 'office.example.com' });
 

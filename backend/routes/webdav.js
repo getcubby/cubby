@@ -7,6 +7,7 @@ import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import safe from '@cloudron/safetydance';
+import { appBridge } from '@cloudron/tegel';
 
 const debugLog = debug('cubby:webdav');
 
@@ -79,13 +80,13 @@ function webdavSegmentsToResource(segments) {
  * Authenticate request via Basic auth. Returns user object or null.
  */
 async function verifyCloudronCredentials(identifier, password) {
-    const url = `http://${process.env.CLOUDRON_PROXY_IP}:3006/verify-app-password`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password })
-    });
-    return response.ok;
+    try {
+        await appBridge.verifyAppPassword({ identifier, password });
+        return true;
+    } catch (error) {
+        if (error.status === 401) return false;
+        throw error;
+    }
 }
 
 async function authFromRequest(req) {

@@ -1,18 +1,15 @@
-import constants from './constants.js';
 import { DOMParser as Dom } from 'xmldom';
 import xpath from 'xpath';
+import { appBridge } from '@cloudron/tegel';
 
-const APP_BRIDGE_ORIGIN = constants.CLOUDRON ? 'http://172.18.0.1:3006' : 'http://127.0.0.1:3001';
 const FETCH_TIMEOUT_MS = 5000;
 
 async function getWopiHost() {
     try {
-        const res = await fetch(`${APP_BRIDGE_ORIGIN}/default-app/office`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const { domain } = await res.json();
+        const { domain } = await appBridge.getDefaultApp('office');
         return domain ? `https://${domain}` : '';
     } catch (error) {
-        if (error.message === 'status 404') return '';
+        if (error.status === 404) return '';
         console.error('Failed to fetch default office app:', error);
         return '';
     }

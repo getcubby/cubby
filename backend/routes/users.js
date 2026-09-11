@@ -1,8 +1,10 @@
 import assert from 'assert';
 import users from '../users.js';
 import MainError from '../mainerror.js';
+import constants from '../constants.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
+import * as oidc from '@cloudron/tegel/src/oidc.js';
 
 async function getUserFromSession(req) {
     const sessionUser = req.session?.user;
@@ -19,7 +21,7 @@ async function getUserFromSession(req) {
     return user;
 }
 
-async function getUserFromToken(req) {
+function extractAccessToken(req) {
     let accessToken = req.query.access_token || req.body?.accessToken || '';
     if (req.headers?.authorization) {
         const parts = req.headers.authorization.split(' ');
@@ -30,9 +32,39 @@ async function getUserFromToken(req) {
         }
     }
 
+    return accessToken;
+}
+
+async function getUserFromOidcToken(accessToken) {
+    const [introspectError, introspection] = await safe(oidc.introspectToken(accessToken));
+    if (introspectError || !introspection?.active) return null;
+
+    const username = introspection.sub || introspection.username;
+    if (!username) return null;
+
+    const [userError, user] = await safe(users.ensureUser({
+        username,
+        email: introspection.email || '',
+        displayName: introspection.name || username
+    }));
+    if (userError) {
+        console.error('getUserFromOidcToken: failed to ensure user', userError);
+        return null;
+    }
+
+    return user;
+}
+
+async function getUserFromToken(req) {
+    const accessToken = extractAccessToken(req);
     if (!accessToken) return null;
 
-    return await users.getByAccessToken(accessToken);
+    const user = await users.getByAccessToken(accessToken);
+    if (user) return user;
+
+    // Fall back to OIDC bearer tokens (used by other Cloudron apps such as Mitte).
+    if (constants.TEST) return null;
+    return await getUserFromOidcToken(accessToken);
 }
 
 async function isAuthenticated(req, res, next) {

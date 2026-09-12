@@ -6,7 +6,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@cloudron/pankow": "^4.4.14",
+    "@cloudron/pankow": "^4.4.15",
     "@vitejs/plugin-vue": "^6.0.8",
     "dompurify": "^3.4.15",
     "eslint": "^10.10.0",

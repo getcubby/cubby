@@ -17,7 +17,7 @@
     "better-sqlite3": "^13.0.3",
     "debug": "^4.4.3",
     "handlebars": "^4.7.9",
-    "nodemailer": "^10.0.3",
+    "nodemailer": "^10.0.8",
     "nodemailer-smtp-transport": "^2.7.4",
     "pg": "^8.23.0",
     "xmldom": "^0.6.0",
@@ -28,7 +28,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
-    "mocha": "^12.0.0",
+    "mocha": "^12.0.1",
     "nock": "^14.0.17"
   }
 }

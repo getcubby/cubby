@@ -618,3 +618,11 @@
 * Fix share URLs to not redirect to login view
 * Add ability to use password protection for share URLs and file drops
 
+[2.19.0]
+* Update cubby to 2.19.0
+* Move from PostgreSQL to SQlite reducing memory footprint
+* Make Cloudron groups available for sharing and group folders
+* Use Cloudron app passwords for webdav
+* Recoll search indexer fixes
+* Improve timestamp usage in UI
+

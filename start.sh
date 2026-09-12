@@ -33,6 +33,11 @@ chown -R cloudron:cloudron /app/data
 echo "==> Remove legacy recents file"
 rm -f /app/data/.recents.json
 
+# apply any outstanding postgres migrations before copying to sqlite (the
+# postgresql addon is retained for the transition release)
+echo "==> Run database migrations"
+DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
+
 # one-time migration from postgres (addon retained for the transition release)
 echo "==> Run postgres -> sqlite migration (if needed)"
 gosu cloudron:cloudron node /app/code/scripts/migrate-pg-to-sqlite.js

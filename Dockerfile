@@ -20,6 +20,7 @@ RUN apt-get update && \
 
 COPY app.js package.json package-lock.json start.sh /app/code/
 COPY skeleton /app/code/skeleton
+COPY migrations /app/code/migrations
 COPY backend /app/code/backend
 COPY scripts /app/code/scripts
 

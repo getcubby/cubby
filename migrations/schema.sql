@@ -1,0 +1,149 @@
+#### WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+#### This file is not used by any code and is here to document the latest schema
+
+#### General ideas
+#### Default char set is utf8 and DEFAULT COLLATE is utf8_bin. Collate affects comparisons in WHERE and ORDER
+#### Strict mode is enabled
+#### VARCHAR - stored as part of table row (use for strings)
+#### TEXT - stored offline from table row (use for strings)
+#### BLOB - stored offline from table row (use for binary data)
+#### https://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
+#### Times are stored in the database in UTC. And precision is seconds
+
+# The code uses zero dates. Make sure sql_mode does NOT have NO_ZERO_DATE
+# http://johnemb.blogspot.com/2014/09/adding-or-removing-individual-sql-modes.html
+# SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'NO_ZERO_DATE',''));
+
+CREATE TABLE IF NOT EXISTS users(
+    username VARCHAR(128) NOT NULL UNIQUE,
+    email VARCHAR(254) NOT NULL,
+    display_name VARCHAR(512) DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source VARCHAR(128) DEFAULT '',
+
+    PRIMARY KEY(username));
+
+CREATE TABLE IF NOT EXISTS tokens(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    username VARCHAR(128) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(username) REFERENCES users(username),
+    PRIMARY KEY(id));
+
+# a file can be shared multiple times
+CREATE TABLE IF NOT EXISTS shares(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+    readonly BOOLEAN NOT NULL DEFAULT FALSE,
+    receiver_username VARCHAR(128),
+    receiver_email VARCHAR(128),
+    receiver_group VARCHAR(128),
+    password_hash VARCHAR(255),
+
+    FOREIGN KEY(receiver_username) REFERENCES users(username),
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    ownerGroupConstraint FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
+    receiverGroupConstraint FOREIGN KEY(receiver_group) REFERENCES groups(id) ON DELETE CASCADE,
+    PRIMARY KEY(id));
+
+CREATE TABLE IF NOT EXISTS groups(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    name VARCHAR(256) NOT NULL,
+    source VARCHAR(16) NOT NULL DEFAULT '',
+
+    PRIMARY KEY(id));
+
+CREATE TABLE group_members(
+    group_id VARCHAR(128) REFERENCES groups(id),
+    username VARCHAR(128) REFERENCES users(username),
+
+    UNIQUE (group_id, username));
+
+CREATE TABLE IF NOT EXISTS groupfolders(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    name VARCHAR(256) NOT NULL,
+
+    PRIMARY KEY(id));
+
+CREATE TABLE groupfolders_members(
+    groupfolder_id VARCHAR(128) REFERENCES groupfolders(id),
+    username VARCHAR(128) REFERENCES users(username),
+    role VARCHAR(16) NOT NULL DEFAULT 'editor',
+
+    UNIQUE (groupfolder_id, username));
+
+CREATE TABLE groupfolders_group_members(
+    groupfolder_id VARCHAR(128) REFERENCES groupfolders(id) ON DELETE CASCADE,
+    group_id VARCHAR(128) REFERENCES groups(id) ON DELETE CASCADE,
+    role VARCHAR(16) NOT NULL DEFAULT 'editor',
+
+    UNIQUE (groupfolder_id, group_id));
+
+# favorites has a username component allowing shared files or group folder files to be favorited
+# when share_id is set, file_path is relative to that share root
+CREATE TABLE IF NOT EXISTS favorites(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    username VARCHAR(128),
+    share_id VARCHAR(128),
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(username) REFERENCES users(username),
+    FOREIGN KEY(share_id) REFERENCES shares(id) ON DELETE CASCADE,
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
+    PRIMARY KEY(id));
+
+CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_share_path ON favorites (username, share_id, file_path) WHERE share_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_owner_path ON favorites (username, owner_username, owner_groupfolder, file_path) WHERE share_id IS NULL;
+
+# recents records who opened a file; share_id + relative file_path, or owner + storage file_path
+CREATE TABLE IF NOT EXISTS recents(
+    opener VARCHAR(128) NOT NULL,
+    share_id VARCHAR(128),
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(512) NOT NULL,
+    accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(opener) REFERENCES users(username),
+    FOREIGN KEY(share_id) REFERENCES shares(id) ON DELETE CASCADE,
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id));
+
+CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_share_path ON recents (opener, share_id, file_path) WHERE share_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_owner_path ON recents (opener, owner_username, owner_groupfolder, file_path) WHERE share_id IS NULL;
+
+CREATE TABLE IF NOT EXISTS file_activity(
+    id VARCHAR(128) PRIMARY KEY,
+    actor VARCHAR(128) NOT NULL,
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(512) NOT NULL,
+    action VARCHAR(32) NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(actor) REFERENCES users(username),
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id));
+
+# a file drop provides a public upload-only link for a specific folder
+CREATE TABLE IF NOT EXISTS filedrops(
+    id VARCHAR(128) NOT NULL UNIQUE,
+    owner_username VARCHAR(128),
+    owner_groupfolder VARCHAR(128),
+    file_path VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+
+    FOREIGN KEY(owner_username) REFERENCES users(username),
+    FOREIGN KEY(owner_groupfolder) REFERENCES groupfolders(id),
+    PRIMARY KEY(id));

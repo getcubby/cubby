@@ -194,7 +194,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch / Locked by another user'));
             }
-            const newLockId = crypto.randomUUID();
+            const newLockId = wopiLock || crypto.randomUUID();
             LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
             res.set('X-WOPI-Lock', newLockId);
             return next(new HttpSuccess(200, {}));
@@ -265,6 +265,7 @@ async function checkFileInfo(req, res, next) {
     next(new HttpSuccess(200, {
         BaseFileName: result.fileName,
         Size: result.size,
+        Version: result.mtime.toISOString(),
         LastModifiedTime: result.mtime.toISOString(),
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,

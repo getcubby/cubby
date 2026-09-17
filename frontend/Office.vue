@@ -6,9 +6,24 @@ import MainModel from './models/MainModel.js';
 import DirectoryModel from './models/DirectoryModel.js';
 
 const wopiForm = useTemplateRef('wopiForm');
+const officeViewer = useTemplateRef('officeViewer');
 
 const wopiToken = ref('');
 const wopiUrl = ref('');
+
+function sendSaveAndClose() {
+  const iframe = officeViewer.value;
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Save' }), '*');
+    iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Close' }), '*');
+  } catch (e) {
+    console.error('Failed to send postMessage to WOPI editor', e);
+  }
+}
+
+onBeforeUnmount(sendSaveAndClose);
+window.addEventListener('pagehide', sendSaveAndClose);
 
 function safeHashResourcePath() {
   const raw = window.location.hash.slice(1);
@@ -98,17 +113,6 @@ onMounted(async () => {
       console.error('Failed to parse message from WOPI editor', e);
     }
   }, false);
-
-  onBeforeUnmount(() => {
-    const iframe = officeViewer.value;
-    if (!iframe || !iframe.contentWindow) return;
-    try {
-      iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Save' }), '*');
-      iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Close' }), '*');
-    } catch (e) {
-      console.error('Failed to send postMessage to WOPI editor', e);
-    }
-  });
 
   setTimeout(() => {
     wopiForm.value.submit();

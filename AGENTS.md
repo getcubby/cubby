@@ -1,6 +1,6 @@
 # cubby
 
-File sharing app: Node backend (`backend/`, `app.js`) and Vue 3 UI (`frontend/`). Local development uses Docker Postgres.
+File sharing app: Node backend (`backend/`, `app.js`) and Vue 3 UI (`frontend/`). Data is stored in SQLite (`backend/schema.js`).
 
 Sibling s42 apps live in `../`. Shared Vue UI is `@cloudron/pankow` (source: `../../utils/pankow`). Shared Node helpers (Express app, OIDC, sessions, SCIM, app-bridge client) are `@cloudron/tegel` (source: `../../utils/tegel`). Platform code is `../../platform`. App-bridge server and the rest of the platform live in `../../platform/box`.
 
@@ -8,13 +8,13 @@ Reuse patterns from sibling s42 apps instead of inventing new ones. Prefer panko
 
 ## Develop
 
-Create an OpenID client on a Cloudron. Redirect URI must be `http://localhost:3000/auth/callback`. `./develop.sh` starts Postgres 12, runs migrations, and writes a `.env.sh` template if missing.
+Create an OpenID client on a Cloudron. Redirect URI must be `http://localhost:3000/auth/callback`. `./develop.sh` builds the frontend, writes a `.env.sh` template if missing, and starts the app with a local SQLite database.
 
 ```bash
 ./develop.sh
 ```
 
-`./develop.sh --fresh` removes the Postgres container and the `frontend-dist/` build.
+`./develop.sh --fresh` removes the local SQLite database (`.data/cubby.db`) and the `frontend-dist/` build.
 
 Frontend hot reload in a second terminal (Vite on port 5555):
 
@@ -29,7 +29,7 @@ npm run dev
 npm test
 ```
 
-`npm test` runs `./run-tests`, which starts a Docker Postgres on port 5433 and mocha on `backend/test/*-test.js` and `backend/routes/test/*-test.js`. `FAST=1 ./run-tests` skips wiping the container. A single file:
+`npm test` runs `./run-tests`, which uses a SQLite database under `/tmp/cubby_test` and mocha on `backend/test/*-test.js` and `backend/routes/test/*-test.js`. A single file:
 
 ```bash
 ./run-tests backend/test/files-test.js

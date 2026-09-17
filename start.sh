@@ -10,12 +10,6 @@ export OIDC_ISSUER_BASE_URL="${CLOUDRON_OIDC_ISSUER}"
 export OIDC_CLIENT_ID="${CLOUDRON_OIDC_CLIENT_ID}"
 export OIDC_CLIENT_SECRET="${CLOUDRON_OIDC_CLIENT_SECRET}"
 
-export POSTGRESQL_HOST="${CLOUDRON_POSTGRESQL_HOST}"
-export POSTGRESQL_PORT="${CLOUDRON_POSTGRESQL_PORT}"
-export POSTGRESQL_DATABASE="${CLOUDRON_POSTGRESQL_DATABASE}"
-export POSTGRESQL_USERNAME="${CLOUDRON_POSTGRESQL_USERNAME}"
-export POSTGRESQL_PASSWORD="${CLOUDRON_POSTGRESQL_PASSWORD}"
-
 export MAIL_SMTP_SERVER="${CLOUDRON_MAIL_SMTP_SERVER}"
 export MAIL_SMTP_PORT="${CLOUDRON_MAIL_SMTP_PORT}"
 export MAIL_SMTP_USERNAME="${CLOUDRON_MAIL_SMTP_USERNAME}"
@@ -32,15 +26,6 @@ chown -R cloudron:cloudron /app/data
 
 echo "==> Remove legacy recents file"
 rm -f /app/data/.recents.json
-
-# apply any outstanding postgres migrations before copying to sqlite (the
-# postgresql addon is retained for the transition release)
-echo "==> Run database migrations"
-DATABASE_URL="postgres://${POSTGRESQL_USERNAME}:${POSTGRESQL_PASSWORD}@${POSTGRESQL_HOST}:${POSTGRESQL_PORT}/${POSTGRESQL_DATABASE}" ./node_modules/.bin/db-migrate up
-
-# one-time migration from postgres (addon retained for the transition release)
-echo "==> Run postgres -> sqlite migration (if needed)"
-gosu cloudron:cloudron node /app/code/scripts/migrate-pg-to-sqlite.js
 
 echo "==> Start the server"
 export DEBUG="cubby:*"

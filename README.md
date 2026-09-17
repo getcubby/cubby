@@ -31,13 +31,6 @@ APP_ORIGIN="https://example.com"    # must include schema http:// or https://
 # local server port, usually behind a reverse proxy
 PORT="3000"
 
-# database
-POSTGRESQL_HOST="postgres"
-POSTGRESQL_PORT="3306"
-POSTGRESQL_DATABASE="cubby"
-POSTGRESQL_USERNAME="root"
-POSTGRESQL_PASSWORD="password"
-
 # OpenID provider
 OIDC_ISSUER_BASE_URL="https://openid.provider.com"
 OIDC_CLIENT_ID="client-id"
@@ -58,14 +51,12 @@ npm start
 
 ## Project development
 
-A docker environment is required for the PostgreSQL database instance.
-
 Install app dependencies
 ```
 npm install
 ```
 
-The main application can be run using a helper script, which will create and initialize the datbase:
+The main application can be run using a helper script, which will create and initialize the database:
 ```
 ./develop.sh
 ```

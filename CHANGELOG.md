@@ -626,3 +626,8 @@
 * Recoll search indexer fixes
 * Improve timestamp usage in UI
 
+[2.20.0]
+* Update cubby to 2.20.0
+* Remove postgresql leftovers
+* Various office integration fixes
+

@@ -16,6 +16,12 @@ import xpath from 'xpath';
 
 const debugLog = debug('cubby:routes:office');
 
+const ANONYMOUS_USER_PREFIX = 'anonymous:';
+
+function getHandleId(usernameOrGroupfolder, filePath) {
+    return 'hid-' + crypto.createHash('sha256').update(`${usernameOrGroupfolder}:${filePath}`).digest('hex');
+}
+
 function cleanExpiredLocks() {
     const now = Date.now();
     for (const handleId of Object.keys(LOCKS)) {
@@ -28,7 +34,6 @@ function cleanExpiredLocks() {
 
 const HANDLES = {};
 const LOCKS = {};
-const FILE_SESSION = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
 
@@ -55,9 +60,13 @@ async function wopiAuth(req, res, next) {
 
     const handleId = req.params.handleId;
     const handle = handleId ? HANDLES[handleId] : null;
-    if (handle && handle.token === accessToken) {
-        req.user = { username: handle.username, displayName: 'Anonymous' };
-        return next();
+    if (handle) {
+        for (const [identity, info] of Object.entries(handle.users)) {
+            if (identity.startsWith(ANONYMOUS_USER_PREFIX) && info.token === accessToken) {
+                req.user = { username: identity, displayName: 'Anonymous' };
+                return next();
+            }
+        }
     }
 
     return next(new HttpError(401, 'Invalid Access Token'));
@@ -96,55 +105,35 @@ async function getHandle(req, res, next) {
 
     const onlineUrl = nodes[0].getAttribute('urlsrc');
 
-    if (!req.user) {
-        const token = crypto.randomBytes(32).toString('hex');
-        const handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
-        HANDLES[handleId] = {
+    const handleId = getHandleId(subject.usernameOrGroupfolder, subject.filePath);
+
+    let handle = HANDLES[handleId];
+    if (!handle) {
+        handle = {
             username: subject.usernameOrGroupfolder,
-            resourcePath: resourcePath,
             filePath: subject.filePath,
-            users: { [subject.usernameOrGroupfolder]: { readonly: isReadonly } },
-            token: token,
+            users: {},
         };
-        return res.status(200).json({ handleId, url: onlineUrl, token });
+        HANDLES[handleId] = handle;
     }
 
-    const fileKey = `${subject.usernameOrGroupfolder}:${subject.filePath}`;
-    const sessionHandleId = FILE_SESSION[fileKey];
-    const sessionHandle = sessionHandleId ? HANDLES[sessionHandleId] : null;
-
-    if (sessionHandle && !sessionHandle.users[req.user.username]) {
-        debugLog(`getHandle: ${req.user.username} joining existing session ${sessionHandleId}`);
-        const token = await tokens.add(req.user.username);
-        sessionHandle.users[req.user.username] = { readonly: isReadonly, token };
-        return res.status(200).json({ handleId: sessionHandleId, url: onlineUrl, token });
-    }
-
-    if (sessionHandle && sessionHandle.users[req.user.username]) {
-        if (Object.keys(sessionHandle.users).length > 1) {
-            debugLog(`getHandle: ${req.user.username} rejoining session ${sessionHandleId} with collaborators`);
-            const token = await tokens.add(req.user.username);
-            return res.status(200).json({ handleId: sessionHandleId, url: onlineUrl, token });
+    let token;
+    if (req.user) {
+        token = await tokens.add(req.user.username);
+        handle.users[req.user.username] = { readonly: isReadonly, token };
+    } else {
+        const identity = `${ANONYMOUS_USER_PREFIX}${subject.share.id}`;
+        const existing = handle.users[identity];
+        if (existing) {
+            existing.readonly = isReadonly;
+            token = existing.token;
+        } else {
+            token = crypto.randomBytes(32).toString('hex');
+            handle.users[identity] = { readonly: isReadonly, token };
         }
     }
 
-    const newHandleId = 'hid-' + crypto.randomBytes(32).toString('hex');
-    debugLog(`getHandle: ${req.user.username} creating new handle ${newHandleId} for ${fileKey}`);
-    const token = await tokens.add(req.user.username);
-    HANDLES[newHandleId] = {
-        username: subject.usernameOrGroupfolder,
-        resourcePath: resourcePath,
-        filePath: subject.filePath,
-        users: { [req.user.username]: { readonly: isReadonly, token } },
-        token: null,
-    };
-    FILE_SESSION[fileKey] = newHandleId;
-
-    res.status(200).json({
-        handleId: newHandleId,
-        url: onlineUrl,
-        token: token
-    });
+    res.status(200).json({ handleId, url: onlineUrl, token });
 }
 
 async function postFile(req, res, next) {

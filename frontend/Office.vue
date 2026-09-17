@@ -45,12 +45,6 @@ function redirectToMainAppForLogin() {
 }
 
 onMounted(async () => {
-  const profile = await MainModel.getProfile();
-  if (!profile?.username) {
-    redirectToMainAppForLogin();
-    return;
-  }
-
   const resource = parseResourcePath(safeHashResourcePath());
   if (!resource) {
     console.error('Office: invalid resource path in hash');

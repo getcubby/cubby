@@ -9,8 +9,6 @@ const wopiForm = useTemplateRef('wopiForm');
 const officeViewer = useTemplateRef('officeViewer');
 
 const wopiToken = ref('');
-const wopiTokenTtl = ref(Date.now() + 10 * 60 * 60 * 1000);
-const wopiDocsApiConfig = JSON.stringify({ editorConfig: { customization: { forcesave: true } } });
 const wopiUrl = ref('');
 
 function sendSaveAndClose() {
@@ -124,8 +122,6 @@ onMounted(async () => {
         <input name="ui_defaults" value="UIMode=compact;SavedUIState=false;TextSidebar=false" type="hidden"/>
         <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
         <input name="access_token" :value="wopiToken" type="hidden"/>
-        <input name="access_token_ttl" :value="wopiTokenTtl" type="hidden"/>
-        <input name="docs_api_config" :value="wopiDocsApiConfig" type="hidden"/>
         <input type="submit" value="" />
       </form>
     </div>

@@ -18,10 +18,6 @@ const debugLog = debug('cubby:routes:office');
 
 const ANONYMOUS_USER_PREFIX = 'anonymous:';
 
-function getHandleId(usernameOrGroupfolder, filePath) {
-    return 'hid-' + crypto.createHash('sha256').update(`${usernameOrGroupfolder}:${filePath}`).digest('hex');
-}
-
 function cleanExpiredLocks() {
     const now = Date.now();
     for (const handleId of Object.keys(LOCKS)) {
@@ -45,6 +41,7 @@ function cleanExpiredHandles() {
 
 const HANDLES = {};
 const LOCKS = {};
+const FILE_SESSION = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
 const HANDLE_TTL = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
@@ -119,17 +116,20 @@ async function getHandle(req, res, next) {
     if (!nodes || !nodes.length) return next(new HttpError(500, 'The requested mime type is not handled'));
 
     const onlineUrl = nodes[0].getAttribute('urlsrc');
+    const fileKey = `${subject.usernameOrGroupfolder}:${subject.filePath}`;
 
-    const handleId = getHandleId(subject.usernameOrGroupfolder, subject.filePath);
+    let handleId = FILE_SESSION[fileKey];
+    let handle = handleId ? HANDLES[handleId] : null;
 
-    let handle = HANDLES[handleId];
     if (!handle) {
+        handleId = 'hid-' + crypto.randomBytes(32).toString('hex');
         handle = {
             username: subject.usernameOrGroupfolder,
             filePath: subject.filePath,
             users: {},
         };
         HANDLES[handleId] = handle;
+        FILE_SESSION[fileKey] = handleId;
     }
     handle.lastActivityAt = Date.now();
 
@@ -194,7 +194,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch / Locked by another user'));
             }
-            const newLockId = wopiLock || crypto.randomUUID();
+            const newLockId = crypto.randomUUID();
             LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
             res.set('X-WOPI-Lock', newLockId);
             return next(new HttpSuccess(200, {}));
@@ -228,6 +228,8 @@ async function postFile(req, res, next) {
                 return next(new HttpError(409, 'Lock mismatch'));
             }
             delete LOCKS[handleId];
+            const fileKey = `${handle.username}:${handle.filePath}`;
+            if (FILE_SESSION[fileKey] === handleId) delete FILE_SESSION[fileKey];
             res.set('X-WOPI-Lock', '');
             return next(new HttpSuccess(200, {}));
         }
@@ -265,7 +267,6 @@ async function checkFileInfo(req, res, next) {
     next(new HttpSuccess(200, {
         BaseFileName: result.fileName,
         Size: result.size,
-        Version: result.mtime.toISOString(),
         LastModifiedTime: result.mtime.toISOString(),
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
         UserId: req.user.username,

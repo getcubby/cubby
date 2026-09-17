@@ -46,7 +46,7 @@ function postProcess(data) {
 }
 
 async function log({ actor, owner, filePath, action, details = null }) {
-    assert.strictEqual(typeof actor, 'string');
+    assert(actor === null || typeof actor === 'string');
     assert.strictEqual(typeof owner, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof action, 'string');

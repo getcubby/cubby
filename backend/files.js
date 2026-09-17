@@ -110,7 +110,7 @@ async function runChangeHooks(usernameOrGroupfolder, filePath, activityContext =
 
     if (!activityContext) return;
 
-    assert.strictEqual(typeof activityContext.actor, 'string');
+    assert(activityContext.actor === null || typeof activityContext.actor === 'string');
     assert.strictEqual(typeof activityContext.action, 'string');
 
     // clear the actitvity log of a deleted file from the past
@@ -192,13 +192,14 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     }
 }
 
-async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite, { actor } = {}) {
+async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite, { actor, details } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof mtime, 'object');
     assert.strictEqual(typeof overwrite, 'boolean');
     assert.strict(Buffer.isBuffer(content));
-    assert(actor === undefined || typeof actor === 'string');
+    assert(actor === undefined || actor === null || typeof actor === 'string');
+    assert(details === undefined || details === null || typeof details === 'object');
 
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -214,7 +215,7 @@ async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, conte
     const [writeError] = await safe(fsPromises.writeFile(fullFilePath, content, 'utf8'));
     if (writeError) throw new MainError(MainError.FS_ERROR, writeError);
 
-    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
+    await runChangeHooks(usernameOrGroupfolder, filePath, (actor !== undefined || details !== undefined) ? { actor, action: existed && overwrite ? 'updated' : 'created', details } : null);
 
     if (!mtime) return;
 

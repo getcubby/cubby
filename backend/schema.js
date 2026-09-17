@@ -105,7 +105,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_owner_path ON recents (opener, 
 
 CREATE TABLE IF NOT EXISTS file_activity(
     id TEXT PRIMARY KEY,
-    actor TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+    actor TEXT REFERENCES users(username) ON DELETE CASCADE,
     owner_username TEXT REFERENCES users(username),
     owner_groupfolder TEXT REFERENCES groupfolders(id),
     file_path TEXT NOT NULL,
@@ -131,16 +131,37 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const MIGRATIONS = [
-    // Example for future changes:
-    // {
-    //     version: 2,
-    //     up(db) {
-    //         db.exec('ALTER TABLE users ADD COLUMN foo TEXT DEFAULT \'\';');
-    //     }
-    // }
+    {
+        // file_activity.actor becomes nullable so anonymous (public link) edits can
+        // be recorded with a NULL actor. SQLite cannot drop a NOT NULL constraint in
+        // place, so the table is rebuilt.
+        version: 2,
+        up(db) {
+            db.exec(`
+                BEGIN;
+                CREATE TABLE file_activity_new(
+                    id TEXT PRIMARY KEY,
+                    actor TEXT REFERENCES users(username) ON DELETE CASCADE,
+                    owner_username TEXT REFERENCES users(username),
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT}
+                );
+                INSERT INTO file_activity_new (id, actor, owner_username, owner_groupfolder, file_path, action, details, created_at)
+                    SELECT id, actor, owner_username, owner_groupfolder, file_path, action, details, created_at FROM file_activity;
+                DROP TABLE file_activity;
+                ALTER TABLE file_activity_new RENAME TO file_activity;
+                CREATE INDEX IF NOT EXISTS file_activity_owner_path_idx ON file_activity (owner_username, owner_groupfolder, file_path, created_at DESC);
+                CREATE INDEX IF NOT EXISTS file_activity_actor_idx ON file_activity (actor, created_at DESC);
+                COMMIT;
+            `);
+        }
+    }
 ];
 
 export function initSchema(db) {

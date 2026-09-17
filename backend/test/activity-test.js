@@ -141,6 +141,19 @@ describe('activity', function () {
         assert.equal(listed[0].details.isDirectory, true);
     });
 
+    it('logs anonymous updates with a null actor and share details', async function () {
+        await createUsers();
+
+        await files.addOrOverwriteFileContents(alice.username, '/anon-update.txt', Buffer.from('v1'), null, true, { actor: alice.username });
+        await files.addOrOverwriteFileContents(alice.username, '/anon-update.txt', Buffer.from('v2'), null, true, { actor: null, details: { shareId: 'sid-1' } });
+
+        const listed = await activity.listByPath(alice.username, '/anon-update.txt');
+        assert.equal(listed.length, 2);
+        assert.equal(listed[0].action, 'updated');
+        assert.equal(listed[0].actor, null);
+        assert.equal(listed[0].details.shareId, 'sid-1');
+    });
+
     it('logs copied via copy', async function () {
         await createUsers();
         await addUserFile(alice.username, '/copy-src.txt', 'payload');

@@ -32,9 +32,21 @@ function cleanExpiredLocks() {
     }
 }
 
+function cleanExpiredHandles() {
+    const now = Date.now();
+    for (const [handleId, handle] of Object.entries(HANDLES)) {
+        if (now - (handle.lastActivityAt || 0) > HANDLE_TTL) {
+            debugLog(`cleanExpiredHandles: removing idle handle ${handleId}`);
+            delete HANDLES[handleId];
+            delete LOCKS[handleId];
+        }
+    }
+}
+
 const HANDLES = {};
 const LOCKS = {};
 const WOPI_LOCK_TTL = 30 * 60 * 1000;
+const HANDLE_TTL = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
 
 function getAccessTokenFromRequest(req) {
@@ -50,19 +62,22 @@ async function wopiAuth(req, res, next) {
     const accessToken = getAccessTokenFromRequest(req);
     if (!accessToken) return next(new HttpError(401, 'Invalid Access Token'));
 
+    const handleId = req.params.handleId;
+    const handle = handleId ? HANDLES[handleId] : null;
+
     const [error, user] = await safe(users.getByAccessToken(accessToken));
     if (error) return next(MainError.toHttpError(error));
 
     if (user) {
+        if (handle) handle.lastActivityAt = Date.now();
         req.user = user;
         return next();
     }
 
-    const handleId = req.params.handleId;
-    const handle = handleId ? HANDLES[handleId] : null;
     if (handle) {
         for (const [identity, info] of Object.entries(handle.users)) {
             if (identity.startsWith(ANONYMOUS_USER_PREFIX) && info.token === accessToken) {
+                handle.lastActivityAt = Date.now();
                 req.user = { username: identity, displayName: 'Anonymous' };
                 return next();
             }
@@ -116,6 +131,7 @@ async function getHandle(req, res, next) {
         };
         HANDLES[handleId] = handle;
     }
+    handle.lastActivityAt = Date.now();
 
     let token;
     if (req.user) {
@@ -129,7 +145,7 @@ async function getHandle(req, res, next) {
             token = existing.token;
         } else {
             token = crypto.randomBytes(32).toString('hex');
-            handle.users[identity] = { readonly: isReadonly, token };
+            handle.users[identity] = { readonly: isReadonly, token, shareId: subject.share.id };
         }
     }
 
@@ -317,7 +333,11 @@ async function putFile(req, res, next) {
         return next(new HttpError(409, 'Lock mismatch'));
     }
 
-    const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor: req.user.username }));
+    const isAnonymous = req.user.username.startsWith(ANONYMOUS_USER_PREFIX);
+    const actor = isAnonymous ? null : req.user.username;
+    const details = isAnonymous ? { shareId: userInfo?.shareId } : null;
+
+    const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor, details }));
     if (error) return next(MainError.toHttpError(error));
 
     debugLog(`putFile: ${handleId} wrote ${req.body.length} bytes, actor=${req.user.username}`);
@@ -327,6 +347,7 @@ async function putFile(req, res, next) {
 
 if (!constants.TEST) {
     setInterval(cleanExpiredLocks, 5 * 60 * 1000);
+    setInterval(cleanExpiredHandles, 60 * 60 * 1000);
 }
 
 export default {

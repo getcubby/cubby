@@ -73,6 +73,10 @@ function receiverLabel(details) {
   return 'link';
 }
 
+function actorLabel(item) {
+  return item.actor || 'Anonymous user';
+}
+
 function formatActivityAction(item) {
   switch (item.action) {
   case 'created':
@@ -191,7 +195,7 @@ onMounted(loadGroups);
             <div v-if="activityItems.length === 0" class="activity-empty">No activity yet</div>
             <div v-for="item in activityItems" :key="item.id" class="activity-item">
               <span class="activity-label" v-tooltip.top="prettyLongDate(item.createdAt)">
-                <strong class="activity-actor">{{ item.actor }}</strong> {{ formatActivityAction(item) }}
+                <strong class="activity-actor">{{ actorLabel(item) }}</strong> {{ formatActivityAction(item) }}
               </span>
               <span class="activity-time">{{ prettyDate(item.createdAt) }}</span>
             </div>

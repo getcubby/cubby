@@ -30,7 +30,7 @@
 
 <script setup>
 
-import { ref, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import { Button, MainLayout, TopBar, utils } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 
@@ -43,9 +43,15 @@ const entry = ref(null);
 const wopiToken = ref('');
 const wopiUrl = ref('');
 
+let saveAndCloseSent = false;
+
 function sendSaveAndClose() {
+  if (saveAndCloseSent) return;
+
   const iframe = officeViewer.value;
   if (!iframe || !iframe.contentWindow) return;
+
+  saveAndCloseSent = true;
   try {
     iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Save' }), '*');
     iframe.contentWindow.postMessage(JSON.stringify({ MessageId: 'UI_Close' }), '*');
@@ -73,6 +79,7 @@ function onMessage(event) {
 async function open(item) {
   if (!item) return;
   entry.value = item;
+  saveAndCloseSent = false;
 
   const [error, handle] = await MainModel.getOfficeHandle(item);
   if (error) {
@@ -85,12 +92,12 @@ async function open(item) {
   wopiUrl.value = `${handle.url}WOPISrc=${wopiSrc}`;
   wopiToken.value = handle.token;
 
-  setTimeout(() => {
-    wopiForm.value?.submit();
-  }, 3000);
+  await nextTick();
+  wopiForm.value?.submit();
 }
 
 function onClose() {
+  sendSaveAndClose();
   emit('close');
 }
 
@@ -117,6 +124,12 @@ defineExpose({ open });
 
 .main-layout {
   background-color: white;
+}
+
+@media (prefers-color-scheme: dark) {
+  .main-layout {
+    background-color: black;
+  }
 }
 
 .office-container {

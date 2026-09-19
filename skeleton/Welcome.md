@@ -33,7 +33,7 @@ Cubby also opens plain text and source code files in a built-in editor, where yo
 
 When you open an image, the viewer loads every other image in the same folder so you can step through them like a gallery.
 
-If your administrator has connected an office server, Word, Excel, PowerPoint, and other office documents open in a new tab for editing.
+If your administrator has connected an office server, Word, Excel, PowerPoint, and other office documents open directly in the browser for editing.
 
 ## Share files and folders
 

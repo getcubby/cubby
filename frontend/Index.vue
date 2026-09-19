@@ -1,7 +1,7 @@
 <script setup>
 
 import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
-import { BASE_URL, parseResourcePath, API_ORIGIN } from './utils.js';
+import { parseResourcePath, API_ORIGIN } from './utils.js';
 import { Button, SideBar, TopBar, LoginView } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
 import SharesView from './components/SharesView.vue';
@@ -214,13 +214,6 @@ function onGroupFoldersChanged() {
 }
 
 onMounted(async () => {
-  const resumeParams = new URLSearchParams(window.location.search);
-  if (resumeParams.has('resumeOffice')) {
-    const p = resumeParams.get('resumeOffice');
-    if (p) localStorage.returnToOffice = p;
-    window.history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
-  }
-
   async function handleHash(hash) {
     hash = decodeURIComponent(hash);
 
@@ -269,18 +262,6 @@ onMounted(async () => {
     profile.value = await MainModel.getProfile() || {};
   } catch (e) {
     return console.error('mounted: getProfile() error', e);
-  }
-
-  if (profile.value.username && localStorage.returnToOffice) {
-    const officePath = localStorage.returnToOffice.trim();
-    localStorage.returnToOffice = '';
-    if (officePath) {
-      const base = (BASE_URL || '/').replace(/\/?$/, '/');
-      const u = new URL('office.html', window.location.origin + base);
-      u.hash = officePath;
-      window.location.replace(u.href);
-      return;
-    }
   }
 
   await refreshConfig();

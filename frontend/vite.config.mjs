@@ -57,7 +57,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve('index.html'),
-        office: resolve('office.html'),
         filedrop: resolve('filedrop.html'),
         sharePassword: resolve('share-password.html'),
       },

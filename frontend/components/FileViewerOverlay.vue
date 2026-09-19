@@ -1,10 +1,11 @@
 <script setup>
 
-import { ref, useTemplateRef } from 'vue';
+import { ref, nextTick, useTemplateRef } from 'vue';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
 import MarkdownViewer from './MarkdownViewer.vue';
+import OfficeViewer from './OfficeViewer.vue';
 
 const props = defineProps({
   readonly: {
@@ -31,6 +32,7 @@ const currentSiblingEntries = ref([]);
 const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
 const markdownViewer = useTemplateRef('markdownViewer');
+const officeViewer = useTemplateRef('officeViewer');
 const textViewer = useTemplateRef('textViewer');
 const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
@@ -48,9 +50,10 @@ function onImageViewerNavigate(entry) {
   history.replaceState(null, '', `#files${entry.resourcePath}`);
 }
 
-async function openOffice(item, resource) {
-  window.open('/office.html#' + item.resourcePath, '_blank');
-  window.location.hash = `files${resource.resourcePath}`.slice(0, -item.name.length);
+async function openOffice(item) {
+  viewer.value = 'office';
+  await nextTick();
+  officeViewer.value.open(item);
 }
 
 async function openMarkdown(item, resource) {
@@ -75,7 +78,7 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
   currentSiblingEntries.value = siblingEntries || [];
 
   if (preferredViewer === 'office' && MainModel.canHandleWithOffice(item)) {
-    await openOffice(item, resource);
+    await openOffice(item);
     return;
   } else if (preferredViewer === 'text' && textViewer.value.canHandle(item)) {
     await openText(item, resource);
@@ -95,7 +98,7 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
   } else if (markdownViewer.value.canHandle(item)) {
     await openMarkdown(item, resource);
   } else if (MainModel.canHandleWithOffice(item)) {
-    await openOffice(item, resource);
+    await openOffice(item);
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
     else window.location.href = item.downloadFileUrl;
@@ -136,6 +139,11 @@ defineExpose({ openFile, close, openWith });
   <Transition name="viewer-slide">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :open-with-handler="() => openWith('text')" />
+    </div>
+  </Transition>
+  <Transition name="viewer-slide">
+    <div class="viewer-container" v-if="viewer === 'office'">
+      <OfficeViewer ref="officeViewer" @close="onViewerClose" />
     </div>
   </Transition>
   <Transition name="viewer-slide">

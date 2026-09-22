@@ -154,6 +154,26 @@ describe('recent', function () {
         assert.equal(entries[0].owner, 'groupfolder-team');
     });
 
+    it('removeByOwnerAndPath removes share-scoped recent entries when the file is deleted', async function () {
+        await users.add(alice);
+        await users.add(user);
+        await files.addDirectory(alice.username, '/shared-dir');
+        await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
+
+        const shareId = await shares.create({
+            ownerUsername: alice.username,
+            filePath: '/shared-dir',
+            receiverUsername: user.username
+        });
+
+        await recent.add(user.username, `/shares/${shareId}/nested.txt`);
+        assert.equal((await recent.list(user.username, 10, 10)).length, 1);
+
+        await files.remove(alice.username, '/shared-dir/nested.txt');
+
+        assert.equal((await recent.list(user.username, 10, 10)).length, 0);
+    });
+
     it('relocatePaths updates share-scoped recent relative paths', async function () {
         await users.add(alice);
         await users.add(user);

@@ -176,6 +176,22 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     await database.query(`DELETE FROM favorites WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         ownerUsername, ownerGroupfolder, ...pathArgs
     ]);
+
+    // share-based favorites whose share survives but whose resolved path falls
+    // inside the deleted path. (The share itself being deleted is handled by
+    // the shares.id ON DELETE CASCADE foreign key.)
+    const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+        FROM favorites f JOIN shares s ON f.share_id = s.id WHERE f.share_id IS NOT NULL`);
+
+    for (const row of shareFavorites.rows) {
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        if (shareOwner !== owner) continue;
+
+        const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);
+        if (!pathAffected(canonicalPath, filePath, isDirectory)) continue;
+
+        await database.query('DELETE FROM favorites WHERE id = ?', [ row.id ]);
+    }
 }
 
 function relativeFromCanonical(shareRoot, canonicalPath) {

@@ -133,6 +133,26 @@ describe('favorites', function () {
         assert.equal(byPath.length, 1);
     });
 
+    it('removeByOwnerAndPath removes share-scoped favorites when the file is deleted', async function () {
+        await users.add(alice);
+        await users.add(user);
+        await files.addDirectory(alice.username, '/shared-dir');
+        await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
+
+        const shareId = await shares.create({
+            ownerUsername: alice.username,
+            filePath: '/shared-dir',
+            receiverUsername: user.username
+        });
+
+        await favorites.create(user.username, { shareId, filePath: '/nested.txt' });
+        assert.equal((await favorites.list(user.username)).length, 1);
+
+        await files.remove(alice.username, '/shared-dir/nested.txt');
+
+        assert.equal((await favorites.list(user.username)).length, 0);
+    });
+
     it('relocatePaths updates share-scoped favorite relative paths', async function () {
         await createUsersWithFile();
         await files.addDirectory(alice.username, '/shared-dir');

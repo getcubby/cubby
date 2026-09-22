@@ -188,6 +188,22 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     await database.query(`DELETE FROM recents WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         ownerUsername, ownerGroupfolder, ...pathArgs
     ]);
+
+    // share-based recents whose share survives but whose resolved path falls
+    // inside the deleted path. (The share itself being deleted is handled by
+    // the shares.id ON DELETE CASCADE foreign key.)
+    const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+        FROM recents r JOIN shares s ON r.share_id = s.id WHERE r.share_id IS NOT NULL`);
+
+    for (const row of shareRecents.rows) {
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        if (shareOwner !== owner) continue;
+
+        const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);
+        if (!pathAffected(canonicalPath, filePath, isDirectory)) continue;
+
+        await database.query('DELETE FROM recents WHERE opener = ? AND share_id = ? AND file_path = ?', [ row.opener, row.share_id, row.file_path ]);
+    }
 }
 
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {

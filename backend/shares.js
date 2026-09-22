@@ -222,8 +222,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
     // recursive move shares of child items
-    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
 
     await database.query(`UPDATE shares SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
@@ -236,6 +236,23 @@ async function remove(shareId) {
     debugLog(`remove: ${shareId}`);
 
     await database.query('DELETE FROM shares WHERE id = ?', [ shareId ]);
+}
+
+async function removeByOwnerAndPath(owner, filePath, isDirectory) {
+    assert.strictEqual(typeof owner, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+
+    debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
+
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+
+    await database.query(`DELETE FROM shares WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUsername, ownerGroupfolder, ...pathArgs
+    ]);
 }
 
 /**
@@ -272,6 +289,7 @@ export default {
     getByOwnerAndReceiverAndFilepath,
     relocatePaths,
     remove,
+    removeByOwnerAndPath,
     isExpired,
     isUnlocked,
     isReceiverAllowed

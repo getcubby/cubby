@@ -175,6 +175,23 @@ async function remove(id) {
     await database.query('DELETE FROM favorites WHERE id = ?', [ id ]);
 }
 
+async function removeByOwnerAndPath(owner, filePath, isDirectory) {
+    assert.strictEqual(typeof owner, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+
+    debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
+
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+
+    await database.query(`DELETE FROM favorites WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUsername, ownerGroupfolder, ...pathArgs
+    ]);
+}
+
 function relativeFromCanonical(shareRoot, canonicalPath) {
     if (canonicalPath === shareRoot) return '/';
     return canonicalPath.slice(shareRoot.length) || '/';
@@ -203,8 +220,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
 
     await database.query(`UPDATE favorites SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
         WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
@@ -238,5 +255,6 @@ export default {
     get,
     create,
     remove,
+    removeByOwnerAndPath,
     relocatePaths
 };

@@ -12,6 +12,7 @@ import Entry from './entry.js';
 import shares from './shares.js';
 import filedrops from './filedrops.js';
 import recoll from './recoll.js';
+import recent from './recent.js';
 import diskusage from './diskusage.js';
 import activity from './activity.js';
 import MainError from './mainerror.js';
@@ -574,13 +575,31 @@ async function remove(usernameOrGroupfolder, filePath, { actor } = {}) {
     assert.strictEqual(typeof filePath, 'string');
     assert(actor === undefined || typeof actor === 'string');
 
+    // normalize the logical path so the DB cleanup below (which matches on
+    // file_path) is robust to redundant or trailing slashes in the request
+    filePath = filePath.replace(/\/+/g, '/');
+    if (filePath.length > 1 && filePath.endsWith('/')) filePath = filePath.slice(0, -1);
+
     const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     debugLog(`remove ${fullFilePath}`);
 
+    // capture whether we are deleting a directory before it is gone, so we can
+    // also clean up shares/filedrops/favorites/recents pointing inside it
+    const stat = safe.fs.statSync(fullFilePath);
+    const isDirectory = !!stat && stat.isDirectory();
+
     const [error] = await safe(fsPromises.rm(fullFilePath, { recursive: true }));
     if (error) throw new MainError(MainError.FS_ERROR, error);
+
+    // remove shares, filedrops, favorites and recents that reference this path
+    // (or, for directories, anything beneath it). Otherwise a new file/folder
+    // created later at the same path would re-attach the stale share.
+    await shares.removeByOwnerAndPath(usernameOrGroupfolder, filePath, isDirectory);
+    await filedrops.removeByOwnerAndPath(usernameOrGroupfolder, filePath, isDirectory);
+    await favorites.removeByOwnerAndPath(usernameOrGroupfolder, filePath, isDirectory);
+    await recent.removeByOwnerAndPath(usernameOrGroupfolder, filePath, isDirectory);
 
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'deleted' } : null);
 }

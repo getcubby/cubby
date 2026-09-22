@@ -148,8 +148,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
 
     await database.query(`UPDATE file_activity SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
         WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [

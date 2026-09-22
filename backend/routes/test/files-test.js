@@ -77,6 +77,78 @@ describe('files API', function () {
         assert.equal(missing.status, 404);
     });
 
+    it('removes shares when a shared folder is deleted and recreated', async function () {
+        await addUserFile(alice.username, '/share-folder/inner.txt', 'inner');
+
+        // share the folder itself and a file inside it
+        const folderShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/share-folder', receiverEmail: 'folder@test.local' });
+        assert.equal(folderShare.status, 200);
+
+        const innerShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/share-folder/inner.txt', receiverEmail: 'inner@test.local' });
+        assert.equal(innerShare.status, 200);
+
+        const listBefore = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        assert.equal(listBefore.body.shares.length, 2);
+
+        // delete the folder
+        const del = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/share-folder' });
+        assert.equal(del.status, 200);
+
+        // recreate a folder at the very same path
+        await addUserFile(alice.username, '/share-folder/inner.txt', 'new inner');
+
+        // the new folder must not inherit the old shares
+        const listAfter = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        assert.equal(listAfter.body.shares.length, 0);
+
+        const folder = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/share-folder/' });
+        assert.equal(folder.body.sharedWith.length, 0);
+        assert.equal(folder.body.files.find((f) => f.fileName === 'inner.txt').sharedWith.length, 0);
+    });
+
+    it('removes shares when a shared folder is deleted with a trailing slash', async function () {
+        await addUserFile(alice.username, '/slash-folder/inner.txt', 'inner');
+
+        await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/slash-folder', receiverEmail: 'slash@test.local' });
+
+        // delete with a trailing slash
+        const del = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/slash-folder/' });
+        assert.equal(del.status, 200);
+
+        // recreate at the same path
+        await addUserFile(alice.username, '/slash-folder/inner.txt', 'new inner');
+
+        const listAfter = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        assert.equal(listAfter.body.shares.length, 0);
+    });
+
+    it('does not remove shares inside similarly-named folders when deleting (underscore)', async function () {
+        await addUserFile(alice.username, '/a_b/inner.txt', 'inner');
+        await addUserFile(alice.username, '/axb/child.txt', 'child');
+
+        // a share inside a folder whose name differs only by a single character
+        const keepShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/axb/child.txt', receiverEmail: 'keep@test.local' });
+        assert.equal(keepShare.status, 200);
+
+        await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/a_b', receiverEmail: 'drop@test.local' });
+
+        // deleting /a_b must not delete the share on /axb/child.txt
+        await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/a_b' });
+
+        const listAfter = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        assert.equal(listAfter.body.shares.length, 1);
+        assert.equal(listAfter.body.shares[0].filePath, '/axb/child.txt');
+    });
+
     it('viewer cannot write to a group folder but owner can', async function () {
         await groupfolders.add('team', 'Team', alice.username);
         await groupfolders.update('team', 'Team', [

@@ -188,6 +188,23 @@ async function purge() {
     await database.query('DELETE FROM recents WHERE accessed_at < ?', [ cutoff ]);
 }
 
+async function removeByOwnerAndPath(owner, filePath, isDirectory) {
+    assert.strictEqual(typeof owner, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof isDirectory, 'boolean');
+
+    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+
+    debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
+
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+
+    await database.query(`DELETE FROM recents WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUsername, ownerGroupfolder, ...pathArgs
+    ]);
+}
+
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
     assert.strictEqual(typeof fromOwner, 'string');
     assert.strictEqual(typeof fromPath, 'string');
@@ -200,8 +217,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR file_path LIKE ? || \'/%\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath ] : [ fromPath ];
+    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
+    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
 
     await database.query(`UPDATE recents SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
         WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
@@ -234,5 +251,6 @@ export default {
     remove,
     list,
     purge,
+    removeByOwnerAndPath,
     relocatePaths
 };

@@ -199,10 +199,10 @@ onMounted(loadGroups);
           <template v-else>
             <div v-if="activityItems.length === 0" class="activity-empty">No activity yet</div>
             <div v-for="item in activityItems" :key="item.id" class="activity-item">
-              <span class="activity-label" v-tooltip.top="prettyLongDate(item.createdAt)">
+              <div class="activity-label">
                 <strong class="activity-actor">{{ actorLabel(item) }}</strong> {{ formatActivityAction(item) }}
-              </span>
-              <span class="activity-time">{{ prettyDate(item.createdAt) }}</span>
+              </div>
+              <span class="activity-time" v-tooltip.top="prettyLongDate(item.createdAt)">{{ prettyDate(item.createdAt) }}</span>
             </div>
           </template>
         </template>
@@ -306,8 +306,6 @@ onMounted(loadGroups);
 }
 
 .activity-item {
-  display: flex;
-  flex-direction: column;
   margin-bottom: 8px;
   font-size: 13px;
 }

@@ -1,37 +1,24 @@
 <template>
-  <MainLayout :gap="false" class="main-layout">
-    <template #header>
-      <TopBar class="navbar" :gap="false">
-        <template #center>
-          <div class="file-name">{{ entry ? entry.fileName : '' }}</div>
-        </template>
-        <template #right>
-          <Button v-if="entry && entry.downloadFileUrl" icon="fa-solid fa-download" outline tool @click="onDownload" style="margin-right: 5px;">Download</Button>
-          <Button icon="fa-solid fa-xmark" @click="onClose">{{ utils.translation('main.dialog.close') }}</Button>
-        </template>
-      </TopBar>
-    </template>
-    <template #body>
-      <div class="office-container">
-        <div style="display: none">
-          <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
-            <input name="ui_defaults" value="UIMode=compact;SavedUIState=false;TextSidebar=false" type="hidden"/>
-            <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
-            <input name="access_token" :value="wopiToken" type="hidden"/>
-            <input type="submit" value="" />
-          </form>
-        </div>
+  <div class="office-viewer">
+    <div style="display: none">
+      <form :action="wopiUrl" ref="wopiForm" enctype="multipart/form-data" method="post" target="document-viewer">
+        <input name="ui_defaults" value="UIMode=compact;SavedUIState=false;TextSidebar=false" type="hidden"/>
+        <input name="css_variables" value="--co-primary-element=#0071e3;" type="hidden"/>
+        <input name="access_token" :value="wopiToken" type="hidden"/>
+        <input type="submit" value="" />
+      </form>
+    </div>
 
-        <iframe ref="officeViewer" name="document-viewer" class="viewer" allow="clipboard-read *; clipboard-write *"></iframe>
-      </div>
-    </template>
-  </MainLayout>
+    <iframe ref="officeViewer" name="document-viewer" class="viewer" allow="clipboard-read *; clipboard-write *"></iframe>
+
+    <Button class="close-button" icon="fa-solid fa-xmark" secondary tool v-tooltip.left="utils.translation('main.dialog.close')" @click="onClose" />
+  </div>
 </template>
 
 <script setup>
 
 import { ref, nextTick, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
-import { Button, MainLayout, TopBar, utils } from '@cloudron/pankow';
+import { Button, utils } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 
 const emit = defineEmits(['close']);
@@ -39,7 +26,6 @@ const emit = defineEmits(['close']);
 const wopiForm = useTemplateRef('wopiForm');
 const officeViewer = useTemplateRef('officeViewer');
 
-const entry = ref(null);
 const wopiToken = ref('');
 const wopiUrl = ref('');
 
@@ -78,7 +64,6 @@ function onMessage(event) {
 
 async function open(item) {
   if (!item) return;
-  entry.value = item;
   saveAndCloseSent = false;
 
   const [error, handle] = await MainModel.getOfficeHandle(item);
@@ -101,10 +86,6 @@ function onClose() {
   emit('close');
 }
 
-function onDownload() {
-  if (entry.value) window.location.href = entry.value.downloadFileUrl;
-}
-
 onMounted(() => {
   window.addEventListener('message', onMessage, false);
   window.addEventListener('pagehide', sendSaveAndClose);
@@ -122,29 +103,31 @@ defineExpose({ open });
 
 <style scoped>
 
-.main-layout {
+.office-viewer {
+  position: relative;
+  width: 100%;
+  height: 100%;
   background-color: white;
 }
 
 @media (prefers-color-scheme: dark) {
-  .main-layout {
+  .office-viewer {
     background-color: black;
   }
 }
 
-.office-container {
-  display: flex;
-  height: 100%;
-  width: 100%;
-}
-
 .viewer {
+  display: block;
   width: 100%;
+  height: 100%;
   border: none;
 }
 
-.file-name {
-  margin: 0 0.5rem;
+.close-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
 }
 
 </style>

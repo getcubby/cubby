@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import debug from 'debug';
 import database from './database.js';
 import files from './files.js';
+import sqlutil from './sqlutil.js';
 import MainError from './mainerror.js';
 import safe from '@cloudron/safetydance';
 
@@ -11,20 +12,6 @@ const debugLog = debug('cubby:activity');
 const ACTIONS = new Set([ 'created', 'updated', 'moved', 'copied', 'deleted', 'shared', 'unshared', 'filedrop_created', 'filedrop_deleted' ]);
 const CONTENT_ACTIONS = [ 'created', 'updated', 'deleted', 'moved', 'copied' ];
 const CONTENT_ACTIONS_SQL = CONTENT_ACTIONS.map((a) => `'${a}'`).join(', ');
-
-function ownerToDbColumns(owner) {
-    if (files.isGroupfolder(owner)) {
-        return {
-            ownerUsername: null,
-            ownerGroupfolder: owner.slice('groupfolder-'.length)
-        };
-    }
-
-    return {
-        ownerUsername: owner,
-        ownerGroupfolder: null
-    };
-}
 
 function postProcess(data) {
     data.filePath = data.file_path;
@@ -53,7 +40,7 @@ async function log({ actor, owner, filePath, action, details = null }) {
     assert(ACTIONS.has(action));
     assert(details === null || typeof details === 'object');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`log: ${actor} ${action} ${owner}${filePath}`);
 
@@ -70,7 +57,7 @@ async function clearByPath(owner, filePath) {
     assert.strictEqual(typeof owner, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`clearByPath: ${owner}${filePath}`);
 
@@ -82,7 +69,7 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof limit, 'number');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     let includeDescendants = false;
 
@@ -98,8 +85,9 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
     let result;
 
     if (includeDescendants) {
-        result = await database.query(`SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND (file_path = ? OR file_path LIKE ? || '/%')
-            ORDER BY created_at DESC, rowid DESC LIMIT ?`, [ ownerUsername, ownerGroupfolder, filePath, filePath, limit ]);
+        const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, true);
+        result = await database.query(`SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}
+            ORDER BY created_at DESC, rowid DESC LIMIT ?`, [ ownerUsername, ownerGroupfolder, ...pathArgs, limit ]);
     } else {
         result = await database.query('SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? ORDER BY created_at DESC, rowid DESC LIMIT ?', [
             ownerUsername, ownerGroupfolder, filePath, limit
@@ -116,15 +104,16 @@ async function lastActivityAt(owner, filePath, { recursive = false } = {}) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof recursive, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`lastActivityAt: ${owner}${filePath} recursive:${recursive}`);
 
     let result;
 
     if (recursive) {
+        const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, true);
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
-            WHERE (owner_username = ? OR owner_groupfolder = ?) AND (file_path = ? OR file_path LIKE ? || '/%') AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath, filePath ]);
+            WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition} AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, ...pathArgs ]);
     } else {
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
             WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath ]);
@@ -143,13 +132,12 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     assert.strictEqual(typeof toPath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const from = ownerToDbColumns(fromOwner);
-    const to = ownerToDbColumns(toOwner);
+    const from = sqlutil.ownerToDbColumns(fromOwner);
+    const to = sqlutil.ownerToDbColumns(toOwner);
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
     await database.query(`UPDATE file_activity SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
         WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [

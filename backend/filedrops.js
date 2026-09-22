@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import files from './files.js';
+import sqlutil from './sqlutil.js';
 import database from './database.js';
 import crypto from 'crypto';
 import MainError from './mainerror.js';
@@ -134,18 +135,11 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    let ownerUsername = null, ownerGroupfolder = null;
-
-    if (files.isGroupfolder(owner)) {
-        ownerGroupfolder = owner.slice('groupfolder-'.length);
-    } else {
-        ownerUsername = owner;
-    }
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
     await database.query(`DELETE FROM filedrops WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         ownerUsername, ownerGroupfolder, ...pathArgs
@@ -159,28 +153,15 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     assert.strictEqual(typeof toPath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    let fromOwnerUsername = null, fromOwnerGroupfolder = null;
-    let toOwnerUsername = null, toOwnerGroupfolder = null;
-
-    if (files.isGroupfolder(fromOwner)) {
-        fromOwnerGroupfolder = fromOwner.slice('groupfolder-'.length);
-    } else {
-        fromOwnerUsername = fromOwner;
-    }
-
-    if (files.isGroupfolder(toOwner)) {
-        toOwnerGroupfolder = toOwner.slice('groupfolder-'.length);
-    } else {
-        toOwnerUsername = toOwner;
-    }
+    const from = sqlutil.ownerToDbColumns(fromOwner);
+    const to = sqlutil.ownerToDbColumns(toOwner);
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
     await database.query(`UPDATE filedrops SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        toOwnerUsername, toOwnerGroupfolder, toPath, fromPath, fromOwnerUsername, fromOwnerGroupfolder, ...pathArgs
+        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
     ]);
 }
 

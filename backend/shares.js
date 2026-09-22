@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import files from './files.js';
+import sqlutil from './sqlutil.js';
 import database from './database.js';
 import crypto from 'crypto';
 import groups from './groups.js';
@@ -195,20 +196,6 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
     return result.rows;
 }
 
-function ownerToDbColumns(owner) {
-    if (files.isGroupfolder(owner)) {
-        return {
-            ownerUsername: null,
-            ownerGroupfolder: owner.slice('groupfolder-'.length)
-        };
-    }
-
-    return {
-        ownerUsername: owner,
-        ownerGroupfolder: null
-    };
-}
-
 async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory }) {
     assert.strictEqual(typeof fromOwner, 'string');
     assert.strictEqual(typeof fromPath, 'string');
@@ -216,14 +203,13 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     assert.strictEqual(typeof toPath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const from = ownerToDbColumns(fromOwner);
-    const to = ownerToDbColumns(toOwner);
+    const from = sqlutil.ownerToDbColumns(fromOwner);
+    const to = sqlutil.ownerToDbColumns(toOwner);
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
     // recursive move shares of child items
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
     await database.query(`UPDATE shares SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
@@ -243,12 +229,11 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
     await database.query(`DELETE FROM shares WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         ownerUsername, ownerGroupfolder, ...pathArgs

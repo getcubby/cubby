@@ -1,6 +1,6 @@
 import assert from 'assert';
 import debug from 'debug';
-import files from './files.js';
+import sqlutil from './sqlutil.js';
 import shares from './shares.js';
 import database from './database.js';
 import path from 'path';
@@ -8,20 +8,6 @@ import path from 'path';
 const debugLog = debug('cubby:recent');
 
 const MAX_AGE = 60 * 24 * 60 * 60 * 1000; // ~2 months
-
-function ownerToDbColumns(owner) {
-    if (files.isGroupfolder(owner)) {
-        return {
-            ownerUsername: null,
-            ownerGroupfolder: owner.slice('groupfolder-'.length)
-        };
-    }
-
-    return {
-        ownerUsername: owner,
-        ownerGroupfolder: null
-    };
-}
 
 function postProcess(data) {
     data.filePath = data.file_path;
@@ -193,12 +179,11 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = ownerToDbColumns(owner);
+    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ filePath, filePath, filePath ] : [ filePath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
     await database.query(`DELETE FROM recents WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
         ownerUsername, ownerGroupfolder, ...pathArgs
@@ -212,13 +197,12 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     assert.strictEqual(typeof toPath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const from = ownerToDbColumns(fromOwner);
-    const to = ownerToDbColumns(toOwner);
+    const from = sqlutil.ownerToDbColumns(fromOwner);
+    const to = sqlutil.ownerToDbColumns(toOwner);
 
     debugLog(`relocatePaths: ${fromOwner}${fromPath} -> ${toOwner}${toPath} isDirectory:${isDirectory}`);
 
-    const pathCondition = isDirectory ? '(file_path = ? OR substr(file_path, 1, length(?) + 1) = ? || \'/\')' : 'file_path = ?';
-    const pathArgs = isDirectory ? [ fromPath, fromPath, fromPath ] : [ fromPath ];
+    const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
     await database.query(`UPDATE recents SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
         WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [

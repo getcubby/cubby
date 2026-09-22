@@ -32,6 +32,7 @@ const props = defineProps({
 const emit = defineEmits(['download', 'delete', 'share']);
 
 const visible = ref(localStorage.previewPanelVisible === 'true');
+const activeTab = ref('details');
 const hasContent = computed(() => props.selectedEntries.length > 0 || Object.keys(props.parentEntry).length !== 0);
 const entry = computed(() =>{
   return props.selectedEntries.length ? props.selectedEntries[0] : props.parentEntry;
@@ -55,6 +56,10 @@ const tabViewKey = computed(() => {
 function onToggle() {
   visible.value = !visible.value;
   localStorage.previewPanelVisible = visible.value;
+}
+
+function onTabChanged(tab) {
+  activeTab.value = tab;
 }
 
 const activityItems = ref([]);
@@ -150,7 +155,7 @@ onMounted(loadGroups);
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
       </div>
 
-      <TabView :key="tabViewKey" :tabs="{ details: 'Details', activity: 'Activity' }" default-active="details" class="preview-tabs">
+      <TabView :key="tabViewKey" :tabs="{ details: 'Details', activity: 'Activity' }" :default-active="activeTab" @changed="onTabChanged" class="preview-tabs">
         <template #details>
           <div class="detail" v-show="selectedEntries.length <= 1 && displayName">
             <p>Name</p>

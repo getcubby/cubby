@@ -631,3 +631,9 @@
 * Remove postgresql leftovers
 * Various office integration fixes
 
+[2.21.0]
+* Update cubby to 2.21.0
+* Fix share resource cleanup when folders get deleted
+* Do not special case office viewer to open in a new tab
+* Remember preview panel state
+

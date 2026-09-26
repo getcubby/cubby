@@ -117,4 +117,19 @@ describe('office API', function () {
         assert.equal(third.status, 200);
         assert.notEqual(third.body.handleId, first.body.handleId);
     });
+
+    it('requires the password to open a document of a protected share', async function () {
+        mockOffice();
+        await addUserFile(alice.username, '/office-secret.odt', 'original');
+
+        const createResponse = await superagent.post(`${serverUrl}/api/v1/shares`)
+            .query({ access_token: alice.token })
+            .send({ ownerUsername: alice.username, path: '/office-secret.odt', password: 'hunter2' });
+        const shareId = createResponse.body.shareId;
+
+        const response = await superagent.get(`${serverUrl}/api/v1/office/handle`)
+            .query({ resourcePath: `/shares/${shareId}/` })
+            .ok(() => true);
+        assert.equal(response.status, 423);
+    });
 });

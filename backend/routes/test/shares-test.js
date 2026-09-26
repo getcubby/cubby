@@ -152,6 +152,42 @@ describe('shares API', function () {
         assert.match(pageResponse.headers['content-type'], /text\/html/);
     });
 
+    it('requires the password to zip download a protected share', async function () {
+        await addUserFile(alice.username, '/secret-zip.txt', 'password protected zip');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/secret-zip.txt', readonly: true, password: 'hunter2' });
+        const shareId = createResponse.body.shareId;
+
+        const lockedResponse = await withToken(superagent.get(`${serverUrl}/api/v1/download`), user.token)
+            .query({ entries: `/shares/${shareId}/` })
+            .ok(() => true);
+        assert.equal(lockedResponse.status, 423);
+
+        const unlockResponse = await superagent.post(`${serverUrl}/api/v1/shares/${shareId}/unlock`)
+            .send({ password: 'hunter2' });
+        const cookie = (unlockResponse.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+
+        const unlockedResponse = await withToken(superagent.get(`${serverUrl}/api/v1/download`), user.token)
+            .query({ entries: `/shares/${shareId}/` })
+            .set('cookie', cookie);
+        assert.equal(unlockedResponse.status, 200);
+        assert.match(unlockedResponse.headers['content-type'], /zip/);
+    });
+
+    it('requires the password to list activity of a protected share', async function () {
+        await addUserFile(alice.username, '/secret-activity.txt', 'password protected activity');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/secret-activity.txt', readonly: true, password: 'hunter2' });
+        const shareId = createResponse.body.shareId;
+
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), user.token)
+            .query({ path: `/shares/${shareId}/` })
+            .ok(() => true);
+        assert.equal(response.status, 423);
+    });
+
     it('cannot share files of another user', async function () {
         await addUserFile(alice.username, '/not-yours.txt', 'not yours');
 

@@ -5,6 +5,7 @@ import MainError from '../mainerror.js';
 import files from '../files.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
+import shares from '../shares.js';
 
 const debugLog = debug('cubby:routes:activity');
 
@@ -21,6 +22,7 @@ async function list(req, res, next) {
 
     const subject = await files.translateResourcePath(req.user.username, filePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
 
     const [error, items] = await safe(activity.listByPath(subject.usernameOrGroupfolder, subject.filePath, { limit }));
     if (error) return next(MainError.toHttpError(error));

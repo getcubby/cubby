@@ -121,6 +121,8 @@ async function download(req, res, next) {
 
             if (!await shares.isReceiverAllowed(share, req.user.username)) return next(new HttpError(403, 'not allowed'));
 
+            if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
+
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
             getArgs = [ share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
         } else if (resource === 'groupfolders') {

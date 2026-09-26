@@ -10,6 +10,7 @@ import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import office from '../office.js';
 import safe from '@cloudron/safetydance';
+import shares from '../shares.js';
 import tokens from '../tokens.js';
 import users from '../users.js';
 import xpath from 'xpath';
@@ -93,6 +94,7 @@ async function getHandle(req, res, next) {
 
     const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
     if (!subject) return next(new HttpError(403, 'not allowed'));
+    if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
 
     const isReadonly = subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER;
 

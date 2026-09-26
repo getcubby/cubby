@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import common from './common.js';
 import superagent from '@cloudron/superagent';
 import groupfolders from '../../groupfolders.js';
+import groups from '../../groups.js';
 
 describe('files API', function () {
     const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
@@ -166,6 +167,34 @@ describe('files API', function () {
             .query({ path: '/groupfolders/team/allowed.txt', overwrite: true })
             .send(Buffer.from('allowed'));
         assert.equal(ownerWrite.status, 200);
+    });
+
+    it('returns the effective role for group folder viewers via a user group', async function () {
+        await groups.add({ id: 'readers', name: 'Readers' });
+        await groups.setMembers('readers', [ user.username ]);
+        await groupfolders.add('via-group', 'Via Group', alice.username);
+        await groupfolders.update('via-group', 'Via Group', [ { username: alice.username, role: 'owner' } ], [ { groupId: 'readers', role: 'viewer' } ]);
+        await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/groupfolders/via-group/doc.txt', overwrite: true })
+            .send(Buffer.from('doc'));
+
+        const dir = await withToken(superagent.get(`${serverUrl}/api/v1/files`), user.token).query({ path: '/groupfolders/via-group/' });
+        assert.equal(dir.body.group.myRole, 'viewer');
+        assert.equal(dir.body.files[0].group.myRole, 'viewer');
+        assert.ok(dir.body.group.members);
+
+        const file = await withToken(superagent.get(`${serverUrl}/api/v1/files`), user.token).query({ path: '/groupfolders/via-group/doc.txt' });
+        assert.equal(file.body.group.myRole, 'viewer');
+
+        const ownerDir = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token).query({ path: '/groupfolders/via-group/' });
+        assert.equal(ownerDir.body.group.myRole, 'owner');
+
+        const root = await withToken(superagent.get(`${serverUrl}/api/v1/files`), user.token).query({ path: '/groupfolders/' });
+        const rootEntry = root.body.files.find((f) => f.id === 'via-group');
+        assert.equal(rootEntry.group.myRole, 'viewer');
+
+        const settings = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
+        assert.equal(settings.body.groupFolder.find((g) => g.id === 'via-group').myRole, 'viewer');
     });
 
     it('returns 404 for an unknown group folder', async function () {

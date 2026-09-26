@@ -60,10 +60,7 @@ const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
   if (currentResourcePath.value === '/groupfolders/') return true;
   if (currentShare.value) return currentShare.value.readonly;
-  if (currentGroup.value) {
-    const member = currentGroup.value.members.find((m) => m.username === profile.value?.username);
-    return member?.role === ROLES.VIEWER;
-  }
+  if (currentGroup.value) return currentGroup.value.myRole === ROLES.VIEWER;
   return false;
 });
 

@@ -230,6 +230,9 @@ async function get(req, res, next) {
             const [error, file] = await safe(files.get(`groupfolder-${group.id}`, groupFilePath));
             if (error) return next(MainError.toHttpError(error));
 
+            // children share the group object of their directory
+            if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.username);
+
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
 
@@ -261,6 +264,7 @@ async function get(req, res, next) {
                 file.fileName = group.name;
                 file.isShare = false;
                 file.isGroup = true;
+                if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.username);
                 const groupEntry = file.asGroup('/');
                 groupEntry.id = group.id;
 

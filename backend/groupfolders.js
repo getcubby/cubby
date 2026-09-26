@@ -185,21 +185,31 @@ async function remove(id) {
 
     debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
 
-    const [rmError] = await safe(fsPromises.rm(groupFolderPath, { recursive: true }));
-    if (rmError) throw new MainError(MainError.FS_ERROR, rmError);
+    // move the files aside first so that a failure leaves both the files and the database untouched
+    const trashPath = path.join(paths.GROUPS_DATA_ROOT, `.deleted-${id}-${crypto.randomBytes(4).toString('hex')}`);
+    const [renameError] = await safe(fsPromises.rename(groupFolderPath, trashPath));
+    if (renameError && renameError.code !== 'ENOENT') throw new MainError(MainError.FS_ERROR, renameError);
 
-    const queries = [{
-        query: 'DELETE FROM groupfolders_members WHERE groupfolder_id = ?',
-        args: [ id ]
-    }, {
-        query: 'DELETE FROM groupfolders_group_members WHERE groupfolder_id = ?',
-        args: [ id ]
-    }, {
-        query: 'DELETE FROM groupfolders WHERE id = ?',
-        args: [ id ]
-    }];
+    // rows referencing the group folder have no ON DELETE CASCADE. favorites and recents of its shares cascade with the shares
+    const queries = [
+        'DELETE FROM favorites WHERE owner_groupfolder = ?',
+        'DELETE FROM recents WHERE owner_groupfolder = ?',
+        'DELETE FROM shares WHERE owner_groupfolder = ?',
+        'DELETE FROM filedrops WHERE owner_groupfolder = ?',
+        'DELETE FROM file_activity WHERE owner_groupfolder = ?',
+        'DELETE FROM groupfolders_members WHERE groupfolder_id = ?',
+        'DELETE FROM groupfolders_group_members WHERE groupfolder_id = ?',
+        'DELETE FROM groupfolders WHERE id = ?'
+    ].map(query => ({ query, args: [ id ] }));
 
-    await database.transaction(queries);
+    const [dbError] = await safe(database.transaction(queries));
+    if (dbError) {
+        if (!renameError) await safe(fsPromises.rename(trashPath, groupFolderPath));
+        throw dbError;
+    }
+
+    const [rmError] = await safe(fsPromises.rm(trashPath, { recursive: true, force: true }));
+    if (rmError) console.error(`remove: failed to remove files of group folder ${id} at ${trashPath}`, rmError);
 
     // FIXME reindex for all for the moment until we know who got removed!
     recoll.index();

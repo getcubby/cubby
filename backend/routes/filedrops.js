@@ -149,6 +149,7 @@ async function uploadToFiledrop(req, res, next) {
     const fileName = req.query.name;
 
     if (!fileName || typeof fileName !== 'string') return next(new HttpError(400, 'name must be a non-empty string'));
+    if (/[/\\\0]/.test(fileName) || fileName === '.' || fileName === '..') return next(new HttpError(400, 'name must be a plain file name'));
 
     debugLog(`uploadToFiledrop: ${filedropId} name:${fileName}`);
 

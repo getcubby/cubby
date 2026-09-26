@@ -62,6 +62,34 @@ describe('filedrops API', function () {
         assert.equal(uploadResponse.status, 200);
     });
 
+    it('rejects upload names that are not plain file names', async function () {
+        await addUserFile(alice.username, '/inbox/keep.txt', 'dummy');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/inbox' });
+        assert.equal(createResponse.status, 200);
+        const filedropId = createResponse.body.filedropId;
+
+        for (const name of [ '../escaped.txt', '..', '.', 'sub/file.txt', '..\\escaped.txt', 'a\0b' ]) {
+            const response = await superagent.post(`${serverUrl}/api/v1/filedrops/${filedropId}`)
+                .query({ name })
+                .send(Buffer.from('content'))
+                .ok(() => true);
+            assert.equal(response.status, 400, name);
+        }
+
+        const escaped = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/escaped.txt' })
+            .ok(() => true);
+        assert.equal(escaped.status, 404);
+
+        const okResponse = await superagent.post(`${serverUrl}/api/v1/filedrops/${filedropId}`)
+            .query({ name: 'a..b.txt' })
+            .send(Buffer.from('content'));
+        assert.equal(okResponse.status, 200);
+        assert.equal(okResponse.body.fileName, 'a..b.txt');
+    });
+
     it('cannot create a file drop in storage of another user', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), user.token)
             .send({ ownerUsername: alice.username, path: '/' })

@@ -78,11 +78,11 @@ async function getPreview(req, res, next) {
 async function download(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
+    if (typeof req.query.entries !== 'string' || !req.query.entries) return next(new HttpError(400, 'entries must be a non-empty comma separated list'));
+
     const entries = req.query.entries.split(',');
     const skipPath = req.query.skipPath || '';
     const name = req.query.name || 'cubby';
-
-    if (!Array.isArray(entries)) return next(new HttpError(400, 'entries must be a non-empty stringified array'));
 
     debugLog(`download: type=zip skipPath=${skipPath}`, entries);
 

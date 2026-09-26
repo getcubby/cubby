@@ -4,7 +4,7 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('misc API', function () {
-    const { setup, cleanup, serverUrl } = common;
+    const { setup, cleanup, serverUrl, alice, withToken } = common;
 
     before(setup);
     after(cleanup);
@@ -19,5 +19,11 @@ describe('misc API', function () {
         assert.equal(response.status, 200);
         assert.ok(response.body.viewers);
         assert.equal(typeof response.body.appPasswordsUrl, 'string');
+    });
+
+    it('requires entries to download', async function () {
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/download`), alice.token)
+            .ok(() => true);
+        assert.equal(response.status, 400);
     });
 });

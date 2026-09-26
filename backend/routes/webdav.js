@@ -131,6 +131,11 @@ async function authFromRequest(req) {
     return ok ? { username } : null;
 }
 
+// WebDAV has no session to unlock a share in, so password protected shares are never accessible
+function isLockedShare(subject) {
+    return !!subject.share?.passwordProtected;
+}
+
 function sendXml(res, status, body) {
     res.status(status);
     res.set('Content-Type', 'application/xml; charset="utf-8"');
@@ -286,6 +291,10 @@ ${responses.join('\n')}
         res.status(403).send('Forbidden');
         return;
     }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
+        return;
+    }
 
     const [getError, entry] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
     if (getError) {
@@ -337,6 +346,10 @@ async function handleGet(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
+        return;
+    }
     const [getError, entry] = await safe(files.get(subject.usernameOrGroupfolder, subject.filePath));
     if (getError) {
         sendMainError(res, getError);
@@ -366,6 +379,10 @@ async function handleHead(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
+        return;
+    }
     const [headError, headResult] = await safe(files.head(subject.usernameOrGroupfolder, subject.filePath));
     if (headError) {
         sendMainError(res, headError);
@@ -391,6 +408,10 @@ async function handlePut(req, res, username, segments) {
     const subject = await files.translateResourcePath(username, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
+        return;
+    }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
         return;
     }
     if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
@@ -516,6 +537,10 @@ async function handleMkcol(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
+        return;
+    }
     if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
@@ -549,6 +574,10 @@ async function handleDelete(req, res, username, segments) {
     const subject = await files.translateResourcePath(username, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
+        return;
+    }
+    if (isLockedShare(subject)) {
+        res.status(423).send('Locked');
         return;
     }
     if (subject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER) {
@@ -608,6 +637,10 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
+    if (isLockedShare(subject) || isLockedShare(destSubject)) {
+        res.status(423).send('Locked');
+        return;
+    }
     if (subject.share?.readonly || destSubject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER || destSubject.role === groupFolders.ROLES.VIEWER) {
         res.status(403).send('Forbidden');
         return;
@@ -648,6 +681,10 @@ async function handleMove(req, res, username, segments, pathInfo) {
     const destSubject = await files.translateResourcePath(username, destResource.resourcePath);
     if (!subject || !destSubject) {
         res.status(403).send('Forbidden');
+        return;
+    }
+    if (isLockedShare(subject) || isLockedShare(destSubject)) {
+        res.status(423).send('Locked');
         return;
     }
     if (subject.share?.readonly || destSubject.share?.readonly || subject.role === groupFolders.ROLES.VIEWER || destSubject.role === groupFolders.ROLES.VIEWER) {

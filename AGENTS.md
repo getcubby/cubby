@@ -43,7 +43,7 @@ npm test
 
 ## API docs
 
-When changing the HTTP API, update the OpenAPI spec at `../website/api/cubby/openapi.yaml`.
+When changing the HTTP API, update the OpenAPI spec at `../website/openapi/cubby.yaml`.
 
 ## Code style
 

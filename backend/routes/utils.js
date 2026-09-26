@@ -29,6 +29,17 @@ export function parseOwner(body) {
     return { ownerUsername, ownerGroupfolder };
 }
 
+/** Whether username may read files of the given storage: their own home, or a group folder they are part of. */
+export async function canReadOwner(username, ownerUsername, ownerGroupfolder) {
+    if (ownerUsername) return ownerUsername === username;
+    if (!ownerGroupfolder) return false;
+
+    const groupFolder = await groupFolders.get(ownerGroupfolder);
+    if (!groupFolder) return false;
+
+    return await groupFolders.isPartOf(groupFolder, username);
+}
+
 /** Whether username may manage shares and file drops of the given storage: their own home, or a group folder where they are owner or editor. */
 export async function canWriteOwner(username, ownerUsername, ownerGroupfolder) {
     if (ownerUsername) return ownerUsername === username;

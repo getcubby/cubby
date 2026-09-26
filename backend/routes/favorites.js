@@ -4,6 +4,9 @@ import favorites from '../favorites.js';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
+import shares from '../shares.js';
+import sqlutil from '../sqlutil.js';
+import { canReadOwner } from './utils.js';
 
 const debugLog = debug('cubby:routes:favorites');
 
@@ -17,10 +20,22 @@ async function create(req, res, next) {
 
     let createArgs;
     if (shareId) {
+        const [shareError, share] = await safe(shares.get(shareId));
+        if (shareError) return next(MainError.toHttpError(shareError));
+        if (!share || shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
+        if (!await shares.isReceiverAllowed(share, req.user.username)) return next(new HttpError(403, 'not allowed'));
+
         debugLog(`create: share:${shareId} ${filePath}`);
         createArgs = { shareId, filePath };
     } else {
         const owner = req.body.owner || req.user.username;
+        if (typeof owner !== 'string') return next(new HttpError(400, 'owner must be a string'));
+
+        const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+        const [accessError, allowed] = await safe(canReadOwner(req.user.username, ownerUsername, ownerGroupfolder));
+        if (accessError) return next(MainError.toHttpError(accessError));
+        if (!allowed) return next(new HttpError(403, 'not allowed'));
+
         debugLog(`create: owner:${owner} ${filePath}`);
         createArgs = { owner, filePath };
     }

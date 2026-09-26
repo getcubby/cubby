@@ -79,8 +79,9 @@ function getAbsolutePath(usernameOrGroupfolder, filePath) {
 
     fs.mkdirSync(path.join(dataRoot, identifier), { recursive: true });
 
-    const fullFilePath = path.resolve(path.join(dataRoot, identifier, filePath));
-    if (fullFilePath.indexOf(path.join(dataRoot, identifier)) !== 0) return null;
+    const rootPath = path.resolve(dataRoot, identifier);
+    const fullFilePath = path.resolve(path.join(rootPath, filePath));
+    if (fullFilePath !== rootPath && !fullFilePath.startsWith(rootPath + path.sep)) return null;
 
     return fullFilePath;
 }

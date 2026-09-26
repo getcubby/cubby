@@ -33,6 +33,9 @@ describe('files', function () {
         assert.equal(valid, path.join(paths.USER_DATA_ROOT, alice.username, 'docs', 'readme.txt'));
 
         assert.equal(files.getAbsolutePath(alice.username, '/../secret'), null);
+        assert.equal(files.getAbsolutePath(alice.username, `/../${alice.username}2/secret`), null);
+        assert.equal(files.getAbsolutePath('groupfolder-team', '/../team2/secret'), null);
+        assert.equal(files.getAbsolutePath(alice.username, '/'), path.join(paths.USER_DATA_ROOT, alice.username));
     });
 
     it('can add, get, head, move, copy, and remove files', async function () {

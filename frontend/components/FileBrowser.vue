@@ -67,6 +67,13 @@ const isReadonly = computed(() => {
   return false;
 });
 
+const showShare = computed(() => {
+  if (activeResourceType.value === 'shares') return false;
+  if (currentResourcePath.value === '/groupfolders/') return false;
+  if (currentGroup.value && isReadonly.value) return false;
+  return true;
+});
+
 function setViewMode(mode) {
   viewMode.value = mode;
   localStorage.viewMode = mode;
@@ -672,6 +679,7 @@ onMounted(() => {
       const item = directoryView.value?.focusItem;
       return !item || item.isFile;
     },
+    visible: () => showShare.value,
   });
 
   const openIdx = model.findIndex(i => i.id === 'open');
@@ -743,7 +751,7 @@ defineExpose({
             :show-select-all="currentResourcePath !== '/groupfolders/'"
             :show-copy="currentResourcePath !== '/groupfolders/'"
             :show-cut="!isReadonly"
-            :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
+            :show-share="showShare"
             :share-indicator-property="'isSharedWith'"
             :file-drop-indicator-property="'isFileDrop'"
             :editable="!isReadonly"
@@ -786,7 +794,7 @@ defineExpose({
         :selected-entries="selectedEntries"
         :show-download="currentResourcePath !== '/groupfolders/'"
         :show-delete="!isReadonly"
-        :show-share="activeResourceType !== 'shares' && currentResourcePath !== '/groupfolders/'"
+        :show-share="showShare"
         @download="downloadHandler"
         @delete="deleteHandler"
         @share="shareHandler"

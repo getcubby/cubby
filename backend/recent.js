@@ -7,7 +7,8 @@ import path from 'path';
 
 const debugLog = debug('cubby:recent');
 
-const MAX_AGE = 60 * 24 * 60 * 60 * 1000; // ~2 months
+const MAX_DAYS = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function postProcess(data) {
     data.filePath = data.file_path;
@@ -151,8 +152,9 @@ async function list(opener, daysAgo = 10, maxFiles = 100) {
     assert.strictEqual(typeof daysAgo, 'number');
     assert.strictEqual(typeof maxFiles, 'number');
 
-    debugLog(`list: ${opener} maxFiles:${maxFiles}`);
+    debugLog(`list: ${opener} daysAgo:${daysAgo} maxFiles:${maxFiles}`);
 
+    const maxAge = Math.min(daysAgo, MAX_DAYS) * DAY_MS;
     const now = Date.now();
     const result = [];
 
@@ -160,7 +162,7 @@ async function list(opener, daysAgo = 10, maxFiles = 100) {
 
     for (const row of rows.rows) {
         const recent = postProcess(row);
-        if (now - new Date(recent.accessedAt).getTime() > MAX_AGE) break;
+        if (now - new Date(recent.accessedAt).getTime() > maxAge) break;
         if (result.length >= maxFiles) break;
 
         result.push(recent);
@@ -170,7 +172,7 @@ async function list(opener, daysAgo = 10, maxFiles = 100) {
 }
 
 async function purge() {
-    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(Date.now() - MAX_DAYS * DAY_MS);
     await database.query('DELETE FROM recents WHERE accessed_at < ?', [ cutoff ]);
 }
 
@@ -247,6 +249,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 }
 
 export default {
+    MAX_DAYS,
+
     add,
     remove,
     list,

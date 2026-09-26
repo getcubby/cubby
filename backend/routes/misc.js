@@ -172,7 +172,9 @@ async function download(req, res, next) {
 async function getRecent(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    const daysAgo = isNaN(parseInt(req.query.days_ago, 10)) ? 10 : parseInt(req.query.days_ago, 10);
+    const daysAgoArg = req.query.days_ago;
+    if (daysAgoArg !== undefined && (typeof daysAgoArg !== 'string' || !/^\d+$/.test(daysAgoArg))) return next(new HttpError(400, 'days_ago must be a non-negative integer'));
+    const daysAgo = daysAgoArg === undefined ? 10 : Math.min(parseInt(daysAgoArg, 10), recent.MAX_DAYS);
     const maxFiles = 100;
 
     debugLog(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);

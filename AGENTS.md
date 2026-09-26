@@ -41,6 +41,10 @@ npm test
 - **Tegel** — `createExpressApp()`, `oidcRedirectToLoginProvider`, `oidcCallback`, `logout`, `requireAuth`, `HttpError` / `HttpSuccess`, `appBridge`.
 - **Box app-bridge** — platform HTTP API (`../../platform/box/src/app-bridge.js`). Apps call it through `tegel.appBridge`, not by copying box code.
 
+## API docs
+
+When changing the HTTP API, update the OpenAPI spec at `../website/api/cubby/openapi.yaml`.
+
 ## Code style
 
 - Javascript ESM

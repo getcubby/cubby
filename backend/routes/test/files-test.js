@@ -78,6 +78,13 @@ describe('files API', function () {
         assert.equal(missing.status, 404);
     });
 
+    it('returns 404 when deleting a file that does not exist', async function () {
+        const response = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/does-not-exist.txt' })
+            .ok(() => true);
+        assert.equal(response.status, 404);
+    });
+
     it('removes shares when a shared folder is deleted and recreated', async function () {
         await addUserFile(alice.username, '/share-folder/inner.txt', 'inner');
 

@@ -592,7 +592,10 @@ async function remove(usernameOrGroupfolder, filePath, { actor } = {}) {
     const isDirectory = !!stat && stat.isDirectory();
 
     const [error] = await safe(fsPromises.rm(fullFilePath, { recursive: true }));
-    if (error) throw new MainError(MainError.FS_ERROR, error);
+    if (error) {
+        if (error.code === 'ENOENT') throw new MainError(MainError.NOT_FOUND, 'file not found');
+        throw new MainError(MainError.FS_ERROR, error);
+    }
 
     // remove shares, filedrops, favorites and recents that reference this path
     // (or, for directories, anything beneath it). Otherwise a new file/folder

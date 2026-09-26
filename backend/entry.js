@@ -1,6 +1,8 @@
 import assert from 'assert';
 import mimeIcons from './mimeicons.js';
 import crypto from 'crypto';
+import path from 'path';
+import paths from './paths.js';
 import preview from './preview.js';
 
 function Entry({ fullFilePath, filePath, fileName, owner, size = 0, mtime = new Date(), atime = new Date(), isDirectory, isFile, isShare = false, isGroup = false, isBinary = false, mimeType, files = [], sharedWith = [], fileDrops = [], share = null, group = null, favorites = null }) {
@@ -75,17 +77,28 @@ Entry.prototype.getPreviewUrl = function () {
 
     const previewHash = preview.getHash(this.mimeType, this._fullFilePath);
     if (previewHash) {
-        let type;
-        if (this.share) type = 'shares';
-        else if (this.group) type = 'groups';
-        else type = 'files';
+        let type, ownerId, rootPath;
+        if (this.share) {
+            type = 'shares';
+            ownerId = this.share.id;
+            const ownerRoot = this.share.ownerGroupfolder ? path.join(paths.GROUPS_DATA_ROOT, this.share.ownerGroupfolder) : path.join(paths.USER_DATA_ROOT, this.share.ownerUsername);
+            rootPath = path.join(ownerRoot, this.share.filePath);
+        } else if (this.group) {
+            type = 'groups';
+            ownerId = this.group.id;
+            rootPath = path.join(paths.GROUPS_DATA_ROOT, this.group.id);
+        } else {
+            type = 'files';
+            ownerId = this.owner;
+            rootPath = path.join(paths.USER_DATA_ROOT, this.owner);
+        }
 
-        let ownerId;
-        if (this.share) ownerId = this.share.id;
-        else if (this.group) ownerId = this.group.id;
-        else ownerId = this.owner;
+        // path is relative to the share, group folder or home, the preview route resolves it to check access
+        const relativePath = '/' + path.relative(rootPath, this._fullFilePath);
+        // also escape characters that break unquoted css url()
+        const encodedPath = encodeURIComponent(relativePath).replace(/[()'!*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
-        return `/api/v1/preview/${type}/${ownerId}/${previewHash}`;
+        return `/api/v1/preview/${type}/${ownerId}/${previewHash}?path=${encodedPath}`;
     }
 
     const mime = this.mimeType.split('/');

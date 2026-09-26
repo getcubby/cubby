@@ -2,6 +2,7 @@ import assert from 'assert';
 import { ZipArchive } from 'archiver';
 import debug from 'debug';
 import files from '../files.js';
+import fs from 'fs';
 import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
 import office from '../office.js';
@@ -42,37 +43,47 @@ async function getPreview(req, res, next) {
     const type = req.params.type;
     const id = req.params.id; // id depends on type (either username or shareId)
     const hash = req.params.hash;
+    const filePath = req.query.path; // relative to the home, share or group folder
 
-    debugLog(`getPreview: type=${type} id=${id} hash=${hash}`);
+    debugLog(`getPreview: type=${type} id=${id} hash=${hash} path=${filePath}`);
 
+    // do not leak if the owner, file or hash exists
+    if (typeof filePath !== 'string' || !filePath.startsWith('/')) return next(new HttpError(404, 'not found'));
+
+    let usernameOrGroupfolder, rootPath;
     if (type === 'files') {
-        if (!req.user || id !== req.user.username) return next(new HttpError(404, 'not found')); // do not leak if username or hash should exist
+        if (!req.user || id !== req.user.username) return next(new HttpError(404, 'not found'));
 
-        const localPreviewPath = preview.getLocalPath(hash);
-        if (localPreviewPath) return res.sendFile(localPreviewPath, { dotfiles: 'allow' });
-
-        return next(new HttpError(412, 'try again later'));
+        usernameOrGroupfolder = req.user.username;
+        rootPath = '/';
     } else if (type === 'shares') {
         // permissions are checked in routes/shares.js
         if (!req.share) return next(new HttpError(404, 'not found'));
 
-        const localPreviewPath = preview.getLocalPath(hash);
-        if (localPreviewPath) return res.sendFile(localPreviewPath, { dotfiles: 'allow' });
-
-        return next(new HttpError(412, 'try again later'));
+        usernameOrGroupfolder = req.share.ownerUsername || `groupfolder-${req.share.ownerGroupfolder}`;
+        rootPath = req.share.filePath;
     } else if (type === 'groups') {
         if (!req.user) return next(new HttpError(401, 'not authorized'));
 
         const group = await groupFolders.get(id);
-        if (!group || !await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(404, 'not found')); // do not leak
+        if (!group || !await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(404, 'not found'));
 
-        const localPreviewPath = preview.getLocalPath(hash);
-        if (localPreviewPath) return res.sendFile(localPreviewPath, { dotfiles: 'allow' });
-
-        return next(new HttpError(412, 'try again later'));
+        usernameOrGroupfolder = `groupfolder-${group.id}`;
+        rootPath = '/';
+    } else {
+        return next(new HttpError(404, 'not found'));
     }
 
-    next(new HttpError(404, 'not found'));
+    const fullRootPath = files.getAbsolutePath(usernameOrGroupfolder, rootPath);
+    const fullFilePath = files.getAbsolutePath(usernameOrGroupfolder, path.join(rootPath, filePath));
+    if (!fullRootPath || !fullFilePath) return next(new HttpError(404, 'not found'));
+    if (fullFilePath !== fullRootPath && !fullFilePath.startsWith(fullRootPath + path.sep)) return next(new HttpError(404, 'not found'));
+    if (preview.hashFromPath(fullFilePath) !== hash || !fs.existsSync(fullFilePath)) return next(new HttpError(404, 'not found'));
+
+    const localPreviewPath = preview.getLocalPath(hash);
+    if (localPreviewPath) return res.sendFile(localPreviewPath, { dotfiles: 'allow' });
+
+    next(new HttpError(412, 'try again later'));
 }
 
 async function download(req, res, next) {

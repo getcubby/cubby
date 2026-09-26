@@ -37,6 +37,12 @@ function enqueue(hash, fullFilePath, generator) {
     process();
 }
 
+function hashFromPath(fullFilePath) {
+    assert.strictEqual(typeof fullFilePath, 'string');
+
+    return crypto.createHash('md5').update(fullFilePath).digest('hex');
+}
+
 const generators = [{
     name: 'imagemagick',
     mimeTypes: [ 'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/tiff', 'image/ico' ],
@@ -44,7 +50,7 @@ const generators = [{
         assert.strictEqual(typeof mimeType, 'string');
         assert.strictEqual(typeof fullFilePath, 'string');
 
-        const hash = crypto.createHash('md5').update(fullFilePath).digest('hex');
+        const hash = hashFromPath(fullFilePath);
         const targetPath = path.join(paths.THUMBNAIL_ROOT, hash);
 
         async function generate(hash, fullFilePath) {
@@ -91,6 +97,7 @@ function getLocalPath(hash) {
 }
 
 export default {
+    hashFromPath,
     getHash,
     getLocalPath
 };

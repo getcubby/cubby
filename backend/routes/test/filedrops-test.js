@@ -4,7 +4,7 @@ import common from './common.js';
 import superagent from '@cloudron/superagent';
 
 describe('filedrops API', function () {
-    const { setup, cleanup, serverUrl, alice, withToken, addUserFile } = common;
+    const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
 
     before(setup);
     after(cleanup);
@@ -60,5 +60,43 @@ describe('filedrops API', function () {
             .set('cookie', cookie)
             .send(Buffer.from('content'));
         assert.equal(uploadResponse.status, 200);
+    });
+
+    it('cannot create a file drop in storage of another user', async function () {
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), user.token)
+            .send({ ownerUsername: alice.username, path: '/' })
+            .ok(() => true);
+        assert.equal(response.status, 403);
+    });
+
+    it('cannot remove a file drop of another user', async function () {
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/' });
+        const filedropId = createResponse.body.filedropId;
+
+        const removeDenied = await withToken(superagent.del(`${serverUrl}/api/v1/filedrops`), user.token)
+            .query({ filedropId })
+            .ok(() => true);
+        assert.equal(removeDenied.status, 403);
+
+        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/filedrops`), alice.token)
+            .query({ filedropId });
+        assert.equal(removeResponse.status, 200);
+    });
+
+    it('requires write access to create a file drop in a group folder', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), alice.token)
+            .send({ slug: 'drop-team', name: 'Team' });
+        await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/drop-team`), alice.token)
+            .send({ name: 'Team', members: [ { username: alice.username, role: 'owner' }, { username: user.username, role: 'viewer' } ] });
+
+        const viewerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), user.token)
+            .send({ ownerGroupfolder: 'drop-team', path: '/' })
+            .ok(() => true);
+        assert.equal(viewerCreate.status, 403);
+
+        const ownerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
+            .send({ ownerGroupfolder: 'drop-team', path: '/' });
+        assert.equal(ownerCreate.status, 200);
     });
 });

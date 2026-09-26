@@ -60,6 +60,10 @@ async function remove(req, res, next) {
 
     debugLog(`remove: ${req.params.id}`);
 
+    const [getError, favorite] = await safe(favorites.get(req.params.id));
+    if (getError) return next(MainError.toHttpError(getError));
+    if (!favorite || favorite.username !== req.user.username) return next(new HttpError(404, 'favorite does not exist'));
+
     const [error] = await safe(favorites.remove(req.params.id));
     if (error) return next(MainError.toHttpError(error));
 

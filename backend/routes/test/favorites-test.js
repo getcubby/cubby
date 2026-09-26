@@ -34,4 +34,19 @@ describe('favorites API', function () {
         const emptyList = await withToken(superagent.get(`${serverUrl}/api/v1/favorites`), user.token);
         assert.equal(emptyList.body.favorites.length, 0);
     });
+
+    it('cannot remove a favorite of another user', async function () {
+        await addUserFile(alice.username, '/favorite-keep.txt', 'keep me');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), alice.token)
+            .send({ path: '/favorite-keep.txt' });
+        const favoriteId = createResponse.body.id;
+
+        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/favorites/${favoriteId}`), user.token)
+            .ok(() => true);
+        assert.equal(removeResponse.status, 404);
+
+        const getResponse = await withToken(superagent.get(`${serverUrl}/api/v1/favorites/${favoriteId}`), alice.token);
+        assert.equal(getResponse.status, 200);
+    });
 });

@@ -151,4 +151,73 @@ describe('shares API', function () {
         assert.equal(pageResponse.status, 200);
         assert.match(pageResponse.headers['content-type'], /text\/html/);
     });
+
+    it('cannot share files of another user', async function () {
+        await addUserFile(alice.username, '/not-yours.txt', 'not yours');
+
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), user.token)
+            .send({ ownerUsername: alice.username, path: '/not-yours.txt' })
+            .ok(() => true);
+        assert.equal(response.status, 403);
+    });
+
+    it('requires exactly one owner', async function () {
+        const none = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ path: '/public.txt' })
+            .ok(() => true);
+        assert.equal(none.status, 400);
+
+        const both = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, ownerGroupfolder: 'team', path: '/public.txt' })
+            .ok(() => true);
+        assert.equal(both.status, 400);
+    });
+
+    it('cannot remove a share of another user', async function () {
+        await addUserFile(alice.username, '/keep-share.txt', 'keep share');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUsername: alice.username, path: '/keep-share.txt' });
+
+        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), user.token)
+            .query({ shareId: createResponse.body.shareId })
+            .ok(() => true);
+        assert.equal(removeResponse.status, 403);
+
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        assert.ok(listResponse.body.shares.some((share) => share.id === createResponse.body.shareId));
+    });
+
+    it('requires write access to share from a group folder', async function () {
+        await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), alice.token)
+            .send({ slug: 'share-team', name: 'Team' });
+        await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/share-team`), alice.token)
+            .send({ name: 'Team', members: [ { username: alice.username, role: 'owner' }, { username: user.username, role: 'viewer' } ] });
+
+        const viewerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), user.token)
+            .send({ ownerGroupfolder: 'share-team', path: '/' })
+            .ok(() => true);
+        assert.equal(viewerCreate.status, 403);
+
+        const unknownCreate = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerGroupfolder: 'no-such-team', path: '/' })
+            .ok(() => true);
+        assert.equal(unknownCreate.status, 403);
+
+        const ownerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerGroupfolder: 'share-team', path: '/' });
+        assert.equal(ownerCreate.status, 200);
+
+        const viewerRemove = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), user.token)
+            .query({ shareId: ownerCreate.body.shareId })
+            .ok(() => true);
+        assert.equal(viewerRemove.status, 403);
+
+        await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/share-team`), alice.token)
+            .send({ name: 'Team', members: [ { username: alice.username, role: 'owner' }, { username: user.username, role: 'editor' } ] });
+
+        const editorRemove = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), user.token)
+            .query({ shareId: ownerCreate.body.shareId });
+        assert.equal(editorRemove.status, 200);
+    });
 });

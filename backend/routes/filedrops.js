@@ -7,7 +7,7 @@ import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
-import { parseExpiresAtMs } from './utils.js';
+import { canWriteOwner, parseExpiresAtMs, parseOwner } from './utils.js';
 
 const debugLog = debug('cubby:routes:filedrops');
 
@@ -16,8 +16,14 @@ async function createFiledrop(req, res, next) {
 
     if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const ownerUsername = req.body.ownerUsername || null;
-    const ownerGroupfolder = req.body.ownerGroupfolder || null;
+    const parsedOwner = parseOwner(req.body);
+    if (parsedOwner.error) return next(new HttpError(400, parsedOwner.error));
+    const { ownerUsername, ownerGroupfolder } = parsedOwner;
+
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, ownerUsername, ownerGroupfolder));
+    if (accessError) return next(MainError.toHttpError(accessError));
+    if (!allowed) return next(new HttpError(403, 'not allowed'));
+
     const filePath = req.body.path.replace(/\/+/g, '/');
     const parsed = parseExpiresAtMs(req.body.expiresAt);
     if (parsed.error) return next(new HttpError(400, parsed.error));
@@ -66,6 +72,10 @@ async function removeFiledrop(req, res, next) {
     const [getError, filedrop] = await safe(filedrops.get(filedropId));
     if (getError) return next(new HttpError(500, getError));
     if (!filedrop) return next(new HttpError(404, 'not found'));
+
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, filedrop.ownerUsername, filedrop.ownerGroupfolder));
+    if (accessError) return next(MainError.toHttpError(accessError));
+    if (!allowed) return next(new HttpError(403, 'not allowed'));
 
     const [error] = await safe(filedrops.remove(filedropId));
     if (error) return next(MainError.toHttpError(error));

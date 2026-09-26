@@ -7,7 +7,7 @@ import path from 'path';
 import MainError from '../mainerror.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
-import { parseExpiresAtMs } from './utils.js';
+import { canWriteOwner, parseExpiresAtMs, parseOwner } from './utils.js';
 
 const debugLog = debug('cubby:routes:shares');
 
@@ -113,8 +113,14 @@ async function createShare(req, res, next) {
 
     if (!req.body.path) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const ownerUsername = req.body.ownerUsername || null;
-    const ownerGroupfolder = req.body.ownerGroupfolder || null;
+    const parsedOwner = parseOwner(req.body);
+    if (parsedOwner.error) return next(new HttpError(400, parsedOwner.error));
+    const { ownerUsername, ownerGroupfolder } = parsedOwner;
+
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, ownerUsername, ownerGroupfolder));
+    if (accessError) return next(MainError.toHttpError(accessError));
+    if (!allowed) return next(new HttpError(403, 'not allowed'));
+
     const filePath = req.body.path.replace(/\/+/g, '/');
     const receiverUsername = req.body.receiverUsername || null;
     const receiverEmail = req.body.receiverEmail || null;
@@ -212,6 +218,10 @@ async function removeShare(req, res, next) {
     const [getError, share] = await safe(shares.get(shareId));
     if (getError) return next(new HttpError(500, getError));
     if (!share) return next(new HttpError(404, 'not found'));
+
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, share.ownerUsername, share.ownerGroupfolder));
+    if (accessError) return next(MainError.toHttpError(accessError));
+    if (!allowed) return next(new HttpError(403, 'not allowed'));
 
     const [error] = await safe(shares.remove(shareId));
     if (error) return next(MainError.toHttpError(error));

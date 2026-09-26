@@ -78,6 +78,13 @@ describe('files API', function () {
         assert.equal(missing.status, 404);
     });
 
+    it('returns 404 for an unknown resource', async function () {
+        const response = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/escaped.txt' })
+            .ok(() => true);
+        assert.equal(response.status, 404);
+    });
+
     it('returns 404 when deleting a file that does not exist', async function () {
         const response = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
             .query({ path: '/home/does-not-exist.txt' })

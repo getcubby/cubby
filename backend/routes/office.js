@@ -92,7 +92,8 @@ async function getHandle(req, res, next) {
     const collaboraHost = await office.getWopiHost();
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
-    const subject = await files.translateResourcePath(req.user?.username ?? null, resourcePath);
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username ?? null, resourcePath));
+    if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
     if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
 

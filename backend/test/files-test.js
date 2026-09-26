@@ -205,6 +205,13 @@ describe('files', function () {
         assert.equal(subject, null);
     });
 
+    it('throws not found for unknown groupfolders', async function () {
+        await createUsers();
+
+        const [error] = await safe(files.translateResourcePath(user.username, '/groupfolders/no-such-team/file.txt'));
+        assert.equal(error.reason, MainError.NOT_FOUND);
+    });
+
     it('can get files by absolute path', async function () {
         await createUsers();
         await addUserFile(alice.username, '/absolute.txt', 'absolute');

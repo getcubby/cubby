@@ -61,6 +61,7 @@ async function translateResourcePath(username, resourcePath) {
         if (!groupId) return null;
 
         const group = await groupFolders.get(groupId);
+        if (!group) throw new MainError(MainError.NOT_FOUND, 'no such groupfolder');
 
         // check if the user is part of the group (directly or via a group)
         if (!await groupFolders.isPartOf(group, username)) return null;

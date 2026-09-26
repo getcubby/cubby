@@ -167,4 +167,31 @@ describe('files API', function () {
             .send(Buffer.from('allowed'));
         assert.equal(ownerWrite.status, 200);
     });
+
+    it('returns 404 for an unknown group folder', async function () {
+        const path = '/groupfolders/no-such-team/file.txt';
+
+        const getResponse = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token).query({ path }).ok(() => true);
+        assert.equal(getResponse.status, 404);
+
+        const headResponse = await withToken(superagent.head(`${serverUrl}/api/v1/files`), alice.token).query({ path }).ok(() => true);
+        assert.equal(headResponse.status, 404);
+
+        const addResponse = await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path, overwrite: true })
+            .send(Buffer.from('nope'))
+            .ok(() => true);
+        assert.equal(addResponse.status, 404);
+
+        const updateResponse = await withToken(superagent.put(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ action: 'copy', path, new_path: '/home/copy.txt' })
+            .ok(() => true);
+        assert.equal(updateResponse.status, 404);
+
+        const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token).query({ path }).ok(() => true);
+        assert.equal(removeResponse.status, 404);
+
+        const activityResponse = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), alice.token).query({ path }).ok(() => true);
+        assert.equal(activityResponse.status, 404);
+    });
 });

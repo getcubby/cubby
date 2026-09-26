@@ -759,7 +759,7 @@ function expressMiddleware() {
         const [dispatchError] = await safe(dispatchWebdavMethod(req, res, username, segments, pathInfo));
         if (dispatchError) {
             debugLog('webdav error: %s', dispatchError.message || dispatchError);
-            res.status(500).send('Internal Server Error');
+            sendMainError(res, dispatchError);
         }
     };
 }

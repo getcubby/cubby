@@ -637,3 +637,21 @@
 * Do not special case office viewer to open in a new tab
 * Remember preview panel state
 
+[2.22.0]
+* Update cubby to 2.22.0
+* Return 400 when downloading without entries.
+* Require the share password for zip downloads, office handles and activity.
+* Check ownership when creating or removing shares, file drops and favorites.
+* Return 404 instead of 500 for an unknown resource in the files API.
+* Do not let paths escape into a sibling home or group folder with the same name prefix.
+* Honour days_ago when listing recent files.
+* Return 404 when deleting a file that does not exist.
+* Remove shares, favorites, recents, activity and file drops when removing a group folder.
+* Only serve previews of files inside the share, group folder or home of the caller.
+* Reject file drop upload names that are not plain file names.
+* Use the effective group folder role to hide actions from viewers.
+* Refuse password protected shares over WebDAV.
+* Hide share and file drop actions from group folder viewers.
+* Only allow favorites on files the user can access.
+* Return 404 instead of 500 for unknown group folders.
+

@@ -11,6 +11,7 @@ import {
   FileUploader,
   PasswordInput,
   TextInput,
+  useChangeBroadcast,
   useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
@@ -25,6 +26,9 @@ import { ROLES } from '../roles.js';
 const { notify } = useNotify();
 
 const DirectoryModelError = DirectoryModel.DirectoryModelError;
+
+// item drags between cubby windows of the same site
+const DRAG_SCOPE = 'cubby';
 
 const emit = defineEmits(['invalid-session', 'share', 'filedrop', 'close-viewer', 'open-file']);
 
@@ -53,6 +57,18 @@ const breadCrumbHome = ref({
 });
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 const pendingViewer = ref(null);
+
+function folderKey(resourcePath) {
+  return sanitize(`${resourcePath}/`);
+}
+
+// other cubby windows of this browser reload changed folders
+const changes = useChangeBroadcast('cubby-changes', DRAG_SCOPE);
+
+changes.onChange(function (resourcePaths) {
+  if (!currentResourcePath.value) return;
+  if (resourcePaths.map(folderKey).includes(folderKey(currentResourcePath.value))) refresh();
+});
 
 const isGroupFoldersRoot = computed(() => activeResourceType.value === 'groupfolders' && breadCrumbs.value.length === 0);
 
@@ -114,6 +130,7 @@ async function uploadHandler(targetDir, file, progressHandler) {
   const resource = parseResourcePath(targetDir);
   await DirectoryModel.upload(resource, file, progressHandler);
   await refresh();
+  changes.announce([resource.resourcePath]);
 }
 
 const fileUploader = useTemplateRef('fileUploader');
@@ -247,6 +264,7 @@ async function onNewItemDialogSubmit() {
   newItemForm.value.busy = false;
   newItemDialogElement.value.close();
   await refresh();
+  changes.announce([resource.resourcePath]);
   directoryView.value.highlightByName(name);
 }
 
@@ -289,8 +307,39 @@ async function downloadHandler(items) {
   await DirectoryModel.download(resource, items);
 }
 
-async function onDrop(targetFolder, dataTransfer, files) {
+function dragPayloadHandler(items) {
+  return items.map(function (i) { return { name: i.name, extension: i.extension, resourcePath: i.resourcePath }; });
+}
+
+function filesFromDragPayload(payload) {
+  if (!Array.isArray(payload)) return null;
+
+  const files = payload
+    .filter(function (f) { return typeof f?.name === 'string' && f.name && typeof f.extension === 'string' && typeof f.resourcePath === 'string' && f.resourcePath.startsWith('/'); })
+    .map(function (f) { return { name: f.name, extension: f.extension, resourcePath: f.resourcePath, resource: parseResourcePath(f.resourcePath) }; });
+
+  return files.length ? files : null;
+}
+
+async function pasteFiles(resource, action, files) {
+  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
+
+  await DirectoryModel.paste(resource, action, files);
+  await refresh();
+
+  const sourceFolders = action === 'cut' ? files.map(function (f) { return f.resource.parentResourcePath; }).filter(Boolean) : [];
+  changes.announce([resource.resourcePath, ...sourceFolders]);
+
+  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+}
+
+async function onDrop(targetFolder, dataTransfer, files, { payload = null, action = 'move' } = {}) {
   const fullTargetFolder = sanitize(`${currentResourcePath.value}/${targetFolder}`);
+
+  if (payload) {
+    files = filesFromDragPayload(payload);
+    if (!files) return;
+  }
 
   if (dataTransfer) {
     async function getFile(e) {
@@ -340,14 +389,9 @@ async function onDrop(targetFolder, dataTransfer, files) {
     }
     fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));
   } else {
-    if (!files.length) return;
+    if (!files || !files.length) return;
 
-    window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
-    await DirectoryModel.paste(parseResourcePath(fullTargetFolder), 'cut', files);
-    await refresh();
-
-    window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+    await pasteFiles(parseResourcePath(fullTargetFolder), action === 'copy' ? 'copy' : 'cut', files);
   }
 }
 
@@ -385,6 +429,7 @@ async function onDeleteConfirm() {
   }
 
   await refresh();
+  changes.announce([currentResourcePath.value]);
 
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
 
@@ -411,6 +456,7 @@ async function extractHandler(item) {
     return;
   }
   await refresh();
+  changes.announce([currentResourcePath.value]);
 
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
 }
@@ -418,13 +464,8 @@ async function extractHandler(item) {
 async function pasteHandler(action, files, target) {
   if (!files || !files.length) return;
 
-  window.addEventListener('beforeunload', beforeUnloadListener, { capture: true });
-
   const resource = parseResourcePath((target && target.isDirectory) ? sanitize(currentResourcePath.value + '/' + target.fileName) : currentResourcePath.value);
-  await DirectoryModel.paste(resource, action, files);
-  await refresh();
-
-  window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
+  await pasteFiles(resource, action, files);
 }
 
 function shareHandler(item) {
@@ -441,6 +482,7 @@ async function onRenameRequested(item) {
 
 function onRenamed(newName) {
   refresh();
+  changes.announce([currentResourcePath.value]);
   directoryView.value.highlightByName(newName);
 }
 
@@ -768,6 +810,8 @@ defineExpose({
             :upload-file-handler="openUploadFile"
             :upload-folder-handler="openUploadFolder"
             :drop-handler="onDrop"
+            :drag-scope="DRAG_SCOPE"
+            :drag-payload-handler="dragPayloadHandler"
             :items="entries"
             :fallback-icon="`${BASE_URL}mime-types/application-x-generic.svg`"
           >

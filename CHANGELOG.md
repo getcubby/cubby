@@ -655,3 +655,8 @@
 * Only allow favorites on files the user can access.
 * Return 404 instead of 500 for unknown group folders.
 
+[2.22.1]
+* Update cubby to 2.22.1
+* Fix drag and drop issues
+* Fix selection bugs
+

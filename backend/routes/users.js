@@ -1,25 +1,12 @@
 import assert from 'assert';
 import users from '../users.js';
 import MainError from '../mainerror.js';
-import constants from '../constants.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
-import * as oidc from '@cloudron/tegel/src/oidc.js';
+import * as tegel from '@cloudron/tegel';
 
-async function getUserFromSession(req) {
-    const sessionUser = req.session?.user;
-    if (!sessionUser?.username) return null;
-
-    let user = await users.get(sessionUser.username);
-    if (!user) {
-        user = await users.ensureUser({
-            username: sessionUser.username,
-            email: sessionUser.email ?? '',
-            displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
-        });
-    }
-    return user;
-}
+const requireOidcAuth = tegel.requireAuth();
+const optionalOidcAuth = tegel.optionalAuth();
 
 function extractAccessToken(req) {
     let accessToken = req.query.access_token || req.body?.accessToken || '';
@@ -35,82 +22,80 @@ function extractAccessToken(req) {
     return accessToken;
 }
 
-async function getUserFromOidcToken(accessToken) {
-    const [introspectError, introspection] = await safe(oidc.introspectToken(accessToken));
-    if (introspectError || !introspection?.active) return null;
+// cubby's own api tokens (mobile app and WOPI)
+async function getUserFromLocalToken(req) {
+    const accessToken = extractAccessToken(req);
+    if (!accessToken) return null;
 
-    const username = introspection.sub || introspection.username;
-    if (!username) return null;
+    return await users.getByAccessToken(accessToken);
+}
 
-    const [userError, user] = await safe(users.ensureUser({
-        username,
-        email: introspection.email || '',
-        displayName: introspection.name || username
-    }));
-    if (userError) {
-        console.error('getUserFromOidcToken: failed to ensure user', userError);
-        return null;
+function runMiddleware(middleware, req, res) {
+    return new Promise((resolve) => middleware(req, res, resolve));
+}
+
+// maps req.user set by tegel (session or OIDC bearer token) to the database user
+async function getDatabaseUser(req) {
+    const oidcUser = req.user;
+    const displayName = oidcUser.displayName ?? oidcUser.name ?? oidcUser.username;
+    const email = oidcUser.email ?? '';
+
+    const user = await users.get(oidcUser.username);
+    if (!user) return await users.ensureUser({ username: oidcUser.username, email, displayName });
+
+    // keep the internal database in sync with the session info. bearer token introspection may not have these claims
+    const fromSession = req.session?.user === oidcUser;
+    if (fromSession && (user.displayName !== displayName || user.email !== email)) {
+        await users.update(user.username, { displayName, email });
+        user.displayName = displayName;
+        user.email = email;
     }
 
     return user;
 }
 
-async function getUserFromToken(req) {
-    const accessToken = extractAccessToken(req);
-    if (!accessToken) return null;
-
-    const user = await users.getByAccessToken(accessToken);
-    if (user) return user;
-
-    // Fall back to OIDC bearer tokens (used by other Cloudron apps such as Mitte).
-    if (constants.TEST) return null;
-    return await getUserFromOidcToken(accessToken);
-}
-
 async function isAuthenticated(req, res, next) {
-    let user = await getUserFromToken(req);
-    if (!user) user = await getUserFromSession(req);
-
-    if (!user) {
-        const sessionUser = req.session?.user;
-        if (!sessionUser?.username) return next(new HttpError(401, 'Unauthorized'));
-
-        req.user = await users.ensureUser({
-            username: sessionUser.username,
-            email: sessionUser.email ?? '',
-            displayName: sessionUser.displayName ?? sessionUser.name ?? sessionUser.username
-        });
-    } else {
-        // keep the internal database in sync with the session/OIDC provider info
-        const sessionUser = req.session?.user;
-        if (sessionUser && (user.displayName !== (sessionUser.displayName ?? sessionUser.name) || user.email !== (sessionUser.email ?? ''))) {
-            await users.update(user.username, {
-                displayName: sessionUser.displayName ?? sessionUser.name ?? user.displayName,
-                email: sessionUser.email ?? user.email
-            });
-            user.displayName = sessionUser.displayName ?? sessionUser.name ?? user.displayName;
-            user.email = sessionUser.email ?? user.email;
-        }
-        req.user = user;
+    const [tokenError, tokenUser] = await safe(getUserFromLocalToken(req));
+    if (tokenError) return next(MainError.toHttpError(tokenError));
+    if (tokenUser) {
+        req.user = tokenUser;
+        return next();
     }
 
+    const authError = await runMiddleware(requireOidcAuth, req, res);
+    if (authError) return next(authError);
+    if (!req.user?.username) return next(new HttpError(401, 'Unauthorized'));
+
+    const [error, user] = await safe(getDatabaseUser(req));
+    if (error) return next(MainError.toHttpError(error));
+
+    req.user = user;
     next();
 }
 
 // following middlewares have to check req.user if needed, like public share links
 async function optionalAuth(req, res, next) {
-    req.user = await getUserFromToken(req);
-    if (!req.user) req.user = await getUserFromSession(req);
-    next();
-}
+    const [tokenError, tokenUser] = await safe(getUserFromLocalToken(req));
+    if (tokenError) return next(MainError.toHttpError(tokenError));
+    if (tokenUser) {
+        req.user = tokenUser;
+        return next();
+    }
 
-async function tokenAuth(req, res, next) {
-    const [error, user] = await safe(getUserFromToken(req));
-    if (error) return next(MainError.toHttpError(error));
-    if (!user) return next(new HttpError(401, 'Invalid Access Token'));
+    await runMiddleware(optionalOidcAuth, req, res);
+    if (!req.user?.username) {
+        req.user = null;
+        return next();
+    }
+
+    const [error, user] = await safe(getDatabaseUser(req));
+    if (error) {
+        console.error('optionalAuth: failed to get database user', error);
+        req.user = null;
+        return next();
+    }
 
     req.user = user;
-
     next();
 }
 
@@ -132,7 +117,6 @@ async function list(req, res, next) {
 
 export default {
     isAuthenticated,
-    tokenAuth,
     optionalAuth,
     profile,
     list

@@ -7,7 +7,7 @@ import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import safe from '@cloudron/safetydance';
-import { appBridge } from '@cloudron/tegel';
+import { verifyBasicAuth } from '@cloudron/tegel';
 
 const debugLog = debug('cubby:webdav');
 
@@ -26,8 +26,6 @@ function sendMainError(res, error) {
 
 const DAV_NS = 'DAV:';
 const WEBDAV_PREFIX = '/webdav/';
-const LOCAL_WEBDAV_PASSWORD = 'password';
-
 // Virtual root segment names (URL path segments and display names)
 const VIRTUAL_HOME = { segment: 'home', displayName: 'Home' };
 const VIRTUAL_SHARES = { segment: 'shares', displayName: 'Shared with you' };
@@ -74,61 +72,6 @@ function webdavSegmentsToResource(segments) {
         return { resourcePath: '/groupfolders/' + groupId + (rest ? '/' + rest : '') };
     }
     return null;
-}
-
-/**
- * Authenticate request via Basic auth. Returns user object or null.
- */
-async function verifyCloudronCredentials(identifier, password) {
-    try {
-        await appBridge.verifyAppPassword({ identifier, password });
-        return true;
-    } catch (error) {
-        if (error.status === 401) return false;
-        throw error;
-    }
-}
-
-async function authFromRequest(req) {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Basic ')) {
-        debugLog('auth: no Authorization or not Basic');
-        return null;
-    }
-    const decoded = safe(function () {
-        const b64 = auth.slice(6).trim();
-        return Buffer.from(b64, 'base64').toString('utf8');
-    });
-    if (decoded === null) {
-        debugLog('auth: exception', safe.error);
-        return null;
-    }
-    const i = decoded.indexOf(':');
-    if (i === -1) {
-        debugLog('auth: no colon in decoded Basic value');
-        return null;
-    }
-    const username = decoded.slice(0, i);
-    const password = decoded.slice(i + 1);
-    if (!username || !password) {
-        debugLog('auth: empty username or password');
-        return null;
-    }
-    debugLog('auth: attempting login for user=%s', username);
-
-    if (process.env.CLOUDRON) {
-        const [error, ok] = await safe(verifyCloudronCredentials(username, password));
-        if (error) {
-            debugLog('auth: cloudron verify failed %s', error.message || error);
-            return null;
-        }
-        debugLog('auth: cloudron verify result=%s', ok ? 'ok' : 'failed');
-        return ok ? { username } : null;
-    }
-
-    const ok = password === LOCAL_WEBDAV_PASSWORD;
-    debugLog('auth: local password result=%s', ok ? 'ok' : 'failed');
-    return ok ? { username } : null;
 }
 
 // WebDAV has no session to unlock a share in, so password protected shares are never accessible
@@ -768,7 +711,7 @@ function expressMiddleware() {
         }
         debugLog('request: parsed username=%s segments=%o', pathInfo.username, pathInfo.segments);
 
-        const user = await authFromRequest(req);
+        const user = await verifyBasicAuth(req);
         if (!user) {
             debugLog('request: auth failed, sending 401');
             res.set('WWW-Authenticate', 'Basic realm="Cubby"');

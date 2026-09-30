@@ -660,3 +660,7 @@
 * Fix drag and drop issues
 * Fix selection bugs
 
+[2.22.2]
+* Update cubby to 2.22.2
+* Bump tegel
+

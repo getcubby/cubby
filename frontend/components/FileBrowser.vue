@@ -442,7 +442,6 @@ async function onDeleteConfirm() {
   window.removeEventListener('beforeunload', beforeUnloadListener, { capture: true });
 
   deleteDialog.value.close();
-  deletePending.value = [];
   deleteBusy.value = false;
 }
 

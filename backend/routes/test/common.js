@@ -31,7 +31,7 @@ async function cleanup() {
 }
 
 function withToken(req, token) {
-    return req.query({ access_token: token });
+    return req.set('x-test-user', token);
 }
 
 export default {

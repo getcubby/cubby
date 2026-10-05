@@ -2,83 +2,46 @@ import crypto from 'crypto';
 import debug from 'debug';
 import { HttpSuccess, HttpError } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
-import tokens from '../tokens.js';
+import mobiletokens from '../mobiletokens.js';
 import users from '../users.js';
+import { authorizationUrl, exchangeCode } from '../mobileoidc.js';
 
 const debugLog = debug('cubby:routes:mobile');
 
+const PACKAGE_NAME = 'io.cloudron.cubby';
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 const USE_APP_LINKS = !!process.env.ANDROID_CERT_SHA256;
-const REDIRECT_URI = USE_APP_LINKS ? `${APP_ORIGIN}/api/v1/mobile/callback` : 'io.cloudron.cubby://auth/callback';
+const CUSTOM_SCHEME_REDIRECT = 'io.cloudron.cubby://auth/callback';
 
 const pendingStates = new Map(); // oidc state -> timestamp
 
+function redirectUri() {
+    return USE_APP_LINKS ? `${APP_ORIGIN}/api/v1/mobile/callback` : CUSTOM_SCHEME_REDIRECT;
+}
+
+function rememberState(state) {
+    pendingStates.set(state, Date.now());
+    for (const [saved, ts] of pendingStates) {
+        if ((Date.now() - ts) > 10 * 60 * 1000) pendingStates.delete(saved); // state cleanup
+    }
+}
+
 function getConfig(req, res, next) {
-    const config = {
+    next(new HttpSuccess(200, {
         methods: [ 'oidc' ],
         oidc: { loginUrl: '/api/v1/mobile/start' }
-    };
-
-    next(new HttpSuccess(200, config));
+    }));
 }
 
-function mobileStart(req, res) {
+async function mobileStart(req, res) {
     const state = crypto.randomBytes(16).toString('hex');
-    pendingStates.set(state, Date.now());
-    for (const [s, ts] of pendingStates) {
-        if ((Date.now() - ts) > 10 * 60 * 1000) pendingStates.delete(s); // state cleanup
-    }
+    rememberState(state);
 
-    debugLog(`mobileStart: auth starting with redirect_uri: ${REDIRECT_URI} (USE_APP_LINKS: ${USE_APP_LINKS})`);
+    debugLog(`mobileStart: auth starting with redirect_uri: ${redirectUri()} (USE_APP_LINKS: ${USE_APP_LINKS})`);
 
-    const authUrl = new URL(`${process.env.OIDC_ISSUER_BASE_URL}/auth`);
-    authUrl.searchParams.set('client_id', process.env.OIDC_CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'openid profile email');
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('prompt', 'login'); // on mobile, the session is cached in browser. this forces IDP to prompt
-
-    res.redirect(authUrl.toString());
-}
-
-async function exchangeCodeWithIdp(code, redirectUri) {
-    const tokenUrl = new URL(process.env.CLOUDRON_OIDC_TOKEN_ENDPOINT);
-    const params = new URLSearchParams();
-    params.append('grant_type', 'authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri', redirectUri);
-    params.append('client_id', process.env.OIDC_CLIENT_ID);
-    params.append('client_secret', process.env.CLOUDRON_OIDC_CLIENT_SECRET);
-
-    const response = await fetch(tokenUrl.toString(), {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: params.toString()
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        debugLog(`exchangeCodeWithIdp: ${errorText}`);
-        throw new Error('Failed to exchange code for token');
-    }
-
-    return response.json();
-}
-
-async function getOidcProfile(accessToken) {
-    const userInfoUrl = new URL(process.env.CLOUDRON_OIDC_PROFILE_ENDPOINT);
-    const response = await fetch(userInfoUrl.toString(), {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (!response.ok) throw new Error('Failed to get user info');
-    return response.json();
+    const url = await authorizationUrl({ redirectUri: redirectUri(), state });
+    res.redirect(url);
 }
 
 async function codeToToken(req, res, next) {
@@ -89,28 +52,34 @@ async function codeToToken(req, res, next) {
     if (!pendingStates.has(state)) return next(new HttpError(400, 'invalid or expired state'));
     pendingStates.delete(state);
 
-    const [tokenError, idpTokens] = await safe(exchangeCodeWithIdp(code, REDIRECT_URI));
-    if (tokenError) {
-        console.error('codeToToken error:', tokenError);
-        return next(new HttpError(401, tokenError.message || 'Authentication failed'));
+    const [exchangeError, exchanged] = await safe(exchangeCode({ code, redirectUri: redirectUri() }));
+    if (exchangeError) {
+        console.error('codeToToken error:', exchangeError);
+        return next(new HttpError(401, 'Authentication failed'));
     }
 
-    const [profileError, profile] = await safe(getOidcProfile(idpTokens.access_token));
-    if (profileError) {
-        console.error('codeToToken error:', profileError);
-        return next(new HttpError(401, profileError.message || 'Authentication failed'));
-    }
+    const profile = exchanged.profile || {};
+    const username = profile.sub;
+    if (!username) return next(new HttpError(401, 'Authentication failed'));
 
-    const [userError, user] = await safe(users.ensureUser({ username: profile.sub, email: profile.email, displayName: profile.name }));
+    const displayName = profile.name || username;
+    const email = profile.email || '';
+
+    const [userError, user] = await safe(users.ensureUser({ username, email, displayName }));
     if (userError) {
         console.error('codeToToken error:', userError);
-        return next(new HttpError(401, userError.message || 'Authentication failed'));
+        return next(new HttpError(401, 'Authentication failed'));
     }
 
-    const [addTokenError, apiToken] = await safe(tokens.add(user.username));
+    const [addTokenError, apiToken] = await safe(mobiletokens.add({
+        username: user.username,
+        accessToken: exchanged.tokens.access_token,
+        refreshToken: exchanged.tokens.refresh_token,
+        expiresIn: exchanged.tokens.expires_in
+    }));
     if (addTokenError) {
         console.error('codeToToken error:', addTokenError);
-        return next(new HttpError(401, addTokenError.message || 'Authentication failed'));
+        return next(new HttpError(401, 'Authentication failed'));
     }
 
     next(new HttpSuccess(200, {
@@ -136,7 +105,7 @@ function assetLinks(req, res) {
         relation: ['delegate_permission/common.handle_all_urls'],
         target: {
             namespace: 'android_app',
-            package_name: 'io.cloudron.cubby',
+            package_name: PACKAGE_NAME,
             sha256_cert_fingerprints: sha256Fingerprints
         }
     }]);
@@ -147,5 +116,5 @@ export default {
     mobileStart,
     codeToToken,
     callbackLandingFallback,
-    assetLinks,
+    assetLinks
 };

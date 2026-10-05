@@ -8,28 +8,6 @@ import * as tegel from '@cloudron/tegel';
 const requireOidcAuth = tegel.requireAuth();
 const optionalOidcAuth = tegel.optionalAuth();
 
-function extractAccessToken(req) {
-    let accessToken = req.query.access_token || req.body?.accessToken || '';
-    if (req.headers?.authorization) {
-        const parts = req.headers.authorization.split(' ');
-        if (parts.length == 2) {
-            const [scheme, credentials] = parts;
-
-            if (/^Bearer$/i.test(scheme)) accessToken = credentials;
-        }
-    }
-
-    return accessToken;
-}
-
-// cubby's own api tokens (mobile app and WOPI)
-async function getUserFromLocalToken(req) {
-    const accessToken = extractAccessToken(req);
-    if (!accessToken) return null;
-
-    return await users.getByAccessToken(accessToken);
-}
-
 function runMiddleware(middleware, req, res) {
     return new Promise((resolve) => middleware(req, res, resolve));
 }
@@ -55,13 +33,6 @@ async function getDatabaseUser(req) {
 }
 
 async function isAuthenticated(req, res, next) {
-    const [tokenError, tokenUser] = await safe(getUserFromLocalToken(req));
-    if (tokenError) return next(MainError.toHttpError(tokenError));
-    if (tokenUser) {
-        req.user = tokenUser;
-        return next();
-    }
-
     const authError = await runMiddleware(requireOidcAuth, req, res);
     if (authError) return next(authError);
     if (!req.user?.username) return next(new HttpError(401, 'Unauthorized'));
@@ -75,13 +46,6 @@ async function isAuthenticated(req, res, next) {
 
 // following middlewares have to check req.user if needed, like public share links
 async function optionalAuth(req, res, next) {
-    const [tokenError, tokenUser] = await safe(getUserFromLocalToken(req));
-    if (tokenError) return next(MainError.toHttpError(tokenError));
-    if (tokenUser) {
-        req.user = tokenUser;
-        return next();
-    }
-
     await runMiddleware(optionalOidcAuth, req, res);
     if (!req.user?.username) {
         req.user = null;

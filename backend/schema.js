@@ -30,6 +30,17 @@ CREATE TABLE IF NOT EXISTS tokens(
     FOREIGN KEY(username) REFERENCES users(username)
 );
 
+CREATE TABLE IF NOT EXISTS mobile_tokens(
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    access_token_expires_at INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
+
+    FOREIGN KEY(username) REFERENCES users(username)
+);
+
 CREATE TABLE IF NOT EXISTS groups(
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

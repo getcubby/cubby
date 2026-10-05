@@ -7,6 +7,7 @@ import groupFolders from './routes/groupfolders.js';
 import groups from './routes/groups.js';
 import http from 'http';
 import { lastMile } from '@cloudron/connect-lastmile';
+import { resolveMobileToken } from './mobileauth.js';
 import misc from './routes/misc.js';
 import mobile from './routes/mobile.js';
 import office from './routes/office.js';
@@ -35,6 +36,14 @@ let gScimInterval = null;
 let gTokenCleanupInterval = null;
 let gUploadCleanupInterval = null;
 
+// Test-mode user injection. Routes read x-test-user to pick an existing database user;
+// leaving it unset keeps public (optionalAuth) routes anonymous.
+function testUserResolver(req) {
+    const username = req.get('x-test-user');
+    if (!username) return {};
+    return { username, email: `${username}@test.local`, name: username };
+}
+
 async function start() {
     if (gHttpServer) return;
     const oidcConfig = constants.TEST ? null : (process.env.CLOUDRON ? {} : {
@@ -46,12 +55,15 @@ async function start() {
 
     const { app, router, express } = await tegel.createExpressApp({
             oidcConfig,
-            testMode: constants.TEST || null,
+            testMode: constants.TEST ? testUserResolver : null,
             skipLastMile: true,
             jsonBodySizeLimit: '100mb'
         });
 
         router.del = router.delete;
+
+        // map mobile API tokens to the OIDC access token before tegel auth runs
+        router.use(resolveMobileToken);
 
         // Auth routes (tegel)
         router.get('/auth/login', tegel.oidcRedirectToLoginProvider);

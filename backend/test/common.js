@@ -3,7 +3,6 @@ import files from '../files.js';
 import fs from 'node:fs';
 import nock from 'nock';
 import paths from '../paths.js';
-import tokens from '../tokens.js';
 import users from '../users.js';
 
 const alice = {
@@ -37,10 +36,10 @@ async function setup() {
     await databaseSetup();
 
     await users.add(alice);
-    alice.token = await tokens.add(alice.username);
+    alice.token = alice.username;
 
     await users.add(user);
-    user.token = await tokens.add(user.username);
+    user.token = user.username;
 }
 
 async function addUserWithHome(userData) {

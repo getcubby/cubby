@@ -58,7 +58,8 @@ describe('office API', function () {
         await addUserFile(alice.username, '/office-save.odt', 'original');
 
         const handleRes = await superagent.get(`${serverUrl}/api/v1/office/handle`)
-            .query({ access_token: alice.token, resourcePath: '/home/office-save.odt' });
+            .set('x-test-user', alice.username)
+            .query({ resourcePath: '/home/office-save.odt' });
         assert.equal(handleRes.status, 200);
         assert.ok(handleRes.body.handleId);
         assert.ok(handleRes.body.token);
@@ -89,7 +90,8 @@ describe('office API', function () {
         await addUserFile(alice.username, '/office-session.odt', 'original');
 
         const getHandle = () => superagent.get(`${serverUrl}/api/v1/office/handle`)
-            .query({ access_token: alice.token, resourcePath: '/home/office-session.odt' });
+            .set('x-test-user', alice.username)
+            .query({ resourcePath: '/home/office-session.odt' });
 
         const first = await getHandle();
         assert.equal(first.status, 200);
@@ -123,7 +125,7 @@ describe('office API', function () {
         await addUserFile(alice.username, '/office-secret.odt', 'original');
 
         const createResponse = await superagent.post(`${serverUrl}/api/v1/shares`)
-            .query({ access_token: alice.token })
+            .set('x-test-user', alice.username)
             .send({ ownerUsername: alice.username, path: '/office-secret.odt', password: 'hunter2' });
         const shareId = createResponse.body.shareId;
 

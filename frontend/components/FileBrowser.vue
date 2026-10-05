@@ -348,26 +348,34 @@ async function onDrop(targetFolder, dataTransfer, files, { payload = null, actio
       });
     }
 
+    // readEntries returns at most ~100 entries per call in Chromium; loop until empty
+    async function readAllEntries(dirReader) {
+      const entries = [];
+      while (true) {
+        const batch = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
+        if (batch.length === 0) break;
+        entries.push(...batch);
+      }
+      return entries;
+    }
+
     const fileList = [];
-    async function traverseFileTree(item) {
-      return new Promise(async (resolve) => {
-        if (item.isFile) {
-          fileList.push(await getFile(item));
-          resolve();
-        } else if (item.isDirectory) {
-          const dirReader = item.createReader();
-          const dirItems = await new Promise((resolve, reject) => { dirReader.readEntries(resolve, reject); });
+    async function traverseFileTree(item, relativePath) {
+      if (item.isFile) {
+        const file = await getFile(item);
+        // `webkitRelativePath` is read-only on File, so shadow it with an own property to
+        // preserve the directory structure (DirectoryModel.upload keys off it)
+        Object.defineProperty(file, 'webkitRelativePath', { value: relativePath, enumerable: false });
+        fileList.push(file);
+      } else if (item.isDirectory) {
+        const dirItems = await readAllEntries(item.createReader());
 
-          for (let i in dirItems) {
-            await traverseFileTree(dirItems[i]);
-          }
-
-          resolve();
-        } else {
-          console.log('Skipping uknown file type', item);
-          resolve();
+        for (const dirItem of dirItems) {
+          await traverseFileTree(dirItem, `${relativePath}/${dirItem.name}`);
         }
-      });
+      } else {
+        console.log('Skipping uknown file type', item);
+      }
     }
 
     const droppedEntries = [];
@@ -384,7 +392,7 @@ async function onDrop(targetFolder, dataTransfer, files, { payload = null, actio
       if (droppedEntry.isFile) {
         fileList.push(await getFile(droppedEntry));
       } else if (droppedEntry.isDirectory) {
-        await traverseFileTree(droppedEntry);
+        await traverseFileTree(droppedEntry, droppedEntry.name);
       }
     }
     fileUploader.value.addFiles(fileList, sanitize(`${currentResourcePath.value}/${targetFolder}`));

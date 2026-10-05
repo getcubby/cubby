@@ -2,6 +2,7 @@ import { fetcher } from '@cloudron/pankow';
 import { sanitize, pathJoin } from '@cloudron/pankow/utils';
 import { parseResourcePath, getExtension } from '../utils.js';
 import { API_ORIGIN } from '../utils.js';
+import UploadModel from './UploadModel.js';
 
 class DirectoryModelError {
   constructor(reason, errorOrMessage) {
@@ -217,44 +218,21 @@ async function upload(resource, file, progressHandler) {
 
   const uploadPath = pathJoin(resource.resourcePath, uniqueRelativeFilePath);
 
-  const req = new Promise(function (resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.withCredentials = true;
-
-    xhr.addEventListener('load', () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(xhr.response);
-      } else if (xhr.status === 409) {
-        reject(new DirectoryModelError(DirectoryModelError.CONFLICT))
-      } else if (xhr.status === 401) {
-        reject(new DirectoryModelError(DirectoryModelError.NO_AUTH));
-      } else if (xhr.status === 403) {
-        reject(new DirectoryModelError(DirectoryModelError.NOT_ALLOWED));
-      } else {
-        reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
-          status: xhr.status,
-          statusText: xhr.statusText
-        }));
+  try {
+    await UploadModel.upload(`${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(uploadPath)}`, file, {
+      onProgress: ({ loaded }) => {
+        if (loaded) progressHandler({ direction: 'upload', loaded });
       }
     });
-    xhr.addEventListener('error', () => {
-      reject(new DirectoryModelError(DirectoryModelError.GENERIC, {
-        status: xhr.status,
-        statusText: xhr.statusText
-      }));
+  } catch (error) {
+    if (error?.status === 409) throw new DirectoryModelError(DirectoryModelError.CONFLICT);
+    if (error?.status === 401) throw new DirectoryModelError(DirectoryModelError.NO_AUTH);
+    if (error?.status === 403) throw new DirectoryModelError(DirectoryModelError.NOT_ALLOWED);
+    throw new DirectoryModelError(DirectoryModelError.GENERIC, {
+      status: error?.status,
+      statusText: error?.statusText
     });
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.loaded) progressHandler({ direction: 'upload', loaded: event.loaded});
-    });
-
-    xhr.open('POST', `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(uploadPath)}`);
-
-    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-
-    xhr.send(file);
-  });
-
-  await req;
+  }
 }
 
 async function download(resource, files) {

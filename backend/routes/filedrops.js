@@ -147,9 +147,15 @@ async function uploadToFiledrop(req, res, next) {
 
     const filedropId = req.params.id;
     const fileName = req.query.name;
+    const chunk = req.query.chunk !== undefined ? parseInt(req.query.chunk, 10) : null;
+    const chunks = req.query.chunks !== undefined ? parseInt(req.query.chunks, 10) : null;
 
     if (!fileName || typeof fileName !== 'string') return next(new HttpError(400, 'name must be a non-empty string'));
     if (/[/\\\0]/.test(fileName) || fileName === '.' || fileName === '..') return next(new HttpError(400, 'name must be a plain file name'));
+
+    if (chunk !== null && (!Number.isInteger(chunk) || !Number.isInteger(chunks) || chunk < 0 || chunks <= 0 || chunk >= chunks)) {
+        return next(new HttpError(400, 'chunk and chunks must be positive integers with chunk < chunks'));
+    }
 
     debugLog(`uploadToFiledrop: ${filedropId} name:${fileName}`);
 
@@ -182,7 +188,9 @@ async function uploadToFiledrop(req, res, next) {
 
     const mtime = new Date();
 
-    const [uploadError] = await safe(files.addOrOverwriteFile(owner, uploadFilePath, req, mtime, false, {}));
+    const [uploadError] = chunk !== null
+        ? await safe(files.addFileChunk(owner, uploadFilePath, req, { chunk, chunks, mtime, overwrite: false }))
+        : await safe(files.addOrOverwriteFile(owner, uploadFilePath, req, mtime, false, {}));
     if (uploadError) {
         if (uploadError.reason === MainError.ALREADY_EXISTS) return next(new HttpError(409, 'file already exists'));
         return next(MainError.toHttpError(uploadError));

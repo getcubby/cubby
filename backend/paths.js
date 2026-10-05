@@ -18,6 +18,7 @@ export default {
 
     USER_DATA_ROOT: path.join(root, 'data'),
     GROUPS_DATA_ROOT: path.join(root, 'groups'),
+    UPLOADS_ROOT: path.join(root, '.uploads'),
     THUMBNAIL_ROOT: path.join(root, 'thumbnails'),
     SESSION_PATH: path.join(root, 'sessions'),
     SESSION_SECRET_FILE_PATH: path.join(root, '.session.secret'),

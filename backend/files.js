@@ -17,6 +17,7 @@ import diskusage from './diskusage.js';
 import activity from './activity.js';
 import MainError from './mainerror.js';
 import safe from '@cloudron/safetydance';
+import uploads from './uploads.js';
 import { pipeline } from 'node:stream/promises';
 
 const debugLog = debug('cubby:files');
@@ -146,6 +147,46 @@ async function addDirectory(usernameOrGroupfolder, filePath, { actor } = {}) {
     await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: 'created', details: { isDirectory: true } } : null);
 }
 
+async function writeStreamToFile(stream, destPath, { append = false } = {}) {
+    assert.strictEqual(typeof stream, 'object');
+    assert.strictEqual(typeof destPath, 'string');
+    assert.strictEqual(typeof append, 'boolean');
+
+    const writeStream = fs.createWriteStream(destPath, { flags: append ? 'a' : 'w' });
+    const [pipelineError] = await safe(pipeline(stream, writeStream));
+    if (pipelineError) throw new MainError(MainError.FS_ERROR, pipelineError);
+}
+
+// move a fully written part file into place, run change hooks and apply mtime
+async function finalizeUploadedFile(usernameOrGroupfolder, filePath, partPath, mtime, overwrite, existedBefore, actor) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof partPath, 'string');
+    assert.strictEqual(typeof mtime, 'object');
+    assert.strictEqual(typeof overwrite, 'boolean');
+    assert.strictEqual(typeof existedBefore, 'boolean');
+    assert(actor === undefined || typeof actor === 'string');
+
+    const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
+    if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
+
+    // refuse to clobber a file that appeared while we were uploading
+    if (!overwrite && !existedBefore && fs.existsSync(fullFilePath)) throw new MainError(MainError.ALREADY_EXISTS);
+
+    const [renameError] = await safe(fsPromises.rename(partPath, fullFilePath));
+    if (renameError) throw new MainError(MainError.FS_ERROR, renameError);
+
+    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existedBefore && overwrite ? 'updated' : 'created' } : null);
+
+    if (!mtime) return;
+
+    const [mtimeError] = await safe(applyMtime(fullFilePath, mtime));
+    if (mtimeError) {
+        await safe(fsPromises.rm(fullFilePath));
+        throw mtimeError;
+    }
+}
+
 async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime, overwrite, { actor } = {}) {
     assert.strictEqual(typeof usernameOrGroupfolder, 'string');
     assert.strictEqual(typeof filePath, 'string');
@@ -162,37 +203,79 @@ async function addOrOverwriteFile(usernameOrGroupfolder, filePath, stream, mtime
     const existed = fs.existsSync(fullFilePath);
     if (existed && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
 
-    // we first upload to .part file and the rename
-    const fullFilePathPart = fullFilePath + '.part';
-
     const [mkdirError] = await safe(fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true }));
-    if (mkdirError) {
-        await safe(fsPromises.rm(fullFilePathPart));
-        throw new MainError(MainError.FS_ERROR, mkdirError);
+    if (mkdirError) throw new MainError(MainError.FS_ERROR, mkdirError);
+
+    // upload to a temp part file, then atomically rename into place
+    const tempPartPath = uploads.createPartFile();
+    try {
+        await writeStreamToFile(stream, tempPartPath);
+        await finalizeUploadedFile(usernameOrGroupfolder, filePath, tempPartPath, mtime, overwrite, existed, actor);
+    } catch (error) {
+        await uploads.removePartFile(tempPartPath);
+        throw error;
+    }
+}
+
+async function addFileChunk(usernameOrGroupfolder, filePath, stream, { chunk, chunks, mtime, overwrite, actor } = {}) {
+    assert.strictEqual(typeof usernameOrGroupfolder, 'string');
+    assert.strictEqual(typeof filePath, 'string');
+    assert.strictEqual(typeof stream, 'object');
+    assert.strictEqual(typeof chunk, 'number');
+    assert.strictEqual(typeof chunks, 'number');
+    assert.strictEqual(typeof mtime, 'object');
+    assert.strictEqual(typeof overwrite, 'boolean');
+    assert(actor === undefined || typeof actor === 'string');
+    assert(Number.isInteger(chunk) && Number.isInteger(chunks));
+    assert(chunk >= 0 && chunk < chunks);
+
+    const fullFilePath = getAbsolutePath(usernameOrGroupfolder, filePath);
+    if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
+
+    debugLog(`addFileChunk: ${usernameOrGroupfolder} ${fullFilePath} chunk:${chunk}/${chunks} overwrite:${overwrite}`);
+
+    const uploadId = uploads.uploadIdFor(usernameOrGroupfolder, filePath);
+    const partPath = uploads.partPath(uploadId);
+
+    const isFirst = chunk === 0;
+    const isLast = chunk === chunks - 1;
+
+    let existed;
+    if (isFirst) {
+        existed = fs.existsSync(fullFilePath);
+        if (existed && !overwrite) throw new MainError(MainError.ALREADY_EXISTS);
+
+        const [mkdirError] = await safe(fsPromises.mkdir(path.dirname(fullFilePath), { recursive: true }));
+        if (mkdirError) throw new MainError(MainError.FS_ERROR, mkdirError);
+
+        uploads.resetSession(uploadId, { chunks, received: 0, existed });
+    } else {
+        const meta = await uploads.readMeta(uploadId);
+        if (!meta || meta.chunks !== chunks || meta.received !== chunk) {
+            await uploads.removeSession(uploadId);
+            throw new MainError(MainError.BAD_STATE, 'chunk out of order or missing upload session');
+        }
+        existed = !!meta.existed;
     }
 
-    const writeStream = fs.createWriteStream(fullFilePathPart);
-    const [pipelineError] = await safe(pipeline(stream, writeStream));
-    if (pipelineError) {
-        await safe(fsPromises.rm(fullFilePathPart));
-        throw new MainError(MainError.FS_ERROR, pipelineError);
+    try {
+        await writeStreamToFile(stream, partPath, { append: !isFirst });
+        await uploads.writeMeta(uploadId, { chunks, received: chunk + 1, existed });
+    } catch (error) {
+        await uploads.removeSession(uploadId);
+        throw error;
     }
 
-    const [renameError] = await safe(fsPromises.rename(fullFilePathPart, fullFilePath));
-    if (renameError) {
-        await safe(fsPromises.rm(fullFilePathPart));
-        throw new MainError(MainError.FS_ERROR, renameError);
+    if (!isLast) return;
+
+    try {
+        await finalizeUploadedFile(usernameOrGroupfolder, filePath, partPath, mtime, overwrite, existed, actor);
+    } catch (error) {
+        await uploads.removeSession(uploadId);
+        throw error;
     }
 
-    await runChangeHooks(usernameOrGroupfolder, filePath, actor ? { actor, action: existed && overwrite ? 'updated' : 'created' } : null);
-
-    if (!mtime) return;
-
-    const [mtimeError] = await safe(applyMtime(fullFilePath, mtime));
-    if (mtimeError) {
-        await safe(fsPromises.rm(fullFilePath));
-        throw mtimeError;
-    }
+    await uploads.removeSession(uploadId);
 }
 
 async function addOrOverwriteFileContents(usernameOrGroupfolder, filePath, content, mtime, overwrite, { actor, details } = {}) {
@@ -618,6 +701,7 @@ export default {
 
     addDirectory,
     addOrOverwriteFile,
+    addFileChunk,
     addOrOverwriteFileContents,
     getByAbsolutePath,
     get,

@@ -13,6 +13,7 @@ import office from './routes/office.js';
 import path from 'path';
 import shares from './routes/shares.js';
 import tokens from './tokens.js';
+import uploads from './uploads.js';
 import filedrops from './routes/filedrops.js';
 import users from './routes/users.js';
 import usersDb from './users.js';
@@ -27,10 +28,12 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
 const APP_ORIGIN = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
 const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const UPLOAD_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 let gHttpServer = null;
 let gScimInterval = null;
 let gTokenCleanupInterval = null;
+let gUploadCleanupInterval = null;
 
 async function start() {
     if (gHttpServer) return;
@@ -185,6 +188,15 @@ async function start() {
                 console.error('Token cleanup failed:', err);
             });
         }, 60 * 60 * 1000);
+
+        uploads.cleanupStale(UPLOAD_MAX_AGE_MS).catch((err) => {
+            console.error('Initial upload cleanup failed:', err);
+        });
+        gUploadCleanupInterval = setInterval(() => {
+            uploads.cleanupStale(UPLOAD_MAX_AGE_MS).catch((err) => {
+                console.error('Upload cleanup failed:', err);
+            });
+        }, 60 * 60 * 1000);
     }
 }
 
@@ -197,6 +209,11 @@ async function stop() {
     if (gTokenCleanupInterval) {
         clearInterval(gTokenCleanupInterval);
         gTokenCleanupInterval = null;
+    }
+
+    if (gUploadCleanupInterval) {
+        clearInterval(gUploadCleanupInterval);
+        gUploadCleanupInterval = null;
     }
 
     if (!gHttpServer) return;

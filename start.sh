@@ -19,7 +19,7 @@ export MAIL_FROM="${CLOUDRON_MAIL_FROM}"
 
 # keep in sync with backend/paths.js
 echo "==> Ensure data directories"
-mkdir -p /app/data/{data,groups,thumbnails,sessions,.recoll}
+mkdir -p /app/data/{data,groups,thumbnails,sessions,.recoll,.uploads}
 
 echo "==> Ensure permissions"
 chown -R cloudron:cloudron /app/data

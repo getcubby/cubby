@@ -3,6 +3,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useNotify, Button, ProgressBar } from '@cloudron/pankow';
 import PasswordPage from './PasswordPage.vue';
+import UploadModel from '../models/UploadModel.js';
 
 const { notify } = useNotify();
 
@@ -152,53 +153,47 @@ async function uploadFile(file) {
   addBeforeUnload();
 
   try {
-    const result = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.withCredentials = true;
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(JSON.parse(xhr.response));
-          } catch (e) {
-            resolve({ fileName: file.name, size: file.size });
-          }
-        } else if (xhr.status === 404) {
-          expired.value = true;
-          reject(new Error('File drop is no longer available.'));
-        } else if (xhr.status === 409) {
-          reject(new Error(`A file named "${file.name}" already exists.`));
-        } else {
-          let message = 'Upload failed.';
-          try { message = JSON.parse(xhr.response)?.message || message; } catch (e) {}
-          reject(new Error(message));
-        }
-      });
-
-      xhr.addEventListener('error', () => {
-        reject(new Error('Network error during upload.'));
-      });
-
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable && event.total > 0) {
-          const now = Date.now();
-          const elapsed = now - lastTime;
-          uploadProgress.value = Math.round((event.loaded / event.total) * 100);
-          if (elapsed >= 200) {
-            const delta = event.loaded - lastLoaded;
-            if (delta > 0 && elapsed > 0) {
-              uploadSpeed.value = formatSize((delta / elapsed) * 1000) + '/s';
+    let response;
+    try {
+      response = await UploadModel.upload(`${API_ORIGIN}/api/v1/filedrops/${filedropId.value}?name=${encodeURIComponent(file.name)}`, file, {
+        onProgress: ({ loaded, total }) => {
+          if (total > 0) {
+            const now = Date.now();
+            const elapsed = now - lastTime;
+            uploadProgress.value = Math.round((loaded / total) * 100);
+            if (elapsed >= 200) {
+              const delta = loaded - lastLoaded;
+              if (delta > 0 && elapsed > 0) {
+                uploadSpeed.value = formatSize((delta / elapsed) * 1000) + '/s';
+              }
+              lastLoaded = loaded;
+              lastTime = now;
             }
-            lastLoaded = event.loaded;
-            lastTime = now;
           }
         }
       });
+    } catch (error) {
+      if (error?.status === 404) {
+        expired.value = true;
+        throw new Error('File drop is no longer available.');
+      }
+      if (error?.status === 409) {
+        throw new Error(`A file named "${file.name}" already exists.`);
+      }
+      if (error?.networkError) {
+        throw new Error('Network error during upload.');
+      }
+      let message = 'Upload failed.';
+      try { message = JSON.parse(error?.body)?.message || message; } catch (e) {}
+      throw new Error(message);
+    }
 
-      xhr.open('POST', `${API_ORIGIN}/api/v1/filedrops/${filedropId.value}?name=${encodeURIComponent(file.name)}`);
-      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-      xhr.send(file);
-    });
+    let result;
+    try {
+      result = JSON.parse(response);
+    } catch (e) {
+      result = { fileName: file.name, size: file.size };
+    }
 
     successFile.value = { name: result.fileName, size: file.size };
     notify({ text: `"${result.fileName}" uploaded successfully`, type: 'success' });

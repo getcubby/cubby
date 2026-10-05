@@ -40,8 +40,14 @@ async function add(req, res, next) {
     const overwrite = boolLike(req.query.overwrite);
     const mtime = req.query.mtime ? new Date(req.query.mtime) : null;
     const filePath = req.query.path || '';
+    const chunk = req.query.chunk !== undefined ? parseInt(req.query.chunk, 10) : null;
+    const chunks = req.query.chunks !== undefined ? parseInt(req.query.chunks, 10) : null;
 
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
+
+    if (chunk !== null && (!Number.isInteger(chunk) || !Number.isInteger(chunks) || chunk < 0 || chunks <= 0 || chunk >= chunks)) {
+        return next(new HttpError(400, 'chunk and chunks must be positive integers with chunk < chunks'));
+    }
 
     const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
@@ -52,17 +58,20 @@ async function add(req, res, next) {
     if (subject.role === groupFolders.ROLES.VIEWER) return next(new HttpError(403, 'group folder is read-only'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
 
-    debugLog(`add: ${subject.resource} ${subject.filePath} ${mtime}`);
+    debugLog(`add: ${subject.resource} ${subject.filePath} chunk:${chunk === null ? 'none' : `${chunk}/${chunks}`} ${mtime}`);
 
     const actor = req.user?.username;
     let error;
     if (directory) {
         [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor }));
+    } else if (chunk !== null) {
+        [error] = await safe(files.addFileChunk(subject.usernameOrGroupfolder, subject.filePath, req, { chunk, chunks, mtime, overwrite, actor }));
     } else {
         [error] = await safe(files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor }));
-        if (!error && req.user) await recent.add(req.user.username, subject.resourcePath);
     }
     if (error) return next(MainError.toHttpError(error));
+
+    if (req.user && (chunk === null || chunk === chunks - 1)) await recent.add(req.user.username, subject.resourcePath);
 
     next(new HttpSuccess(200, {}));
 }

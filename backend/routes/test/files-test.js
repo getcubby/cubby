@@ -1,9 +1,31 @@
 import { describe, it, before, after } from 'mocha';
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import common from './common.js';
 import superagent from '@cloudron/superagent';
 import groupfolders from '../../groupfolders.js';
 import groups from '../../groups.js';
+
+// send a raw request body (superagent serializes Buffers to JSON, which the body parser consumes)
+function rawPost(url, body) {
+    return new Promise((resolve, reject) => {
+        const u = new URL(url);
+        const req = http.request({
+            host: u.hostname,
+            port: u.port,
+            path: u.pathname + u.search,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': body.length }
+        }, (res) => {
+            let data = '';
+            res.on('data', (c) => { data += c; });
+            res.on('end', () => resolve({ status: res.statusCode, body: data }));
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
+}
 
 describe('files API', function () {
     const { setup, cleanup, serverUrl, alice, user, withToken, addUserFile } = common;
@@ -28,6 +50,39 @@ describe('files API', function () {
             .query({ path: '/home/upload.txt' });
         assert.equal(getResponse.status, 200);
         assert.equal(getResponse.body.fileName, 'upload.txt');
+    });
+
+    it('uploads a file in chunks and reassembles it', async function () {
+        const chunks = [ 'hello ', 'chunked ', 'world' ];
+
+        for (let i = 0; i < chunks.length; i++) {
+            const url = `${serverUrl}/api/v1/files?path=${encodeURIComponent('/home/chunked.txt')}&chunk=${i}&chunks=${chunks.length}&overwrite=true&access_token=${alice.token}`;
+            const response = await rawPost(url, Buffer.from(chunks[i]));
+            assert.equal(response.status, 200);
+        }
+
+        const getResponse = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/chunked.txt', type: 'raw' });
+        assert.equal(getResponse.status, 200);
+        assert.equal(getResponse.text, 'hello chunked world');
+    });
+
+    it('rejects out-of-order chunks', async function () {
+        const firstUrl = `${serverUrl}/api/v1/files?path=${encodeURIComponent('/home/out-of-order.txt')}&chunk=0&chunks=3&overwrite=true&access_token=${alice.token}`;
+        const first = await rawPost(firstUrl, Buffer.from('first'));
+        assert.equal(first.status, 200);
+
+        const skippedUrl = `${serverUrl}/api/v1/files?path=${encodeURIComponent('/home/out-of-order.txt')}&chunk=2&chunks=3&overwrite=true&access_token=${alice.token}`;
+        const skipped = await rawPost(skippedUrl, Buffer.from('third'));
+        assert.equal(skipped.status, 409);
+    });
+
+    it('rejects a chunked upload that conflicts with an existing file', async function () {
+        await addUserFile(alice.username, '/chunked-exists.txt', 'existing');
+
+        const url = `${serverUrl}/api/v1/files?path=${encodeURIComponent('/home/chunked-exists.txt')}&chunk=0&chunks=2&access_token=${alice.token}`;
+        const response = await rawPost(url, Buffer.from('new'));
+        assert.equal(response.status, 409);
     });
 
     it('returns isBinary for files', async function () {

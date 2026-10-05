@@ -664,3 +664,8 @@
 * Update cubby to 2.22.2
 * Bump tegel
 
+[2.23.0]
+* Update cubby to 2.23.0
+* Add chunked uploads to work with Cloudflare free tier
+* Fix dropping a folder in chromium browsers
+

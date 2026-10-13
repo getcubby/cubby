@@ -271,7 +271,7 @@ onBeforeUnmount(() => removeBeforeUnload());
         <div class="filedrop-error-icon">
           <i class="fa-solid fa-circle-exclamation"></i>
         </div>
-        <h2>File Drop not found</h2>
+        <h2>File drop not found</h2>
         <p>This file drop link is invalid or has been removed.</p>
       </div>
 
@@ -279,7 +279,7 @@ onBeforeUnmount(() => removeBeforeUnload());
         <div class="filedrop-error-icon">
           <i class="fa-solid fa-clock"></i>
         </div>
-        <h2>File Drop expired</h2>
+        <h2>File drop expired</h2>
         <p>This file drop link is no longer available.</p>
       </div>
 
@@ -293,7 +293,7 @@ onBeforeUnmount(() => removeBeforeUnload());
 
       <template v-else>
         <div class="filedrop-header">
-          <h1>File Drop</h1>
+          <h1>File drop</h1>
           <p class="filedrop-folder">Uploading to <strong>{{ folderName }}</strong></p>
         </div>
 

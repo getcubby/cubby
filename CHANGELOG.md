@@ -669,3 +669,12 @@
 * Add chunked uploads to work with Cloudflare free tier
 * Fix dropping a folder in chromium browsers
 
+[2.24.0]
+* Update cubby to 6aecb93
+* Let a group folder be created with its members already set.
+* Drop a favorite in place so the Favorites view does not reload.
+* Add the list and grid switch to Recent files.
+* Place WebDAV under group folders and tighten its settings copy.
+* Open search on Enter as a selectable file list, and return to that list after opening a result.
+* Show where a recent or favorite file lives, and open that folder from the row.
+

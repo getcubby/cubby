@@ -30,7 +30,18 @@ const DirectoryModelError = DirectoryModel.DirectoryModelError;
 // item drags between cubby windows of the same site
 const DRAG_SCOPE = 'cubby';
 
-const emit = defineEmits(['invalid-session', 'share', 'filedrop', 'close-viewer', 'open-file']);
+const emit = defineEmits(['invalid-session', 'share', 'filedrop', 'close-viewer', 'open-file', 'origin-back']);
+
+const props = defineProps({
+  clipboard: {
+    type: Object,
+    default: null,
+  },
+  originBack: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const profile = inject('profile');
 
@@ -694,6 +705,11 @@ function openWith(item, viewerId) {
 }
 
 function onUp() {
+  if (props.originBack) {
+    emit('origin-back');
+    return;
+  }
+
   if (window.location.hash.indexOf('#shares/') === 0) {
     const hash = window.location.hash.slice('#shares/'.length);
 
@@ -819,6 +835,7 @@ defineExpose({
             :drop-handler="onDrop"
             :drag-scope="DRAG_SCOPE"
             :drag-payload-handler="dragPayloadHandler"
+            :clipboard="clipboard"
             :items="entries"
             :fallback-icon="`${BASE_URL}mime-types/application-x-generic.svg`"
           >

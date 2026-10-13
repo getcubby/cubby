@@ -3,7 +3,7 @@
 import { ref, watch, onUnmounted, useTemplateRef } from 'vue';
 import { Spinner, TextInput, Button } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
-import { getFilesViewHashHref } from '../utils.js';
+import { getFilesViewHashHref, getResultLocationLabel, getResultFolderPath } from '../utils.js';
 
 const SEARCH_DEBOUNCE_MS = 500;
 
@@ -78,6 +78,14 @@ function onSearch() {
   runSearch();
 }
 
+function onOpenResults() {
+  const q = searchQuery.value.trim();
+  if (!q) return;
+
+  window.location.hash = 'search/' + encodeURIComponent(q);
+  onDismiss();
+}
+
 watch(searchQuery, () => {
   const q = searchQuery.value.trim();
   if (!q) {
@@ -124,22 +132,6 @@ function getDirectoryHref(entry) {
   return getFilesViewHashHref(entry, folderPath);
 }
 
-/** Sidebar-aligned label so "/" under My files is distinct from "/" in a group folder. */
-function getResultLocationLabel(entry) {
-  if (entry.share) {
-    const rootName = (entry.share.filePath || '').replace(/^\/+|\/+$/g, '');
-    return rootName ? `Shared · ${rootName}` : 'Shared with you';
-  }
-  if (entry.group) {
-    return entry.group.name || entry.group.id || 'Group folder';
-  }
-  return 'My files';
-}
-
-function getResultFolderPath(entry, fileName) {
-  return entry.filePath.slice(0, -fileName.length);
-}
-
 </script>
 
 <template>
@@ -150,7 +142,7 @@ function getResultFolderPath(entry, fileName) {
     <div class="search-bar" ref="searchBar" :class="{'open': open,'results-open': resultsOpen}">
       <i class="fa-solid fa-magnifying-glass" v-show="searchPending === 0" style="cursor: pointer;" @click="onSearch"></i>
       <Spinner v-show="searchPending > 0" />
-      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter="onSearch" class="search-input"/>
+      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter.prevent="onOpenResults" class="search-input"/>
     </div>
     <Transition name="pankow-roll-down">
       <div v-show="resultsOpen" ref="searchResultsPanel" class="search-result-panel">

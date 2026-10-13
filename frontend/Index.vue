@@ -1,6 +1,6 @@
 <script setup>
 
-import { ref, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
 import { parseResourcePath, API_ORIGIN } from './utils.js';
 import { Button, SideBar, TopBar, LoginView } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
@@ -11,6 +11,7 @@ import FileViewerOverlay from './components/FileViewerOverlay.vue';
 import RecentView from './components/RecentView.vue';
 import FavoriteView from './components/FavoriteView.vue';
 import SearchBar from './components/SearchBar.vue';
+import SearchView from './components/SearchView.vue';
 import ShareDialog from './components/ShareDialog.vue';
 import FileDropDialog from './components/FileDropDialog.vue';
 import ProfileMenuButton from './components/ProfileMenuButton.vue';
@@ -22,6 +23,7 @@ const VIEWS = {
   FILES_GROUPFOLDERS: 'files-groupfolders',
   FAVORITES: 'favorites',
   RECENT: 'recent',
+  SEARCH: 'search',
   SETTINGS: 'settings',
   SHARES: 'shares'
 };
@@ -35,8 +37,15 @@ const sideBar = useTemplateRef('sideBar');
 const ready = ref(false);
 const view = ref('');
 const profile = ref({});
+const searchQuery = ref('');
+const fileClipboard = reactive({
+  action: '',
+  files: [],
+});
 const currentHash = ref('');
 const loginProviderName = ref('Cloudron');
+const fileOpenedFromList = ref(false);
+let openedFileHash = '';
 
 const loginLabel = computed(() => `Log in with ${loginProviderName.value || 'Cloudron'}`);
 
@@ -160,9 +169,27 @@ function onWindowFocusForSession() {
 }
 
 function onFileViewerClose() {
+  if (fileOpenedFromList.value) {
+    onOriginBack();
+    return;
+  }
+
   const folderPath = fileBrowser.value?.currentResourcePath || '/home/';
   const resource = parseResourcePath(folderPath);
   window.location.hash = `files${resource.resourcePath}`;
+}
+
+function onOriginBack() {
+  fileOpenedFromList.value = false;
+  openedFileHash = '';
+  history.back();
+}
+
+function clearFileListReturn(hash) {
+  if (!fileOpenedFromList.value) return;
+  if (hash === openedFileHash) return;
+  fileOpenedFromList.value = false;
+  openedFileHash = '';
 }
 
 async function onOpenFile({ item, resource, siblingEntries, viewer }) {
@@ -198,9 +225,15 @@ function resetNonFileViewState() {
 }
 
 function onOpen(item) {
-  if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
-  else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
-  else window.location.hash = `files/home${item.filePath}`;
+  const fromList = !item.isDirectory && (view.value === VIEWS.SEARCH || view.value === VIEWS.RECENT);
+  let nextHash;
+  if (item.share && item.share.id) nextHash = `files/shares/${item.share.id}${item.filePath}`;
+  else if (item.group && item.group.id) nextHash = `files/groupfolders/${item.group.id}${item.filePath}`;
+  else nextHash = `files/home${item.filePath}`;
+
+  fileOpenedFromList.value = fromList;
+  openedFileHash = fromList ? nextHash : '';
+  window.location.hash = nextHash;
 }
 
 function onGroupFoldersChanged() {
@@ -210,6 +243,7 @@ function onGroupFoldersChanged() {
 onMounted(async () => {
   async function handleHash(hash) {
     hash = decodeURIComponent(hash);
+    clearFileListReturn(hash);
 
     if (hash.indexOf('files/home/') === 0) {
       if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
@@ -234,6 +268,19 @@ onMounted(async () => {
       }
       resetNonFileViewState();
       view.value = VIEWS.FAVORITES;
+    } else if (hash.indexOf('search/') === 0) {
+      if (!profile.value?.username) {
+        view.value = VIEWS.LOGIN;
+        return;
+      }
+      const query = hash.slice('search/'.length);
+      if (!query) {
+        window.location.hash = 'files/home/';
+        return;
+      }
+      resetNonFileViewState();
+      searchQuery.value = query;
+      view.value = VIEWS.SEARCH;
     } else if (hash.indexOf('settings') === 0 && profile.value?.username) {
       resetNonFileViewState();
       view.value = VIEWS.SETTINGS;
@@ -346,9 +393,20 @@ onBeforeUnmount(() => {
         <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged" />
         <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
         <FavoriteView v-else-if="view === VIEWS.FAVORITES" />
+        <SearchView
+          v-else-if="view === VIEWS.SEARCH"
+          :query="searchQuery"
+          :clipboard="fileClipboard"
+          @item-activated="onOpen"
+          @invalid-session="onInvalidSession"
+          @share="(item) => shareDialog.open(item)"
+        />
         <FileBrowser
           v-show="isFileBrowserView"
           ref="fileBrowser"
+          :clipboard="fileClipboard"
+          :origin-back="fileOpenedFromList"
+          @origin-back="onOriginBack"
           @invalid-session="onInvalidSession"
           @share="(item) => shareDialog.open(item)"
           @filedrop="(item) => fileDropDialog.open(item)"

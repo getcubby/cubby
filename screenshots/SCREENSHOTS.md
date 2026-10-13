@@ -11,7 +11,7 @@ Shots:
 | `screenshots/search.png` | Top bar search `Sendlinger`, results open |
 | `screenshots/share.png` | Share dialog on `Summit notes.md`, user tab |
 | `screenshots/groupfolder.png` | `#files/groupfolders/design/` |
-| `screenshots/webdav.png` | Profile menu → WebDAV |
+| `screenshots/webdav.png` | `#settings` (WebDAV section) |
 
 Leave out Favorites, Recent, the file-drop dialog, the 3D viewer, the PDF viewer, Office, empty create dialogs, and delete confirmations.
 
@@ -37,7 +37,8 @@ Clip targets:
 | Shot | Clip |
 |---|---|
 | Files, markdown, search, group folder | `.container` |
-| Share, WebDAV | the open dialog |
+| Share | the open dialog |
+| WebDAV | `.container`, scrolled so the WebDAV URL and username are in frame |
 
 Do not call `Emulation.setDeviceMetricsOverride`. Do not set `clip.scale: 2` when `devicePixelRatio` is already 2. Do not upscale a 1× PNG. `browser_take_screenshot` is a layout check only; it is not the file that gets committed.
 
@@ -55,7 +56,7 @@ Install this app at `https://cubby-demo.smartserver.io`. From this repo, with th
 cloudron install -l cubby-demo
 ```
 
-Reuse that install on later retakes. Reinstall only when the location is empty. If that hostname already has a DNS record, pick another location and write it here. `search.png` and `webdav.png` have to be taken on a Cloudron install. Search uses recoll, and the WebDAV dialog links to the dashboard app-password page. The local dev server has neither.
+Reuse that install on later retakes. Reinstall only when the location is empty. If that hostname already has a DNS record, pick another location and write it here. `search.png` and `webdav.png` have to be taken on a Cloudron install. Search uses recoll, and the WebDAV section links to the dashboard app-password page. The local dev server has neither.
 
 Leave `~/.cloudron.json` logged in. Do not paste the API token into chat.
 
@@ -241,6 +242,6 @@ The Share dialog puts users and links on separate tabs. `share.png` is the user 
 4. Search: from My files, focus the top bar, type `Sendlinger`, and wait until the dropdown lists Summit notes.md under My files and Homepage copy.md under Design. Do not click the backdrop. Clip `.container` while the panel is open.
 5. Share: open the Share dialog on Summit notes.md. The user tab shows the second username as Read & write. Clip the dialog.
 6. Group folder: `#files/groupfolders/design/`. Homepage copy.md, Launch checklist.txt, Social posts.txt. Sidebar on Group folders.
-7. WebDAV: profile menu → WebDAV, on the Cloudron install. The URL is `https://cubby-demo.smartserver.io/webdav/<username>/` and the username field is filled. Clip the dialog.
+7. WebDAV: `#settings`, on the Cloudron install. The WebDAV section shows `https://cubby-demo.smartserver.io/webdav/<username>/` and the username. Clip `.container` with those fields in frame.
 
 Write each PNG under `screenshots/`. Check the bitmap is 2× the CSS clip before keeping it.

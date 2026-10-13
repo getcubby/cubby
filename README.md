@@ -76,7 +76,7 @@ https://<your-cubby-domain>/webdav/<username>/
 
 On Cloudron, create an **App password** in the dashboard under **Profile → App passwords**, then use your Cloudron username and that password in the WebDAV client. Browser SSO is not used for WebDAV.
 
-In the app, the profile menu item **WebDAV** shows the URL and a link to create an app password.
+In the app, **Settings** shows the URL and a link to create an app password.
 
 Example mounts:
 

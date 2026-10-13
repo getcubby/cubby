@@ -64,7 +64,7 @@ Right-click a `.zip` or other supported archive and choose **Extract** to unpack
 
 ## WebDAV
 
-Cubby supports **WebDAV**, so you can open your files from a file manager, tablet, or backup app. Open your profile menu and choose **WebDAV** for the URL and login details.
+Cubby supports **WebDAV**, so you can open your files from a file manager, tablet, or backup app. Open **Settings** for the URL and login details.
 
 ---
 

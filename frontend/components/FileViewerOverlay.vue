@@ -171,13 +171,13 @@ defineExpose({ openFile, close, openWith });
 
 .viewer-slide-enter-active,
 .viewer-slide-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 .viewer-slide-enter-from,
 .viewer-slide-leave-to {
   opacity: 0;
-  transform: translateY(33.33%) scale(0.95);
+  transform: translateY(8px);
 }
 
 </style>

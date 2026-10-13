@@ -6,7 +6,9 @@ import { API_ORIGIN } from '../utils';
 async function add(data) {
   const tmp = {
     name: data.name,
-    slug: data.slug
+    slug: data.slug,
+    members: data.members || [],
+    groupMembers: data.groupMembers || []
   };
 
   const result = await fetcher.post(`${API_ORIGIN}/api/v1/settings/groupfolders`, tmp);

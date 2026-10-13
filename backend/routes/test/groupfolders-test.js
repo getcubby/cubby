@@ -44,6 +44,36 @@ describe('groupfolders API', function () {
         assert.equal(aliceList.body.groupFolder.find((g) => g.id === 'private'), undefined);
     });
 
+    it('creates a group folder with members and keeps the creator as owner', async function () {
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({
+                slug: 'with-members',
+                name: 'With members',
+                members: [
+                    { username: user.username, role: 'editor' },
+                    { username: alice.username, role: 'viewer' }
+                ]
+            });
+        assert.equal(response.status, 200);
+
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
+        const folder = listResponse.body.groupFolder.find((g) => g.id === 'with-members');
+        assert.deepEqual(folder.members, [
+            { username: alice.username, role: 'viewer' },
+            { username: user.username, role: 'owner' }
+        ]);
+
+        const aliceList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);
+        assert.ok(aliceList.body.groupFolder.find((g) => g.id === 'with-members'));
+    });
+
+    it('rejects invalid members', async function () {
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'bad-members', name: 'Bad', members: [ { username: alice.username, role: 'boss' } ] })
+            .ok(() => true);
+        assert.equal(response.status, 400);
+    });
+
     it('rejects an invalid slug', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
             .send({ slug: '../../etc', name: 'Evil' })

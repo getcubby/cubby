@@ -64,15 +64,17 @@ async function getMemberUsernames(id) {
 }
 
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(idOrSlug, name, ownerUsername) {
+async function add(idOrSlug, name, ownerUsername, members = [], groupMembers = []) {
     assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
     assert.strictEqual(typeof ownerUsername, 'string');
+    assert(Array.isArray(members));
+    assert(Array.isArray(groupMembers));
 
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUsername}`);
+    debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUsername} members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name) VALUES (?, ?)',
@@ -82,8 +84,25 @@ async function add(idOrSlug, name, ownerUsername) {
         args: [ idOrSlug, ownerUsername, ROLES.OWNER ]
     }];
 
+    const seen = new Set([ ownerUsername ]);
+    for (const member of members) {
+        if (seen.has(member.username)) continue;
+        seen.add(member.username);
+        queries.push({
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
+            args: [ idOrSlug, member.username, member.role ]
+        });
+    }
+
+    for (const groupMember of groupMembers) {
+        queries.push({
+            query: 'INSERT INTO groupfolders_group_members (groupfolder_id, group_id, role) VALUES (?, ?, ?)',
+            args: [ idOrSlug, groupMember.groupId, groupMember.role ]
+        });
+    }
+
     const [error] = await safe(database.transaction(queries));
-    if (error?.nestedError?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') throw new MainError(MainError.NOT_FOUND, 'user not found');
+    if (error?.nestedError?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') throw new MainError(MainError.NOT_FOUND, 'user or group not found');
     if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 

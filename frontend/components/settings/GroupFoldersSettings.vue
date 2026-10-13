@@ -1,12 +1,13 @@
 <script setup>
 
 import { ref, computed, inject, onMounted, useTemplateRef } from 'vue';
-import { Button, Dialog, FormGroup, InputDialog, ListItem, ProgressBar, SingleSelect, TextInput } from '@cloudron/pankow';
+import { Button, Dialog, InputDialog, ListItem, ProgressBar, TextInput } from '@cloudron/pankow';
 import Section from '../Section.vue';
+import GroupFolderMembers from './GroupFolderMembers.vue';
 import GroupFolderModel from '../../models/GroupFolderModel.js';
 import MainModel from '../../models/MainModel.js';
 import slugify from '../../slugify.js';
-import { ROLES, roleOptions } from '../../roles.js';
+import { ROLES } from '../../roles.js';
 
 const props = defineProps({
   users: {
@@ -31,6 +32,10 @@ const groupFolderAdd = ref({
   busy: false,
   name: '',
   slug: '',
+  members: [],
+  groupMembers: [],
+  newMember: '',
+  newMemberRole: ROLES.EDITOR,
 });
 const groupFolderEdit = ref({
   error: '',
@@ -43,43 +48,24 @@ const groupFolderEdit = ref({
   newMemberRole: ROLES.EDITOR,
 });
 
-const userOptions = computed(() => props.users.map((u) => ({
-  ...u,
-  label: u.username || u.email,
-})));
-
 const groupNameById = computed(() => {
   const map = {};
   groups.value.forEach((g) => { map[g.id] = g.name; });
   return map;
 });
 
-const memberOptions = computed(() => {
-  const options = [];
-
-  const existingUsers = new Set(groupFolderEdit.value.members.map((m) => m.username));
-  const availableUsers = userOptions.value.filter((u) => !existingUsers.has(u.username));
-  if (availableUsers.length) {
-    options.push({ label: 'Users', separator: true });
-    availableUsers.forEach((u) => { options.push({ id: `user:${u.username}`, label: u.label, username: u.username, type: 'user' }); });
-  }
-
-  const existingGroups = new Set(groupFolderEdit.value.groupMembers.map((m) => m.groupId));
-  const availableGroups = groups.value.filter((g) => !existingGroups.has(g.id));
-  if (availableGroups.length) {
-    options.push({ label: 'Groups', separator: true });
-    availableGroups.forEach((g) => { options.push({ id: `group:${g.id}`, label: g.name, groupId: g.id, type: 'group' }); });
-  }
-
-  return options;
-});
+function memberFields(includeSelf) {
+  const username = profile.value?.username;
+  return {
+    members: includeSelf && username ? [{ username, role: ROLES.OWNER }] : [],
+    groupMembers: [],
+    newMember: '',
+    newMemberRole: ROLES.EDITOR,
+  };
+}
 
 function currentUserRole(groupFolder) {
   return groupFolder.myRole || null;
-}
-
-function roleLabel(role) {
-  return roleOptions.find((o) => o.value === role)?.label || role;
 }
 
 function groupFolderMemberLabels(groupFolder) {
@@ -106,26 +92,6 @@ function groupFolderActions(groupFolder) {
   }];
 }
 
-function onAddMember() {
-  const id = groupFolderEdit.value.newMember;
-  const role = groupFolderEdit.value.newMemberRole;
-  if (!id || !role) return;
-
-  const option = memberOptions.value.find((o) => o.id === id);
-  if (!option) return;
-
-  if (option.type === 'user') {
-    if (groupFolderEdit.value.members.some((m) => m.username === option.username)) return;
-    groupFolderEdit.value.members.push({ username: option.username, role });
-  } else {
-    if (groupFolderEdit.value.groupMembers.some((m) => m.groupId === option.groupId)) return;
-    groupFolderEdit.value.groupMembers.push({ groupId: option.groupId, role });
-  }
-
-  groupFolderEdit.value.newMember = '';
-  groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
-}
-
 async function loadGroups() {
   try {
     groups.value = await MainModel.getGroups();
@@ -148,10 +114,13 @@ async function refreshGroupFolders() {
 }
 
 async function onAddGroupFolder() {
-  groupFolderAdd.value.busy = false;
-  groupFolderAdd.value.error = '';
-  groupFolderAdd.value.name = '';
-  groupFolderAdd.value.slug = '';
+  groupFolderAdd.value = {
+    error: '',
+    busy: false,
+    name: '',
+    slug: '',
+    ...memberFields(true),
+  };
   addGroupFolderDialog.value.open();
 }
 
@@ -162,6 +131,8 @@ async function onAddGroupFolderSubmit() {
     await GroupFolderModel.add({
       name: groupFolderAdd.value.name,
       slug: groupFolderAdd.value.slug,
+      members: groupFolderAdd.value.members.map((m) => ({ username: m.username, role: m.role })),
+      groupMembers: groupFolderAdd.value.groupMembers.map((m) => ({ groupId: m.groupId, role: m.role })),
     });
   } catch (e) {
     groupFolderAdd.value.error = e.message;
@@ -184,16 +155,6 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.newMember = '';
   groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
   editGroupFolderDialog.value.open();
-}
-
-function onRemoveMember(index) {
-  const member = groupFolderEdit.value.members[index];
-  if (!member || member.username === profile.value?.username) return;
-  groupFolderEdit.value.members.splice(index, 1);
-}
-
-function onRemoveGroupMember(index) {
-  groupFolderEdit.value.groupMembers.splice(index, 1);
 }
 
 async function onEditGroupFolderSubmit() {
@@ -261,8 +222,10 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
       <p class="has-error" v-show="groupFolderAdd.error">{{ groupFolderAdd.error }}</p>
       <label>Name</label>
       <TextInput v-model="groupFolderAdd.name" style="width: 100%;" @change="groupFolderAdd.slug = slugify(groupFolderAdd.name)"/>
-      <label>Slug (cannot be changed later)</label>
-      <TextInput v-model="groupFolderAdd.slug" placeholder="Optional slug for prettier URLs" style="width: 100%;" />
+      <label>Slug</label>
+      <TextInput v-model="groupFolderAdd.slug" placeholder="design" style="width: 100%;" />
+      <small class="helper-text">Optional. Used in the folder URL and cannot be changed later. A short id is generated if left empty.</small>
+      <GroupFolderMembers :form="groupFolderAdd" :users="users" :groups="groups" />
     </Dialog>
 
     <Dialog
@@ -278,43 +241,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
       <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>
       <label>Name</label>
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
-      <FormGroup>
-        <label>Members</label>
-        <ListItem v-for="(member, index) in groupFolderEdit.members" :key="`u-${member.username}`">
-          <template #left>
-            <i class="fa-solid fa-circle-user item-icon"></i>
-          </template>
-          <template #label>
-            <div class="member-label-row">
-              <span>{{ member.username }}</span>
-              <span v-if="member.username === profile?.username" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
-              <span v-else class="member-role-controls">
-                <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
-                <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveMember(index)" />
-              </span>
-            </div>
-          </template>
-        </ListItem>
-        <ListItem v-for="(member, index) in groupFolderEdit.groupMembers" :key="`g-${member.groupId}`">
-          <template #left>
-            <i class="fa-solid fa-user-group item-icon"></i>
-          </template>
-          <template #label>
-            <div class="member-label-row">
-              <span>{{ groupNameById[member.groupId] || member.groupId }}</span>
-              <span class="member-role-controls">
-                <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
-                <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveGroupMember(index)" />
-              </span>
-            </div>
-          </template>
-        </ListItem>
-        <div class="add-member-row">
-          <SingleSelect v-model="groupFolderEdit.newMember" :options="memberOptions" option-key="id" option-label="label" placeholder="Select user or group" style="flex-grow: 1;" />
-          <SingleSelect v-model="groupFolderEdit.newMemberRole" :options="roleOptions" option-key="value" style="width: 120px;" />
-          <Button icon="fa-solid fa-plus" outline :disabled="!groupFolderEdit.newMember" @click="onAddMember()">Add</Button>
-        </div>
-      </FormGroup>
+      <GroupFolderMembers :form="groupFolderEdit" :users="users" :groups="groups" />
     </Dialog>
 
     <ProgressBar v-if="groupFoldersBusy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false" />
@@ -348,6 +275,19 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
   color: var(--pankow-color-text-secondary);
 }
 
+.helper-text {
+  display: block;
+  font-size: 0.9em;
+  color: #2d2323;
+  margin-top: 0.25em;
+}
+
+@media (prefers-color-scheme: dark) {
+  .helper-text {
+    color: #927f7f;
+  }
+}
+
 .group-folder-subtext {
   display: flex;
   gap: 8px;
@@ -362,34 +302,6 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
   color: var(--pankow-color-text-secondary);
   text-align: center;
   padding: 20px 0;
-}
-
-.member-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 8px;
-}
-
-.member-role-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: normal;
-}
-
-.member-self-role {
-  font-weight: normal;
-  font-size: 13px;
-  color: var(--pankow-color-text-secondary);
-}
-
-.add-member-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
 }
 
 </style>

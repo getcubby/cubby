@@ -52,12 +52,17 @@ async function add(req, res, next) {
     const name = req.body.name;
     const slug = req.body.slug || '';
 
+    const members = req.body.members || [];
+    const groupMembers = req.body.groupMembers || [];
+
     if (typeof name !== 'string' || !name) return next(new HttpError(400, 'name must be a non-empty string'));
     if (slug && !/^[a-z0-9][a-z0-9-]*$/.test(slug)) return next(new HttpError(400, 'slug must contain only lowercase letters, digits, and hyphens'));
+    if (!validateMembers(members)) return next(new HttpError(400, 'members must be an array of { username, role }'));
+    if (!validateGroupMembers(groupMembers)) return next(new HttpError(400, 'groupMembers must be an array of { groupId, role }'));
 
-    debugLog(`add: ${name}`);
+    debugLog(`add: ${name} with members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
 
-    const [error] = await safe(groupFolders.add(slug, name, req.user.username));
+    const [error] = await safe(groupFolders.add(slug, name, req.user.username, members, groupMembers));
     if (error) return next(MainError.toHttpError(error));
 
     return next(new HttpSuccess(200, {}));

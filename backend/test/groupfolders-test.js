@@ -80,6 +80,28 @@ describe('groupfolders', function () {
         assert.equal(error.reason, MainError.NOT_FOUND);
     });
 
+    it('adds extra members and keeps the creator as owner', async function () {
+        await createUsers();
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+
+        await groupfolders.add('team', 'Team', alice.username, [
+            { username: alice.username, role: 'editor' },
+            { username: user.username, role: 'viewer' }
+        ], [
+            { groupId: 'gid-1', role: 'editor' }
+        ]);
+
+        const folder = await groupfolders.get('team');
+        assert.deepEqual(folder.members, [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'viewer' }
+        ]);
+        assert.deepEqual(folder.groupMembers, [
+            { groupId: 'gid-1', role: 'editor' }
+        ]);
+        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+    });
+
     it('can update members and name', async function () {
         await createUsers();
 

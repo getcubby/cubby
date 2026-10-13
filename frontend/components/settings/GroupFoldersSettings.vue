@@ -229,7 +229,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
     </Dialog>
 
     <Dialog
-      :title="`Edit group folder ${groupFolderEdit.id}`"
+      title="Edit group folder"
       ref="editGroupFolderDialog"
       reject-label="Cancel"
       reject-style="secondary"
@@ -241,6 +241,9 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
       <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>
       <label>Name</label>
       <TextInput v-model="groupFolderEdit.name" style="width: 100%;" />
+      <label>Slug</label>
+      <TextInput v-model="groupFolderEdit.id" readonly style="width: 100%;" />
+      <small class="helper-text">Used in the folder URL and cannot be changed.</small>
       <GroupFolderMembers :form="groupFolderEdit" :users="users" :groups="groups" />
     </Dialog>
 
@@ -251,7 +254,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
           <i class="fa-solid fa-user-group item-icon"></i>
         </template>
         <template #label>
-          {{ groupFolder.name }} <span v-if="groupFolder.name.toUpperCase() !== groupFolder.id.toUpperCase()" class="group-folder-slug">- {{ groupFolder.id }}/</span>
+          {{ groupFolder.name }}
         </template>
         <template #subtext>
           <div class="group-folder-subtext">{{ groupFolderMemberLabels(groupFolder) }}</div>
@@ -291,11 +294,6 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
 .group-folder-subtext {
   display: flex;
   gap: 8px;
-}
-
-.group-folder-slug {
-  color: var(--pankow-color-text-secondary);
-  font-size: 12px;
 }
 
 .group-folder-empty {

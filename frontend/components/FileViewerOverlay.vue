@@ -25,9 +25,12 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const viewer = ref('');
+const returnViewer = ref('');
+const animateViewer = ref(true);
 const currentItem = ref(null);
 const currentResource = ref(null);
 const currentSiblingEntries = ref([]);
+let openGeneration = 0;
 
 const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
@@ -38,10 +41,20 @@ const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
 
 function close() {
+  openGeneration += 1;
+  returnViewer.value = '';
+  animateViewer.value = true;
   viewer.value = '';
 }
 
 function onViewerClose() {
+  if (returnViewer.value && viewer.value !== returnViewer.value) {
+    const previous = returnViewer.value;
+    returnViewer.value = '';
+    presentViewer(previous);
+    return;
+  }
+
   close();
   emit('close');
 }
@@ -50,24 +63,55 @@ function onImageViewerNavigate(entry) {
   history.replaceState(null, '', `#files${entry.resourcePath}`);
 }
 
-async function openOffice(item) {
+async function openOffice(item, generation) {
+  if (generation !== undefined && generation !== openGeneration) return;
   viewer.value = 'office';
   await nextTick();
+  if (generation !== undefined && generation !== openGeneration) return;
   officeViewer.value.open(item);
 }
 
-async function openMarkdown(item, resource) {
+async function openMarkdown(item, resource, generation) {
   const raw = await DirectoryModel.getRawContent(resource);
   const textContent = typeof raw === 'string' ? raw : await raw.text();
+  if (generation !== undefined && generation !== openGeneration) return;
   markdownViewer.value.open(item, textContent);
   viewer.value = 'markdown';
 }
 
-async function openText(item, resource) {
+async function openText(item, resource, generation) {
   const raw = await DirectoryModel.getRawContent(resource);
   const textContent = typeof raw === 'string' ? raw : await raw.text();
+  if (generation !== undefined && generation !== openGeneration) return;
   textViewer.value.open(item, textContent);
   viewer.value = 'text';
+}
+
+async function presentViewer(viewerId) {
+  const item = currentItem.value;
+  const resource = currentResource.value;
+  if (!item || !resource) return;
+
+  const generation = ++openGeneration;
+  animateViewer.value = false;
+
+  if (viewerId === 'text' && textViewer.value.canHandle(item)) {
+    await openText(item, resource, generation);
+  } else if (viewerId === 'markdown' && markdownViewer.value.canHandle(item)) {
+    await openMarkdown(item, resource, generation);
+  } else if (viewerId === 'office' && MainModel.canHandleWithOffice(item)) {
+    await openOffice(item, generation);
+  } else {
+    returnViewer.value = '';
+    animateViewer.value = true;
+    await openFile(item, resource, currentSiblingEntries.value, viewerId);
+    return;
+  }
+
+  if (generation !== openGeneration) return;
+
+  await nextTick();
+  animateViewer.value = true;
 }
 
 async function openFile(item, resource, siblingEntries, preferredViewer) {
@@ -113,7 +157,10 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
 
 async function openWith(viewerId) {
   if (!currentItem.value || !currentResource.value) return;
-  await openFile(currentItem.value, currentResource.value, currentSiblingEntries.value, viewerId);
+  if (!viewer.value || viewer.value === viewerId) return;
+
+  returnViewer.value = viewer.value;
+  await presentViewer(viewerId);
 }
 
 defineExpose({ openFile, close, openWith });
@@ -121,37 +168,37 @@ defineExpose({ openFile, close, openWith });
 </script>
 
 <template>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'image'">
       <ImageViewer ref="imageViewer" @close="onViewerClose" :navigation-handler="onImageViewerNavigate" :download-handler="downloadHandler" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'text'">
       <TextViewer ref="textViewer" @close="onViewerClose" :save-handler="saveHandler" :readonly="readonly" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'pdf'">
       <PdfViewer ref="pdfViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :open-with-handler="() => openWith('text')" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-if="viewer === 'office'">
       <OfficeViewer ref="officeViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'threed'">
       <ThreeDViewer ref="threeDViewer" @close="onViewerClose" />
     </div>
   </Transition>
-  <Transition name="viewer-slide">
+  <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'generic'">
       <GenericViewer ref="genericViewer" @close="onViewerClose" />
     </div>

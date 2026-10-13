@@ -144,6 +144,22 @@ function toResourcePath(favorite) {
     return sanitize(`/home${favorite.filePath}`);
 }
 
+/** Sidebar-aligned label so "/" under My files is distinct from "/" in a group folder. */
+function getResultLocationLabel(entry) {
+    if (entry.share) {
+        const rootName = (entry.share.filePath || '').replace(/^\/+|\/+$/g, '');
+        return rootName ? `Shared · ${rootName}` : 'Shared with you';
+    }
+    if (entry.group) return entry.group.name || entry.group.id || 'Group folder';
+    return 'My files';
+}
+
+function getResultFolderPath(entry, fileName) {
+    const name = fileName || entry.fileName || '';
+    if (!entry.filePath || !name) return '/';
+    return entry.filePath.slice(0, -name.length) || '/';
+}
+
 function entryListSort(list, prop, desc) {
     var tmp = list.sort(function (a, b) {
         var av = a[prop];
@@ -172,5 +188,7 @@ export {
     prettyType,
     getEntryIdentifier,
     toResourcePath,
+    getResultLocationLabel,
+    getResultFolderPath,
     entryListSort
 };

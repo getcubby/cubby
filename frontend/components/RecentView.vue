@@ -3,8 +3,10 @@
 import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
+import { getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import EmptyState from './EmptyState.vue';
 import { Button, ButtonGroup, ProgressBar } from '@cloudron/pankow';
+import { prettyFileSize } from '@cloudron/pankow/utils';
 
 const emit = defineEmits(['item-activated']);
 
@@ -51,6 +53,15 @@ function onActivateItem(entry) {
   emit('item-activated', entry);
 }
 
+function entryMenu(entry) {
+  if (!entry.parentFolderUrl) return [];
+  return [{
+    label: 'Open folder',
+    icon: 'fa-regular fa-folder-open',
+    action: () => { window.location.href = entry.parentFolderUrl; },
+  }];
+}
+
 function iconError(event, entry) {
   event.target.src = `${API_ORIGIN}/mime-types/application-x-generic.svg`;
 
@@ -85,8 +96,18 @@ function iconError(event, entry) {
         <div :class="viewMode === 'list' ? 'list' : 'grid'">
           <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
             <img class="entry-icon" :src="entry.previewUrl" @error="iconError($event, entry)"/>
-            <span>{{ entry.fileName }}</span>
-            <Button small outline :href="entry.parentFolderUrl" @click.stop class="open-folder" v-if="entry.parentFolderUrl">Open folder</Button>
+            <div class="entry-body">
+              <span class="entry-name">{{ entry.fileName }}</span>
+              <div v-if="viewMode === 'list'" class="entry-path-row">
+                <span class="entry-location">{{ getResultLocationLabel(entry) }}</span>
+                <span class="entry-folder-path">{{ getResultFolderPath(entry) }}</span>
+              </div>
+            </div>
+            <span v-if="viewMode === 'list'" class="entry-size">{{ prettyFileSize(entry.size) }}</span>
+            <div v-if="viewMode === 'list' && entry.parentFolderUrl" class="entry-actions" @click.stop>
+              <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
+            </div>
+            <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @click.stop class="open-folder">Open folder</Button>
           </div>
         </div>
       </div>
@@ -180,11 +201,25 @@ function iconError(event, entry) {
   background-color: var(--pankow-color-background-hover);
 }
 
-.entry > span {
+.entry-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.grid .entry-body {
+  width: 100%;
+  align-items: center;
+}
+
+.entry-name {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   width: 100%;
+}
+
+.grid .entry-name {
   margin: 10px;
   text-align: center;
 }
@@ -198,7 +233,7 @@ function iconError(event, entry) {
   height: 48px;
 }
 
-.grid .entry:hover > span {
+.grid .entry:hover .entry-name {
   overflow: visible;
   width: auto;
   margin: 5px;
@@ -220,11 +255,44 @@ function iconError(event, entry) {
   flex-shrink: 0;
 }
 
-.list .entry > span {
-  text-align: left;
-  width: auto;
+.list .entry-body {
   flex-grow: 1;
   margin: 0 10px;
+}
+
+.entry-path-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.entry-location {
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pankow-color-text-secondary);
+}
+
+.entry-folder-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-size {
+  flex-shrink: 0;
+  margin-right: 8px;
+  color: var(--pankow-color-text-secondary);
+  font-size: 13px;
+}
+
+.entry-actions {
+  flex-shrink: 0;
 }
 
 .grid .open-folder {

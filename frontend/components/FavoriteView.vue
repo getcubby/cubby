@@ -2,8 +2,10 @@
 
 import { ref, onMounted } from 'vue';
 import FavoriteModel from '../models/FavoriteModel.js';
+import { getFilesViewHashHref, getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import EmptyState from './EmptyState.vue';
-import { Icon, ProgressBar } from '@cloudron/pankow';
+import { Button, Icon, ProgressBar } from '@cloudron/pankow';
+import { prettyFileSize } from '@cloudron/pankow/utils';
 
 const favorites = ref([]);
 const busy = ref(true);
@@ -23,6 +25,21 @@ async function refresh() {
 async function onUnFavorite(entry) {
   await FavoriteModel.remove(entry.favorite.id);
   favorites.value = favorites.value.filter(item => item.favorite?.id !== entry.favorite.id);
+}
+
+function parentFolderUrl(entry) {
+  if (entry.share && entry.filePath === '/') return null;
+  return getFilesViewHashHref(entry, getResultFolderPath(entry));
+}
+
+function entryMenu(entry) {
+  const url = parentFolderUrl(entry);
+  if (!url) return [];
+  return [{
+    label: 'Open folder',
+    icon: 'fa-regular fa-folder-open',
+    action: () => { window.location.href = url; },
+  }];
 }
 
 function iconError(event, entry) {
@@ -46,15 +63,23 @@ onMounted(refresh);
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="favorite-body" v-else>
       <div v-if="favorites.length" class="favorite-container">
-        <a v-for="entry in favorites" :key="entry.id" class="favorite-item" :href="entry.href">
-          <img :src="entry.previewUrl || entry.icon" ref="iconImage" @error="iconError($event)"/>
-          <div>
-            {{ entry.fileName }}<br/>
-            <span class="favorite-item-sub">{{ entry.filePath.slice(0, -(entry.fileName.length)) }}</span>
-          </div>
-          <div style="flex-grow: 1;"></div>
+        <div v-for="entry in favorites" :key="entry.id" class="favorite-item">
+          <a class="favorite-main" :href="entry.href">
+            <img :src="entry.previewUrl || entry.icon" @error="iconError($event, entry)"/>
+            <div class="favorite-text">
+              <span class="favorite-name">{{ entry.fileName }}</span>
+              <div class="favorite-path-row">
+                <span class="favorite-location">{{ getResultLocationLabel(entry) }}</span>
+                <span class="favorite-folder-path">{{ getResultFolderPath(entry) }}</span>
+              </div>
+            </div>
+            <span v-if="typeof entry.size === 'number'" class="favorite-size">{{ prettyFileSize(entry.size) }}</span>
+          </a>
           <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
-        </a>
+          <div v-if="parentFolderUrl(entry)" class="favorite-actions" @click.stop>
+            <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
+          </div>
+        </div>
       </div>
       <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
     </div>
@@ -91,49 +116,91 @@ onMounted(refresh);
 }
 
 .favorite-item {
-  --background-color-hover: #ededed;
-  --background-color-selected: #dbedfb;
-  --border-color-focus: #b3cfe5;
-
   display: flex;
   align-items: center;
-  padding: 6px 10px;
-  margin-bottom: 5px;
-  overflow: hidden;
   width: 100%;
-  border-radius: 3px;
-  transition: all 100ms;
-  border: 2px solid transparent;
-}
-
-@media (prefers-color-scheme: dark) {
-  .favorite-item {
-    --background-color-hover: rgba(255, 255, 255, 0.1);
-    --background-color-selected: rgba(255, 255, 255, 0.2);
-    --border-color-focus: rgba(255, 255, 255, 0.3);
-  }
-}
-
-.favorite-item > img {
-  margin-right: 10px;
-  width: 35px;
-  height: 35px;
-  object-fit: cover;
+  padding: 6px 10px;
+  border-radius: var(--pankow-border-radius);
+  cursor: pointer;
 }
 
 .favorite-item:hover {
-  background-color: var(--background-color-hover);
+  background-color: var(--pankow-color-background-hover);
 }
 
-.favorite-item-sub {
-  opacity: 0.7;
-  font-size: 10px;
+.favorite-main {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.favorite-main > img {
+  width: 35px;
+  height: 35px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.favorite-text {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+  margin: 0 10px;
+}
+
+.favorite-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.favorite-path-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.favorite-location,
+.favorite-folder-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-location {
+  flex-shrink: 0;
+  max-width: 45%;
+  color: var(--pankow-color-text-secondary);
+}
+
+.favorite-folder-path {
+  min-width: 0;
+}
+
+.favorite-size {
+  flex-shrink: 0;
+  margin-right: 8px;
+  color: var(--pankow-color-text-secondary);
+  font-size: 13px;
+}
+
+.favorite-actions {
+  flex-shrink: 0;
 }
 
 .star-icon {
-  width: 48px;
+  flex-shrink: 0;
+  width: 36px;
   color: #ffcb00;
-  padding: 10px;
+  padding: 8px;
 }
 
 .star-icon:hover {

@@ -46,11 +46,12 @@ function testUserResolver(req) {
 
 async function start() {
     if (gHttpServer) return;
-    const oidcConfig = constants.TEST ? null : (process.env.CLOUDRON ? {} : {
+    const oidcConfig = constants.TEST ? null : (process.env.CLOUDRON ? { extraScope: 'offline_access' } : {
         issuer: process.env.OIDC_ISSUER_BASE_URL,
         clientId: process.env.OIDC_CLIENT_ID,
         clientSecret: process.env.OIDC_CLIENT_SECRET,
-        callbackUrl: `${APP_ORIGIN}/auth/callback`
+        callbackUrl: `${APP_ORIGIN}/auth/callback`,
+        extraScope: 'offline_access'
     });
 
     const { app, router, express } = await tegel.createExpressApp({

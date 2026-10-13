@@ -5,7 +5,7 @@
   "tagline": "All the file sharing you need, none of the bloat",
   "version": "2.24.0",
   "upstreamVersion": "2.24.0",
-  "minBoxVersion": "10.0.5",
+  "minBoxVersion": "10.1.5",
   "healthCheckPath": "/api/healthcheck",
   "icon": "file://logo.png",
   "description": "file://DESCRIPTION.md",
@@ -38,7 +38,8 @@
       "supportsDisplayName": true
     },
     "oidc": {
-      "loginRedirectUri": "/auth/callback,/api/v1/mobile/callback,io.cloudron.cubby://auth/callback"
+      "loginRedirectUri": "/auth/callback",
+      "publicClientLoginRedirectUri": "io.cloudron.cubby://auth/callback"
     },
     "scim": {}
   },

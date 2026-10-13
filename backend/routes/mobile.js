@@ -4,7 +4,7 @@ import { HttpSuccess, HttpError } from '@cloudron/connect-lastmile';
 import safe from '@cloudron/safetydance';
 import mobiletokens from '../mobiletokens.js';
 import users from '../users.js';
-import { authorizationUrl, exchangeCode } from '../mobileoidc.js';
+import { authorizationUrl, exchangeCode, issuer } from '../mobileoidc.js';
 
 const debugLog = debug('cubby:routes:mobile');
 
@@ -30,7 +30,11 @@ function rememberState(state) {
 function getConfig(req, res, next) {
     next(new HttpSuccess(200, {
         methods: [ 'oidc' ],
-        oidc: { loginUrl: '/api/v1/mobile/start' }
+        oidc: {
+            issuer: issuer(),
+            clientId: process.env.CLOUDRON_OIDC_PUBLIC_CLIENT_ID || '',
+            redirectUri: CUSTOM_SCHEME_REDIRECT
+        }
     }));
 }
 

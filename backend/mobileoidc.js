@@ -1,6 +1,6 @@
 let metadata = null;
 
-function issuer() {
+export function issuer() {
     return (process.env.CLOUDRON_OIDC_ISSUER || process.env.OIDC_ISSUER_BASE_URL || '').replace(/\/$/, '');
 }
 

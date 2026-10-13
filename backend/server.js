@@ -7,7 +7,6 @@ import groupFolders from './routes/groupfolders.js';
 import groups from './routes/groups.js';
 import http from 'http';
 import { lastMile } from '@cloudron/connect-lastmile';
-import { resolveMobileToken } from './mobileauth.js';
 import misc from './routes/misc.js';
 import mobile from './routes/mobile.js';
 import office from './routes/office.js';
@@ -62,9 +61,6 @@ async function start() {
         });
 
         router.del = router.delete;
-
-        // map mobile API tokens to the OIDC access token before tegel auth runs
-        router.use(resolveMobileToken);
 
         // Auth routes (tegel)
         router.get('/auth/login', tegel.oidcRedirectToLoginProvider);
@@ -138,11 +134,6 @@ async function start() {
         router.post('/api/v1/office/wopi/files/:handleId', office.wopiAuth, office.postFile);
 
         router.get('/api/v1/mobile/config', mobile.getConfig);
-        router.get('/api/v1/mobile/start', mobile.mobileStart);
-        router.get('/api/v1/mobile/callback', mobile.callbackLandingFallback);
-        router.post('/api/v1/mobile/code-to-token', express.json(), mobile.codeToToken);
-
-        router.get('/.well-known/assetlinks.json', mobile.assetLinks);
 
         app.use('/', express.static(path.resolve(__dirname, '../frontend-dist')));
         app.use(lastMile());

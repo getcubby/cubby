@@ -30,17 +30,6 @@ CREATE TABLE IF NOT EXISTS tokens(
     FOREIGN KEY(username) REFERENCES users(username)
 );
 
-CREATE TABLE IF NOT EXISTS mobile_tokens(
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT,
-    access_token_expires_at INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
-
-    FOREIGN KEY(username) REFERENCES users(username)
-);
-
 CREATE TABLE IF NOT EXISTS groups(
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -142,7 +131,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const MIGRATIONS = [
     {
@@ -171,6 +160,14 @@ const MIGRATIONS = [
                 CREATE INDEX IF NOT EXISTS file_activity_actor_idx ON file_activity (actor, created_at DESC);
                 COMMIT;
             `);
+        }
+    },
+    {
+        // Android login is PKCE against the public OIDC client. The app sends
+        // that access token directly, so the opaque mobile token rows are unused.
+        version: 3,
+        up(db) {
+            db.exec('DROP TABLE IF EXISTS mobile_tokens');
         }
     }
 ];

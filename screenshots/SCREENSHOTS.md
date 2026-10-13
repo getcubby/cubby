@@ -62,7 +62,7 @@ Leave `~/.cloudron.json` logged in. Do not paste the API token into chat.
 
 ## Files
 
-Log in once. The first login copies `skeleton/` into My files (`Welcome.md` and `Documents/`). Delete both before adding the set below. `DELETE /api/v1/files?path=/home/Welcome.md` and `DELETE /api/v1/files?path=/home/Documents`. On a retake, delete the files and folders in this section and delete the Design group folder, then create them again. The signed-in user already exists, so the skeleton is not copied a second time.
+Log in once. The first login copies `skeleton/` into My files. The git skeleton is `Welcome.md` and `Documents/`. The Cloudron image also includes `Pictures/` and `Videos/`. Delete all of those before adding the set below: `DELETE /api/v1/files?path=/home/Welcome.md`, and the same for `/home/Documents`, `/home/Pictures`, and `/home/Videos`. On a retake, delete the files and folders in this section and delete the Design group folder, then create them again. The signed-in user already exists, so the skeleton is not copied a second time.
 
 Create a folder with `POST /api/v1/files?directory=true&path=...`. Create a file with `POST /api/v1/files?path=...` and the text as the body. Paths below are the `path` query. Lists show folders first, then files A–Z.
 

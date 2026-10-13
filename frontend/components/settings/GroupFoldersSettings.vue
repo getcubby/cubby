@@ -290,7 +290,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
               <span v-if="member.username === profile?.username" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
               <span v-else class="member-role-controls">
                 <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
-                <Button icon="fa-solid fa-xmark" plain tool @click="onRemoveMember(index)" />
+                <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveMember(index)" />
               </span>
             </div>
           </template>
@@ -304,7 +304,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
               <span>{{ groupNameById[member.groupId] || member.groupId }}</span>
               <span class="member-role-controls">
                 <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
-                <Button icon="fa-solid fa-xmark" plain tool @click="onRemoveGroupMember(index)" />
+                <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveGroupMember(index)" />
               </span>
             </div>
           </template>
@@ -312,7 +312,7 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
         <div class="add-member-row">
           <SingleSelect v-model="groupFolderEdit.newMember" :options="memberOptions" option-key="id" option-label="label" placeholder="Select user or group" style="flex-grow: 1;" />
           <SingleSelect v-model="groupFolderEdit.newMemberRole" :options="roleOptions" option-key="value" style="width: 120px;" />
-          <Button icon="fa-solid fa-plus" :disabled="!groupFolderEdit.newMember" @click="onAddMember()">Add</Button>
+          <Button icon="fa-solid fa-plus" outline :disabled="!groupFolderEdit.newMember" @click="onAddMember()">Add</Button>
         </div>
       </FormGroup>
     </Dialog>

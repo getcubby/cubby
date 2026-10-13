@@ -823,7 +823,7 @@ defineExpose({
             :fallback-icon="`${BASE_URL}mime-types/application-x-generic.svg`"
           >
             <template #empty>
-              <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" description="Create new or upload existing files" />
+              <EmptyState v-if="activeResourceType === 'home' || (activeResourceType === 'shares' && breadCrumbs.length) || (activeResourceType === 'groupfolders' && breadCrumbs.length)" icon="fa-regular fa-folder" title="No files" />
               <EmptyState
                 v-else-if="isGroupFoldersRoot"
                 icon="fa-solid fa-user-group"

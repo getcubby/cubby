@@ -770,7 +770,7 @@ defineExpose({
           <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
           <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           <div style="flex-grow: 1"></div>
-          <Button v-if="isGroupFoldersRoot" icon="fa-solid fa-gear" href="#settings" plain>Manage group folders</Button>
+          <Button v-if="isGroupFoldersRoot && entries.length" icon="fa-solid fa-gear" href="#settings" plain>Manage group folders</Button>
           <ButtonGroup style="margin-right: 40px">
             <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
             <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
@@ -828,9 +828,8 @@ defineExpose({
                 v-else-if="isGroupFoldersRoot"
                 icon="fa-solid fa-user-group"
                 title="No group folders"
-                description="Create a group folder to collaborate with others"
               >
-                <Button icon="fa-solid fa-plus" href="#settings">Create group folder</Button>
+                <Button icon="fa-solid fa-gear" href="#settings">Manage group folders</Button>
               </EmptyState>
               <EmptyState v-else-if="activeResourceType === 'shares' && !breadCrumbs.length" icon="fa-solid fa-share-nodes" title="Nothing shared with you" description="Files and folders others shared with you will show up here" />
             </template>

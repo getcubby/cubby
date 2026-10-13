@@ -196,7 +196,7 @@ defineExpose({
           <form @submit="onCreateShare" @submit.prevent>
             <InputGroup>
               <SingleSelect v-model="receiver" :options="receiverOptions" option-key="id" option-label="label" placeholder="Select a user or group"/>
-              <Button icon="fa-solid fa-check" success @click="onCreateShare" :disabled="!receiver">Create share</Button>
+              <Button icon="fa-solid fa-check" @click="onCreateShare" :disabled="!receiver">Create share</Button>
             </InputGroup>
             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
               <Checkbox id="shareReadonly" label="Read only" v-model="readonly" />
@@ -242,7 +242,7 @@ defineExpose({
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />
               <input type="date" v-model="shareLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expires"/>
-              <Button icon="fa-solid fa-link" success @click="onCreateShareLink">Create and copy link</Button>
+              <Button icon="fa-solid fa-link" @click="onCreateShareLink">Create and copy link</Button>
             </div>
           </div>
         </template>

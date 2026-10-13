@@ -79,7 +79,6 @@ defineExpose({ open });
     reject-label="Cancel"
     reject-style="secondary"
     confirm-label="Rename"
-    confirm-style="success"
     :dismissable="!busy"
     :reject-active="!busy"
     :confirm-busy="busy"

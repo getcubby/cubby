@@ -256,7 +256,6 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
       confirm-label="Add"
       :confirm-busy="groupFolderAdd.busy"
       :confirm-active="!!groupFolderAdd.name"
-      confirm-style="success"
       @confirm="onAddGroupFolderSubmit"
     >
       <p class="has-error" v-show="groupFolderAdd.error">{{ groupFolderAdd.error }}</p>
@@ -274,7 +273,6 @@ onMounted(() => { loadGroups(); refreshGroupFolders(); });
       confirm-label="Save"
       :confirm-busy="groupFolderEdit.busy"
       :confirm-active="!!groupFolderEdit.name"
-      confirm-style="success"
       @confirm="onEditGroupFolderSubmit"
     >
       <p class="has-error" v-show="groupFolderEdit.error">{{ groupFolderEdit.error }}</p>

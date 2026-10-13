@@ -134,7 +134,7 @@ defineExpose({
         <div style="display: flex; align-items: center; justify-content: space-between;">
           <Checkbox id="expireFileDropAt" label="Expire at" v-model="filedropLink.expires" />
           <input type="date" v-model="filedropLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!filedropLink.expires"/>
-          <Button icon="fa-solid fa-cloud-arrow-up" success @click="onCreate">Create file drop</Button>
+          <Button icon="fa-solid fa-cloud-arrow-up" @click="onCreate">Create file drop</Button>
         </div>
       </div>
     </div>

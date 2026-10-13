@@ -49,8 +49,10 @@ onMounted(() => {
       <div class="settings-content content">
         <h1 class="settings-page-header">Settings</h1>
 
+        <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
+
         <Section title="WebDAV">
-          <p>
+          <p class="webdav-intro">
             Use this URL in a file manager, tablet, or backup app. Authenticate with your username and an
             <a v-if="appPasswordsUrl" :href="appPasswordsUrl" target="_blank" rel="noopener">App password</a>
             <template v-else>App password</template>
@@ -68,14 +70,7 @@ onMounted(() => {
             <TextInput id="webdavUsername" readonly :model-value="profile.username" style="flex-grow: 1" />
             <ClipboardButton :value="profile.username" />
           </InputGroup>
-
-          <p class="webdav-hint">
-            The root lists <strong>home</strong>, <strong>shares</strong>, and <strong>groupfolders</strong>.
-            Append <code>home/</code> to open your files directly.
-          </p>
         </Section>
-
-        <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
       </div>
     </div>
   </div>
@@ -112,17 +107,20 @@ onMounted(() => {
   font-weight: var(--pankow-font-weight-bold);
 }
 
+.webdav-intro {
+  margin: 0;
+}
+
+.webdav-intro a {
+  color: var(--pankow-color-primary);
+  text-decoration: underline;
+}
+
 .webdav-label {
   display: block;
   margin-top: 12px;
   margin-bottom: 4px;
   font-weight: var(--pankow-font-weight-bold);
-}
-
-.webdav-hint {
-  margin-top: 16px;
-  margin-bottom: 0;
-  color: var(--pankow-color-text-secondary);
 }
 
 </style>

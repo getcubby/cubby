@@ -22,7 +22,7 @@ async function refresh() {
 
 async function onUnFavorite(entry) {
   await FavoriteModel.remove(entry.favorite.id);
-  await refresh();
+  favorites.value = favorites.value.filter(item => item.favorite?.id !== entry.favorite.id);
 }
 
 function iconError(event, entry) {

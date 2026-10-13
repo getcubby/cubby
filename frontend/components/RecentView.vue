@@ -4,12 +4,18 @@ import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
 import EmptyState from './EmptyState.vue';
-import { Button, ProgressBar } from '@cloudron/pankow';
+import { Button, ButtonGroup, ProgressBar } from '@cloudron/pankow';
 
 const emit = defineEmits(['item-activated']);
 
 const buckets = ref([]);
 const busy = ref(true);
+const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
+
+function setViewMode(mode) {
+  viewMode.value = mode;
+  localStorage.viewMode = mode;
+}
 
 onMounted(async () => {
   const entries = await MainModel.recent();
@@ -61,6 +67,13 @@ function iconError(event, entry) {
 
 <template>
   <div class="recent">
+    <div class="recent-toolbar">
+      <div class="recent-toolbar-spacer"></div>
+      <ButtonGroup>
+        <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
+        <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
+      </ButtonGroup>
+    </div>
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
     <div class="buckets" v-else>
       <div class="no-recents" v-if="buckets.length === 0">
@@ -69,9 +82,9 @@ function iconError(event, entry) {
       <div class="bucket" v-for="bucket in buckets" :key="bucket.label">
         <h2>{{ bucket.label }}</h2>
         <div class="hr"></div>
-        <div class="grid">
+        <div :class="viewMode === 'list' ? 'list' : 'grid'">
           <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
-            <img :src="entry.previewUrl" width="48" height="48" style="object-fit: cover;" @error="iconError($event, entry)"/>
+            <img class="entry-icon" :src="entry.previewUrl" @error="iconError($event, entry)"/>
             <span>{{ entry.fileName }}</span>
             <Button small outline :href="entry.parentFolderUrl" @click.stop class="open-folder" v-if="entry.parentFolderUrl">Open folder</Button>
           </div>
@@ -90,6 +103,17 @@ function iconError(event, entry) {
   height: 100%;
   flex-grow: 1;
   min-height: 0;
+}
+
+.recent-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px 0;
+  flex-shrink: 0;
+}
+
+.recent-toolbar-spacer {
+  flex-grow: 1;
 }
 
 .no-recents {
@@ -165,7 +189,16 @@ function iconError(event, entry) {
   text-align: center;
 }
 
-.entry:hover > span {
+.entry-icon {
+  object-fit: cover;
+}
+
+.grid .entry-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.grid .entry:hover > span {
   overflow: visible;
   width: auto;
   margin: 5px;
@@ -174,11 +207,31 @@ function iconError(event, entry) {
   background-color: var(--pankow-color-background-hover);
 }
 
-.open-folder {
+.list .entry {
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: 6px 10px;
+}
+
+.list .entry-icon {
+  width: 35px;
+  height: 35px;
+  flex-shrink: 0;
+}
+
+.list .entry > span {
+  text-align: left;
+  width: auto;
+  flex-grow: 1;
+  margin: 0 10px;
+}
+
+.grid .open-folder {
   visibility: hidden;
 }
 
-.entry:hover > .open-folder {
+.grid .entry:hover > .open-folder {
   visibility: visible;
 }
 

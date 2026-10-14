@@ -11,18 +11,16 @@ function isScimEnabled() {
 }
 
 /**
- * @returns {Promise<{ created: number, updated: number, skipped: number, idToUsername: Map<string, string> }>}
+ * @param {Array<{ id?: string, username: string, displayName?: string, email?: string, active?: boolean }>} scimUsers
+ * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number, idToUsername: Map<string, string> }>}
  */
-export async function syncScimUsers() {
-    if (!scim.isEnabled()) {
-        return { created: 0, updated: 0, skipped: 0, idToUsername: new Map() };
-    }
-
-    const scimUsers = await scim.getAllUsers();
+export async function reconcileScimUsers(scimUsers) {
     let created = 0;
     let updated = 0;
+    let deactivated = 0;
     let skipped = 0;
     const idToUsername = new Map();
+    const seenUsernames = new Set();
 
     for (const user of scimUsers) {
         const userName = user.username;
@@ -31,11 +29,13 @@ export async function syncScimUsers() {
             continue;
         }
 
+        // absent and inactive directory users stay out of group membership maps
         if (user.active === false) {
             skipped += 1;
             continue;
         }
 
+        seenUsernames.add(userName);
         if (user.id) idToUsername.set(String(user.id), userName);
 
         const result = await users.upsertFromScim(userName, { displayName: user.displayName, email: user.email || userName });
@@ -46,7 +46,23 @@ export async function syncScimUsers() {
         }
     }
 
-    return { created, updated, skipped, idToUsername };
+    for (const local of await users.list()) {
+        if (seenUsernames.has(local.username)) continue;
+        if (!local.active) continue;
+
+        await users.setActive(local.username, false);
+        deactivated += 1;
+    }
+
+    return { created, updated, deactivated, skipped, idToUsername };
+}
+
+export async function syncScimUsers() {
+    if (!scim.isEnabled()) {
+        return { created: 0, updated: 0, deactivated: 0, skipped: 0, idToUsername: new Map() };
+    }
+
+    return reconcileScimUsers(await scim.getAllUsers());
 }
 
 /**
@@ -114,8 +130,8 @@ export async function runScimSyncTick() {
         return;
     }
 
-    if (userStats.created > 0 || userStats.updated > 0) {
-        console.log(`SCIM sync: users created=${userStats.created} updated=${userStats.updated} skipped=${userStats.skipped}`);
+    if (userStats.created > 0 || userStats.updated > 0 || userStats.deactivated > 0) {
+        console.log(`SCIM sync: users created=${userStats.created} updated=${userStats.updated} deactivated=${userStats.deactivated} skipped=${userStats.skipped}`);
     }
 
     const [groupsError, groupStats] = await safe(syncScimGroups(userStats.idToUsername));

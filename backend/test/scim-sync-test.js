@@ -3,8 +3,52 @@ import assert from 'node:assert/strict';
 import common from './common.js';
 import groupfolders from '../groupfolders.js';
 import groups from '../groups.js';
-import { reconcileScimGroups } from '../scimSync.js';
+import { reconcileScimGroups, reconcileScimUsers } from '../scimSync.js';
 import users from '../users.js';
+
+describe('scim user sync', function () {
+    const { databaseSetup, cleanup, alice, user } = common;
+
+    beforeEach(databaseSetup);
+    after(cleanup);
+
+    it('marks a missing or inactive user inactive and does not create an unknown one', async function () {
+        await users.add(alice);
+        await users.add(user);
+
+        const stats = await reconcileScimUsers([
+            { id: 'gone', username: alice.username, active: false, email: alice.email, displayName: alice.displayName },
+            { id: 'never', username: 'nobody', active: false }
+        ]);
+
+        assert.equal(stats.deactivated, 2);
+        assert.equal(stats.created, 0);
+        assert.equal((await users.get(alice.username)).active, false);
+        assert.equal((await users.get(user.username)).active, false);
+        assert.equal(await users.get('nobody'), null);
+        assert.equal(stats.idToUsername.has('gone'), false);
+    });
+
+    it('reactivates a user who returns to the directory', async function () {
+        await users.add(user);
+        await users.setActive(user.username, false);
+
+        const stats = await reconcileScimUsers([{
+            id: 'u-1',
+            username: user.username,
+            email: 'new@test.local',
+            displayName: 'Back',
+            active: true
+        }]);
+
+        assert.equal(stats.deactivated, 0);
+        assert.equal(stats.updated, 1);
+        const restored = await users.get(user.username);
+        assert.equal(restored.active, true);
+        assert.equal(restored.email, 'new@test.local');
+        assert.equal(stats.idToUsername.get('u-1'), user.username);
+    });
+});
 
 describe('scim group sync', function () {
     const { databaseSetup, cleanup, alice, user } = common;

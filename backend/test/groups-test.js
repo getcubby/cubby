@@ -43,6 +43,18 @@ describe('groups', function () {
         assert.equal(result.updated, true);
 
         assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ user.username ]);
+        assert.equal((await groups.get('gid-1')).active, true);
+    });
+
+    it('keeps members when a group is marked inactive', async function () {
+        await createUsers();
+
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.username, user.username ]);
+        await groups.setActive('gid-1', false);
+
+        const group = await groups.get('gid-1');
+        assert.equal(group.active, false);
+        assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ alice.username, user.username ]);
     });
 
     it('rejects unknown users in membership', async function () {

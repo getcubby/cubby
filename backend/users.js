@@ -14,6 +14,8 @@ function postProcess(data) {
     data.displayName = data.display_name;
     delete data.display_name;
 
+    data.active = !!data.active;
+
     return data;
 }
 
@@ -72,12 +74,20 @@ async function update(username, user) {
     await database.query('UPDATE users SET email = ?, display_name = ? WHERE username = ?', [ user.email, user.displayName, username ]);
 }
 
+async function setActive(username, active) {
+    assert.strictEqual(typeof username, 'string');
+    assert.strictEqual(typeof active, 'boolean');
+
+    await database.query('UPDATE users SET active = ? WHERE username = ?', [ active, username ]);
+}
+
 async function ensureUser(data) {
     const { username, email, displayName } = data;
 
     debugLog(`ensureUser: ${username}`);
     const [error] = await safe(add({ username, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
+    if (error && error.reason === MainError.ALREADY_EXISTS) await setActive(username, true);
 
     return await get(username);
 }
@@ -99,6 +109,7 @@ async function upsertFromScim(username, contact) {
 
     if (await exists(username)) {
         await update(username, { email, displayName });
+        await setActive(username, true);
         return { created: false, updated: true };
     }
 
@@ -106,6 +117,7 @@ async function upsertFromScim(username, contact) {
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
     if (error && error.reason === MainError.ALREADY_EXISTS) {
         await update(username, { email, displayName });
+        await setActive(username, true);
         return { created: false, updated: true };
     }
 
@@ -119,6 +131,7 @@ export default {
     getByAccessToken,
     list,
     update,
+    setActive,
     ensureUser,
     upsertFromScim
 };

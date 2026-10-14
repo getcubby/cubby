@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users(
     email TEXT NOT NULL,
     display_name TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
-    source TEXT DEFAULT ''
+    active INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS tokens(
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS tokens(
 CREATE TABLE IF NOT EXISTS groups(
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    source TEXT NOT NULL DEFAULT ''
+    active INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS group_members(
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 const MIGRATIONS = [
     {
@@ -168,6 +168,19 @@ const MIGRATIONS = [
         version: 3,
         up(db) {
             db.exec('DROP TABLE IF EXISTS mobile_tokens');
+        }
+    },
+    {
+        // Directory presence is an active flag. source only existed so SCIM sync
+        // could delete groups it had created; every account comes from SCIM or OIDC.
+        version: 4,
+        up(db) {
+            db.exec(`
+                ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+                ALTER TABLE groups ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+                ALTER TABLE users DROP COLUMN source;
+                ALTER TABLE groups DROP COLUMN source;
+            `);
         }
     }
 ];

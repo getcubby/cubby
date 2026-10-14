@@ -69,5 +69,15 @@ describe('users', function () {
         const result = await users.get('scimuser');
         assert.equal(result.email, 'scim-new@test.local');
         assert.equal(result.displayName, 'Scim Updated');
+        assert.equal(result.active, true);
+    });
+
+    it('can mark a user inactive and restore them on login', async function () {
+        await users.add(user);
+        await users.setActive(user.username, false);
+        assert.equal((await users.get(user.username)).active, false);
+
+        const restored = await users.ensureUser(user);
+        assert.equal(restored.active, true);
     });
 });

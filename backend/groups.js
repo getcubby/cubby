@@ -6,11 +6,9 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:groups');
 
-const SOURCES = {
-    SCIM: 'scim'
-};
-
 function postProcess(group) {
+    group.active = !!group.active;
+
     return group;
 }
 
@@ -62,9 +60,7 @@ async function add(group) {
     assert.strictEqual(typeof group.id, 'string');
     assert.strictEqual(typeof group.name, 'string');
 
-    const source = group.source || '';
-
-    const [error] = await safe(database.query('INSERT INTO groups (id, name, source) VALUES (?, ?, ?)', [ group.id, group.name, source ]));
+    const [error] = await safe(database.query('INSERT INTO groups (id, name) VALUES (?, ?)', [ group.id, group.name ]));
     if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'group already exists');
     if (error) throw error;
 }
@@ -74,6 +70,13 @@ async function update(id, name) {
     assert.strictEqual(typeof name, 'string');
 
     await database.query('UPDATE groups SET name = ? WHERE id = ?', [ name, id ]);
+}
+
+async function setActive(id, active) {
+    assert.strictEqual(typeof id, 'string');
+    assert.strictEqual(typeof active, 'boolean');
+
+    await database.query('UPDATE groups SET active = ? WHERE id = ?', [ active, id ]);
 }
 
 async function setMembers(groupId, usernames) {
@@ -127,14 +130,16 @@ async function upsertFromScim(id, name, memberUsernames) {
 
     if (await get(id)) {
         await update(id, name);
+        await setActive(id, true);
         await setMembers(id, memberUsernames);
         return { created: false, updated: true };
     }
 
-    const [error] = await safe(add({ id, name, source: SOURCES.SCIM }));
+    const [error] = await safe(add({ id, name }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
     if (error && error.reason === MainError.ALREADY_EXISTS) {
         await update(id, name);
+        await setActive(id, true);
     }
 
     await setMembers(id, memberUsernames);
@@ -143,7 +148,6 @@ async function upsertFromScim(id, name, memberUsernames) {
 }
 
 export default {
-    SOURCES,
     get,
     list,
     listWithMembers,
@@ -151,6 +155,7 @@ export default {
     getMembershipGroupIds,
     add,
     update,
+    setActive,
     setMembers,
     remove,
     upsertFromScim

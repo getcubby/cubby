@@ -50,18 +50,14 @@ export async function syncScimUsers() {
 }
 
 /**
+ * @param {Array<{ id: string, name?: string, memberIds: string[] }>} scimGroups
  * @param {Map<string, string>} idToUsername
- * @returns {Promise<{ created: number, updated: number, removed: number, skipped: number }>}
+ * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number }>}
  */
-export async function syncScimGroups(idToUsername) {
-    if (!scim.isEnabled()) {
-        return { created: 0, updated: 0, removed: 0, skipped: 0 };
-    }
-
-    const scimGroups = await scim.getAllGroups();
+export async function reconcileScimGroups(scimGroups, idToUsername) {
     let created = 0;
     let updated = 0;
-    let removed = 0;
+    let deactivated = 0;
     let skipped = 0;
     const seenIds = new Set();
 
@@ -89,16 +85,24 @@ export async function syncScimGroups(idToUsername) {
         }
     }
 
-    // remove scim groups that no longer exist upstream
+    // keep the row and its memberships; hide the group from assign lists
     for (const group of await groups.list()) {
-        if (group.source !== groups.SOURCES.SCIM) continue;
         if (seenIds.has(group.id)) continue;
+        if (!group.active) continue;
 
-        await groups.remove(group.id);
-        removed += 1;
+        await groups.setActive(group.id, false);
+        deactivated += 1;
     }
 
-    return { created, updated, removed, skipped };
+    return { created, updated, deactivated, skipped };
+}
+
+export async function syncScimGroups(idToUsername) {
+    if (!scim.isEnabled()) {
+        return { created: 0, updated: 0, deactivated: 0, skipped: 0 };
+    }
+
+    return reconcileScimGroups(await scim.getAllGroups(), idToUsername);
 }
 
 export async function runScimSyncTick() {
@@ -120,9 +124,11 @@ export async function runScimSyncTick() {
         return;
     }
 
-    if (groupStats.created > 0 || groupStats.updated > 0 || groupStats.removed > 0) {
-        console.log(`SCIM sync: groups created=${groupStats.created} updated=${groupStats.updated} removed=${groupStats.removed} skipped=${groupStats.skipped}`);
+    if (groupStats.created > 0 || groupStats.updated > 0 || groupStats.deactivated > 0) {
+        console.log(`SCIM sync: groups created=${groupStats.created} updated=${groupStats.updated} deactivated=${groupStats.deactivated} skipped=${groupStats.skipped}`);
+    }
 
+    if (groupStats.created > 0 || groupStats.updated > 0) {
         // group membership affects which groupfolders a user can access and search
         recoll.index().catch((err) => console.error('SCIM sync reindex failed:', err));
     }

@@ -40,8 +40,12 @@ function higherRole(a, b) {
 async function getMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query('SELECT username, role FROM groupfolders_members WHERE groupfolder_id = ? ORDER BY username', [ id ]);
-    return result.rows.map((m) => ({ username: m.username, role: m.role }));
+    const result = await database.query(`SELECT groupfolders_members.username, groupfolders_members.role, users.active
+        FROM groupfolders_members
+        LEFT JOIN users ON users.username = groupfolders_members.username
+        WHERE groupfolders_members.groupfolder_id = ?
+        ORDER BY groupfolders_members.username`, [ id ]);
+    return result.rows.map((m) => ({ username: m.username, role: m.role, active: !!m.active }));
 }
 
 async function getGroupMembers(id) {

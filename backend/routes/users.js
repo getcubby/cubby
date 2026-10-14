@@ -82,7 +82,7 @@ async function list(req, res, next) {
     const [error, result] = await safe(users.list());
     if (error) return next(MainError.toHttpError(error));
 
-    return next(new HttpSuccess(200, { users: result }));
+    return next(new HttpSuccess(200, { users: result.filter((user) => user.active) }));
 }
 
 export default {

@@ -32,6 +32,11 @@ const groupNameById = computed(() => {
   return map;
 });
 
+// Inactive members stay in the form so a save does not drop their membership.
+const visibleMembers = computed(() => props.form.members
+  .map((member, index) => ({ member, index }))
+  .filter(({ member }) => member.active !== false));
+
 const memberOptions = computed(() => {
   const options = [];
 
@@ -91,7 +96,7 @@ function onRemoveGroupMember(index) {
 <template>
   <FormGroup>
     <label>Members</label>
-    <ListItem v-for="(member, index) in form.members" :key="`u-${member.username}`">
+    <ListItem v-for="{ member, index } in visibleMembers" :key="`u-${member.username}`">
       <template #left>
         <i class="fa-solid fa-circle-user item-icon"></i>
       </template>

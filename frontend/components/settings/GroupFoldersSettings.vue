@@ -69,7 +69,7 @@ function currentUserRole(groupFolder) {
 }
 
 function groupFolderMemberLabels(groupFolder) {
-  const labels = groupFolder.members.map((m) => m.username);
+  const labels = groupFolder.members.filter((m) => m.active !== false).map((m) => m.username);
   for (const gm of (groupFolder.groupMembers || [])) {
     labels.push(groupNameById.value[gm.groupId] || gm.groupId);
   }

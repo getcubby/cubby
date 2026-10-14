@@ -33,8 +33,8 @@ describe('groupfolders', function () {
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'editor' }
+            { username: alice.username, role: 'owner', active: true },
+            { username: user.username, role: 'editor', active: true }
         ]);
         assert.ok(fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')));
 
@@ -93,8 +93,8 @@ describe('groupfolders', function () {
 
         const folder = await groupfolders.get('team');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'viewer' }
+            { username: alice.username, role: 'owner', active: true },
+            { username: user.username, role: 'viewer', active: true }
         ]);
         assert.deepEqual(folder.groupMembers, [
             { groupId: 'gid-1', role: 'editor' }
@@ -114,8 +114,8 @@ describe('groupfolders', function () {
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Updated Team');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'viewer' }
+            { username: alice.username, role: 'owner', active: true },
+            { username: user.username, role: 'viewer', active: true }
         ]);
     });
 
@@ -148,5 +148,23 @@ describe('groupfolders', function () {
         assert.equal(forUser.length, 1);
 
         assert.deepEqual(await groupfolders.getMemberUsernames('team'), [ alice.username, user.username ]);
+    });
+
+    it('keeps an inactive member when the update still includes them', async function () {
+        await createUsers();
+        await users.setActive(user.username, false);
+
+        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.update('team', 'Team', [
+            { username: alice.username, role: 'owner' },
+            { username: user.username, role: 'editor' }
+        ]);
+
+        const folder = await groupfolders.get('team');
+        assert.deepEqual(folder.members, [
+            { username: alice.username, role: 'owner', active: true },
+            { username: user.username, role: 'editor', active: false }
+        ]);
+        assert.equal(await groupfolders.isPartOf(folder, user.username), true);
     });
 });

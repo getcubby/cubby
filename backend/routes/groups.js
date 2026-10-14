@@ -10,7 +10,7 @@ async function list(req, res, next) {
     const [error, result] = await safe(groups.listWithMembers());
     if (error) return next(MainError.toHttpError(error));
 
-    return next(new HttpSuccess(200, { groups: result }));
+    return next(new HttpSuccess(200, { groups: result.filter((group) => group.active) }));
 }
 
 export default {

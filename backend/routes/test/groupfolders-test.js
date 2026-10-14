@@ -29,7 +29,7 @@ describe('groupfolders API', function () {
         const team = listResponse.body.groupFolder.find((g) => g.id === 'team');
         assert.ok(team);
         assert.deepEqual(team.members, [
-            { username: user.username, role: 'owner' }
+            { username: user.username, role: 'owner', active: true }
         ]);
     });
 
@@ -59,8 +59,8 @@ describe('groupfolders API', function () {
         const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
         const folder = listResponse.body.groupFolder.find((g) => g.id === 'with-members');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'viewer' },
-            { username: user.username, role: 'owner' }
+            { username: alice.username, role: 'viewer', active: true },
+            { username: user.username, role: 'owner', active: true }
         ]);
 
         const aliceList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);

@@ -42,6 +42,25 @@ describe('files API', function () {
         assert.equal(response.status, 401);
     });
 
+    it('records a raw read as recent unless recent=false', async function () {
+        await addUserFile(alice.username, '/recent-raw.txt', 'opened');
+        await addUserFile(alice.username, '/recent-skipped.txt', 'slideshow');
+
+        const recorded = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/recent-raw.txt', type: 'raw' });
+        assert.equal(recorded.status, 200);
+
+        const skipped = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/recent-skipped.txt', type: 'raw', recent: 'false' });
+        assert.equal(skipped.status, 200);
+
+        const recent = await withToken(superagent.get(`${serverUrl}/api/v1/recent`), alice.token);
+        assert.equal(recent.status, 200);
+        const paths = recent.body.recents.map(r => r.filePath);
+        assert.ok(paths.includes('/recent-raw.txt'));
+        assert.equal(paths.includes('/recent-skipped.txt'), false);
+    });
+
     it('can upload and get a file', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
             .query({ path: '/home/upload.txt', overwrite: true })

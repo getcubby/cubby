@@ -22,6 +22,11 @@ function boolLike(arg) {
     return true;
 }
 
+// raw reads are recent opens unless the caller opts out (slideshow neighbors)
+function recordRecent(query) {
+    return query.recent === undefined || boolLike(query.recent);
+}
+
 // sets isBinary on a single file (always) and on directory children (skipping text/* mime)
 async function attachBinaryFlags(entry) {
     if (entry.isFile) {
@@ -129,7 +134,7 @@ async function get(req, res, next) {
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
 
-            if (req.user) await recent.add(req.user.username, req.query.path);
+            if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
 
             return sendFile(res, result);
         } else if (type === 'download') {
@@ -161,7 +166,7 @@ async function get(req, res, next) {
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
 
-                if (req.user) await recent.add(req.user.username, req.query.path);
+                if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {
@@ -245,7 +250,7 @@ async function get(req, res, next) {
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
 
-                if (req.user) await recent.add(req.user.username, req.query.path);
+                if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {

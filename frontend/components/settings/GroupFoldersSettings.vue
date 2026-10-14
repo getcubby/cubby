@@ -71,7 +71,7 @@ function currentUserRole(groupFolder) {
 function groupFolderMemberLabels(groupFolder) {
   const labels = groupFolder.members.filter((m) => m.active !== false).map((m) => m.username);
   for (const gm of (groupFolder.groupMembers || [])) {
-    labels.push(groupNameById.value[gm.groupId] || gm.groupId);
+    labels.push(gm.name || groupNameById.value[gm.groupId] || gm.groupId);
   }
   return labels.join(', ');
 }
@@ -151,7 +151,7 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.id = groupFolder.id;
   groupFolderEdit.value.name = groupFolder.name;
   groupFolderEdit.value.members = groupFolder.members.map((m) => ({ username: m.username, role: m.role }));
-  groupFolderEdit.value.groupMembers = (groupFolder.groupMembers || []).map((m) => ({ groupId: m.groupId, role: m.role }));
+  groupFolderEdit.value.groupMembers = (groupFolder.groupMembers || []).map((m) => ({ groupId: m.groupId, role: m.role, name: m.name }));
   groupFolderEdit.value.newMember = '';
   groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
   editGroupFolderDialog.value.open();

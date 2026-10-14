@@ -174,6 +174,10 @@ describe('shares', function () {
 
         const share = await shares.get(shareId);
         assert.equal(share.receiverGroup, 'gid-1');
+        assert.equal(share.receiverGroupName, 'Engineering');
+
+        await groups.setActive('gid-1', false);
+        assert.equal((await shares.get(shareId)).receiverGroupName, 'Engineering');
 
         // members of the group can see the share
         const sharedWith = await shares.listSharedWith(user.username);

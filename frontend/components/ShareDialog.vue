@@ -82,7 +82,7 @@ function entryOwner() {
 
 function receiverLabel(share) {
   if (share.receiverUsername) return share.receiverUsername;
-  if (share.receiverGroup) return groupNameById.value[share.receiverGroup] || share.receiverGroup;
+  if (share.receiverGroup) return share.receiverGroupName || groupNameById.value[share.receiverGroup] || share.receiverGroup;
   return share.receiverEmail || '';
 }
 

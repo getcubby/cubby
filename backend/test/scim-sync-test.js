@@ -72,7 +72,9 @@ describe('scim group sync', function () {
         assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ user.username ]);
 
         const folder = await groupfolders.get('team');
-        assert.deepEqual(folder.groupMembers.map((m) => m.groupId), [ 'gid-1' ]);
+        assert.deepEqual(folder.groupMembers.map((m) => ({ groupId: m.groupId, name: m.name, active: m.active })), [
+            { groupId: 'gid-1', name: 'Engineering', active: false }
+        ]);
         assert.equal(await groupfolders.getRole(folder, user.username), 'owner');
     });
 

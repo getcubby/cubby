@@ -12,6 +12,8 @@ import users from './users.js';
 
 const debugLog = debug('cubby:shares');
 
+const SHARE_WITH_GROUP_NAME = 'SELECT shares.*, groups.name AS receiver_group_name FROM shares LEFT JOIN groups ON groups.id = shares.receiver_group';
+
 // in some queries we use the REGEXP operator so if input contains regexp chars we have to escape them
 function escapeForSqlRegexp(text) {
     const specials = [
@@ -48,6 +50,9 @@ function postProcess(data) {
     data.receiverGroup = data.receiver_group;
     delete data.receiver_group;
 
+    data.receiverGroupName = data.receiver_group_name || null;
+    delete data.receiver_group_name;
+
     data.passwordProtected = !!data.password_hash;
     delete data.password_hash;
 
@@ -74,7 +79,7 @@ async function listSharedWith(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE receiver_username = ? OR receiver_group IN (SELECT group_id FROM group_members WHERE username = ?)', [ username, username ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.receiver_username = ? OR shares.receiver_group IN (SELECT group_id FROM group_members WHERE username = ?)`, [ username, username ]);
 
     result.rows.forEach(postProcess);
 
@@ -87,7 +92,7 @@ async function list(username) {
 
     debugLog(`listSharedWith: ${username}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE owner_username = ?', [ username ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.owner_username = ?`, [ username ]);
 
     result.rows.forEach(postProcess);
 
@@ -137,7 +142,7 @@ async function get(shareId) {
 
     debugLog(`get: ${shareId}`);
 
-    const result = await database.query('SELECT * FROM shares WHERE id = ?', [ shareId ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.id = ?`, [ shareId ]);
 
     if (result.rows.length === 0) return null;
 
@@ -166,7 +171,7 @@ async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) 
 
     // enabling this would list shares within a folder in the sharedWith of that folder
     // const result = await database.query('SELECT * FROM shares WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path ~ $3', [ ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
-    const result = await database.query('SELECT * FROM shares WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filepath ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ ownerUsername, ownerGroupfolder, filepath ]);
 
     if (result.rows.length === 0) return null;
 
@@ -186,8 +191,8 @@ async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder,
 
     let result;
 
-    if (exactMatch) result = await database.query('SELECT * FROM shares WHERE (receiver_email = ? OR receiver_username = ? OR receiver_group = ?) AND (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, filepath ]);
-    else result = await database.query('SELECT * FROM shares WHERE (receiver_email = ? OR receiver_username = ? OR receiver_group = ?) AND (owner_username = ? OR owner_groupfolder = ?) AND file_path REGEXP ?', [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    if (exactMatch) result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_username = ? OR shares.receiver_group = ?) AND (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, filepath ]);
+    else result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_username = ? OR shares.receiver_group = ?) AND (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path REGEXP ?`, [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 

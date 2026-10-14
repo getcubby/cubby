@@ -74,7 +74,7 @@ function onAddMember() {
     props.form.members.push({ username: option.username, role });
   } else {
     if (props.form.groupMembers.some((m) => m.groupId === option.groupId)) return;
-    props.form.groupMembers.push({ groupId: option.groupId, role });
+    props.form.groupMembers.push({ groupId: option.groupId, role, name: option.label });
   }
 
   props.form.newMember = '';
@@ -117,7 +117,7 @@ function onRemoveGroupMember(index) {
       </template>
       <template #label>
         <div class="member-label-row">
-          <span>{{ groupNameById[member.groupId] || member.groupId }}</span>
+          <span>{{ member.name || groupNameById[member.groupId] || member.groupId }}</span>
           <span class="member-role-controls">
             <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
             <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveGroupMember(index)" />

@@ -51,8 +51,12 @@ async function getMembers(id) {
 async function getGroupMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query('SELECT group_id, role FROM groupfolders_group_members WHERE groupfolder_id = ? ORDER BY group_id', [ id ]);
-    return result.rows.map((m) => ({ groupId: m.group_id, role: m.role }));
+    const result = await database.query(`SELECT groupfolders_group_members.group_id, groupfolders_group_members.role, groups.name, groups.active
+        FROM groupfolders_group_members
+        LEFT JOIN groups ON groups.id = groupfolders_group_members.group_id
+        WHERE groupfolders_group_members.groupfolder_id = ?
+        ORDER BY groupfolders_group_members.group_id`, [ id ]);
+    return result.rows.map((m) => ({ groupId: m.group_id, role: m.role, name: m.name || m.group_id, active: !!m.active }));
 }
 
 // all usernames that are members (directly or via a group)

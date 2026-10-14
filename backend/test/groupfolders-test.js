@@ -97,7 +97,7 @@ describe('groupfolders', function () {
             { username: user.username, role: 'viewer', active: true }
         ]);
         assert.deepEqual(folder.groupMembers, [
-            { groupId: 'gid-1', role: 'editor' }
+            { groupId: 'gid-1', role: 'editor', name: 'Engineering', active: true }
         ]);
         assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
     });

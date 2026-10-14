@@ -678,3 +678,7 @@
 * Open search on Enter as a selectable file list, and return to that list after opening a result.
 * Show where a recent or favorite file lives, and open that folder from the row.
 
+[2.25.0]
+* Update cubby to 033e819
+* Fix PKCE flow for the mobile app
+

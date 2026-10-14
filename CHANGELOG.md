@@ -682,3 +682,7 @@
 * Update cubby to 033e819
 * Fix PKCE flow for the mobile app
 
+[2.26.0]
+* Update cubby to 6456fd5
+* Add option to open file without adding it to favorites
+

@@ -55,3 +55,15 @@ When changing the HTTP API, update the OpenAPI spec at `../website/openapi/cubby
 - Vue 3 `<script setup>`; use `@cloudron/pankow` as much as possible
 - Backend: tegel for the Express app, OIDC, and sessions; `safe()` from `@cloudron/safetydance` for fallible calls
 - Match the indent of the file being edited
+
+## SCIM
+
+Directory users and groups are identified by Cloudron ids (`users.id`, shaped `uid-…`, and `groups.id`), not by username or group name. Store username, email, display name, and group name for display. Those values can change.
+
+OIDC `sub` is the username. On login, resolve it to the Cloudron user id, then update the stored username, email, and display name from the OIDC claims. Do not wait for SCIM to refresh the person who just signed in. A successful login marks that user active.
+
+Run a periodic SCIM sync. It upserts users and groups this app already knows, and refreshes username, email, display name, and group name. It stores `active` on users and groups. A user or group missing from a successful, non-empty SCIM response is marked inactive. Do not insert a user or group this app has never stored. An empty SCIM response leaves every `active` flag unchanged. A user or group that appears again is marked active, and an active group's member list is refreshed.
+
+Do not delete users, groups, files, or memberships when a row becomes inactive.
+
+Pickers for new shares, members, and other new assignments list only active users and groups. An existing resource still shows its inactive users and groups, and the only action on those rows is remove. Saving the resource keeps an inactive member unless they were explicitly removed. If the only owner is inactive, another existing member or an admin can still remove them.

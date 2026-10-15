@@ -15,7 +15,7 @@ describe('users', function () {
     it('can add and get a user', async function () {
         await users.add(alice);
 
-        const result = await users.get(alice.username);
+        const result = await users.get(alice.id);
         assert.equal(result.username, alice.username);
         assert.equal(result.email, alice.email);
         assert.equal(result.displayName, alice.displayName);
@@ -40,7 +40,7 @@ describe('users', function () {
 
     it('resolves users by access token', async function () {
         await users.add(user);
-        const accessToken = await tokens.add(user.username);
+        const accessToken = await tokens.add(user.id);
 
         const result = await users.getByAccessToken(accessToken);
         assert.equal(result.username, user.username);
@@ -49,24 +49,24 @@ describe('users', function () {
     it('can update a user', async function () {
         await users.add(user);
 
-        await users.update(user.username, { email: 'updated@test.local', displayName: 'Updated User' });
+        await users.update(user.id, { username: user.username, email: 'updated@test.local', displayName: 'Updated User' });
 
-        const result = await users.get(user.username);
+        const result = await users.get(user.id);
         assert.equal(result.email, 'updated@test.local');
         assert.equal(result.displayName, 'Updated User');
-        assert.equal(await users.exists(user.username), true);
+        assert.equal(await users.exists(user.id), true);
     });
 
     it('can upsert users from scim', async function () {
-        const created = await users.upsertFromScim('scimuser', { email: 'scim@test.local', displayName: 'Scim User' });
+        const created = await users.upsertFromScim('uid-scimuser', { username: 'scimuser', email: 'scim@test.local', displayName: 'Scim User' });
         assert.equal(created.created, true);
         assert.equal(created.updated, false);
 
-        const updated = await users.upsertFromScim('scimuser', { email: 'scim-new@test.local', displayName: 'Scim Updated' });
+        const updated = await users.upsertFromScim('uid-scimuser', { username: 'scimuser', email: 'scim-new@test.local', displayName: 'Scim Updated' });
         assert.equal(updated.created, false);
         assert.equal(updated.updated, true);
 
-        const result = await users.get('scimuser');
+        const result = await users.get('uid-scimuser');
         assert.equal(result.email, 'scim-new@test.local');
         assert.equal(result.displayName, 'Scim Updated');
         assert.equal(result.active, true);
@@ -74,8 +74,8 @@ describe('users', function () {
 
     it('can mark a user inactive and restore them on login', async function () {
         await users.add(user);
-        await users.setActive(user.username, false);
-        assert.equal((await users.get(user.username)).active, false);
+        await users.setActive(user.id, false);
+        assert.equal((await users.get(user.id)).active, false);
 
         const restored = await users.ensureUser(user);
         assert.equal(restored.active, true);

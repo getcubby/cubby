@@ -13,7 +13,7 @@ describe('favorites API', function () {
         await addUserFile(alice.username, '/favorite-api.txt', 'favorite me');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), alice.token)
-            .send({ path: '/favorite-api.txt', owner: alice.username });
+            .send({ path: '/favorite-api.txt', owner: alice.id });
         assert.equal(createResponse.status, 200);
         const favoriteId = createResponse.body.id;
         assert.match(favoriteId, /^[0-9a-f-]{36}$/);
@@ -22,7 +22,7 @@ describe('favorites API', function () {
         assert.equal(listResponse.status, 200);
         assert.equal(listResponse.body.favorites.length, 1);
         assert.equal(listResponse.body.favorites[0].filePath, '/favorite-api.txt');
-        assert.equal(listResponse.body.favorites[0].owner, alice.username);
+        assert.equal(listResponse.body.favorites[0].owner, alice.id);
 
         const getResponse = await withToken(superagent.get(`${serverUrl}/api/v1/favorites/${favoriteId}`), alice.token);
         assert.equal(getResponse.status, 200);
@@ -39,7 +39,7 @@ describe('favorites API', function () {
         await addUserFile(alice.username, '/favorite-not-yours.txt', 'not yours');
 
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), user.token)
-            .send({ path: '/favorite-not-yours.txt', owner: alice.username })
+            .send({ path: '/favorite-not-yours.txt', owner: alice.id })
             .ok(() => true);
         assert.equal(response.status, 403);
     });
@@ -59,7 +59,7 @@ describe('favorites API', function () {
         assert.equal(unknown.status, 403);
 
         await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/favorite-team`), alice.token)
-            .send({ name: 'Team', members: [ { username: alice.username, role: 'owner' }, { username: user.username, role: 'viewer' } ] });
+            .send({ name: 'Team', members: [ { userId: alice.id, role: 'owner' }, { userId: user.id, role: 'viewer' } ] });
 
         const viewer = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), user.token)
             .send({ path: '/', owner: 'groupfolder-favorite-team' });
@@ -70,7 +70,7 @@ describe('favorites API', function () {
         await addUserFile(alice.username, '/favorite-share.txt', 'shared with alice only');
 
         const shareResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/favorite-share.txt', receiverUsername: alice.username });
+            .send({ ownerUserId: alice.id, path: '/favorite-share.txt', receiverUserId: alice.id });
         const shareId = shareResponse.body.shareId;
 
         const denied = await withToken(superagent.post(`${serverUrl}/api/v1/favorites`), user.token)

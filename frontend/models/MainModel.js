@@ -9,6 +9,7 @@ async function getProfile() {
   if (result.status !== 200) return null;
 
   return {
+    id: result.body.id,
     username: result.body.username,
     email: result.body.email,
     displayName: result.body.displayName

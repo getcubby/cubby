@@ -52,21 +52,21 @@ async function getPreview(req, res, next) {
 
     let usernameOrGroupfolder, rootPath;
     if (type === 'files') {
-        if (!req.user || id !== req.user.username) return next(new HttpError(404, 'not found'));
+        if (!req.user || id !== req.user.id) return next(new HttpError(404, 'not found'));
 
-        usernameOrGroupfolder = req.user.username;
+        usernameOrGroupfolder = req.user.id;
         rootPath = '/';
     } else if (type === 'shares') {
         // permissions are checked in routes/shares.js
         if (!req.share) return next(new HttpError(404, 'not found'));
 
-        usernameOrGroupfolder = req.share.ownerUsername || `groupfolder-${req.share.ownerGroupfolder}`;
+        usernameOrGroupfolder = req.share.ownerUserId || `groupfolder-${req.share.ownerGroupfolder}`;
         rootPath = req.share.filePath;
     } else if (type === 'groups') {
         if (!req.user) return next(new HttpError(401, 'not authorized'));
 
         const group = await groupFolders.get(id);
-        if (!group || !await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(404, 'not found'));
+        if (!group || !await groupFolders.isPartOf(group, req.user.id)) return next(new HttpError(404, 'not found'));
 
         usernameOrGroupfolder = `groupfolder-${group.id}`;
         rootPath = '/';
@@ -120,7 +120,7 @@ async function download(req, res, next) {
         let getArgs;
 
         if (resource === 'home') {
-            getArgs = [ req.user.username, filePath ];
+            getArgs = [ req.user.id, filePath ];
         } else if (resource === 'shares') {
             const shareId = filePath.split('/')[1];
             if (!shareId)  return next(new HttpError(404, 'missing share id'));
@@ -130,12 +130,12 @@ async function download(req, res, next) {
 
             if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
-            if (!await shares.isReceiverAllowed(share, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!await shares.isReceiverAllowed(share, req.user.id)) return next(new HttpError(403, 'not allowed'));
 
             if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
-            getArgs = [ share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
+            getArgs = [ share.ownerUserId || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
         } else if (resource === 'groupfolders') {
             const groupFolderSlug = filePath.split('/')[1];
             if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
@@ -143,7 +143,7 @@ async function download(req, res, next) {
             const groupFolder = await groupFolders.get(groupFolderSlug);
             if (!groupFolder) return next(new HttpError(404, 'no such groupfolder'));
 
-            if (!await groupFolders.isPartOf(groupFolder, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!await groupFolders.isPartOf(groupFolder, req.user.id)) return next(new HttpError(403, 'not allowed'));
 
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
             getArgs = [ 'groupfolder-' + groupFolderSlug, actualFilePath ];
@@ -179,7 +179,7 @@ async function getRecent(req, res, next) {
 
     debugLog(`get: recent daysAgo:${daysAgo} maxFiles:${maxFiles}`);
 
-    const [error, entries] = await safe(recent.list(req.user.username, daysAgo, maxFiles));
+    const [error, entries] = await safe(recent.list(req.user.id, daysAgo, maxFiles));
     if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { recents: entries }));
@@ -191,9 +191,9 @@ async function search(req, res, next) {
     const query = req.query.query || '';
     if (!query) return next(new HttpError(400, 'non-empty query arg required'));
 
-    debugLog(`search: ${req.user.username} ${query}`);
+    debugLog(`search: ${req.user.id} ${query}`);
 
-    const [error, results] = await safe(recoll.searchByUsername(req.user.username, query));
+    const [error, results] = await safe(recoll.searchByUsername(req.user.id, query));
     if (error) {
         console.error('search error:', error);
         return next(new HttpError(500, 'search failed'));

@@ -22,7 +22,7 @@ describe('preview', function () {
         await users.add(alice);
         await addUserFile(alice.username, '/preview-model.png', MINIMAL_PNG);
 
-        const fullFilePath = files.getAbsolutePath(alice.username, '/preview-model.png');
+        const fullFilePath = files.getAbsolutePath(alice.id, '/preview-model.png');
         const hash = preview.getHash('image/png', fullFilePath);
         assert.ok(hash);
 
@@ -34,7 +34,7 @@ describe('preview', function () {
         await users.add(alice);
         await addUserFile(alice.username, '/preview-cached.png', MINIMAL_PNG);
 
-        const fullFilePath = files.getAbsolutePath(alice.username, '/preview-cached.png');
+        const fullFilePath = files.getAbsolutePath(alice.id, '/preview-cached.png');
         const hash = preview.getHash('image/png', fullFilePath);
         const localPath = await waitForPreview(hash);
         const mtimeMs = fs.statSync(localPath).mtimeMs;

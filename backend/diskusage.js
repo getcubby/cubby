@@ -174,7 +174,7 @@ async function calculate() {
     debugLog(`calculate`);
 
     const userList = await users.list();
-    for (const user of userList) await calculateByUsername(user.username);
+    for (const user of userList) await calculateByUsername(user.id);
 
     const groupFolderList = await groupFolders.list();
     for (const folder of groupFolderList) await calculateByUsername('groupfolder-' + folder.id);

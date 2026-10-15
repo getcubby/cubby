@@ -7,6 +7,7 @@ import groupFolders from '../groupfolders.js';
 import MainError from '../mainerror.js';
 import mime from '../mime.js';
 import safe from '@cloudron/safetydance';
+import users from '../users.js';
 import { verifyBasicAuth } from '@cloudron/tegel';
 
 const debugLog = debug('cubby:webdav');
@@ -184,11 +185,11 @@ ${responses.join('\n')}
     }
 
     if (resource.virtualSharesList) {
-        const list = await shares.listSharedWith(username);
+        const list = await shares.listSharedWith(req.cubbyUserId);
         responses.push(propfindResponse(baseHref, null, true, VIRTUAL_SHARES.displayName, null, new Date(), null));
         if (depth >= 1) {
             for (const share of list) {
-                const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUsername;
+                const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUserId;
                 const [getError, file] = await safe(files.get(owner, share.filePath));
                 if (getError) {
                     debugLog('share file get failed', share.id, getError);
@@ -207,7 +208,7 @@ ${responses.join('\n')}
     }
 
     if (resource.virtualGroupfoldersList) {
-        const list = await groupFolders.list(username);
+        const list = await groupFolders.list(req.cubbyUserId);
         responses.push(propfindResponse(baseHref, null, true, VIRTUAL_GROUPFOLDERS.displayName, null, new Date(), null));
         if (depth >= 1) {
             for (const group of list) {
@@ -229,7 +230,7 @@ ${responses.join('\n')}
     }
 
     // Actual file system path
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -284,7 +285,7 @@ async function handleGet(req, res, username, segments) {
         res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
         return;
     }
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -317,7 +318,7 @@ async function handleHead(req, res, username, segments) {
         res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
         return;
     }
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -348,7 +349,7 @@ async function handlePut(req, res, username, segments) {
         res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
         return;
     }
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -372,7 +373,7 @@ async function handlePut(req, res, username, segments) {
         return;
     }
 
-    const [putError] = await safe(files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor: username }));
+    const [putError] = await safe(files.addOrOverwriteFile(subject.usernameOrGroupfolder, subject.filePath, req, mtime, overwrite, { actor: req.cubbyUserId }));
     if (putError) {
         if (putError.reason === MainError.ALREADY_EXISTS && !overwrite) {
             res.status(412).send('Precondition Failed');
@@ -475,7 +476,7 @@ async function handleMkcol(req, res, username, segments) {
         res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
         return;
     }
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -488,7 +489,7 @@ async function handleMkcol(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    const [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor: username }));
+    const [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor: req.cubbyUserId }));
     if (error) {
         if (error.reason === MainError.ALREADY_EXISTS) {
             res.status(405).send('Method Not Allowed');
@@ -514,7 +515,7 @@ async function handleDelete(req, res, username, segments) {
         res.status(405).set('Allow', 'OPTIONS, PROPFIND').send('Method Not Allowed');
         return;
     }
-    const subject = await files.translateResourcePath(username, resource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, resource.resourcePath);
     if (!subject) {
         res.status(403).send('Forbidden');
         return;
@@ -527,7 +528,7 @@ async function handleDelete(req, res, username, segments) {
         res.status(403).send('Forbidden');
         return;
     }
-    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: username }));
+    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.cubbyUserId }));
     if (error) {
         sendMainError(res, error);
         return;
@@ -574,8 +575,8 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         return;
     }
     const overwrite = req.headers.overwrite !== 'F' && req.headers.overwrite !== 'f';
-    const subject = await files.translateResourcePath(username, srcResource.resourcePath);
-    const destSubject = await files.translateResourcePath(username, destResource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, srcResource.resourcePath);
+    const destSubject = await files.translateResourcePath(req.cubbyUserId, destResource.resourcePath);
     if (!subject || !destSubject) {
         res.status(403).send('Forbidden');
         return;
@@ -588,7 +589,7 @@ async function handleCopy(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    const [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite, { actor: username }));
+    const [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, destSubject.usernameOrGroupfolder, destSubject.filePath, overwrite, { actor: req.cubbyUserId }));
     if (error) {
         if (error.reason === MainError.CONFLICT) {
             res.status(412).send('Precondition Failed');
@@ -620,8 +621,8 @@ async function handleMove(req, res, username, segments, pathInfo) {
         res.status(403).send('Forbidden');
         return;
     }
-    const subject = await files.translateResourcePath(username, srcResource.resourcePath);
-    const destSubject = await files.translateResourcePath(username, destResource.resourcePath);
+    const subject = await files.translateResourcePath(req.cubbyUserId, srcResource.resourcePath);
+    const destSubject = await files.translateResourcePath(req.cubbyUserId, destResource.resourcePath);
     if (!subject || !destSubject) {
         res.status(403).send('Forbidden');
         return;
@@ -635,7 +636,7 @@ async function handleMove(req, res, username, segments, pathInfo) {
         return;
     }
     const [error] = await safe(relocate.relocate({
-        actor: username,
+        actor: req.cubbyUserId,
         fromOwner: subject.usernameOrGroupfolder,
         fromPath: subject.filePath,
         toOwner: destSubject.usernameOrGroupfolder,
@@ -711,9 +712,21 @@ function expressMiddleware() {
         }
         debugLog('request: parsed username=%s segments=%o', pathInfo.username, pathInfo.segments);
 
-        const user = await verifyBasicAuth(req);
-        if (!user) {
+        const oidcUser = await verifyBasicAuth(req);
+        if (!oidcUser) {
             debugLog('request: auth failed, sending 401');
+            res.set('WWW-Authenticate', 'Basic realm="Cubby"');
+            res.status(401).send('Unauthorized');
+            return;
+        }
+
+        const [userError, user] = await safe(users.syncFromOidc({
+            username: oidcUser.username,
+            email: oidcUser.email || '',
+            displayName: oidcUser.displayName || oidcUser.name || oidcUser.username
+        }));
+        if (userError || !user) {
+            debugLog('request: directory user lookup failed, sending 401');
             res.set('WWW-Authenticate', 'Basic realm="Cubby"');
             res.status(401).send('Unauthorized');
             return;
@@ -734,6 +747,7 @@ function expressMiddleware() {
         pathInfo.origin = origin;
 
         const username = user.username;
+        req.cubbyUserId = user.id;
         const { segments } = pathInfo;
 
         const [dispatchError] = await safe(dispatchWebdavMethod(req, res, username, segments, pathInfo));

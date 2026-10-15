@@ -79,7 +79,7 @@ function receiverLabel(details) {
 }
 
 function actorLabel(item) {
-  return item.actor || 'Anonymous user';
+  return item.actorUsername || 'Anonymous user';
 }
 
 function formatActivityAction(item) {

@@ -23,16 +23,16 @@ async function create(req, res, next) {
         const [shareError, share] = await safe(shares.get(shareId));
         if (shareError) return next(MainError.toHttpError(shareError));
         if (!share || shares.isExpired(share)) return next(new HttpError(404, 'share not found'));
-        if (!await shares.isReceiverAllowed(share, req.user.username)) return next(new HttpError(403, 'not allowed'));
+        if (!await shares.isReceiverAllowed(share, req.user.id)) return next(new HttpError(403, 'not allowed'));
 
         debugLog(`create: share:${shareId} ${filePath}`);
         createArgs = { shareId, filePath };
     } else {
-        const owner = req.body.owner || req.user.username;
+        const owner = req.body.owner || req.user.id;
         if (typeof owner !== 'string') return next(new HttpError(400, 'owner must be a string'));
 
-        const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
-        const [accessError, allowed] = await safe(canReadOwner(req.user.username, ownerUsername, ownerGroupfolder));
+        const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+        const [accessError, allowed] = await safe(canReadOwner(req.user.id, ownerUserId, ownerGroupfolder));
         if (accessError) return next(MainError.toHttpError(accessError));
         if (!allowed) return next(new HttpError(403, 'not allowed'));
 
@@ -40,7 +40,7 @@ async function create(req, res, next) {
         createArgs = { owner, filePath };
     }
 
-    const [error, id] = await safe(favorites.create(req.user.username, createArgs));
+    const [error, id] = await safe(favorites.create(req.user.id, createArgs));
     if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { id }));
@@ -49,9 +49,9 @@ async function create(req, res, next) {
 async function list(req, res, next) {
     assert.strictEqual(typeof req.user, 'object');
 
-    debugLog(`list: for ${req.user.username}`);
+    debugLog(`list: for ${req.user.id}`);
 
-    const [error, result] = await safe(favorites.list(req.user.username));
+    const [error, result] = await safe(favorites.list(req.user.id));
     if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { favorites: result }));
@@ -65,7 +65,7 @@ async function get(req, res, next) {
     const [error, result] = await safe(favorites.get(req.params.id));
     if (error) return next(MainError.toHttpError(error));
     if (!result) return next(new HttpError(404, 'favorite does not exist'));
-    if (result.username !== req.user.username) return next(new HttpError(404, 'favorite does not exist'));
+    if (result.userId !== req.user.id) return next(new HttpError(404, 'favorite does not exist'));
 
     next(new HttpSuccess(200, { favorite: result }));
 }
@@ -77,7 +77,7 @@ async function remove(req, res, next) {
 
     const [getError, favorite] = await safe(favorites.get(req.params.id));
     if (getError) return next(MainError.toHttpError(getError));
-    if (!favorite || favorite.username !== req.user.username) return next(new HttpError(404, 'favorite does not exist'));
+    if (!favorite || favorite.userId !== req.user.id) return next(new HttpError(404, 'favorite does not exist'));
 
     const [error] = await safe(favorites.remove(req.params.id));
     if (error) return next(MainError.toHttpError(error));

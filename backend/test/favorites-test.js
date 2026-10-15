@@ -24,19 +24,19 @@ describe('favorites', function () {
     it('can create, get, list, and remove a favorite', async function () {
         await createUsersWithFile();
 
-        const id = await favorites.create(user.username, { owner: alice.username, filePath: '/favorite.txt' });
+        const id = await favorites.create(user.id, { owner: alice.id, filePath: '/favorite.txt' });
         assert.match(id, /^[0-9a-f-]{36}$/);
 
         const favorite = await favorites.get(id);
-        assert.equal(favorite.username, user.username);
+        assert.equal(favorite.userId, user.id);
         assert.equal(favorite.filePath, '/favorite.txt');
         assert.equal(favorite.shareId, null);
 
-        const listed = await favorites.list(user.username);
+        const listed = await favorites.list(user.id);
         assert.equal(listed.length, 1);
         assert.equal(listed[0].id, id);
 
-        const byOwner = await favorites.listByOwnerAndFilePath(alice.username, '/favorite.txt');
+        const byOwner = await favorites.listByOwnerAndFilePath(alice.id, '/favorite.txt');
         assert.equal(byOwner.length, 1);
 
         await favorites.remove(id);
@@ -46,25 +46,25 @@ describe('favorites', function () {
     it('is idempotent when creating the same favorite twice', async function () {
         await createUsersWithFile();
 
-        const firstId = await favorites.create(user.username, { owner: alice.username, filePath: '/favorite.txt' });
-        const secondId = await favorites.create(user.username, { owner: alice.username, filePath: '/favorite.txt' });
+        const firstId = await favorites.create(user.id, { owner: alice.id, filePath: '/favorite.txt' });
+        const secondId = await favorites.create(user.id, { owner: alice.id, filePath: '/favorite.txt' });
 
         assert.equal(firstId, secondId);
-        assert.equal((await favorites.list(user.username)).length, 1);
+        assert.equal((await favorites.list(user.id)).length, 1);
     });
 
     it('can create a share-scoped favorite with a relative path', async function () {
         await createUsersWithFile();
-        await files.addDirectory(alice.username, '/shared-dir');
+        await files.addDirectory(alice.id, '/shared-dir');
         await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
 
         const shareId = await shares.create({
-            ownerUsername: alice.username,
+            ownerUserId: alice.id,
             filePath: '/shared-dir',
-            receiverUsername: user.username
+            receiverUserId: user.id
         });
 
-        const id = await favorites.create(user.username, { shareId, filePath: '/nested.txt' });
+        const id = await favorites.create(user.id, { shareId, filePath: '/nested.txt' });
         const favorite = await favorites.get(id);
         assert.equal(favorite.shareId, shareId);
         assert.equal(favorite.filePath, '/nested.txt');
@@ -72,9 +72,9 @@ describe('favorites', function () {
 
         const byShare = await favorites.listByShareAndFilePath(shareId, '/nested.txt');
         assert.equal(byShare.length, 1);
-        assert.equal(byShare[0].username, user.username);
+        assert.equal(byShare[0].userId, user.id);
 
-        const byOwner = await favorites.listByOwnerAndFilePath(alice.username, '/shared-dir/nested.txt');
+        const byOwner = await favorites.listByOwnerAndFilePath(alice.id, '/shared-dir/nested.txt');
         assert.equal(byOwner.length, 0);
     });
 
@@ -82,7 +82,7 @@ describe('favorites', function () {
         await users.add(alice);
         await users.add(user);
 
-        const [error] = await safe(favorites.create(user.username, { owner: alice.username, filePath: '/../escape.txt' }));
+        const [error] = await safe(favorites.create(user.id, { owner: alice.id, filePath: '/../escape.txt' }));
         assert.ok(error);
         assert.equal(error.reason, MainError.INVALID_PATH);
     });
@@ -90,86 +90,86 @@ describe('favorites', function () {
     it('relocatePaths updates an exact file favorite path and keeps id', async function () {
         await createUsersWithFile();
 
-        const id = await favorites.create(user.username, { owner: alice.username, filePath: '/favorite.txt' });
+        const id = await favorites.create(user.id, { owner: alice.id, filePath: '/favorite.txt' });
 
         await favorites.relocatePaths({
-            fromOwner: alice.username,
+            fromOwner: alice.id,
             fromPath: '/favorite.txt',
-            toOwner: alice.username,
+            toOwner: alice.id,
             toPath: '/renamed.txt',
             isDirectory: false
         });
 
         const favorite = await favorites.get(id);
         assert.equal(favorite.filePath, '/renamed.txt');
-        assert.equal(favorite.owner, alice.username);
+        assert.equal(favorite.owner, alice.id);
 
-        const listed = await favorites.list(user.username);
+        const listed = await favorites.list(user.id);
         assert.equal(listed.length, 1);
         assert.equal(listed[0].id, id);
     });
 
     it('relocatePaths updates folder favorites and descendants', async function () {
         await createUsersWithFile();
-        await files.addDirectory(alice.username, '/starred-dir');
+        await files.addDirectory(alice.id, '/starred-dir');
         await addUserFile(alice.username, '/starred-dir/nested.txt', 'nested');
 
-        await favorites.create(user.username, { owner: alice.username, filePath: '/starred-dir' });
-        await favorites.create(alice.username, { owner: alice.username, filePath: '/starred-dir/nested.txt' });
+        await favorites.create(user.id, { owner: alice.id, filePath: '/starred-dir' });
+        await favorites.create(alice.id, { owner: alice.id, filePath: '/starred-dir/nested.txt' });
 
         await favorites.relocatePaths({
-            fromOwner: alice.username,
+            fromOwner: alice.id,
             fromPath: '/starred-dir',
-            toOwner: alice.username,
+            toOwner: alice.id,
             toPath: '/moved-dir',
             isDirectory: true
         });
 
-        const userFavorites = await favorites.list(user.username);
+        const userFavorites = await favorites.list(user.id);
         assert.equal(userFavorites.length, 1);
         assert.equal(userFavorites[0].filePath, '/moved-dir');
 
-        const byPath = await favorites.listByOwnerAndFilePath(alice.username, '/moved-dir/nested.txt');
+        const byPath = await favorites.listByOwnerAndFilePath(alice.id, '/moved-dir/nested.txt');
         assert.equal(byPath.length, 1);
     });
 
     it('removeByOwnerAndPath removes share-scoped favorites when the file is deleted', async function () {
         await users.add(alice);
         await users.add(user);
-        await files.addDirectory(alice.username, '/shared-dir');
+        await files.addDirectory(alice.id, '/shared-dir');
         await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
 
         const shareId = await shares.create({
-            ownerUsername: alice.username,
+            ownerUserId: alice.id,
             filePath: '/shared-dir',
-            receiverUsername: user.username
+            receiverUserId: user.id
         });
 
-        await favorites.create(user.username, { shareId, filePath: '/nested.txt' });
-        assert.equal((await favorites.list(user.username)).length, 1);
+        await favorites.create(user.id, { shareId, filePath: '/nested.txt' });
+        assert.equal((await favorites.list(user.id)).length, 1);
 
-        await files.remove(alice.username, '/shared-dir/nested.txt');
+        await files.remove(alice.id, '/shared-dir/nested.txt');
 
-        assert.equal((await favorites.list(user.username)).length, 0);
+        assert.equal((await favorites.list(user.id)).length, 0);
     });
 
     it('relocatePaths updates share-scoped favorite relative paths', async function () {
         await createUsersWithFile();
-        await files.addDirectory(alice.username, '/shared-dir');
+        await files.addDirectory(alice.id, '/shared-dir');
         await addUserFile(alice.username, '/shared-dir/nested.txt', 'nested');
 
         const shareId = await shares.create({
-            ownerUsername: alice.username,
+            ownerUserId: alice.id,
             filePath: '/shared-dir',
-            receiverUsername: user.username
+            receiverUserId: user.id
         });
 
-        const id = await favorites.create(user.username, { shareId, filePath: '/nested.txt' });
+        const id = await favorites.create(user.id, { shareId, filePath: '/nested.txt' });
 
         await favorites.relocatePaths({
-            fromOwner: alice.username,
+            fromOwner: alice.id,
             fromPath: '/shared-dir/nested.txt',
-            toOwner: alice.username,
+            toOwner: alice.id,
             toPath: '/shared-dir/renamed.txt',
             isDirectory: false
         });
@@ -181,20 +181,20 @@ describe('favorites', function () {
     it('relocatePaths updates owner on cross-root move', async function () {
         await users.add(alice);
         await users.add(user);
-        await groupfolders.add('team', 'Team', user.username);
+        await groupfolders.add('team', 'Team', user.id);
         await addUserFile(alice.username, '/cross.txt', 'cross');
 
-        await favorites.create(user.username, { owner: alice.username, filePath: '/cross.txt' });
+        await favorites.create(user.id, { owner: alice.id, filePath: '/cross.txt' });
 
         await favorites.relocatePaths({
-            fromOwner: alice.username,
+            fromOwner: alice.id,
             fromPath: '/cross.txt',
             toOwner: 'groupfolder-team',
             toPath: '/cross.txt',
             isDirectory: false
         });
 
-        const listed = await favorites.list(user.username);
+        const listed = await favorites.list(user.id);
         assert.equal(listed.length, 1);
         assert.equal(listed[0].filePath, '/cross.txt');
         assert.equal(listed[0].owner, 'groupfolder-team');

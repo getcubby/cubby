@@ -55,9 +55,10 @@ const groupNameById = computed(() => {
 });
 
 function memberFields(includeSelf) {
+  const userId = profile.value?.id;
   const username = profile.value?.username;
   return {
-    members: includeSelf && username ? [{ username, role: ROLES.OWNER }] : [],
+    members: includeSelf && userId ? [{ userId, username, role: ROLES.OWNER }] : [],
     groupMembers: [],
     newMember: '',
     newMemberRole: ROLES.EDITOR,
@@ -131,7 +132,7 @@ async function onAddGroupFolderSubmit() {
     await GroupFolderModel.add({
       name: groupFolderAdd.value.name,
       slug: groupFolderAdd.value.slug,
-      members: groupFolderAdd.value.members.map((m) => ({ username: m.username, role: m.role })),
+      members: groupFolderAdd.value.members.map((m) => ({ userId: m.userId, role: m.role })),
       groupMembers: groupFolderAdd.value.groupMembers.map((m) => ({ groupId: m.groupId, role: m.role })),
     });
   } catch (e) {
@@ -150,7 +151,7 @@ function onEditGroupFolder(groupFolder) {
   groupFolderEdit.value.error = '';
   groupFolderEdit.value.id = groupFolder.id;
   groupFolderEdit.value.name = groupFolder.name;
-  groupFolderEdit.value.members = groupFolder.members.map((m) => ({ username: m.username, role: m.role }));
+  groupFolderEdit.value.members = groupFolder.members.map((m) => ({ userId: m.userId, username: m.username, role: m.role, active: m.active }));
   groupFolderEdit.value.groupMembers = (groupFolder.groupMembers || []).map((m) => ({ groupId: m.groupId, role: m.role, name: m.name }));
   groupFolderEdit.value.newMember = '';
   groupFolderEdit.value.newMemberRole = ROLES.EDITOR;
@@ -163,7 +164,7 @@ async function onEditGroupFolderSubmit() {
   try {
     await GroupFolderModel.update(groupFolderEdit.value.id, {
       name: groupFolderEdit.value.name,
-      members: groupFolderEdit.value.members.map((m) => ({ username: m.username, role: m.role })),
+      members: groupFolderEdit.value.members.map((m) => ({ userId: m.userId, role: m.role })),
       groupMembers: groupFolderEdit.value.groupMembers.map((m) => ({ groupId: m.groupId, role: m.role })),
     });
   } catch (e) {

@@ -20,15 +20,15 @@ describe('groups', function () {
     it('can add, list and remove groups with members', async function () {
         await createUsers();
 
-        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.username, user.username ]);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id, user.id ]);
 
         const all = await groups.listWithMembers();
         assert.equal(all.length, 1);
         assert.equal(all[0].name, 'Engineering');
-        assert.deepEqual(all[0].members, [ alice.username, user.username ]);
+        assert.deepEqual(all[0].members, [ { id: alice.id, username: alice.username }, { id: user.id, username: user.username } ]);
 
-        assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ alice.username, user.username ]);
-        assert.deepEqual(await groups.getMembershipGroupIds(alice.username), [ 'gid-1' ]);
+        assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ alice.id, user.id ].sort());
+        assert.deepEqual(await groups.getMembershipGroupIds(alice.id), [ 'gid-1' ]);
 
         await groups.remove('gid-1');
         assert.equal(await groups.get('gid-1'), null);
@@ -37,24 +37,24 @@ describe('groups', function () {
     it('can update a group and its members', async function () {
         await createUsers();
 
-        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.username ]);
-        const result = await groups.upsertFromScim('gid-1', 'Eng', [ user.username ]);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        const result = await groups.upsertFromScim('gid-1', 'Eng', [ user.id ]);
         assert.equal(result.created, false);
         assert.equal(result.updated, true);
 
-        assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ user.username ]);
+        assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ user.id ]);
         assert.equal((await groups.get('gid-1')).active, true);
     });
 
     it('keeps members when a group is marked inactive', async function () {
         await createUsers();
 
-        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.username, user.username ]);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id, user.id ]);
         await groups.setActive('gid-1', false);
 
         const group = await groups.get('gid-1');
         assert.equal(group.active, false);
-        assert.deepEqual(await groups.getMemberUsernames('gid-1'), [ alice.username, user.username ]);
+        assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ alice.id, user.id ].sort());
     });
 
     it('rejects unknown users in membership', async function () {

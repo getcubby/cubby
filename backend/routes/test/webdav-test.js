@@ -18,7 +18,7 @@ describe('webdav', function () {
     async function createLinkShare(filePath, password) {
         await addUserFile(alice.username, `${filePath}/file.txt`, 'shared content');
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: filePath, readonly: false, password });
+            .send({ ownerUserId: alice.id, path: filePath, readonly: false, password });
         assert.equal(response.status, 200);
         return response.body.shareId;
     }

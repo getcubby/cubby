@@ -20,7 +20,7 @@ async function list(req, res, next) {
 
     debugLog(`list: ${filePath} limit:${limit}`);
 
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user.username, filePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user.id, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
     if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));

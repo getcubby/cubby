@@ -6,6 +6,7 @@ import paths from '../paths.js';
 import users from '../users.js';
 
 const alice = {
+    id: 'uid-alice',
     username: 'alice',
     email: 'alice@test.local',
     displayName: 'Alice',
@@ -13,6 +14,7 @@ const alice = {
 };
 
 const user = {
+    id: 'uid-testuser',
     username: 'testuser',
     email: 'user@test.local',
     displayName: 'Test User',
@@ -47,7 +49,9 @@ async function addUserWithHome(userData) {
 }
 
 async function addUserFile(username, filePath, content = 'hello') {
-    await files.addOrOverwriteFileContents(username, filePath, Buffer.from(content), null, true);
+    const stored = await users.getByUsername(username);
+    const userId = stored ? stored.id : username;
+    await files.addOrOverwriteFileContents(userId, filePath, Buffer.from(content), null, true);
 }
 
 async function cleanup() {

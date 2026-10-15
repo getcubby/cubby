@@ -12,6 +12,9 @@ import safe from '@cloudron/safetydance';
 const debugLog = debug('cubby:favorites');
 
 function postProcess(data) {
+    data.userId = data.user_id;
+    delete data.user_id;
+
     data.filePath = data.file_path;
     delete data.file_path;
 
@@ -22,8 +25,8 @@ function postProcess(data) {
     delete data.created_at;
 
     if (data.owner_groupfolder) data.owner = `groupfolder-${data.owner_groupfolder}`;
-    else data.owner = data.owner_username;
-    delete data.owner_username;
+    else data.owner = data.owner_user_id;
+    delete data.owner_user_id;
     delete data.owner_groupfolder;
 
     return data;
@@ -33,11 +36,11 @@ async function listByOwnerAndFilePath(owner, filePath) {
     assert(typeof owner === 'string');
     assert(typeof filePath === 'string');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`listByOwnerAndFilePath: ${owner} ${filePath}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filePath ]);
+    const result = await database.query('SELECT * FROM favorites WHERE share_id IS NULL AND (owner_user_id = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUserId, ownerGroupfolder, filePath ]);
 
     result.rows.forEach(postProcess);
 
@@ -69,21 +72,21 @@ async function list(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM favorites WHERE username = ? ORDER BY created_at DESC, rowid DESC', [ username ]);
+    const result = await database.query('SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC, rowid DESC', [ username ]);
 
     result.rows.forEach(postProcess);
 
     return result.rows;
 }
 
-async function findExistingId(username, { shareId, ownerUsername, ownerGroupfolder, filePath }) {
+async function findExistingId(username, { shareId, ownerUserId, ownerGroupfolder, filePath }) {
     if (shareId) {
-        const result = await database.query('SELECT id FROM favorites WHERE username = ? AND share_id = ? AND file_path = ?', [ username, shareId, filePath ]);
+        const result = await database.query('SELECT id FROM favorites WHERE user_id = ? AND share_id = ? AND file_path = ?', [ username, shareId, filePath ]);
         return result.rows[0]?.id || null;
     }
 
-    const result = await database.query('SELECT id FROM favorites WHERE username = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?', [
-        username, ownerUsername, ownerGroupfolder, filePath
+    const result = await database.query('SELECT id FROM favorites WHERE user_id = ? AND share_id IS NULL AND owner_user_id IS ? AND owner_groupfolder IS ? AND file_path = ?', [
+        username, ownerUserId, ownerGroupfolder, filePath
     ]);
     return result.rows[0]?.id || null;
 }
@@ -103,14 +106,14 @@ async function create(username, { owner, filePath, shareId = null }) {
 
     debugLog(`create: ${username} share:${shareId || 'none'} ${filePath}`);
 
-    let ownerUsername = null;
+    let ownerUserId = null;
     let ownerGroupfolder = null;
 
     if (shareId) {
         const share = await shares.get(shareId);
         if (!share) throw new MainError(MainError.NOT_FOUND);
 
-        const shareOwner = share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`;
+        const shareOwner = share.ownerUserId || `groupfolder-${share.ownerGroupfolder}`;
         const canonicalPath = canonicalFromShareFavorite(share.filePath, filePath);
         const fullFilePath = files.getAbsolutePath(shareOwner, canonicalPath);
         if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
@@ -118,23 +121,23 @@ async function create(username, { owner, filePath, shareId = null }) {
         assert(typeof owner === 'string');
 
         const ownerColumns = sqlutil.ownerToDbColumns(owner);
-        ownerUsername = ownerColumns.ownerUsername;
+        ownerUserId = ownerColumns.ownerUserId;
         ownerGroupfolder = ownerColumns.ownerGroupfolder;
 
         const fullFilePath = files.getAbsolutePath(owner, filePath);
         if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
     }
 
-    const existingId = await findExistingId(username, { shareId, ownerUsername, ownerGroupfolder, filePath });
+    const existingId = await findExistingId(username, { shareId, ownerUserId, ownerGroupfolder, filePath });
     if (existingId) return existingId;
 
     const id = crypto.randomUUID();
 
-    const [error] = await safe(database.query('INSERT INTO favorites (id, username, share_id, owner_username, owner_groupfolder, file_path) VALUES (?, ?, ?, ?, ?, ?)', [
-        id, username, shareId, ownerUsername, ownerGroupfolder, filePath
+    const [error] = await safe(database.query('INSERT INTO favorites (id, user_id, share_id, owner_user_id, owner_groupfolder, file_path) VALUES (?, ?, ?, ?, ?, ?)', [
+        id, username, shareId, ownerUserId, ownerGroupfolder, filePath
     ]));
     if (error) {
-        const retryId = await findExistingId(username, { shareId, ownerUsername, ownerGroupfolder, filePath });
+        const retryId = await findExistingId(username, { shareId, ownerUserId, ownerGroupfolder, filePath });
         if (retryId) return retryId;
         throw new MainError(MainError.BAD_STATE, error);
     }
@@ -167,24 +170,24 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
-    await database.query(`DELETE FROM favorites WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        ownerUsername, ownerGroupfolder, ...pathArgs
+    await database.query(`DELETE FROM favorites WHERE share_id IS NULL AND (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUserId, ownerGroupfolder, ...pathArgs
     ]);
 
     // share-based favorites whose share survives but whose resolved path falls
     // inside the deleted path. (The share itself being deleted is handled by
     // the shares.id ON DELETE CASCADE foreign key.)
-    const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+    const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_user_id, s.owner_groupfolder
         FROM favorites f JOIN shares s ON f.share_id = s.id WHERE f.share_id IS NOT NULL`);
 
     for (const row of shareFavorites.rows) {
-        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_user_id;
         if (shareOwner !== owner) continue;
 
         const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);
@@ -224,16 +227,16 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
-    await database.query(`UPDATE favorites SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
-        WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
+    await database.query(`UPDATE favorites SET owner_user_id = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE share_id IS NULL AND (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUserId, to.ownerGroupfolder, toPath, fromPath, from.ownerUserId, from.ownerGroupfolder, ...pathArgs
     ]);
 
-    const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+    const shareFavorites = await database.query(`SELECT f.id, f.file_path, f.share_id, s.file_path AS share_root, s.owner_user_id, s.owner_groupfolder
         FROM favorites f JOIN shares s ON f.share_id = s.id WHERE f.share_id IS NOT NULL`);
 
     for (const row of shareFavorites.rows) {
-        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_user_id;
         if (shareOwner !== fromOwner) continue;
 
         const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);

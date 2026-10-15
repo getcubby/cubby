@@ -10,8 +10,8 @@ import passwords from './password.js';
 const debugLog = debug('cubby:filedrops');
 
 function postProcess(data) {
-    data.ownerUsername = data.owner_username;
-    delete data.owner_username;
+    data.ownerUserId = data.owner_user_id;
+    delete data.owner_user_id;
 
     data.ownerGroupfolder = data.owner_groupfolder;
     delete data.owner_groupfolder;
@@ -49,15 +49,15 @@ async function list(username) {
 
     debugLog(`list: ${username}`);
 
-    const result = await database.query('SELECT * FROM filedrops WHERE owner_username = ?', [ username ]);
+    const result = await database.query('SELECT * FROM filedrops WHERE owner_user_id = ?', [ username ]);
 
     result.rows.forEach(postProcess);
 
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = null, password = null }) {
-    assert(typeof ownerUsername === 'string' || !ownerUsername);
+async function create({ ownerUserId, ownerGroupfolder, filePath, expiresAt = null, password = null }) {
+    assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
     assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
@@ -65,17 +65,17 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, expiresAt = n
 
     const expiresAtDb = expiresAt ? new Date(expiresAt) : null;
 
-    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} expiresAt:${expiresAtDb || 'none'}`);
+    debugLog(`create: ${ownerUserId || ownerGroupfolder} ${filePath} expiresAt:${expiresAtDb || 'none'}`);
 
-    const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
+    const fullFilePath = files.getAbsolutePath(ownerUserId || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     const filedropId = 'fdp-' + crypto.randomBytes(32).toString('hex');
 
     const passwordHash = password ? await passwords.hashPassword(password) : null;
 
-    await database.query('INSERT INTO filedrops (id, owner_username, owner_groupfolder, file_path, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?)', [
-        filedropId, ownerUsername || null, ownerGroupfolder || null, filePath, expiresAtDb, passwordHash
+    await database.query('INSERT INTO filedrops (id, owner_user_id, owner_groupfolder, file_path, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?)', [
+        filedropId, ownerUserId || null, ownerGroupfolder || null, filePath, expiresAtDb, passwordHash
     ]);
 
     return filedropId;
@@ -106,14 +106,14 @@ async function verifyPassword(filedropId, candidatePassword) {
     return await passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
-async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {
-    assert(typeof ownerUsername === 'string' || !ownerUsername);
+async function getByOwnerAndFilepath(ownerUserId, ownerGroupfolder, filepath) {
+    assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof filepath, 'string');
 
-    debugLog(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
+    debugLog(`getByOwnerAndFilepath: ownerUserId:${ownerUserId} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
 
-    const result = await database.query('SELECT * FROM filedrops WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filepath ]);
+    const result = await database.query('SELECT * FROM filedrops WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUserId, ownerGroupfolder, filepath ]);
 
     if (result.rows.length === 0) return null;
 
@@ -135,14 +135,14 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
-    await database.query(`DELETE FROM filedrops WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        ownerUsername, ownerGroupfolder, ...pathArgs
+    await database.query(`DELETE FROM filedrops WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUserId, ownerGroupfolder, ...pathArgs
     ]);
 }
 
@@ -160,8 +160,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
-    await database.query(`UPDATE filedrops SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
+    await database.query(`UPDATE filedrops SET owner_user_id = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUserId, to.ownerGroupfolder, toPath, fromPath, from.ownerUserId, from.ownerGroupfolder, ...pathArgs
     ]);
 }
 

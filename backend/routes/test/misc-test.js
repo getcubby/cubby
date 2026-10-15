@@ -32,8 +32,8 @@ describe('misc API', function () {
     it('lists recent files within days_ago', async function () {
         await addUserFile(alice.username, '/recent-new.txt', 'new');
         await addUserFile(alice.username, '/recent-old.txt', 'old');
-        await recent.add(alice.username, '/home/recent-new.txt');
-        await recent.add(alice.username, '/home/recent-old.txt');
+        await recent.add(alice.id, '/home/recent-new.txt');
+        await recent.add(alice.id, '/home/recent-old.txt');
 
         const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
         await database.query('UPDATE recents SET accessed_at = ? WHERE file_path = ?', [ fiveDaysAgo, '/recent-old.txt' ]);

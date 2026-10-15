@@ -55,16 +55,16 @@ describe('recoll', function () {
     }
 
     async function createUserWithIndexedFile(username, filePath, content) {
-        await users.add({ username, email: `${username}@test.local`, displayName: username });
+        await users.add({ id: `uid-${username}`, username, email: `${username}@test.local`, displayName: username });
         await addUserFile(username, filePath, content);
-        await indexUser(username);
+        await indexUser(`uid-${username}`);
     }
 
     it('can index and search user files', async function () {
         const marker = `recoll-user-marker-${Date.now()}`;
         await createUserWithIndexedFile(alice.username, '/search-me.txt', marker);
 
-        const results = await recoll.searchByUsername(alice.username, marker);
+        const results = await recoll.searchByUsername(alice.id, marker);
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'search-me.txt');
         assert.ok(results[0].entry.filePath.endsWith('search-me.txt'));
@@ -75,11 +75,11 @@ describe('recoll', function () {
 
         await users.add(alice);
         await users.add(user);
-        await groupfolders.add('team', 'Team', user.username);
+        await groupfolders.add('team', 'Team', user.id);
         await addUserFile('groupfolder-team', '/team-doc.txt', marker);
-        await indexUser(user.username);
+        await indexUser(user.id);
 
-        const results = await recoll.searchByUsername(user.username, marker);
+        const results = await recoll.searchByUsername(user.id, marker);
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'team-doc.txt');
     });
@@ -89,10 +89,10 @@ describe('recoll', function () {
 
         await users.add(alice);
         await addUserFile(alice.username, '/ondemand.txt', marker);
-        assert.equal(fs.existsSync(indexDbPath(alice.username)), false);
+        assert.equal(fs.existsSync(indexDbPath(alice.id)), false);
 
-        const results = await recoll.searchByUsername(alice.username, marker);
-        assert.ok(fs.existsSync(indexDbPath(alice.username)), 'recoll index was not created');
+        const results = await recoll.searchByUsername(alice.id, marker);
+        assert.ok(fs.existsSync(indexDbPath(alice.id)), 'recoll index was not created');
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'ondemand.txt');
     });
@@ -101,13 +101,13 @@ describe('recoll', function () {
         const marker = `recoll-groupfolder-marker-${Date.now()}`;
 
         await users.add(user);
-        await groupfolders.add('shared', 'Shared', user.username);
+        await groupfolders.add('shared', 'Shared', user.id);
         await addUserFile('groupfolder-shared', '/shared-doc.txt', marker);
-        await indexUser(user.username);
+        await indexUser(user.id);
 
         await recoll.indexByGroupFolder('shared');
 
-        const results = await recoll.searchByUsername(user.username, marker);
+        const results = await recoll.searchByUsername(user.id, marker);
         assert.ok(results.length >= 1);
         assert.equal(results[0].fileName, 'shared-doc.txt');
     });

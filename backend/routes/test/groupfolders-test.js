@@ -29,7 +29,7 @@ describe('groupfolders API', function () {
         const team = listResponse.body.groupFolder.find((g) => g.id === 'team');
         assert.ok(team);
         assert.deepEqual(team.members, [
-            { username: user.username, role: 'owner', active: true }
+            { userId: user.id, username: user.username, role: 'owner', active: true }
         ]);
     });
 
@@ -50,8 +50,8 @@ describe('groupfolders API', function () {
                 slug: 'with-members',
                 name: 'With members',
                 members: [
-                    { username: user.username, role: 'editor' },
-                    { username: alice.username, role: 'viewer' }
+                    { userId: user.id, role: 'editor' },
+                    { userId: alice.id, role: 'viewer' }
                 ]
             });
         assert.equal(response.status, 200);
@@ -59,8 +59,8 @@ describe('groupfolders API', function () {
         const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
         const folder = listResponse.body.groupFolder.find((g) => g.id === 'with-members');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'viewer', active: true },
-            { username: user.username, role: 'owner', active: true }
+            { userId: alice.id, username: alice.username, role: 'viewer', active: true },
+            { userId: user.id, username: user.username, role: 'owner', active: true }
         ]);
 
         const aliceList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);
@@ -69,7 +69,7 @@ describe('groupfolders API', function () {
 
     it('rejects invalid members', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
-            .send({ slug: 'bad-members', name: 'Bad', members: [ { username: alice.username, role: 'boss' } ] })
+            .send({ slug: 'bad-members', name: 'Bad', members: [ { userId: alice.id, role: 'boss' } ] })
             .ok(() => true);
         assert.equal(response.status, 400);
     });
@@ -91,7 +91,7 @@ describe('groupfolders API', function () {
             .send({ slug: 'manage', name: 'Team' });
 
         const updateDenied = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/manage`), alice.token)
-            .send({ name: 'Hacked', members: [ { username: alice.username, role: 'owner' } ] })
+            .send({ name: 'Hacked', members: [ { userId: alice.id, role: 'owner' } ] })
             .ok(() => true);
         assert.equal(updateDenied.status, 403);
 
@@ -100,7 +100,7 @@ describe('groupfolders API', function () {
         assert.equal(removeDenied.status, 403);
 
         const update = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/manage`), user.token)
-            .send({ name: 'Updated Team', members: [ { username: alice.username, role: 'editor' }, { username: user.username, role: 'owner' } ] });
+            .send({ name: 'Updated Team', members: [ { userId: alice.id, role: 'editor' }, { userId: user.id, role: 'owner' } ] });
         assert.equal(update.status, 200);
 
         const updatedList = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), user.token);
@@ -117,7 +117,7 @@ describe('groupfolders API', function () {
             .send({ slug: 'selfrole', name: 'Team' });
 
         const response = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/selfrole`), user.token)
-            .send({ name: 'Team', members: [ { username: user.username, role: 'editor' } ] })
+            .send({ name: 'Team', members: [ { userId: user.id, role: 'editor' } ] })
             .ok(() => true);
         assert.equal(response.status, 403);
     });

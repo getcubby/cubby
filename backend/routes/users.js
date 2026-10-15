@@ -17,25 +17,9 @@ async function getDatabaseUser(req) {
     const oidcUser = req.user;
     const displayName = oidcUser.displayName ?? oidcUser.name ?? oidcUser.username;
     const email = oidcUser.email ?? '';
-
-    const user = await users.get(oidcUser.username);
-    if (!user) return await users.ensureUser({ username: oidcUser.username, email, displayName });
-
-    // a person who can still authenticate is present again until the next sync
-    if (!user.active) {
-        await users.setActive(user.username, true);
-        user.active = true;
-    }
-
-    // keep the internal database in sync with the session info. bearer token introspection may not have these claims
     const fromSession = req.session?.user === oidcUser;
-    if (fromSession && (user.displayName !== displayName || user.email !== email)) {
-        await users.update(user.username, { displayName, email });
-        user.displayName = displayName;
-        user.email = email;
-    }
 
-    return user;
+    return await users.syncFromOidc({ username: oidcUser.username, email, displayName }, { updateProfile: fromSession });
 }
 
 async function isAuthenticated(req, res, next) {

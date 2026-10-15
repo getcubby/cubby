@@ -21,8 +21,8 @@ function postProcess(data) {
     delete data.accessed_at;
 
     if (data.owner_groupfolder) data.owner = `groupfolder-${data.owner_groupfolder}`;
-    else data.owner = data.owner_username;
-    delete data.owner_username;
+    else data.owner = data.owner_user_id;
+    delete data.owner_user_id;
     delete data.owner_groupfolder;
 
     return data;
@@ -34,7 +34,7 @@ function resourcePathToRef(resourcePath, opener) {
     if (resourcePath.indexOf('/home') === 0) {
         return {
             shareId: null,
-            ownerUsername: opener,
+            ownerUserId: opener,
             ownerGroupfolder: null,
             filePath: resourcePath.slice('/home'.length) || '/'
         };
@@ -48,7 +48,7 @@ function resourcePathToRef(resourcePath, opener) {
 
         return {
             shareId,
-            ownerUsername: null,
+            ownerUserId: null,
             ownerGroupfolder: null,
             filePath: rest ? '/' + rest : '/'
         };
@@ -62,7 +62,7 @@ function resourcePathToRef(resourcePath, opener) {
 
         return {
             shareId: null,
-            ownerUsername: null,
+            ownerUserId: null,
             ownerGroupfolder: groupId,
             filePath: rest ? '/' + rest : '/'
         };
@@ -101,18 +101,18 @@ async function touch(opener, ref) {
             query: 'DELETE FROM recents WHERE opener = ? AND share_id = ? AND file_path = ?',
             args: [ opener, ref.shareId, ref.filePath ]
         }, {
-            query: `INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES (?, ?, NULL, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+            query: `INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at) VALUES (?, ?, NULL, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
             args: [ opener, ref.shareId, ref.filePath ]
         }]);
         return;
     }
 
     await database.transaction([{
-        query: 'DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?',
-        args: [ opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath ]
+        query: 'DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_user_id IS ? AND owner_groupfolder IS ? AND file_path = ?',
+        args: [ opener, ref.ownerUserId, ref.ownerGroupfolder, ref.filePath ]
     }, {
-        query: `INSERT INTO recents (opener, share_id, owner_username, owner_groupfolder, file_path, accessed_at) VALUES (?, NULL, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
-        args: [ opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath ]
+        query: `INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at) VALUES (?, NULL, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+        args: [ opener, ref.ownerUserId, ref.ownerGroupfolder, ref.filePath ]
     }]);
 }
 
@@ -142,8 +142,8 @@ async function remove(opener, resourcePath) {
         return;
     }
 
-    await database.query('DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_username IS ? AND owner_groupfolder IS ? AND file_path = ?', [
-        opener, ref.ownerUsername, ref.ownerGroupfolder, ref.filePath
+    await database.query('DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_user_id IS ? AND owner_groupfolder IS ? AND file_path = ?', [
+        opener, ref.ownerUserId, ref.ownerGroupfolder, ref.filePath
     ]);
 }
 
@@ -181,24 +181,24 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
-    await database.query(`DELETE FROM recents WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        ownerUsername, ownerGroupfolder, ...pathArgs
+    await database.query(`DELETE FROM recents WHERE share_id IS NULL AND (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUserId, ownerGroupfolder, ...pathArgs
     ]);
 
     // share-based recents whose share survives but whose resolved path falls
     // inside the deleted path. (The share itself being deleted is handled by
     // the shares.id ON DELETE CASCADE foreign key.)
-    const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+    const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_user_id, s.owner_groupfolder
         FROM recents r JOIN shares s ON r.share_id = s.id WHERE r.share_id IS NOT NULL`);
 
     for (const row of shareRecents.rows) {
-        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_user_id;
         if (shareOwner !== owner) continue;
 
         const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);
@@ -222,16 +222,16 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
-    await database.query(`UPDATE recents SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
-        WHERE share_id IS NULL AND (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
+    await database.query(`UPDATE recents SET owner_user_id = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE share_id IS NULL AND (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUserId, to.ownerGroupfolder, toPath, fromPath, from.ownerUserId, from.ownerGroupfolder, ...pathArgs
     ]);
 
-    const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_username, s.owner_groupfolder
+    const shareRecents = await database.query(`SELECT r.opener, r.file_path, r.share_id, s.file_path AS share_root, s.owner_user_id, s.owner_groupfolder
         FROM recents r JOIN shares s ON r.share_id = s.id WHERE r.share_id IS NOT NULL`);
 
     for (const row of shareRecents.rows) {
-        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_username;
+        const shareOwner = row.owner_groupfolder ? `groupfolder-${row.owner_groupfolder}` : row.owner_user_id;
         if (shareOwner !== fromOwner) continue;
 
         const canonicalPath = canonicalFromShareFavorite(row.share_root, row.file_path);

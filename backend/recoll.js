@@ -26,7 +26,7 @@ async function index() {
     if (constants.TEST) return;
 
     const userList = await users.list();
-    for (const user of userList) await indexByUsername(user.username);
+    for (const user of userList) await indexByUsername(user.id);
 }
 
 // TODO provide faster index operations on individual paths:
@@ -112,7 +112,7 @@ async function indexByGroupFolder(groupFolder, schedule = false) {
 
     debugLog(`indexByGroupFolder: ${groupFolder} ...`);
 
-    for (const username of await groupFolders.getMemberUsernames(groupFolder)) await indexByUsername(username, schedule);
+    for (const userId of await groupFolders.getMemberUserIds(groupFolder)) await indexByUsername(userId, schedule);
 
     debugLog(`indexByGroupFolder: ${groupFolder} done`);
 }

@@ -18,9 +18,9 @@ async function createFiledrop(req, res, next) {
 
     const parsedOwner = parseOwner(req.body);
     if (parsedOwner.error) return next(new HttpError(400, parsedOwner.error));
-    const { ownerUsername, ownerGroupfolder } = parsedOwner;
+    const { ownerUserId, ownerGroupfolder } = parsedOwner;
 
-    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, ownerUsername, ownerGroupfolder));
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.id, ownerUserId, ownerGroupfolder));
     if (accessError) return next(MainError.toHttpError(accessError));
     if (!allowed) return next(new HttpError(403, 'not allowed'));
 
@@ -40,11 +40,11 @@ async function createFiledrop(req, res, next) {
 
     debugLog(`createFiledrop: ${filePath}`);
 
-    const [error, filedropId] = await safe(filedrops.create({ ownerUsername, ownerGroupfolder, filePath, expiresAt, password }));
+    const [error, filedropId] = await safe(filedrops.create({ ownerUserId, ownerGroupfolder, filePath, expiresAt, password }));
     if (error) return next(MainError.toHttpError(error));
 
-    const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath, action: 'filedrop_created', details: { filedropId } });
+    const owner = ownerUserId || `groupfolder-${ownerGroupfolder}`;
+    await activity.log({ actor: req.user.id, owner, filePath, action: 'filedrop_created', details: { filedropId } });
 
     next(new HttpSuccess(200, { filedropId }));
 }
@@ -54,7 +54,7 @@ async function listFiledrops(req, res, next) {
 
     debugLog('listFiledrops');
 
-    const [error, result] = await safe(filedrops.list(req.user.username));
+    const [error, result] = await safe(filedrops.list(req.user.id));
     if (error) return next(MainError.toHttpError(error));
 
     next(new HttpSuccess(200, { filedrops: result }));
@@ -73,15 +73,15 @@ async function removeFiledrop(req, res, next) {
     if (getError) return next(new HttpError(500, getError));
     if (!filedrop) return next(new HttpError(404, 'not found'));
 
-    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, filedrop.ownerUsername, filedrop.ownerGroupfolder));
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.id, filedrop.ownerUserId, filedrop.ownerGroupfolder));
     if (accessError) return next(MainError.toHttpError(accessError));
     if (!allowed) return next(new HttpError(403, 'not allowed'));
 
     const [error] = await safe(filedrops.remove(filedropId));
     if (error) return next(MainError.toHttpError(error));
 
-    const owner = filedrop.ownerUsername || `groupfolder-${filedrop.ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath: filedrop.filePath, action: 'filedrop_deleted', details: { filedropId } });
+    const owner = filedrop.ownerUserId || `groupfolder-${filedrop.ownerGroupfolder}`;
+    await activity.log({ actor: req.user.id, owner, filePath: filedrop.filePath, action: 'filedrop_deleted', details: { filedropId } });
 
     next(new HttpSuccess(200, {}));
 }
@@ -104,7 +104,7 @@ async function getFiledropInfo(req, res, next) {
         return next(new HttpSuccess(200, { id: filedrop.id, passwordProtected: true }));
     }
 
-    const owner = filedrop.ownerUsername || `groupfolder-${filedrop.ownerGroupfolder}`;
+    const owner = filedrop.ownerUserId || `groupfolder-${filedrop.ownerGroupfolder}`;
 
     const [fileError, targetFolder] = await safe(files.head(owner, filedrop.filePath));
     if (fileError) return next(MainError.toHttpError(fileError));
@@ -167,7 +167,7 @@ async function uploadToFiledrop(req, res, next) {
 
     if (filedrop.passwordProtected && !filedrops.isUnlocked(req, filedrop.id)) return next(new HttpError(423, 'password required'));
 
-    const owner = filedrop.ownerUsername || `groupfolder-${filedrop.ownerGroupfolder}`;
+    const owner = filedrop.ownerUserId || `groupfolder-${filedrop.ownerGroupfolder}`;
 
     let uploadFilePath = path.join(filedrop.filePath, fileName);
     let counter = 1;

@@ -14,8 +14,8 @@ describe('activity API', function () {
         await addUserFile(alice.username, '/activity-api.txt', 'activity me');
 
         await activity.log({
-            actor: alice.username,
-            owner: alice.username,
+            actor: alice.id,
+            owner: alice.id,
             filePath: '/activity-api.txt',
             action: 'created'
         });
@@ -39,7 +39,7 @@ describe('activity API', function () {
         assert.equal(response.status, 200);
         assert.equal(response.body.activity.length, 1);
         assert.equal(response.body.activity[0].action, 'created');
-        assert.equal(response.body.activity[0].actor, alice.username);
+        assert.equal(response.body.activity[0].actor, alice.id);
     });
 
     it('returns empty activity for paths with no rows', async function () {

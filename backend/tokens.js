@@ -2,12 +2,12 @@ import assert from 'assert';
 import crypto from 'crypto';
 import database from './database.js';
 
-async function add(username) {
-    assert.strictEqual(typeof username, 'string');
+async function add(userId) {
+    assert.strictEqual(typeof userId, 'string');
 
     const token = crypto.randomBytes(32).toString('hex');
 
-    await database.query('INSERT INTO tokens (id, username) VALUES (?, ?)', [ token, username ]);
+    await database.query('INSERT INTO tokens (id, user_id) VALUES (?, ?)', [ token, userId ]);
 
     return token;
 }

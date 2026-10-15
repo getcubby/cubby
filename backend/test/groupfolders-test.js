@@ -24,52 +24,52 @@ describe('groupfolders', function () {
     it('can add, get, and list groupfolders', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team Folder', alice.username);
+        await groupfolders.add('team', 'Team Folder', alice.id);
         await groupfolders.update('team', 'Team Folder', [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'editor' }
+            { userId: alice.id, username: alice.username, role: 'owner' },
+            { userId: user.id, username: user.username, role: 'editor' }
         ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Team Folder');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner', active: true },
-            { username: user.username, role: 'editor', active: true }
+            { userId: alice.id, username: alice.username, role: 'owner', active: true },
+            { userId: user.id, username: user.username, role: 'editor', active: true }
         ]);
         assert.ok(fs.existsSync(path.join(paths.GROUPS_DATA_ROOT, 'team')));
 
         const all = await groupfolders.list();
         assert.equal(all.length, 1);
 
-        const forUser = await groupfolders.list(user.username);
+        const forUser = await groupfolders.list(user.id);
         assert.equal(forUser.length, 1);
-        assert.ok(await groupfolders.isPartOf(forUser[0], user.username));
+        assert.ok(await groupfolders.isPartOf(forUser[0], user.id));
         assert.equal(await groupfolders.isPartOf(forUser[0], 'nobody'), false);
     });
 
     it('assigns roles and helpers', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.update('team', 'Team', [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'editor' }
+            { userId: alice.id, username: alice.username, role: 'owner' },
+            { userId: user.id, username: user.username, role: 'editor' }
         ]);
 
         const folder = await groupfolders.get('team');
-        assert.equal(await groupfolders.getRole(folder, alice.username), 'owner');
-        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+        assert.equal(await groupfolders.getRole(folder, alice.id), 'owner');
+        assert.equal(await groupfolders.getRole(folder, user.id), 'editor');
         assert.equal(await groupfolders.getRole(folder, 'nobody'), null);
-        assert.ok(await groupfolders.isOwner(folder, alice.username));
-        assert.equal(await groupfolders.isOwner(folder, user.username), false);
+        assert.ok(await groupfolders.isOwner(folder, alice.id));
+        assert.equal(await groupfolders.isOwner(folder, user.id), false);
     });
 
     it('rejects duplicate groupfolder ids', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
 
-        const [error] = await safe(groupfolders.add('team', 'Team Again', alice.username));
+        const [error] = await safe(groupfolders.add('team', 'Team Again', alice.id));
         assert.ok(error);
         assert.equal(error.reason, MainError.ALREADY_EXISTS);
     });
@@ -82,47 +82,47 @@ describe('groupfolders', function () {
 
     it('adds extra members and keeps the creator as owner', async function () {
         await createUsers();
-        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.id ]);
 
-        await groupfolders.add('team', 'Team', alice.username, [
-            { username: alice.username, role: 'editor' },
-            { username: user.username, role: 'viewer' }
+        await groupfolders.add('team', 'Team', alice.id, [
+            { userId: alice.id, username: alice.username, role: 'editor' },
+            { userId: user.id, username: user.username, role: 'viewer' }
         ], [
             { groupId: 'gid-1', role: 'editor' }
         ]);
 
         const folder = await groupfolders.get('team');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner', active: true },
-            { username: user.username, role: 'viewer', active: true }
+            { userId: alice.id, username: alice.username, role: 'owner', active: true },
+            { userId: user.id, username: user.username, role: 'viewer', active: true }
         ]);
         assert.deepEqual(folder.groupMembers, [
             { groupId: 'gid-1', role: 'editor', name: 'Engineering', active: true }
         ]);
-        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+        assert.equal(await groupfolders.getRole(folder, user.id), 'editor');
     });
 
     it('can update members and name', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.update('team', 'Updated Team', [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'viewer' }
+            { userId: alice.id, username: alice.username, role: 'owner' },
+            { userId: user.id, username: user.username, role: 'viewer' }
         ]);
 
         const folder = await groupfolders.get('team');
         assert.equal(folder.name, 'Updated Team');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner', active: true },
-            { username: user.username, role: 'viewer', active: true }
+            { userId: alice.id, username: alice.username, role: 'owner', active: true },
+            { userId: user.id, username: user.username, role: 'viewer', active: true }
         ]);
     });
 
     it('can remove a groupfolder', async function () {
         await createUsers();
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.remove('team');
 
         assert.equal(await groupfolders.get('team'), null);
@@ -131,40 +131,40 @@ describe('groupfolders', function () {
 
     it('resolves membership via groups', async function () {
         await createUsers();
-        await groups.upsertFromScim('gid-1', 'Engineering', [ user.username ]);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.id ]);
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.update('team', 'Team', [
-            { username: alice.username, role: 'owner' }
+            { userId: alice.id, username: alice.username, role: 'owner' }
         ], [
             { groupId: 'gid-1', role: 'editor' }
         ]);
 
         const folder = await groupfolders.get('team');
-        assert.equal(await groupfolders.isPartOf(folder, user.username), true);
-        assert.equal(await groupfolders.getRole(folder, user.username), 'editor');
+        assert.equal(await groupfolders.isPartOf(folder, user.id), true);
+        assert.equal(await groupfolders.getRole(folder, user.id), 'editor');
 
-        const forUser = await groupfolders.list(user.username);
+        const forUser = await groupfolders.list(user.id);
         assert.equal(forUser.length, 1);
 
-        assert.deepEqual(await groupfolders.getMemberUsernames('team'), [ alice.username, user.username ]);
+        assert.deepEqual((await groupfolders.getMemberUserIds('team')).sort(), [ alice.id, user.id ].sort());
     });
 
     it('keeps an inactive member when the update still includes them', async function () {
         await createUsers();
-        await users.setActive(user.username, false);
+        await users.setActive(user.id, false);
 
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.update('team', 'Team', [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'editor' }
+            { userId: alice.id, username: alice.username, role: 'owner' },
+            { userId: user.id, username: user.username, role: 'editor' }
         ]);
 
         const folder = await groupfolders.get('team');
         assert.deepEqual(folder.members, [
-            { username: alice.username, role: 'owner', active: true },
-            { username: user.username, role: 'editor', active: false }
+            { userId: alice.id, username: alice.username, role: 'owner', active: true },
+            { userId: user.id, username: user.username, role: 'editor', active: false }
         ]);
-        assert.equal(await groupfolders.isPartOf(folder, user.username), true);
+        assert.equal(await groupfolders.isPartOf(folder, user.id), true);
     });
 });

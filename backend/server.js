@@ -65,11 +65,11 @@ async function start() {
         // Auth routes (tegel)
         router.get('/auth/login', tegel.oidcRedirectToLoginProvider);
         router.get('/auth/callback', tegel.oidcCallback('/', '/?error=auth_failed', async (user) => {
-            await usersDb.ensureUser({
+            await usersDb.syncFromOidc({
                 username: user.username,
                 email: user.email ?? '',
                 displayName: user.displayName ?? user.name ?? user.username
-            });
+            }, { updateProfile: true });
         }));
         router.get('/auth/logout', tegel.logout('/'));
 
@@ -175,6 +175,9 @@ async function start() {
     });
 
     if (!constants.TEST && isScimEnabled()) {
+        usersDb.backfillIdsFromScim().catch((err) => {
+            console.error('SCIM user id backfill failed:', err);
+        });
         runScimSyncTick().catch((err) => {
             console.error('Initial SCIM sync failed:', err);
         });

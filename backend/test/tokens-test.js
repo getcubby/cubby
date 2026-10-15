@@ -13,12 +13,12 @@ describe('tokens', function () {
     it('can add, get, and remove a token', async function () {
         await users.add(user);
 
-        const token = await tokens.add(user.username);
+        const token = await tokens.add(user.id);
         assert.strictEqual(typeof token, 'string');
         assert.ok(token.length > 0);
 
         const result = await tokens.get(token);
-        assert.equal(result.username, user.username);
+        assert.equal(result.user_id, user.id);
 
         await tokens.remove(token);
         assert.equal(await tokens.get(token), null);

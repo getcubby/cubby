@@ -29,18 +29,30 @@ async function list() {
     return result.rows;
 }
 
-async function getMemberUsernames(groupId) {
+async function getMemberUserIds(groupId) {
     assert.strictEqual(typeof groupId, 'string');
 
-    const result = await database.query('SELECT username FROM group_members WHERE group_id = ? ORDER BY username', [ groupId ]);
+    const result = await database.query('SELECT user_id FROM group_members WHERE group_id = ? ORDER BY user_id', [ groupId ]);
 
-    return result.rows.map((m) => m.username);
+    return result.rows.map((m) => m.user_id);
 }
 
-async function getMembershipGroupIds(username) {
-    assert.strictEqual(typeof username, 'string');
+async function getMembers(groupId) {
+    assert.strictEqual(typeof groupId, 'string');
 
-    const result = await database.query('SELECT group_id FROM group_members WHERE username = ? ORDER BY group_id', [ username ]);
+    const result = await database.query(`SELECT users.id, users.username
+        FROM group_members
+        JOIN users ON users.id = group_members.user_id
+        WHERE group_members.group_id = ?
+        ORDER BY users.username`, [ groupId ]);
+
+    return result.rows.map((m) => ({ id: m.id, username: m.username }));
+}
+
+async function getMembershipGroupIds(userId) {
+    assert.strictEqual(typeof userId, 'string');
+
+    const result = await database.query('SELECT group_id FROM group_members WHERE user_id = ? ORDER BY group_id', [ userId ]);
 
     return result.rows.map((m) => m.group_id);
 }
@@ -49,7 +61,7 @@ async function listWithMembers() {
     const groups = await list();
 
     for (const group of groups) {
-        group.members = await getMemberUsernames(group.id);
+        group.members = await getMembers(group.id);
     }
 
     return groups;
@@ -79,19 +91,19 @@ async function setActive(id, active) {
     await database.query('UPDATE groups SET active = ? WHERE id = ?', [ active, id ]);
 }
 
-async function setMembers(groupId, usernames) {
+async function setMembers(groupId, userIds) {
     assert.strictEqual(typeof groupId, 'string');
-    assert(Array.isArray(usernames));
+    assert(Array.isArray(userIds));
 
     const queries = [{
         query: 'DELETE FROM group_members WHERE group_id = ?',
         args: [ groupId ]
     }];
 
-    for (const username of usernames) {
+    for (const userId of userIds) {
         queries.push({
-            query: 'INSERT INTO group_members (group_id, username) VALUES (?, ?)',
-            args: [ groupId, username ]
+            query: 'INSERT INTO group_members (group_id, user_id) VALUES (?, ?)',
+            args: [ groupId, userId ]
         });
     }
 
@@ -118,20 +130,20 @@ async function remove(id) {
  * Create or update a group synced from Cloudron SCIM.
  * @param {string} id
  * @param {string} name
- * @param {string[]} memberUsernames
+ * @param {string[]} memberUserIds
  * @returns {Promise<{ created: boolean, updated: boolean }>}
  */
-async function upsertFromScim(id, name, memberUsernames) {
+async function upsertFromScim(id, name, memberUserIds) {
     assert.strictEqual(typeof id, 'string');
     assert.strictEqual(typeof name, 'string');
-    assert(Array.isArray(memberUsernames));
+    assert(Array.isArray(memberUserIds));
 
-    debugLog(`upsertFromScim: ${id} ${name} members:${memberUsernames.length}`);
+    debugLog(`upsertFromScim: ${id} ${name} members:${memberUserIds.length}`);
 
     if (await get(id)) {
         await update(id, name);
         await setActive(id, true);
-        await setMembers(id, memberUsernames);
+        await setMembers(id, memberUserIds);
         return { created: false, updated: true };
     }
 
@@ -142,7 +154,7 @@ async function upsertFromScim(id, name, memberUsernames) {
         await setActive(id, true);
     }
 
-    await setMembers(id, memberUsernames);
+    await setMembers(id, memberUserIds);
 
     return { created: true, updated: false };
 }
@@ -151,7 +163,8 @@ export default {
     get,
     list,
     listWithMembers,
-    getMemberUsernames,
+    getMembers,
+    getMemberUserIds,
     getMembershipGroupIds,
     add,
     update,

@@ -43,7 +43,7 @@ const receiverOptions = computed(() => {
 
   if (users.value.length) {
     options.push({ label: 'Users', separator: true });
-    users.value.forEach((u) => { options.push({ id: `user:${u.username}`, label: u.userAndDisplayName, username: u.username, type: 'user' }); });
+    users.value.forEach((u) => { options.push({ id: `user:${u.id}`, label: u.userAndDisplayName, userId: u.id, type: 'user' }); });
   }
 
   if (groups.value.length) {
@@ -76,8 +76,8 @@ function endOfLocalDayMs(ymd) {
 
 function entryOwner() {
   return entry.value.group
-    ? { ownerUsername: null, ownerGroupfolder: entry.value.group.id }
-    : { ownerUsername: entry.value.owner, ownerGroupfolder: null };
+    ? { ownerUserId: null, ownerGroupfolder: entry.value.group.id }
+    : { ownerUserId: entry.value.owner, ownerGroupfolder: null };
 }
 
 function receiverLabel(share) {
@@ -97,11 +97,11 @@ async function onCreateShare() {
   const selected = receiverOptions.value.find((o) => o.id === receiver.value);
   if (!selected) return;
 
-  const receiverUsername = selected.type === 'user' ? selected.username : null;
+  const receiverUserId = selected.type === 'user' ? selected.userId : null;
   const receiverGroup = selected.type === 'group' ? selected.groupId : null;
-  const { ownerUsername, ownerGroupfolder } = entryOwner();
+  const { ownerUserId, ownerGroupfolder } = entryOwner();
 
-  await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUsername, receiverGroup });
+  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUserId, receiverGroup });
 
   // reset the form
   receiver.value = '';
@@ -131,9 +131,9 @@ async function onCreateShareLink() {
       return;
     }
   }
-  const { ownerUsername, ownerGroupfolder } = entryOwner();
+  const { ownerUserId, ownerGroupfolder } = entryOwner();
 
-  const shareId = await ShareModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt, password: shareLink.value.password || null });
+  const shareId = await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt, password: shareLink.value.password || null });
 
   copyShareIdLinkToClipboard(shareId);
 

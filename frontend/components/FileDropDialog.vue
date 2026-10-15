@@ -62,10 +62,10 @@ async function onCreate() {
       return;
     }
   }
-  const ownerUsername = entry.value.group ? null : entry.value.owner;
+  const ownerUserId = entry.value.group ? null : entry.value.owner;
   const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
 
-  const filedropId = await FileDropModel.create({ ownerUsername, ownerGroupfolder, path: entry.value.filePath, expiresAt, password: filedropLink.value.password || null });
+  const filedropId = await FileDropModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, expiresAt, password: filedropLink.value.password || null });
 
   copyToClipboard(FileDropModel.getLink(filedropId));
   notify('File drop link copied to clipboard');

@@ -62,7 +62,7 @@ describe('entry', function () {
     });
 
     it('returns a public view via withoutPrivate', function () {
-        const favorite = { username: 'viewer', id: 'fid-1' };
+        const favorite = { userId: 'viewer', id: 'fid-1' };
         const entry = makeEntry({
             favorites: [ favorite ],
             sharedWith: [ { id: 'sid-1' } ]

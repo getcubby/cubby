@@ -19,7 +19,7 @@ async function create(data) {
     path: data.path
   };
 
-  if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
+  if (data.ownerUserId) tmp.ownerUserId = data.ownerUserId;
   if (data.ownerGroupfolder) tmp.ownerGroupfolder = data.ownerGroupfolder;
   if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
   if (data.password) tmp.password = data.password;

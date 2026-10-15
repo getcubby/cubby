@@ -65,7 +65,7 @@ describe('search API', function () {
         const marker = `search-route-marker-${Date.now()}`;
 
         await addUserFile(alice.username, '/search-route.txt', marker);
-        await indexUser(alice.username);
+        await indexUser(alice.id);
 
         const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), alice.token)
             .query({ query: marker });
@@ -79,12 +79,12 @@ describe('search API', function () {
         const marker = `search-route-ondemand-${Date.now()}`;
 
         await addUserFile(user.username, '/search-ondemand.txt', marker);
-        assert.equal(fs.existsSync(indexDbPath(user.username)), false);
+        assert.equal(fs.existsSync(indexDbPath(user.id)), false);
 
         const response = await withToken(superagent.get(`${serverUrl}/api/v1/search`), user.token)
             .query({ query: marker });
         assert.equal(response.status, 200);
-        assert.ok(fs.existsSync(indexDbPath(user.username)), 'recoll index was not created');
+        assert.ok(fs.existsSync(indexDbPath(user.id)), 'recoll index was not created');
         assert.ok(response.body.results.length >= 1);
         assert.equal(response.body.results[0].fileName, 'search-ondemand.txt');
     });

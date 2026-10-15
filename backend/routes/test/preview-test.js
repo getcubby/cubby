@@ -14,14 +14,14 @@ describe('preview API', function () {
     after(cleanup);
 
     it('returns 404 without authentication for user files', async function () {
-        const response = await superagent.get(`${serverUrl}/api/v1/preview/files/${alice.username}/deadbeef`)
+        const response = await superagent.get(`${serverUrl}/api/v1/preview/files/${alice.id}/deadbeef`)
             .ok(() => true);
         assert.equal(response.status, 404);
     });
 
     it('returns 404 for another user preview', async function () {
         const response = await withToken(
-            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.username}/deadbeef`),
+            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.id}/deadbeef`),
             user.token
         ).ok(() => true);
         assert.equal(response.status, 404);
@@ -40,7 +40,7 @@ describe('preview API', function () {
         const fakeHash = crypto.createHash('md5').update('never-enqueued').digest('hex');
 
         const response = await withToken(
-            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.username}/${fakeHash}`).query({ path: '/mismatch.png' }),
+            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.id}/${fakeHash}`).query({ path: '/mismatch.png' }),
             alice.token
         ).ok(() => true);
         assert.equal(response.status, 404);
@@ -48,11 +48,11 @@ describe('preview API', function () {
 
     it('returns 404 without a path', async function () {
         await addUserFile(alice.username, '/nopath.png', MINIMAL_PNG);
-        const hash = preview.getHash('image/png', files.getAbsolutePath(alice.username, '/nopath.png'));
+        const hash = preview.getHash('image/png', files.getAbsolutePath(alice.id, '/nopath.png'));
         await waitForPreview(hash);
 
         const response = await withToken(
-            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.username}/${hash}`),
+            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.id}/${hash}`),
             alice.token
         ).ok(() => true);
         assert.equal(response.status, 404);
@@ -61,12 +61,12 @@ describe('preview API', function () {
     it('returns thumbnail for own file after generation', async function () {
         await addUserFile(alice.username, '/preview-route.png', MINIMAL_PNG);
 
-        const fullFilePath = files.getAbsolutePath(alice.username, '/preview-route.png');
+        const fullFilePath = files.getAbsolutePath(alice.id, '/preview-route.png');
         const hash = preview.getHash('image/png', fullFilePath);
         await waitForPreview(hash);
 
         const response = await withToken(
-            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.username}/${hash}`).query({ path: '/preview-route.png' }),
+            superagent.get(`${serverUrl}/api/v1/preview/files/${alice.id}/${hash}`).query({ path: '/preview-route.png' }),
             alice.token
         ).ok(() => true);
         assert.equal(response.status, 200);
@@ -78,13 +78,13 @@ describe('preview API', function () {
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
             .send({
-                ownerUsername: alice.username,
+                ownerUserId: alice.id,
                 path: '/preview-share.png',
                 readonly: true
             });
         const shareId = createResponse.body.shareId;
 
-        const fullFilePath = files.getAbsolutePath(alice.username, '/preview-share.png');
+        const fullFilePath = files.getAbsolutePath(alice.id, '/preview-share.png');
         const hash = preview.getHash('image/png', fullFilePath);
 
         const pending = await superagent.get(`${serverUrl}/api/v1/preview/shares/${shareId}/${hash}`)
@@ -130,11 +130,11 @@ describe('preview API', function () {
         await addUserFile(alice.username, '/private/secret.png', MINIMAL_PNG);
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/public', readonly: true });
+            .send({ ownerUserId: alice.id, path: '/public', readonly: true });
         const shareId = createResponse.body.shareId;
 
-        const visibleHash = preview.getHash('image/png', files.getAbsolutePath(alice.username, '/public/visible.png'));
-        const secretHash = preview.getHash('image/png', files.getAbsolutePath(alice.username, '/private/secret.png'));
+        const visibleHash = preview.getHash('image/png', files.getAbsolutePath(alice.id, '/public/visible.png'));
+        const secretHash = preview.getHash('image/png', files.getAbsolutePath(alice.id, '/private/secret.png'));
         await waitForPreview(visibleHash);
         await waitForPreview(secretHash);
 
@@ -153,11 +153,11 @@ describe('preview API', function () {
 
     it('does not serve thumbnails of another user', async function () {
         await addUserFile(alice.username, '/mine.png', MINIMAL_PNG);
-        const hash = preview.getHash('image/png', files.getAbsolutePath(alice.username, '/mine.png'));
+        const hash = preview.getHash('image/png', files.getAbsolutePath(alice.id, '/mine.png'));
         await waitForPreview(hash);
 
         const response = await withToken(
-            superagent.get(`${serverUrl}/api/v1/preview/files/${user.username}/${hash}`).query({ path: `/../${alice.username}/mine.png` }),
+            superagent.get(`${serverUrl}/api/v1/preview/files/${user.id}/${hash}`).query({ path: `/../${alice.id}/mine.png` }),
             user.token
         ).ok(() => true);
         assert.equal(response.status, 404);
@@ -167,7 +167,7 @@ describe('preview API', function () {
         await addUserFile(alice.username, '/listed/pic.png', MINIMAL_PNG);
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/listed', readonly: true });
+            .send({ ownerUserId: alice.id, path: '/listed', readonly: true });
         const shareId = createResponse.body.shareId;
 
         const listing = await superagent.get(`${serverUrl}/api/v1/files`).query({ path: `/shares/${shareId}/` });

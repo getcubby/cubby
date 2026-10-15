@@ -25,11 +25,11 @@ async function create(data) {
     readonly: data.readonly
   };
 
-  if (data.ownerUsername) tmp.ownerUsername = data.ownerUsername;
+  if (data.ownerUserId) tmp.ownerUserId = data.ownerUserId;
   if (data.ownerGroupfolder) tmp.ownerGroupfolder = data.ownerGroupfolder;
   // API: expiresAt is Unix time in milliseconds (finite number), or omit for no expiration
   if (typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) && data.expiresAt > 0) tmp.expiresAt = data.expiresAt;
-  if (data.receiverUsername) tmp.receiverUsername = data.receiverUsername;
+  if (data.receiverUserId) tmp.receiverUserId = data.receiverUserId;
   if (data.receiverGroup) tmp.receiverGroup = data.receiverGroup;
   if (data.password) tmp.password = data.password;
 

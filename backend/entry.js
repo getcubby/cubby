@@ -81,7 +81,7 @@ Entry.prototype.getPreviewUrl = function () {
         if (this.share) {
             type = 'shares';
             ownerId = this.share.id;
-            const ownerRoot = this.share.ownerGroupfolder ? path.join(paths.GROUPS_DATA_ROOT, this.share.ownerGroupfolder) : path.join(paths.USER_DATA_ROOT, this.share.ownerUsername);
+            const ownerRoot = this.share.ownerGroupfolder ? path.join(paths.GROUPS_DATA_ROOT, this.share.ownerGroupfolder) : path.join(paths.USER_DATA_ROOT, this.share.ownerUserId);
             rootPath = path.join(ownerRoot, this.share.filePath);
         } else if (this.group) {
             type = 'groups';
@@ -124,7 +124,7 @@ Entry.prototype.withoutPrivate = function (username = null) {
         isGroup: this.isGroup,
         isBinary: this.isBinary,
         mimeType: this.mimeType,
-        favorite: username ? this.favorites.find(f => f.username === username) : null,
+        favorite: username ? this.favorites.find(f => f.userId === username) : null,
         files: this.files.map(function (f) { return f.withoutPrivate(username); }),
         share: this.share,
         group: this.group,

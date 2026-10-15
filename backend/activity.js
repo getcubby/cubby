@@ -21,9 +21,12 @@ function postProcess(data) {
     delete data.created_at;
 
     if (data.owner_groupfolder) data.owner = `groupfolder-${data.owner_groupfolder}`;
-    else data.owner = data.owner_username;
-    delete data.owner_username;
+    else data.owner = data.owner_user_id;
+    delete data.owner_user_id;
     delete data.owner_groupfolder;
+
+    data.actorUsername = data.actor_username || null;
+    delete data.actor_username;
 
     if (data.details && typeof data.details === 'string') {
         data.details = JSON.parse(data.details);
@@ -40,14 +43,14 @@ async function log({ actor, owner, filePath, action, details = null }) {
     assert(ACTIONS.has(action));
     assert(details === null || typeof details === 'object');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`log: ${actor} ${action} ${owner}${filePath}`);
 
     const id = 'act-' + crypto.randomBytes(16).toString('hex');
 
-    await database.query('INSERT INTO file_activity (id, actor, owner_username, owner_groupfolder, file_path, action, details) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-        id, actor, ownerUsername, ownerGroupfolder, filePath, action, details ? JSON.stringify(details) : null
+    await database.query('INSERT INTO file_activity (id, actor, owner_user_id, owner_groupfolder, file_path, action, details) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+        id, actor, ownerUserId, ownerGroupfolder, filePath, action, details ? JSON.stringify(details) : null
     ]);
 
     return id;
@@ -57,11 +60,11 @@ async function clearByPath(owner, filePath) {
     assert.strictEqual(typeof owner, 'string');
     assert.strictEqual(typeof filePath, 'string');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`clearByPath: ${owner}${filePath}`);
 
-    await database.query('DELETE FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUsername, ownerGroupfolder, filePath ]);
+    await database.query('DELETE FROM file_activity WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND file_path = ?', [ ownerUserId, ownerGroupfolder, filePath ]);
 }
 
 async function listByPath(owner, filePath, { limit = 50 } = {}) {
@@ -69,7 +72,7 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof limit, 'number');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     let includeDescendants = false;
 
@@ -86,11 +89,11 @@ async function listByPath(owner, filePath, { limit = 50 } = {}) {
 
     if (includeDescendants) {
         const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, true);
-        result = await database.query(`SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}
-            ORDER BY created_at DESC, rowid DESC LIMIT ?`, [ ownerUsername, ownerGroupfolder, ...pathArgs, limit ]);
+        result = await database.query(`SELECT file_activity.*, users.username AS actor_username FROM file_activity LEFT JOIN users ON users.id = file_activity.actor WHERE (file_activity.owner_user_id = ? OR file_activity.owner_groupfolder = ?) AND ${pathCondition}
+            ORDER BY file_activity.created_at DESC, file_activity.rowid DESC LIMIT ?`, [ ownerUserId, ownerGroupfolder, ...pathArgs, limit ]);
     } else {
-        result = await database.query('SELECT * FROM file_activity WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? ORDER BY created_at DESC, rowid DESC LIMIT ?', [
-            ownerUsername, ownerGroupfolder, filePath, limit
+        result = await database.query('SELECT file_activity.*, users.username AS actor_username FROM file_activity LEFT JOIN users ON users.id = file_activity.actor WHERE (file_activity.owner_user_id = ? OR file_activity.owner_groupfolder = ?) AND file_activity.file_path = ? ORDER BY file_activity.created_at DESC, file_activity.rowid DESC LIMIT ?', [
+            ownerUserId, ownerGroupfolder, filePath, limit
         ]);
     }
 
@@ -104,7 +107,7 @@ async function lastActivityAt(owner, filePath, { recursive = false } = {}) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof recursive, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`lastActivityAt: ${owner}${filePath} recursive:${recursive}`);
 
@@ -113,10 +116,10 @@ async function lastActivityAt(owner, filePath, { recursive = false } = {}) {
     if (recursive) {
         const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, true);
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
-            WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition} AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, ...pathArgs ]);
+            WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition} AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUserId, ownerGroupfolder, ...pathArgs ]);
     } else {
         result = await database.query(`SELECT MAX(created_at) AS last_activity_at FROM file_activity
-            WHERE (owner_username = ? OR owner_groupfolder = ?) AND file_path = ? AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUsername, ownerGroupfolder, filePath ]);
+            WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND file_path = ? AND action IN (${CONTENT_ACTIONS_SQL})`, [ ownerUserId, ownerGroupfolder, filePath ]);
     }
 
     const timestamp = result.rows[0]?.last_activity_at;
@@ -139,9 +142,9 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
-    await database.query(`UPDATE file_activity SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
-        WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
+    await database.query(`UPDATE file_activity SET owner_user_id = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1)
+        WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUserId, to.ownerGroupfolder, toPath, fromPath, from.ownerUserId, from.ownerGroupfolder, ...pathArgs
     ]);
 }
 

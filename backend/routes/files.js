@@ -54,7 +54,7 @@ async function add(req, res, next) {
         return next(new HttpError(400, 'chunk and chunks must be positive integers with chunk < chunks'));
     }
 
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username, filePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.id, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
@@ -65,7 +65,7 @@ async function add(req, res, next) {
 
     debugLog(`add: ${subject.resource} ${subject.filePath} chunk:${chunk === null ? 'none' : `${chunk}/${chunks}`} ${mtime}`);
 
-    const actor = req.user?.username;
+    const actor = req.user?.id;
     let error;
     if (directory) {
         [error] = await safe(files.addDirectory(subject.usernameOrGroupfolder, subject.filePath, { actor }));
@@ -76,7 +76,7 @@ async function add(req, res, next) {
     }
     if (error) return next(MainError.toHttpError(error));
 
-    if (req.user && (chunk === null || chunk === chunks - 1)) await recent.add(req.user.username, subject.resourcePath);
+    if (req.user && (chunk === null || chunk === chunks - 1)) await recent.add(req.user.id, subject.resourcePath);
 
     next(new HttpSuccess(200, {}));
 }
@@ -85,7 +85,7 @@ async function head(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username, filePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.id, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
     if (!subject.share && !req.user) return next(new HttpError(401, 'not allowed'));
@@ -128,13 +128,13 @@ async function get(req, res, next) {
     if (resource !== 'shares' && !req.user) return next(new HttpError(401, 'Unauthorized'));
 
     if (resource === 'home') {
-        const [error, result] = await safe(files.get(req.user.username, filePath));
+        const [error, result] = await safe(files.get(req.user.id, filePath));
         if (error) return next(MainError.toHttpError(error));
 
         if (type === 'raw') {
             if (result.isDirectory) return next(new HttpError(417, 'type "raw" is not supported for directories'));
 
-            if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
+            if (req.user && recordRecent(req.query)) await recent.add(req.user.id, req.query.path);
 
             return sendFile(res, result);
         } else if (type === 'download') {
@@ -143,7 +143,7 @@ async function get(req, res, next) {
         }
 
         await attachBinaryFlags(result);
-        next(new HttpSuccess(200, result.withoutPrivate(req.user.username)));
+        next(new HttpSuccess(200, result.withoutPrivate(req.user.id)));
     } else if (resource === 'shares') {
         const shareId = filePath.split('/')[1];
         if (shareId) {
@@ -153,20 +153,20 @@ async function get(req, res, next) {
             if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
             // ensure the current user is an allowed receiver (public link/email/group aware)
-            if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
+            if (!await shares.isReceiverAllowed(share, req.user?.id)) return next(new HttpError(403, 'not allowed'));
 
             if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
             // actual path is without shares/<shareId>/
             const shareFilePath = filePath.split('/').slice(2).join('/');
 
-            const [error, file] = await safe(files.get(share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath)));
+            const [error, file] = await safe(files.get(share.ownerUserId || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, shareFilePath)));
             if (error) return next(MainError.toHttpError(error));
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
 
-                if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
+                if (req.user && recordRecent(req.query)) await recent.add(req.user.id, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {
@@ -184,20 +184,20 @@ async function get(req, res, next) {
             const shareFile = file.asShare(share.filePath);
             await favorites.attachToShareTree(shareFile, shareId);
 
-            next(new HttpSuccess(200, shareFile.withoutPrivate(req.user ? req.user.username : null)));
+            next(new HttpSuccess(200, shareFile.withoutPrivate(req.user ? req.user.id : null)));
         } else {
             debugLog('listShares');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
 
-            const [listError, result] = await safe(shares.listSharedWith(req.user.username));
+            const [listError, result] = await safe(shares.listSharedWith(req.user.id));
             if (listError) return next(MainError.toHttpError(listError));
 
             // Collect all file entries from shares
             const sharedFiles = [];
             for (const share of result) {
-                const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUsername;
+                const owner = share.ownerGroupfolder ? `groupfolder-${share.ownerGroupfolder}` : share.ownerUserId;
 
                 const [getError, file] = await safe(files.get(owner, share.filePath));
                 if (getError) {
@@ -223,12 +223,12 @@ async function get(req, res, next) {
                 isFile: false,
                 isShare: true,
                 favorites: [],
-                owner: req.user.username,
+                owner: req.user.id,
                 mimeType: 'inode/share',
                 files: sharedFiles
             });
 
-            next(new HttpSuccess(200, entry.withoutPrivate(req.user.username)));
+            next(new HttpSuccess(200, entry.withoutPrivate(req.user.id)));
         }
     } else if (resource === 'groupfolders') {
         const groupFolderId = filePath.split('/')[1];
@@ -236,7 +236,7 @@ async function get(req, res, next) {
             const group = await groupFolders.get(groupFolderId);
             if (!group) return next(new HttpError(404, 'no such groupfolder'));
 
-            if (!await groupFolders.isPartOf(group, req.user.username)) return next(new HttpError(403, 'not allowed'));
+            if (!await groupFolders.isPartOf(group, req.user.id)) return next(new HttpError(403, 'not allowed'));
 
             // actual path is without groupfolder/<groupId>/
             const groupFilePath = '/' + filePath.split('/').slice(2).join('/');
@@ -245,12 +245,12 @@ async function get(req, res, next) {
             if (error) return next(MainError.toHttpError(error));
 
             // children share the group object of their directory
-            if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.username);
+            if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.id);
 
             if (type === 'raw') {
                 if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
 
-                if (req.user && recordRecent(req.query)) await recent.add(req.user.username, req.query.path);
+                if (req.user && recordRecent(req.query)) await recent.add(req.user.id, req.query.path);
 
                 return sendFile(res, file);
             } else if (type === 'download') {
@@ -259,14 +259,14 @@ async function get(req, res, next) {
             }
 
             await attachBinaryFlags(file);
-            next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.username)));
+            next(new HttpSuccess(200, file.asGroup().withoutPrivate(req.user.id)));
         } else {
             debugLog('listGroupFolders');
 
             // only allowed for authenticated users
             if (!req.user) return next(new HttpError(401, 'not allowed'));
 
-            const [listError, result] = await safe(groupFolders.list(req.user.username));
+            const [listError, result] = await safe(groupFolders.list(req.user.id));
             if (listError) return next(MainError.toHttpError(listError));
 
             // Collect all file entries from groupfolder
@@ -278,7 +278,7 @@ async function get(req, res, next) {
                 file.fileName = group.name;
                 file.isShare = false;
                 file.isGroup = true;
-                if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.username);
+                if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.id);
                 const groupEntry = file.asGroup('/');
                 groupEntry.id = group.id;
 
@@ -296,12 +296,12 @@ async function get(req, res, next) {
                 isShare: false,
                 isGroup: true,
                 size: 0, // toplevel groupfolder has no size
-                owner: req.user.username,
+                owner: req.user.id,
                 mimeType: 'inode/share',
                 files: memberOfGroups
             });
 
-            next(new HttpSuccess(200, entry.withoutPrivate(req.user.username)));
+            next(new HttpSuccess(200, entry.withoutPrivate(req.user.id)));
         }
     } else {
         next(new HttpError(404, `Unknown resource type ${resource}`));
@@ -318,12 +318,12 @@ async function update(req, res, next) {
     if (!newFilePath) return next(new HttpError(400, 'action requires new_path argument'));
 
     // from
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username, filePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.id, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
     // target - if we support actions without target, this needs to move into the ifs
-    const [newTranslateError, newSubject] = await safe(files.translateResourcePath(req.user?.username, newFilePath));
+    const [newTranslateError, newSubject] = await safe(files.translateResourcePath(req.user?.id, newFilePath));
     if (newTranslateError) return next(MainError.toHttpError(newTranslateError));
     if (!newSubject) return next(new HttpError(403, 'not allowed'));
 
@@ -338,14 +338,14 @@ async function update(req, res, next) {
     let error;
     if (action === 'move') {
         [error] = await safe(relocate.relocate({
-            actor: req.user?.username,
+            actor: req.user?.id,
             fromOwner: subject.usernameOrGroupfolder,
             fromPath: subject.filePath,
             toOwner: newSubject.usernameOrGroupfolder,
             toPath: newSubject.filePath
         }));
     } else if (action === 'copy') {
-        [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath, false, { actor: req.user?.username }));
+        [error] = await safe(files.copy(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath, false, { actor: req.user?.id }));
     } else if (action === 'extract') {
         [error] = await safe(files.extract(subject.usernameOrGroupfolder, subject.filePath, newSubject.usernameOrGroupfolder, newSubject.filePath));
     } else {
@@ -360,7 +360,7 @@ async function remove(req, res, next) {
     const filePath = req.query.path;
     if (!filePath) return next(new HttpError(400, 'path must be a non-empty string'));
 
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username, filePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.id, filePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
 
@@ -371,10 +371,10 @@ async function remove(req, res, next) {
 
     debugLog(`remove: ${subject.resource} ${subject.usernameOrGroupfolder} ${subject.filePath}`);
 
-    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.user?.username }));
+    const [error] = await safe(files.remove(subject.usernameOrGroupfolder, subject.filePath, { actor: req.user?.id }));
     if (error) return next(MainError.toHttpError(error));
 
-    if (req.user) await recent.remove(req.user.username, subject.resourcePath);
+    if (req.user) await recent.remove(req.user.id, subject.resourcePath);
 
     next(new HttpSuccess(200, {}));
 }

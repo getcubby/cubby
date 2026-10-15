@@ -14,7 +14,7 @@ describe('filedrops API', function () {
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
             .send({
-                ownerUsername: alice.username,
+                ownerUserId: alice.id,
                 path: '/',
                 password: 'secret123'
             });
@@ -66,7 +66,7 @@ describe('filedrops API', function () {
         await addUserFile(alice.username, '/inbox/keep.txt', 'dummy');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/inbox' });
+            .send({ ownerUserId: alice.id, path: '/inbox' });
         assert.equal(createResponse.status, 200);
         const filedropId = createResponse.body.filedropId;
 
@@ -92,14 +92,14 @@ describe('filedrops API', function () {
 
     it('cannot create a file drop in storage of another user', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), user.token)
-            .send({ ownerUsername: alice.username, path: '/' })
+            .send({ ownerUserId: alice.id, path: '/' })
             .ok(() => true);
         assert.equal(response.status, 403);
     });
 
     it('cannot remove a file drop of another user', async function () {
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/' });
+            .send({ ownerUserId: alice.id, path: '/' });
         const filedropId = createResponse.body.filedropId;
 
         const removeDenied = await withToken(superagent.del(`${serverUrl}/api/v1/filedrops`), user.token)
@@ -116,7 +116,7 @@ describe('filedrops API', function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), alice.token)
             .send({ slug: 'drop-team', name: 'Team' });
         await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/drop-team`), alice.token)
-            .send({ name: 'Team', members: [ { username: alice.username, role: 'owner' }, { username: user.username, role: 'viewer' } ] });
+            .send({ name: 'Team', members: [ { userId: alice.id, role: 'owner' }, { userId: user.id, role: 'viewer' } ] });
 
         const viewerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/filedrops`), user.token)
             .send({ ownerGroupfolder: 'drop-team', path: '/' })

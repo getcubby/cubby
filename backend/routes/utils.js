@@ -17,37 +17,37 @@ export function parseExpiresAtMs(raw) {
     return { expiresAtMs: raw };
 }
 
-/** Validates the `ownerUsername` / `ownerGroupfolder` pair of a share or file drop body. Exactly one must be a non-empty string. */
+/** Validates the `ownerUserId` / `ownerGroupfolder` pair of a share or file drop body. Exactly one must be a non-empty string. */
 export function parseOwner(body) {
-    const ownerUsername = body.ownerUsername || null;
+    const ownerUserId = body.ownerUserId || null;
     const ownerGroupfolder = body.ownerGroupfolder || null;
 
-    if (ownerUsername !== null && typeof ownerUsername !== 'string') return { error: 'ownerUsername must be a string' };
+    if (ownerUserId !== null && typeof ownerUserId !== 'string') return { error: 'ownerUserId must be a string' };
     if (ownerGroupfolder !== null && typeof ownerGroupfolder !== 'string') return { error: 'ownerGroupfolder must be a string' };
-    if (!ownerUsername === !ownerGroupfolder) return { error: 'exactly one of ownerUsername or ownerGroupfolder is required' };
+    if (!ownerUserId === !ownerGroupfolder) return { error: 'exactly one of ownerUserId or ownerGroupfolder is required' };
 
-    return { ownerUsername, ownerGroupfolder };
+    return { ownerUserId, ownerGroupfolder };
 }
 
-/** Whether username may read files of the given storage: their own home, or a group folder they are part of. */
-export async function canReadOwner(username, ownerUsername, ownerGroupfolder) {
-    if (ownerUsername) return ownerUsername === username;
+/** Whether userId may read files of the given storage: their own home, or a group folder they are part of. */
+export async function canReadOwner(userId, ownerUserId, ownerGroupfolder) {
+    if (ownerUserId) return ownerUserId === userId;
     if (!ownerGroupfolder) return false;
 
     const groupFolder = await groupFolders.get(ownerGroupfolder);
     if (!groupFolder) return false;
 
-    return await groupFolders.isPartOf(groupFolder, username);
+    return await groupFolders.isPartOf(groupFolder, userId);
 }
 
-/** Whether username may manage shares and file drops of the given storage: their own home, or a group folder where they are owner or editor. */
-export async function canWriteOwner(username, ownerUsername, ownerGroupfolder) {
-    if (ownerUsername) return ownerUsername === username;
+/** Whether userId may manage shares and file drops of the given storage: their own home, or a group folder where they are owner or editor. */
+export async function canWriteOwner(userId, ownerUserId, ownerGroupfolder) {
+    if (ownerUserId) return ownerUserId === userId;
     if (!ownerGroupfolder) return false;
 
     const groupFolder = await groupFolders.get(ownerGroupfolder);
     if (!groupFolder) return false;
 
-    const role = await groupFolders.getRole(groupFolder, username);
+    const role = await groupFolders.getRole(groupFolder, userId);
     return role === groupFolders.ROLES.OWNER || role === groupFolders.ROLES.EDITOR;
 }

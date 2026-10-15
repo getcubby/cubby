@@ -29,8 +29,8 @@ describe('users API', function () {
     });
 
     it('omits inactive users and groups from the assign lists', async function () {
-        await users.setActive(user.username, false);
-        await groups.upsertFromScim('gid-hidden', 'Hidden', [ user.username ]);
+        await users.setActive(user.id, false);
+        await groups.upsertFromScim('gid-hidden', 'Hidden', [ user.id ]);
         await groups.setActive('gid-hidden', false);
         await groups.upsertFromScim('gid-visible', 'Visible', []);
 

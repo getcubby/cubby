@@ -29,39 +29,39 @@ describe('files', function () {
     it('resolves absolute paths and rejects path traversal', async function () {
         await createUsers();
 
-        const valid = files.getAbsolutePath(alice.username, '/docs/readme.txt');
-        assert.equal(valid, path.join(paths.USER_DATA_ROOT, alice.username, 'docs', 'readme.txt'));
+        const valid = files.getAbsolutePath(alice.id, '/docs/readme.txt');
+        assert.equal(valid, path.join(paths.USER_DATA_ROOT, alice.id, 'docs', 'readme.txt'));
 
-        assert.equal(files.getAbsolutePath(alice.username, '/../secret'), null);
-        assert.equal(files.getAbsolutePath(alice.username, `/../${alice.username}2/secret`), null);
+        assert.equal(files.getAbsolutePath(alice.id, '/../secret'), null);
+        assert.equal(files.getAbsolutePath(alice.id, `/../${alice.username}2/secret`), null);
         assert.equal(files.getAbsolutePath('groupfolder-team', '/../team2/secret'), null);
-        assert.equal(files.getAbsolutePath(alice.username, '/'), path.join(paths.USER_DATA_ROOT, alice.username));
+        assert.equal(files.getAbsolutePath(alice.id, '/'), path.join(paths.USER_DATA_ROOT, alice.id));
     });
 
     it('can add, get, head, move, copy, and remove files', async function () {
         await createUsers();
         await addUserFile(alice.username, '/hello.txt', 'hello');
 
-        const file = await files.get(alice.username, '/hello.txt');
+        const file = await files.get(alice.id, '/hello.txt');
         assert.equal(file.fileName, 'hello.txt');
         assert.equal(file.isFile, true);
 
-        const head = await files.head(alice.username, '/hello.txt');
+        const head = await files.head(alice.id, '/hello.txt');
         assert.equal(head.fileName, 'hello.txt');
         assert.ok(head.size > 0);
 
-        await files.copy(alice.username, '/hello.txt', alice.username, '/copy.txt');
-        assert.ok(await files.get(alice.username, '/copy.txt'));
+        await files.copy(alice.id, '/hello.txt', alice.id, '/copy.txt');
+        assert.ok(await files.get(alice.id, '/copy.txt'));
 
-        await files.move(alice.username, '/copy.txt', alice.username, '/moved.txt');
-        assert.ok(await files.get(alice.username, '/moved.txt'));
+        await files.move(alice.id, '/copy.txt', alice.id, '/moved.txt');
+        assert.ok(await files.get(alice.id, '/moved.txt'));
 
-        const [duplicateError] = await safe(files.addOrOverwriteFileContents(alice.username, '/hello.txt', Buffer.from('again'), null, false));
+        const [duplicateError] = await safe(files.addOrOverwriteFileContents(alice.id, '/hello.txt', Buffer.from('again'), null, false));
         assert.ok(duplicateError);
         assert.equal(duplicateError.reason, MainError.ALREADY_EXISTS);
 
-        await files.remove(alice.username, '/moved.txt');
-        const [missingError] = await safe(files.get(alice.username, '/moved.txt'));
+        await files.remove(alice.id, '/moved.txt');
+        const [missingError] = await safe(files.get(alice.id, '/moved.txt'));
         assert.ok(missingError);
         assert.equal(missingError.reason, MainError.NOT_FOUND);
     });
@@ -71,8 +71,8 @@ describe('files', function () {
         await addUserFile(alice.username, '/text.txt', 'hello world');
         await addUserFile(alice.username, '/binary.bin', 'hello\0world');
 
-        const textPath = files.getAbsolutePath(alice.username, '/text.txt');
-        const binaryPath = files.getAbsolutePath(alice.username, '/binary.bin');
+        const textPath = files.getAbsolutePath(alice.id, '/text.txt');
+        const binaryPath = files.getAbsolutePath(alice.id, '/binary.bin');
 
         assert.equal(await files.isBinaryFile(textPath), false);
         assert.equal(await files.isBinaryFile(binaryPath), true);
@@ -91,16 +91,16 @@ describe('files', function () {
     it('move returns CONFLICT when target exists', async function () {
         await createUsers();
         await addUserFile(alice.username, '/move-conflict-source.txt', 'source');
-        await files.addDirectory(alice.username, '/move-conflict-dir');
+        await files.addDirectory(alice.id, '/move-conflict-dir');
 
-        const [fileOverDir] = await safe(files.move(alice.username, '/move-conflict-source.txt', alice.username, '/move-conflict-dir'));
+        const [fileOverDir] = await safe(files.move(alice.id, '/move-conflict-source.txt', alice.id, '/move-conflict-dir'));
         assert.ok(fileOverDir);
         assert.equal(fileOverDir.reason, MainError.CONFLICT);
 
-        await files.addDirectory(alice.username, '/move-conflict-src-dir');
+        await files.addDirectory(alice.id, '/move-conflict-src-dir');
         await addUserFile(alice.username, '/move-conflict-target-file.txt', 'target');
 
-        const [dirOverFile] = await safe(files.move(alice.username, '/move-conflict-src-dir', alice.username, '/move-conflict-target-file.txt'));
+        const [dirOverFile] = await safe(files.move(alice.id, '/move-conflict-src-dir', alice.id, '/move-conflict-target-file.txt'));
         assert.ok(dirOverFile);
         assert.equal(dirOverFile.reason, MainError.CONFLICT);
     });
@@ -109,7 +109,7 @@ describe('files', function () {
         await createUsers();
         await addUserFile(alice.username, '/same-file.txt', 'same');
 
-        const [error] = await safe(files.move(alice.username, '/same-file.txt', alice.username, '/same-file.txt'));
+        const [error] = await safe(files.move(alice.id, '/same-file.txt', alice.id, '/same-file.txt'));
         assert.ok(error);
         assert.equal(error.reason, MainError.CONFLICT);
     });
@@ -117,7 +117,7 @@ describe('files', function () {
     it('move returns NOT_FOUND when source does not exist', async function () {
         await createUsers();
 
-        const [error] = await safe(files.move(alice.username, '/nonexistent.txt', alice.username, '/dest.txt'));
+        const [error] = await safe(files.move(alice.id, '/nonexistent.txt', alice.id, '/dest.txt'));
         assert.ok(error);
         assert.equal(error.reason, MainError.FS_ERROR);
     });
@@ -125,8 +125,8 @@ describe('files', function () {
     it('can add and list directories', async function () {
         await createUsers();
 
-        await files.addDirectory(alice.username, '/projects');
-        const dir = await files.get(alice.username, '/projects');
+        await files.addDirectory(alice.id, '/projects');
+        const dir = await files.get(alice.id, '/projects');
         assert.equal(dir.isDirectory, true);
         assert.equal(dir.fileName, 'projects');
     });
@@ -134,13 +134,13 @@ describe('files', function () {
     it('overlays directory mtime with descendant file activity', async function () {
         await createUsers();
 
-        await files.addDirectory(alice.username, '/mtime-overlay');
-        const beforeChild = await files.get(alice.username, '/mtime-overlay');
+        await files.addDirectory(alice.id, '/mtime-overlay');
+        const beforeChild = await files.get(alice.id, '/mtime-overlay');
         const parentMtimeBefore = beforeChild.mtime.getTime();
 
-        await files.addOrOverwriteFileContents(alice.username, '/mtime-overlay/child.txt', Buffer.from('child'), null, true, { actor: alice.username });
+        await files.addOrOverwriteFileContents(alice.id, '/mtime-overlay/child.txt', Buffer.from('child'), null, true, { actor: alice.id });
 
-        const parent = await files.get(alice.username, '/mtime-overlay');
+        const parent = await files.get(alice.id, '/mtime-overlay');
         const child = parent.files.find((entry) => entry.fileName === 'child.txt');
 
         assert.ok(parent.mtime.getTime() >= parentMtimeBefore);
@@ -152,9 +152,9 @@ describe('files', function () {
         await createUsers();
         await addUserFile(alice.username, '/notes.txt', 'notes');
 
-        const subject = await files.translateResourcePath(alice.username, '/home/notes.txt');
+        const subject = await files.translateResourcePath(alice.id, '/home/notes.txt');
         assert.equal(subject.resource, 'home');
-        assert.equal(subject.usernameOrGroupfolder, alice.username);
+        assert.equal(subject.usernameOrGroupfolder, alice.id);
         assert.equal(subject.filePath, '/notes.txt');
     });
 
@@ -163,14 +163,14 @@ describe('files', function () {
         await addUserFile(alice.username, '/shared.txt', 'shared');
 
         const shareId = await shares.create({
-            ownerUsername: alice.username,
+            ownerUserId: alice.id,
             filePath: '/shared.txt',
-            receiverUsername: user.username
+            receiverUserId: user.id
         });
 
-        const subject = await files.translateResourcePath(user.username, `/shares/${shareId}/`);
+        const subject = await files.translateResourcePath(user.id, `/shares/${shareId}/`);
         assert.equal(subject.resource, 'shares');
-        assert.equal(subject.usernameOrGroupfolder, alice.username);
+        assert.equal(subject.usernameOrGroupfolder, alice.id);
         assert.equal(subject.filePath, '/shared.txt');
         assert.equal(subject.share.id, shareId);
     });
@@ -180,9 +180,9 @@ describe('files', function () {
         await addUserFile(alice.username, '/shared.txt', 'shared');
 
         const shareId = await shares.create({
-            ownerUsername: alice.username,
+            ownerUserId: alice.id,
             filePath: '/shared.txt',
-            receiverUsername: user.username
+            receiverUserId: user.id
         });
 
         const subject = await files.translateResourcePath('intruder', `/shares/${shareId}/shared.txt`);
@@ -191,10 +191,10 @@ describe('files', function () {
 
     it('can resolve groupfolder resource paths', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', user.username);
+        await groupfolders.add('team', 'Team', user.id);
         await files.addOrOverwriteFileContents('groupfolder-team', '/team.txt', Buffer.from('team'), null, true);
 
-        const subject = await files.translateResourcePath(user.username, '/groupfolders/team/team.txt');
+        const subject = await files.translateResourcePath(user.id, '/groupfolders/team/team.txt');
         assert.equal(subject.resource, 'groupfolders');
         assert.equal(subject.usernameOrGroupfolder, 'groupfolder-team');
         assert.equal(subject.filePath, '/team.txt');
@@ -202,16 +202,16 @@ describe('files', function () {
 
     it('rejects groupfolder paths for non-members', async function () {
         await createUsers();
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
 
-        const subject = await files.translateResourcePath(user.username, '/groupfolders/team/file.txt');
+        const subject = await files.translateResourcePath(user.id, '/groupfolders/team/file.txt');
         assert.equal(subject, null);
     });
 
     it('throws not found for unknown groupfolders', async function () {
         await createUsers();
 
-        const [error] = await safe(files.translateResourcePath(user.username, '/groupfolders/no-such-team/file.txt'));
+        const [error] = await safe(files.translateResourcePath(user.id, '/groupfolders/no-such-team/file.txt'));
         assert.equal(error.reason, MainError.NOT_FOUND);
     });
 
@@ -219,7 +219,7 @@ describe('files', function () {
         await createUsers();
         await addUserFile(alice.username, '/absolute.txt', 'absolute');
 
-        const absolutePath = files.getAbsolutePath(alice.username, '/absolute.txt');
+        const absolutePath = files.getAbsolutePath(alice.id, '/absolute.txt');
         const file = await files.getByAbsolutePath(absolutePath);
         assert.equal(file.fileName, 'absolute.txt');
     });

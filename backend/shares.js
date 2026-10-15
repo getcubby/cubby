@@ -12,7 +12,12 @@ import users from './users.js';
 
 const debugLog = debug('cubby:shares');
 
-const SHARE_WITH_GROUP_NAME = 'SELECT shares.*, groups.name AS receiver_group_name FROM shares LEFT JOIN groups ON groups.id = shares.receiver_group';
+const SHARE_WITH_GROUP_NAME = `SELECT shares.*, groups.name AS receiver_group_name,
+    owner_user.username AS owner_username, receiver_user.username AS receiver_username
+    FROM shares
+    LEFT JOIN groups ON groups.id = shares.receiver_group
+    LEFT JOIN users owner_user ON owner_user.id = shares.owner_user_id
+    LEFT JOIN users receiver_user ON receiver_user.id = shares.receiver_user_id`;
 
 // in some queries we use the REGEXP operator so if input contains regexp chars we have to escape them
 function escapeForSqlRegexp(text) {
@@ -26,7 +31,10 @@ function escapeForSqlRegexp(text) {
 }
 
 function postProcess(data) {
-    data.ownerUsername = data.owner_username;
+    data.ownerUserId = data.owner_user_id;
+    delete data.owner_user_id;
+
+    data.ownerUsername = data.owner_username || null;
     delete data.owner_username;
 
     data.ownerGroupfolder = data.owner_groupfolder;
@@ -41,7 +49,10 @@ function postProcess(data) {
     data.expiresAt = data.expires_at;
     delete data.expires_at;
 
-    data.receiverUsername = data.receiver_username;
+    data.receiverUserId = data.receiver_user_id || null;
+    delete data.receiver_user_id;
+
+    data.receiverUsername = data.receiver_username || null;
     delete data.receiver_username;
 
     data.receiverEmail = data.receiver_email;
@@ -74,12 +85,12 @@ function isUnlocked(req, shareId) {
     return passwords.isUnlocked(req, 'shareUnlock', shareId);
 }
 
-async function listSharedWith(username) {
-    assert.strictEqual(typeof username, 'string');
+async function listSharedWith(userId) {
+    assert.strictEqual(typeof userId, 'string');
 
-    debugLog(`list: ${username}`);
+    debugLog(`list: ${userId}`);
 
-    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.receiver_username = ? OR shares.receiver_group IN (SELECT group_id FROM group_members WHERE username = ?)`, [ username, username ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.receiver_user_id = ? OR shares.receiver_group IN (SELECT group_id FROM group_members WHERE user_id = ?)`, [ userId, userId ]);
 
     result.rows.forEach(postProcess);
 
@@ -87,23 +98,23 @@ async function listSharedWith(username) {
     return result.rows.filter(function (share) { return share.receiverUsername || share.receiverEmail || share.receiverGroup; }).filter(function (share) { return !isExpired(share); });
 }
 
-async function list(username) {
-    assert.strictEqual(typeof username, 'string');
+async function list(userId) {
+    assert.strictEqual(typeof userId, 'string');
 
-    debugLog(`listSharedWith: ${username}`);
+    debugLog(`listSharedWith: ${userId}`);
 
-    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.owner_username = ?`, [ username ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE shares.owner_user_id = ?`, [ userId ]);
 
     result.rows.forEach(postProcess);
 
     return result.rows;
 }
 
-async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, receiverGroup = null, readonly, expiresAt = null, password = null }) {
-    assert(typeof ownerUsername === 'string' || !ownerUsername);
+async function create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup = null, readonly, expiresAt = null, password = null }) {
+    assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
-    assert(typeof receiverUsername === 'string' || !receiverUsername);
+    assert(typeof receiverUserId === 'string' || !receiverUserId);
     assert(typeof receiverEmail === 'string' || !receiverEmail);
     assert(typeof receiverGroup === 'string' || !receiverGroup);
     assert(typeof readonly === 'undefined' || typeof readonly === 'boolean');
@@ -115,23 +126,23 @@ async function create({ ownerUsername, ownerGroupfolder, filePath, receiverUsern
 
     const expiresAtDb = expiresAt ? new Date(expiresAt) : null;
 
-    debugLog(`create: ${ownerUsername || ownerGroupfolder} ${filePath} receiver:${receiverUsername || receiverEmail || receiverGroup || 'link'} readonly:${readonly} expiresAt:${expiresAtDb || 'none'}`);
+    debugLog(`create: ${ownerUserId || ownerGroupfolder} ${filePath} receiver:${receiverUserId || receiverEmail || receiverGroup || 'link'} readonly:${readonly} expiresAt:${expiresAtDb || 'none'}`);
 
-    const fullFilePath = files.getAbsolutePath(ownerUsername || `groupfolder-${ownerGroupfolder}`, filePath);
+    const fullFilePath = files.getAbsolutePath(ownerUserId || `groupfolder-${ownerGroupfolder}`, filePath);
     if (!fullFilePath) throw new MainError(MainError.INVALID_PATH);
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
     // passwords only apply to public link shares (no receiver)
-    const isLinkShare = !receiverUsername && !receiverEmail && !receiverGroup;
+    const isLinkShare = !receiverUserId && !receiverEmail && !receiverGroup;
     const passwordHash = isLinkShare && password ? await passwords.hashPassword(password) : null;
 
-    await database.query('INSERT INTO shares (id, owner_username, owner_groupfolder, file_path, receiver_email, receiver_username, receiver_group, readonly, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
-        shareId, ownerUsername || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUsername || null, receiverGroup || null, readonly, expiresAtDb, passwordHash
+    await database.query('INSERT INTO shares (id, owner_user_id, owner_groupfolder, file_path, receiver_email, receiver_user_id, receiver_group, readonly, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+        shareId, ownerUserId || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUserId || null, receiverGroup || null, readonly, expiresAtDb, passwordHash
     ]);
 
     // group shares just show up for members, no per-member email
-    const notifyEmail = receiverUsername ? (await users.get(receiverUsername)).email : receiverEmail;
+    const notifyEmail = receiverUserId ? (await users.get(receiverUserId)).email : receiverEmail;
     if (notifyEmail) await mailer.newShare(notifyEmail, shareId);
 
     return shareId;
@@ -162,16 +173,14 @@ async function verifyPassword(shareId, candidatePassword) {
     return await passwords.verifyPassword(candidatePassword, result.rows[0].password_hash);
 }
 
-async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) {
-    assert(typeof ownerUsername === 'string' || !ownerUsername);
+async function getByOwnerAndFilepath(ownerUserId, ownerGroupfolder, filepath) {
+    assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof filepath, 'string');
 
-    debugLog(`getByOwnerAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
+    debugLog(`getByOwnerAndFilepath: ownerUserId:${ownerUserId} ownerGroupfolder:${ownerGroupfolder} filepath:${filepath}`);
 
-    // enabling this would list shares within a folder in the sharedWith of that folder
-    // const result = await database.query('SELECT * FROM shares WHERE (owner_username = $1 OR owner_groupfolder = $2) AND file_path ~ $3', [ ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
-    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ ownerUsername, ownerGroupfolder, filepath ]);
+    const result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.owner_user_id = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ ownerUserId, ownerGroupfolder, filepath ]);
 
     if (result.rows.length === 0) return null;
 
@@ -180,19 +189,19 @@ async function getByOwnerAndFilepath(ownerUsername, ownerGroupfolder, filepath) 
     return result.rows;
 }
 
-async function getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiver, filepath, exactMatch = false) {
-    assert(typeof ownerUsername === 'string' || !ownerUsername);
+async function getByOwnerAndReceiverAndFilepath(ownerUserId, ownerGroupfolder, receiver, filepath, exactMatch = false) {
+    assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert.strictEqual(typeof receiver, 'string');
     assert.strictEqual(typeof filepath, 'string');
     assert.strictEqual(typeof exactMatch, 'boolean');
 
-    debugLog(`getByOwnerAndReceiverAndFilepath: ownerUsername:${ownerUsername} ownerGroupfolder:${ownerGroupfolder} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
+    debugLog(`getByOwnerAndReceiverAndFilepath: ownerUserId:${ownerUserId} ownerGroupfolder:${ownerGroupfolder} receiver:${receiver} exactMatch:${exactMatch} filepath:${filepath}`);
 
     let result;
 
-    if (exactMatch) result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_username = ? OR shares.receiver_group = ?) AND (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, filepath ]);
-    else result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_username = ? OR shares.receiver_group = ?) AND (shares.owner_username = ? OR shares.owner_groupfolder = ?) AND shares.file_path REGEXP ?`, [ receiver, receiver, receiver, ownerUsername, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
+    if (exactMatch) result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_user_id = ? OR shares.receiver_group = ?) AND (shares.owner_user_id = ? OR shares.owner_groupfolder = ?) AND shares.file_path = ?`, [ receiver, receiver, receiver, ownerUserId, ownerGroupfolder, filepath ]);
+    else result = await database.query(`${SHARE_WITH_GROUP_NAME} WHERE (shares.receiver_email = ? OR shares.receiver_user_id = ? OR shares.receiver_group = ?) AND (shares.owner_user_id = ? OR shares.owner_groupfolder = ?) AND shares.file_path REGEXP ?`, [ receiver, receiver, receiver, ownerUserId, ownerGroupfolder, `(^)${escapeForSqlRegexp(filepath)}(.*$)` ]);
 
     if (result.rows.length === 0) return null;
 
@@ -216,8 +225,8 @@ async function relocatePaths({ fromOwner, fromPath, toOwner, toPath, isDirectory
     // recursive move shares of child items
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(fromPath, isDirectory);
 
-    await database.query(`UPDATE shares SET owner_username = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        to.ownerUsername, to.ownerGroupfolder, toPath, fromPath, from.ownerUsername, from.ownerGroupfolder, ...pathArgs
+    await database.query(`UPDATE shares SET owner_user_id = ?, owner_groupfolder = ?, file_path = ? || substr(file_path, length(?) + 1) WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        to.ownerUserId, to.ownerGroupfolder, toPath, fromPath, from.ownerUserId, from.ownerGroupfolder, ...pathArgs
     ]);
 }
 
@@ -234,34 +243,34 @@ async function removeByOwnerAndPath(owner, filePath, isDirectory) {
     assert.strictEqual(typeof filePath, 'string');
     assert.strictEqual(typeof isDirectory, 'boolean');
 
-    const { ownerUsername, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
+    const { ownerUserId, ownerGroupfolder } = sqlutil.ownerToDbColumns(owner);
 
     debugLog(`removeByOwnerAndPath: ${owner}${filePath} isDirectory:${isDirectory}`);
 
     const { sql: pathCondition, args: pathArgs } = sqlutil.pathCondition(filePath, isDirectory);
 
-    await database.query(`DELETE FROM shares WHERE (owner_username = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
-        ownerUsername, ownerGroupfolder, ...pathArgs
+    await database.query(`DELETE FROM shares WHERE (owner_user_id = ? OR owner_groupfolder = ?) AND ${pathCondition}`, [
+        ownerUserId, ownerGroupfolder, ...pathArgs
     ]);
 }
 
 /**
- * Whether the given username is allowed to access a share.
- * Public link shares and email shares follow the existing (no username binding) model.
+ * Whether the given user id is allowed to access a share.
+ * Public link shares and email shares follow the existing (no user binding) model.
  * @param {object} share
- * @param {string} username
+ * @param {string} userId
  * @returns {Promise<boolean>}
  */
-async function isReceiverAllowed(share, username) {
+async function isReceiverAllowed(share, userId) {
     assert.strictEqual(typeof share, 'object');
 
-    if (!share.receiverUsername && !share.receiverEmail && !share.receiverGroup) return true;
+    if (!share.receiverUserId && !share.receiverEmail && !share.receiverGroup) return true;
 
-    if (share.receiverUsername) return share.receiverUsername === username;
+    if (share.receiverUserId) return share.receiverUserId === userId;
 
     if (share.receiverGroup) {
-        if (!username) return false;
-        const groupIds = await groups.getMembershipGroupIds(username);
+        if (!userId) return false;
+        const groupIds = await groups.getMembershipGroupIds(userId);
         return groupIds.includes(share.receiverGroup);
     }
 

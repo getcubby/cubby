@@ -19,6 +19,10 @@ const debugLog = debug('cubby:routes:office');
 
 const ANONYMOUS_USER_PREFIX = 'anonymous:';
 
+function officeIdentity(user) {
+    return user.id || user.username;
+}
+
 function cleanExpiredLocks() {
     const now = Date.now();
     for (const handleId of Object.keys(LOCKS)) {
@@ -92,7 +96,7 @@ async function getHandle(req, res, next) {
     const collaboraHost = await office.getWopiHost();
     if (!collaboraHost) return next(new HttpError(412, 'office endpoint not configured'));
 
-    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.username ?? null, resourcePath));
+    const [translateError, subject] = await safe(files.translateResourcePath(req.user?.id ?? null, resourcePath));
     if (translateError) return next(MainError.toHttpError(translateError));
     if (!subject) return next(new HttpError(403, 'not allowed'));
     if (subject.share?.passwordProtected && !shares.isUnlocked(req, subject.share.id)) return next(new HttpError(423, 'password required'));
@@ -138,8 +142,8 @@ async function getHandle(req, res, next) {
 
     let token;
     if (req.user) {
-        token = await tokens.add(req.user.username);
-        handle.users[req.user.username] = { readonly: isReadonly, token };
+        token = await tokens.add(req.user.id);
+        handle.users[req.user.id] = { readonly: isReadonly, token };
     } else {
         const identity = `${ANONYMOUS_USER_PREFIX}${subject.share.id}`;
         const existing = handle.users[identity];
@@ -176,7 +180,7 @@ async function postFile(req, res, next) {
             if (existingLock) {
                 if (wopiOldLock && existingLock.lockId === wopiOldLock) {
                     const newLockId = crypto.randomUUID();
-                    LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
+                    LOCKS[handleId] = { lockId: newLockId, username: officeIdentity(req.user), createdAt: Date.now() };
                     res.set('X-WOPI-Lock', newLockId);
                     return next(new HttpSuccess(200, {}));
                 }
@@ -185,12 +189,12 @@ async function postFile(req, res, next) {
                     res.set('X-WOPI-Lock', wopiLock);
                     return next(new HttpSuccess(200, {}));
                 }
-                if (existingLock.username === req.user.username) {
+                if (existingLock.username === officeIdentity(req.user)) {
                     existingLock.createdAt = Date.now();
                     res.set('X-WOPI-Lock', existingLock.lockId);
                     return next(new HttpSuccess(200, {}));
                 }
-                if (handle.users[req.user.username]) {
+                if (handle.users[officeIdentity(req.user)]) {
                     res.set('X-WOPI-Lock', existingLock.lockId);
                     return next(new HttpSuccess(200, {}));
                 }
@@ -198,7 +202,7 @@ async function postFile(req, res, next) {
                 return next(new HttpError(409, 'Lock mismatch / Locked by another user'));
             }
             const newLockId = crypto.randomUUID();
-            LOCKS[handleId] = { lockId: newLockId, username: req.user.username, createdAt: Date.now() };
+            LOCKS[handleId] = { lockId: newLockId, username: officeIdentity(req.user), createdAt: Date.now() };
             res.set('X-WOPI-Lock', newLockId);
             return next(new HttpSuccess(200, {}));
         }
@@ -213,7 +217,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', '');
                 return next(new HttpError(409, 'Lock mismatch'));
             }
-            if (wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
+            if (wopiLock !== existingLock.lockId && !handle.users[officeIdentity(req.user)]) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch'));
             }
@@ -226,7 +230,7 @@ async function postFile(req, res, next) {
                 res.set('X-WOPI-Lock', '');
                 return next(new HttpSuccess(200, {}));
             }
-            if (wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
+            if (wopiLock !== existingLock.lockId && !handle.users[officeIdentity(req.user)]) {
                 res.set('X-WOPI-Lock', existingLock.lockId);
                 return next(new HttpError(409, 'Lock mismatch'));
             }
@@ -266,13 +270,13 @@ async function checkFileInfo(req, res, next) {
 
     debugLog(`checkFileInfo: ${handleId} size=${result.size} mtime=${result.mtime.toISOString()}`);
 
-    const userInfo = handle.users[req.user.username];
+    const userInfo = handle.users[officeIdentity(req.user)];
     next(new HttpSuccess(200, {
         BaseFileName: result.fileName,
         Size: result.size,
         LastModifiedTime: result.mtime.toISOString(),
         // also OwnerId would be supported https://sdk.collaboraonline.com/docs/How_to_integrate.html#authentication
-        UserId: req.user.username,
+        UserId: officeIdentity(req.user),
         UserFriendlyName: req.user.displayName || req.user.username,
         UserCanWrite: userInfo ? !userInfo.readonly : false,
         SupportsLocks: true
@@ -328,24 +332,24 @@ async function putFile(req, res, next) {
     const handle = HANDLES[handleId];
     if (!handle)  return next(new HttpError(404, 'not found'));
 
-    const userInfo = handle.users[req.user.username];
+    const userInfo = handle.users[officeIdentity(req.user)];
     if (userInfo && userInfo.readonly) return next(new HttpError(403, 'share is readonly'));
 
     const wopiLock = req.headers['x-wopi-lock'] || '';
     const existingLock = LOCKS[handleId];
-    if (existingLock && wopiLock !== existingLock.lockId && !handle.users[req.user.username]) {
+    if (existingLock && wopiLock !== existingLock.lockId && !handle.users[officeIdentity(req.user)]) {
         res.set('X-WOPI-Lock', existingLock.lockId);
         return next(new HttpError(409, 'Lock mismatch'));
     }
 
-    const isAnonymous = req.user.username.startsWith(ANONYMOUS_USER_PREFIX);
-    const actor = isAnonymous ? null : req.user.username;
+    const isAnonymous = officeIdentity(req.user).startsWith(ANONYMOUS_USER_PREFIX);
+    const actor = isAnonymous ? null : officeIdentity(req.user);
     const details = isAnonymous ? { shareId: userInfo?.shareId } : null;
 
     const [error] = await safe(files.addOrOverwriteFileContents(handle.username, handle.filePath, req.body, null, true, { actor, details }));
     if (error) return next(MainError.toHttpError(error));
 
-    debugLog(`putFile: ${handleId} wrote ${req.body.length} bytes, actor=${req.user.username}`);
+    debugLog(`putFile: ${handleId} wrote ${req.body.length} bytes, actor=${officeIdentity(req.user)}`);
 
     next(new HttpSuccess(200, { LastModifiedTime: new Date().toISOString() }));
 }

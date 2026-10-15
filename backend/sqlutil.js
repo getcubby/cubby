@@ -1,20 +1,20 @@
 import assert from 'assert';
 import files from './files.js';
 
-// Maps an owner (a username or `groupfolder-<id>`) to the owner columns used
+// Maps an owner (a user id or `groupfolder-<id>`) to the owner columns used
 // across the data tables (shares, filedrops, favorites, recents, file_activity).
 function ownerToDbColumns(owner) {
     assert.strictEqual(typeof owner, 'string');
 
     if (files.isGroupfolder(owner)) {
         return {
-            ownerUsername: null,
+            ownerUserId: null,
             ownerGroupfolder: owner.slice('groupfolder-'.length)
         };
     }
 
     return {
-        ownerUsername: owner,
+        ownerUserId: owner,
         ownerGroupfolder: null
     };
 }

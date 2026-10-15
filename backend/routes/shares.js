@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import shares from '../shares.js';
+import users from '../users.js';
 import activity from '../activity.js';
 import files from '../files.js';
 import path from 'path';
@@ -38,7 +39,7 @@ async function optionalAttachReceiver(req, res, next) {
 
     req.share = share;
 
-    if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
+    if (!await shares.isReceiverAllowed(share, req.user?.id)) return next(new HttpError(403, 'not allowed'));
 
     if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
@@ -61,7 +62,7 @@ async function attachReceiver(req, res, next) {
 
     req.share = share;
 
-    if (!await shares.isReceiverAllowed(share, req.user?.username)) return next(new HttpError(403, 'not allowed'));
+    if (!await shares.isReceiverAllowed(share, req.user?.id)) return next(new HttpError(403, 'not allowed'));
 
     next();
 }
@@ -84,7 +85,7 @@ async function getShareLink(req, res, next) {
 
     debugLog(`get: ${req.share.id} path:${filePath} type:${type || 'json'}`);
 
-    const [error, file] = await safe(files.get(req.share.ownerUsername ? req.share.ownerUsername : `groupfolder-${req.share.ownerGroupfolder}`, path.join(req.share.filePath, filePath)));
+    const [error, file] = await safe(files.get(req.share.ownerUserId ? req.share.ownerUserId : `groupfolder-${req.share.ownerGroupfolder}`, path.join(req.share.filePath, filePath)));
     if (error) return next(MainError.toHttpError(error));
 
     if (type === 'raw') {
@@ -115,14 +116,14 @@ async function createShare(req, res, next) {
 
     const parsedOwner = parseOwner(req.body);
     if (parsedOwner.error) return next(new HttpError(400, parsedOwner.error));
-    const { ownerUsername, ownerGroupfolder } = parsedOwner;
+    const { ownerUserId, ownerGroupfolder } = parsedOwner;
 
-    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, ownerUsername, ownerGroupfolder));
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.id, ownerUserId, ownerGroupfolder));
     if (accessError) return next(MainError.toHttpError(accessError));
     if (!allowed) return next(new HttpError(403, 'not allowed'));
 
     const filePath = req.body.path.replace(/\/+/g, '/');
-    const receiverUsername = req.body.receiverUsername || null;
+    const receiverUserId = req.body.receiverUserId || null;
     const receiverEmail = req.body.receiverEmail || null;
     const receiverGroup = req.body.receiverGroup || null;
     const readonly = boolLike(req.body.readonly);
@@ -139,10 +140,10 @@ async function createShare(req, res, next) {
         password = null;
     }
 
-    debugLog(`createShare: ${filePath} receiver:${receiverUsername || receiverEmail || receiverGroup || 'link'}`);
+    debugLog(`createShare: ${filePath} receiver:${receiverUserId || receiverEmail || receiverGroup || 'link'}`);
 
-    if (receiverEmail || receiverUsername || receiverGroup) {
-        const [error, existingShares] = await safe(shares.getByOwnerAndReceiverAndFilepath(ownerUsername, ownerGroupfolder, receiverUsername || receiverEmail || receiverGroup, filePath, true /* exact match */));
+    if (receiverEmail || receiverUserId || receiverGroup) {
+        const [error, existingShares] = await safe(shares.getByOwnerAndReceiverAndFilepath(ownerUserId, ownerGroupfolder, receiverUserId || receiverEmail || receiverGroup, filePath, true /* exact match */));
         if (error) return next(MainError.toHttpError(error));
 
         if (existingShares && existingShares.length) {
@@ -151,11 +152,12 @@ async function createShare(req, res, next) {
         }
     }
 
-    const [error, shareId] = await safe(shares.create({ ownerUsername, ownerGroupfolder, filePath, receiverUsername, receiverEmail, receiverGroup, readonly, expiresAt, password }));
+    const [error, shareId] = await safe(shares.create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup, readonly, expiresAt, password }));
     if (error) return next(MainError.toHttpError(error));
 
-    const owner = ownerUsername || `groupfolder-${ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath, action: 'shared', details: { shareId, receiverUsername, receiverEmail, receiverGroup } });
+    const owner = ownerUserId || `groupfolder-${ownerGroupfolder}`;
+    const receiver = receiverUserId ? await users.get(receiverUserId) : null;
+    await activity.log({ actor: req.user.id, owner, filePath, action: 'shared', details: { shareId, receiverUserId, receiverUsername: receiver?.username || null, receiverEmail, receiverGroup } });
 
     next(new HttpSuccess(200, { shareId }));
 }
@@ -165,17 +167,17 @@ async function listShares(req, res, next) {
 
     debugLog('listShares');
 
-    const [error, result] = await safe(shares.list(req.user.username));
+    const [error, result] = await safe(shares.list(req.user.id));
     if (error) return next(MainError.toHttpError(error));
 
     const validShares = [];
     // Collect all file entries from shares
     for (const share of result) {
-        const [error, file] = await safe(files.get(share.ownerUsername ? share.ownerUsername : `groupfolder-${share.ownerGroupfolder}`, share.filePath));
+        const [error, file] = await safe(files.get(share.ownerUserId ? share.ownerUserId : `groupfolder-${share.ownerGroupfolder}`, share.filePath));
         if (error) debugLog('listShares: Share does not map to a file or folder', share, error);
         if (!file) continue;
 
-        share.file = file.withoutPrivate(req.user.username);
+        share.file = file.withoutPrivate(req.user.id);
         validShares.push(share);
     }
 
@@ -219,15 +221,15 @@ async function removeShare(req, res, next) {
     if (getError) return next(new HttpError(500, getError));
     if (!share) return next(new HttpError(404, 'not found'));
 
-    const [accessError, allowed] = await safe(canWriteOwner(req.user.username, share.ownerUsername, share.ownerGroupfolder));
+    const [accessError, allowed] = await safe(canWriteOwner(req.user.id, share.ownerUserId, share.ownerGroupfolder));
     if (accessError) return next(MainError.toHttpError(accessError));
     if (!allowed) return next(new HttpError(403, 'not allowed'));
 
     const [error] = await safe(shares.remove(shareId));
     if (error) return next(MainError.toHttpError(error));
 
-    const owner = share.ownerUsername || `groupfolder-${share.ownerGroupfolder}`;
-    await activity.log({ actor: req.user.username, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUsername: share.receiverUsername, receiverEmail: share.receiverEmail, receiverGroup: share.receiverGroup } });
+    const owner = share.ownerUserId || `groupfolder-${share.ownerGroupfolder}`;
+    await activity.log({ actor: req.user.id, owner, filePath: share.filePath, action: 'unshared', details: { shareId, receiverUserId: share.receiverUserId, receiverEmail: share.receiverEmail, receiverGroup: share.receiverGroup } });
 
     next(new HttpSuccess(200, {}));
 }

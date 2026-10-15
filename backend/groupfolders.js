@@ -40,12 +40,12 @@ function higherRole(a, b) {
 async function getMembers(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const result = await database.query(`SELECT groupfolders_members.username, groupfolders_members.role, users.active
+    const result = await database.query(`SELECT groupfolders_members.user_id, groupfolders_members.role, users.username, users.active
         FROM groupfolders_members
-        LEFT JOIN users ON users.username = groupfolders_members.username
+        LEFT JOIN users ON users.id = groupfolders_members.user_id
         WHERE groupfolders_members.groupfolder_id = ?
-        ORDER BY groupfolders_members.username`, [ id ]);
-    return result.rows.map((m) => ({ username: m.username, role: m.role, active: !!m.active }));
+        ORDER BY users.username`, [ id ]);
+    return result.rows.map((m) => ({ userId: m.user_id, username: m.username || '', role: m.role, active: !!m.active }));
 }
 
 async function getGroupMembers(id) {
@@ -59,46 +59,46 @@ async function getGroupMembers(id) {
     return result.rows.map((m) => ({ groupId: m.group_id, role: m.role, name: m.name || m.group_id, active: !!m.active }));
 }
 
-// all usernames that are members (directly or via a group)
-async function getMemberUsernames(id) {
+// all user ids that are members (directly or via a group)
+async function getMemberUserIds(id) {
     assert.strictEqual(typeof id, 'string');
 
-    const usernames = new Set();
-    for (const member of await getMembers(id)) usernames.add(member.username);
+    const userIds = new Set();
+    for (const member of await getMembers(id)) userIds.add(member.userId);
     for (const groupMember of await getGroupMembers(id)) {
-        for (const username of await groups.getMemberUsernames(groupMember.groupId)) usernames.add(username);
+        for (const userId of await groups.getMemberUserIds(groupMember.groupId)) userIds.add(userId);
     }
-    return Array.from(usernames);
+    return Array.from(userIds);
 }
 
 // group ids are like slugs so they are unique and should be humanly readable
-async function add(idOrSlug, name, ownerUsername, members = [], groupMembers = []) {
+async function add(idOrSlug, name, ownerUserId, members = [], groupMembers = []) {
     assert.strictEqual(typeof idOrSlug, 'string');
     assert.strictEqual(typeof name, 'string');
-    assert.strictEqual(typeof ownerUsername, 'string');
+    assert.strictEqual(typeof ownerUserId, 'string');
     assert(Array.isArray(members));
     assert(Array.isArray(groupMembers));
 
     // if no id slug is provided generate one
     if (!idOrSlug) idOrSlug = crypto.randomBytes(6).toString('hex');
 
-    debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUsername} members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
+    debugLog(`add: ${idOrSlug} by name ${name} with owner ${ownerUserId} members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
 
     const queries = [{
         query: 'INSERT INTO groupfolders (id, name) VALUES (?, ?)',
         args: [ idOrSlug, name ]
     }, {
-        query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
-        args: [ idOrSlug, ownerUsername, ROLES.OWNER ]
+        query: 'INSERT INTO groupfolders_members (groupfolder_id, user_id, role) VALUES (?, ?, ?)',
+        args: [ idOrSlug, ownerUserId, ROLES.OWNER ]
     }];
 
-    const seen = new Set([ ownerUsername ]);
+    const seen = new Set([ ownerUserId ]);
     for (const member of members) {
-        if (seen.has(member.username)) continue;
-        seen.add(member.username);
+        if (seen.has(member.userId)) continue;
+        seen.add(member.userId);
         queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
-            args: [ idOrSlug, member.username, member.role ]
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, user_id, role) VALUES (?, ?, ?)',
+            args: [ idOrSlug, member.userId, member.role ]
         });
     }
 
@@ -118,7 +118,7 @@ async function add(idOrSlug, name, ownerUsername, members = [], groupMembers = [
 
     // kick off indexer in background
     if (!constants.TEST) {
-        recoll.indexByUsername(ownerUsername);
+        recoll.indexByUsername(ownerUserId);
     }
 }
 
@@ -137,8 +137,8 @@ async function get(id) {
     return groupFolder;
 }
 
-async function list(username = '') {
-    assert.strictEqual(typeof username, 'string');
+async function list(userId = '') {
+    assert.strictEqual(typeof userId, 'string');
 
     const result = await database.query('SELECT * FROM groupfolders ORDER BY name');
 
@@ -148,12 +148,12 @@ async function list(username = '') {
         folder.groupMembers = await getGroupMembers(folder.id);
     }
 
-    if (!username) return folders;
+    if (!userId) return folders;
 
     // a user is part of a groupfolder if they are a direct member or in a member group
     const accessible = [];
     for (const folder of folders) {
-        if (await isPartOf(folder, username)) accessible.push(folder);
+        if (await isPartOf(folder, userId)) accessible.push(folder);
     }
 
     return accessible;
@@ -179,8 +179,8 @@ async function update(id, name, members, groupMembers = []) {
 
     for (const member of members) {
         queries.push({
-            query: 'INSERT INTO groupfolders_members (groupfolder_id, username, role) VALUES (?, ?, ?)',
-            args: [ id, member.username, member.role ]
+            query: 'INSERT INTO groupfolders_members (groupfolder_id, user_id, role) VALUES (?, ?, ?)',
+            args: [ id, member.userId, member.role ]
         });
     }
 
@@ -242,17 +242,17 @@ async function remove(id) {
     recoll.index();
 }
 
-async function getRole(groupFolder, username) {
+async function getRole(groupFolder, userId) {
     assert.strictEqual(typeof groupFolder, 'object');
-    assert.strictEqual(typeof username, 'string');
+    assert.strictEqual(typeof userId, 'string');
 
     let role = null;
 
-    const member = groupFolder.members.find((m) => m.username === username);
+    const member = groupFolder.members.find((m) => m.userId === userId);
     if (member) role = member.role;
 
     // resolve group-derived roles, most permissive wins
-    const membershipGroupIds = new Set(await groups.getMembershipGroupIds(username));
+    const membershipGroupIds = new Set(await groups.getMembershipGroupIds(userId));
     for (const groupMember of groupFolder.groupMembers) {
         if (!membershipGroupIds.has(groupMember.groupId)) continue;
         role = higherRole(role, groupMember.role);
@@ -261,12 +261,12 @@ async function getRole(groupFolder, username) {
     return role;
 }
 
-async function isPartOf(groupFolder, username) {
-    return await getRole(groupFolder, username) !== null;
+async function isPartOf(groupFolder, userId) {
+    return await getRole(groupFolder, userId) !== null;
 }
 
-async function isOwner(groupFolder, username) {
-    return await getRole(groupFolder, username) === ROLES.OWNER;
+async function isOwner(groupFolder, userId) {
+    return await getRole(groupFolder, userId) === ROLES.OWNER;
 }
 
 export default {
@@ -280,7 +280,7 @@ export default {
 
     getMembers,
     getGroupMembers,
-    getMemberUsernames,
+    getMemberUserIds,
     getRole,
     isPartOf,
     isOwner

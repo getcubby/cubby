@@ -40,11 +40,11 @@ const visibleMembers = computed(() => props.form.members
 const memberOptions = computed(() => {
   const options = [];
 
-  const existingUsers = new Set(props.form.members.map((m) => m.username));
-  const availableUsers = userOptions.value.filter((u) => !existingUsers.has(u.username));
+  const existingUsers = new Set(props.form.members.map((m) => m.userId));
+  const availableUsers = userOptions.value.filter((u) => !existingUsers.has(u.id));
   if (availableUsers.length) {
     options.push({ label: 'Users', separator: true });
-    availableUsers.forEach((u) => { options.push({ id: `user:${u.username}`, label: u.label, username: u.username, type: 'user' }); });
+    availableUsers.forEach((u) => { options.push({ id: `user:${u.id}`, label: u.label, userId: u.id, username: u.username, type: 'user' }); });
   }
 
   const existingGroups = new Set(props.form.groupMembers.map((m) => m.groupId));
@@ -70,8 +70,8 @@ function onAddMember() {
   if (!option) return;
 
   if (option.type === 'user') {
-    if (props.form.members.some((m) => m.username === option.username)) return;
-    props.form.members.push({ username: option.username, role });
+    if (props.form.members.some((m) => m.userId === option.userId)) return;
+    props.form.members.push({ userId: option.userId, username: option.username, role });
   } else {
     if (props.form.groupMembers.some((m) => m.groupId === option.groupId)) return;
     props.form.groupMembers.push({ groupId: option.groupId, role, name: option.label });
@@ -83,7 +83,7 @@ function onAddMember() {
 
 function onRemoveMember(index) {
   const member = props.form.members[index];
-  if (!member || member.username === profile.value?.username) return;
+  if (!member || member.userId === profile.value?.id) return;
   props.form.members.splice(index, 1);
 }
 
@@ -96,14 +96,14 @@ function onRemoveGroupMember(index) {
 <template>
   <FormGroup>
     <label>Members</label>
-    <ListItem v-for="{ member, index } in visibleMembers" :key="`u-${member.username}`">
+    <ListItem v-for="{ member, index } in visibleMembers" :key="`u-${member.userId}`">
       <template #left>
         <i class="fa-solid fa-circle-user item-icon"></i>
       </template>
       <template #label>
         <div class="member-label-row">
           <span>{{ member.username }}</span>
-          <span v-if="member.username === profile?.username" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
+          <span v-if="member.userId === profile?.id" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
           <span v-else class="member-role-controls">
             <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
             <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveMember(index)" />

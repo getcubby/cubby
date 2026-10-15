@@ -173,11 +173,11 @@ describe('files API', function () {
 
         // share the folder itself and a file inside it
         const folderShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/share-folder', receiverEmail: 'folder@test.local' });
+            .send({ ownerUserId: alice.id, path: '/share-folder', receiverEmail: 'folder@test.local' });
         assert.equal(folderShare.status, 200);
 
         const innerShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/share-folder/inner.txt', receiverEmail: 'inner@test.local' });
+            .send({ ownerUserId: alice.id, path: '/share-folder/inner.txt', receiverEmail: 'inner@test.local' });
         assert.equal(innerShare.status, 200);
 
         const listBefore = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
@@ -205,7 +205,7 @@ describe('files API', function () {
         await addUserFile(alice.username, '/slash-folder/inner.txt', 'inner');
 
         await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/slash-folder', receiverEmail: 'slash@test.local' });
+            .send({ ownerUserId: alice.id, path: '/slash-folder', receiverEmail: 'slash@test.local' });
 
         // delete with a trailing slash
         const del = await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
@@ -225,11 +225,11 @@ describe('files API', function () {
 
         // a share inside a folder whose name differs only by a single character
         const keepShare = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/axb/child.txt', receiverEmail: 'keep@test.local' });
+            .send({ ownerUserId: alice.id, path: '/axb/child.txt', receiverEmail: 'keep@test.local' });
         assert.equal(keepShare.status, 200);
 
         await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUsername: alice.username, path: '/a_b', receiverEmail: 'drop@test.local' });
+            .send({ ownerUserId: alice.id, path: '/a_b', receiverEmail: 'drop@test.local' });
 
         // deleting /a_b must not delete the share on /axb/child.txt
         await withToken(superagent.del(`${serverUrl}/api/v1/files`), alice.token)
@@ -241,10 +241,10 @@ describe('files API', function () {
     });
 
     it('viewer cannot write to a group folder but owner can', async function () {
-        await groupfolders.add('team', 'Team', alice.username);
+        await groupfolders.add('team', 'Team', alice.id);
         await groupfolders.update('team', 'Team', [
-            { username: alice.username, role: 'owner' },
-            { username: user.username, role: 'viewer' }
+            { userId: alice.id, role: 'owner' },
+            { userId: user.id, role: 'viewer' }
         ]);
 
         const viewerWrite = await withToken(superagent.post(`${serverUrl}/api/v1/files`), user.token)
@@ -261,9 +261,9 @@ describe('files API', function () {
 
     it('returns the effective role for group folder viewers via a user group', async function () {
         await groups.add({ id: 'readers', name: 'Readers' });
-        await groups.setMembers('readers', [ user.username ]);
-        await groupfolders.add('via-group', 'Via Group', alice.username);
-        await groupfolders.update('via-group', 'Via Group', [ { username: alice.username, role: 'owner' } ], [ { groupId: 'readers', role: 'viewer' } ]);
+        await groups.setMembers('readers', [ user.id ]);
+        await groupfolders.add('via-group', 'Via Group', alice.id);
+        await groupfolders.update('via-group', 'Via Group', [ { userId: alice.id, role: 'owner' } ], [ { groupId: 'readers', role: 'viewer' } ]);
         await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
             .query({ path: '/groupfolders/via-group/doc.txt', overwrite: true })
             .send(Buffer.from('doc'));

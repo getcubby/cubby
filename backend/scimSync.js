@@ -12,24 +12,24 @@ function isScimEnabled() {
 
 /**
  * @param {Array<{ id?: string, username: string, displayName?: string, email?: string, active?: boolean }>} scimUsers
- * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number, idToUsername: Map<string, string> }>}
+ * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number, seenUserIds: Set<string> }>}
  */
 export async function reconcileScimUsers(scimUsers) {
     let created = 0;
     let updated = 0;
     let deactivated = 0;
     let skipped = 0;
-    const idToUsername = new Map();
-    const seenUsernames = new Set();
+    const seenUserIds = new Set();
 
     // an empty fetch is not a directory listing; leave every active flag alone
     if (scimUsers.length === 0) {
-        return { created, updated, deactivated, skipped, idToUsername };
+        return { created, updated, deactivated, skipped, seenUserIds };
     }
 
     for (const user of scimUsers) {
         const userName = user.username;
-        if (!userName) {
+        const userId = user.id ? String(user.id) : '';
+        if (!userName || !userId) {
             skipped += 1;
             continue;
         }
@@ -40,10 +40,9 @@ export async function reconcileScimUsers(scimUsers) {
             continue;
         }
 
-        seenUsernames.add(userName);
-        if (user.id) idToUsername.set(String(user.id), userName);
+        seenUserIds.add(userId);
 
-        const result = await users.upsertFromScim(userName, { displayName: user.displayName, email: user.email || userName });
+        const result = await users.upsertFromScim(userId, { username: userName, displayName: user.displayName, email: user.email || userName });
         if (result.created) {
             created += 1;
         } else if (result.updated) {
@@ -52,19 +51,19 @@ export async function reconcileScimUsers(scimUsers) {
     }
 
     for (const local of await users.list()) {
-        if (seenUsernames.has(local.username)) continue;
+        if (seenUserIds.has(local.id)) continue;
         if (!local.active) continue;
 
-        await users.setActive(local.username, false);
+        await users.setActive(local.id, false);
         deactivated += 1;
     }
 
-    return { created, updated, deactivated, skipped, idToUsername };
+    return { created, updated, deactivated, skipped, seenUserIds };
 }
 
 export async function syncScimUsers() {
     if (!scim.isEnabled()) {
-        return { created: 0, updated: 0, deactivated: 0, skipped: 0, idToUsername: new Map() };
+        return { created: 0, updated: 0, deactivated: 0, skipped: 0, seenUserIds: new Set() };
     }
 
     return reconcileScimUsers(await scim.getAllUsers());
@@ -72,10 +71,10 @@ export async function syncScimUsers() {
 
 /**
  * @param {Array<{ id: string, name?: string, memberIds: string[] }>} scimGroups
- * @param {Map<string, string>} idToUsername
+ * @param {Set<string>} seenUserIds
  * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number }>}
  */
-export async function reconcileScimGroups(scimGroups, idToUsername) {
+export async function reconcileScimGroups(scimGroups, seenUserIds) {
     let created = 0;
     let updated = 0;
     let deactivated = 0;
@@ -97,13 +96,12 @@ export async function reconcileScimGroups(scimGroups, idToUsername) {
         seenIds.add(id);
 
         const name = group.name || id;
-        const memberUsernames = new Set();
+        const memberUserIds = [];
         for (const userId of group.memberIds) {
-            const username = idToUsername.get(userId);
-            if (username) memberUsernames.add(username);
+            if (seenUserIds.has(userId)) memberUserIds.push(userId);
         }
 
-        const result = await groups.upsertFromScim(id, name, Array.from(memberUsernames));
+        const result = await groups.upsertFromScim(id, name, memberUserIds);
         if (result.created) {
             created += 1;
         } else if (result.updated) {
@@ -123,12 +121,12 @@ export async function reconcileScimGroups(scimGroups, idToUsername) {
     return { created, updated, deactivated, skipped };
 }
 
-export async function syncScimGroups(idToUsername) {
+export async function syncScimGroups(seenUserIds) {
     if (!scim.isEnabled()) {
         return { created: 0, updated: 0, deactivated: 0, skipped: 0 };
     }
 
-    return reconcileScimGroups(await scim.getAllGroups(), idToUsername);
+    return reconcileScimGroups(await scim.getAllGroups(), seenUserIds);
 }
 
 export async function runScimSyncTick() {
@@ -144,7 +142,7 @@ export async function runScimSyncTick() {
         console.log(`SCIM sync: users created=${userStats.created} updated=${userStats.updated} deactivated=${userStats.deactivated} skipped=${userStats.skipped}`);
     }
 
-    const [groupsError, groupStats] = await safe(syncScimGroups(userStats.idToUsername));
+    const [groupsError, groupStats] = await safe(syncScimGroups(userStats.seenUserIds));
     if (groupsError) {
         console.error('SCIM group sync failed:', groupsError.message || groupsError);
         return;

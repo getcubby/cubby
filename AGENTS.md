@@ -62,7 +62,7 @@ Directory users and groups are identified by Cloudron ids (`users.id`, shaped `u
 
 OIDC `sub` is the username. On login, resolve it to the Cloudron user id, then update the stored username, email, and display name from the OIDC claims. Do not wait for SCIM to refresh the person who just signed in. A successful login marks that user active.
 
-Run a periodic SCIM sync. It upserts users and groups this app already knows, and refreshes username, email, display name, and group name. It stores `active` on users and groups. A user or group missing from a successful, non-empty SCIM response is marked inactive. Do not insert a user or group this app has never stored. An empty SCIM response leaves every `active` flag unchanged. A user or group that appears again is marked active, and an active group's member list is refreshed.
+Run a periodic SCIM sync. It inserts directory users and groups that are active, including ones this app has never stored, and refreshes username, email, display name, and group name. It stores `active` on users and groups. A user or group missing from a successful, non-empty SCIM response is marked inactive. Do not insert one that is missing or inactive and has no local row. An empty SCIM response leaves every `active` flag unchanged. A user or group that appears again is marked active, and an active group's member list is refreshed.
 
 Do not delete users, groups, files, or memberships when a row becomes inactive.
 

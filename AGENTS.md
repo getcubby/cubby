@@ -58,6 +58,8 @@ When changing the HTTP API, update the OpenAPI spec at `../website/openapi/cubby
 
 ## SCIM
 
+These are general guidelines for an app that uses the Cloudron directory. Apply only the parts that fit this app. An app with no groups does not need a groups table. A periodic SCIM sync is only for an app that keeps a local copy of directory users or groups and needs those display fields and `active` flags kept current.
+
 Directory users and groups are identified by Cloudron ids (`users.id`, shaped `uid-…`, and `groups.id`), not by username or group name. Store username, email, display name, and group name for display. Those values can change.
 
 OIDC `sub` is the username. On login, resolve it to the Cloudron user id, then update the stored username, email, and display name from the OIDC claims. Do not wait for SCIM to refresh the person who just signed in. A successful login marks that user active.

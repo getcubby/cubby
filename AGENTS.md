@@ -66,7 +66,7 @@ OIDC `sub` is the username. On login, resolve it to the Cloudron user id, then u
 
 Role handling comes from SCIM, not from the OIDC profile. The profile is the same for every app. A SCIM user's `roles` includes `admin` when that person is a Cloudron admin or an operator of this app.
 
-Run a periodic SCIM sync. It inserts directory users and groups that are active, including ones this app has never stored, and refreshes username, email, display name, and group name. It stores `active` on users and groups. A user or group missing from a successful, non-empty SCIM response is marked inactive. Do not insert one that is missing or inactive and has no local row. An empty SCIM response leaves every `active` flag unchanged. A user or group that appears again is marked active, and an active group's member list is refreshed.
+Run a periodic SCIM sync through `tegel.userDirectory`. It inserts directory users and groups that are active, including ones this app has never stored, and refreshes username, email, display name, and group name. It stores `active` on users and groups. A user or group missing from a successful, non-empty SCIM response is marked inactive. Do not insert one that is missing or inactive and has no local row. An empty SCIM response leaves every `active` flag unchanged. A user or group that appears again is marked active, and an active group's member list is refreshed.
 
 Do not delete users, groups, files, or memberships when a row becomes inactive.
 

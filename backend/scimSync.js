@@ -22,6 +22,11 @@ export async function reconcileScimUsers(scimUsers) {
     const idToUsername = new Map();
     const seenUsernames = new Set();
 
+    // an empty fetch is not a directory listing; leave every active flag alone
+    if (scimUsers.length === 0) {
+        return { created, updated, deactivated, skipped, idToUsername };
+    }
+
     for (const user of scimUsers) {
         const userName = user.username;
         if (!userName) {
@@ -76,6 +81,11 @@ export async function reconcileScimGroups(scimGroups, idToUsername) {
     let deactivated = 0;
     let skipped = 0;
     const seenIds = new Set();
+
+    // an empty fetch is not a directory listing; leave every active flag alone
+    if (scimGroups.length === 0) {
+        return { created, updated, deactivated, skipped };
+    }
 
     for (const group of scimGroups) {
         const id = group.id;

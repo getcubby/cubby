@@ -29,6 +29,15 @@ describe('scim user sync', function () {
         assert.equal(stats.idToUsername.has('gone'), false);
     });
 
+    it('leaves users active when the SCIM user list is empty', async function () {
+        await users.add(alice);
+
+        const stats = await reconcileScimUsers([]);
+
+        assert.equal(stats.deactivated, 0);
+        assert.equal((await users.get(alice.username)).active, true);
+    });
+
     it('reactivates a user who returns to the directory', async function () {
         await users.add(user);
         await users.setActive(user.username, false);
@@ -56,6 +65,16 @@ describe('scim group sync', function () {
     beforeEach(databaseSetup);
     after(cleanup);
 
+    it('leaves groups active when the SCIM group list is empty', async function () {
+        await users.add(alice);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.username ]);
+
+        const stats = await reconcileScimGroups([], new Map());
+
+        assert.equal(stats.deactivated, 0);
+        assert.equal((await groups.get('gid-1')).active, true);
+    });
+
     it('marks a missing group inactive and keeps its team folder membership', async function () {
         await users.add(alice);
         await users.add(user);
@@ -64,7 +83,7 @@ describe('scim group sync', function () {
             { groupId: 'gid-1', role: 'owner' }
         ]);
 
-        const stats = await reconcileScimGroups([], new Map());
+        const stats = await reconcileScimGroups([{ id: 'gid-other', name: 'Other', memberIds: [] }], new Map());
         assert.equal(stats.deactivated, 1);
 
         const group = await groups.get('gid-1');

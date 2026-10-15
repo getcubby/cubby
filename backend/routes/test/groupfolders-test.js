@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import paths from '../../paths.js';
 import superagent from '@cloudron/superagent';
+import users from '../../users.js';
 
 describe('groupfolders API', function () {
     const { setup, cleanup, serverUrl, alice, user, withToken } = common;
@@ -179,5 +180,32 @@ describe('groupfolders API', function () {
 
         const list = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);
         assert.equal(list.body.groupFolder.find((g) => g.id === 'busy'), undefined);
+    });
+
+    it('lets a member remove an inactive sole owner and become the owner', async function () {
+        const addResponse = await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), user.token)
+            .send({ slug: 'handoff', name: 'Handoff', members: [{ userId: alice.id, role: 'editor' }] });
+        assert.equal(addResponse.status, 200);
+
+        await users.setActive(user.id, false);
+
+        const denied = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/handoff`), alice.token)
+            .send({ name: 'Renamed', members: [{ userId: alice.id, role: 'editor' }] })
+            .ok(() => true);
+        assert.equal(denied.status, 403);
+
+        const promoted = await withToken(superagent.put(`${serverUrl}/api/v1/settings/groupfolders/handoff`), alice.token)
+            .send({ name: 'Handoff', members: [{ userId: alice.id, role: 'editor' }] })
+            .ok(() => true);
+        assert.equal(promoted.status, 200);
+
+        const list = await withToken(superagent.get(`${serverUrl}/api/v1/settings/groupfolders`), alice.token);
+        const handoff = list.body.groupFolder.find((g) => g.id === 'handoff');
+        assert.deepEqual(handoff.members.map((m) => ({ userId: m.userId, role: m.role })), [{ userId: alice.id, role: 'owner' }]);
+
+        const remove = await withToken(superagent.del(`${serverUrl}/api/v1/settings/groupfolders/handoff`), user.token)
+            .ok(() => true);
+        assert.equal(remove.status, 403);
+        await users.setActive(user.id, true);
     });
 });

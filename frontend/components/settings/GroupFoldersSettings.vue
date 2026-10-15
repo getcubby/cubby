@@ -69,8 +69,16 @@ function currentUserRole(groupFolder) {
   return groupFolder.myRole || null;
 }
 
+function hasActiveOwner(groupFolder) {
+  const owners = [
+    ...groupFolder.members.filter((m) => m.role === ROLES.OWNER),
+    ...(groupFolder.groupMembers || []).filter((m) => m.role === ROLES.OWNER),
+  ];
+  return owners.some((owner) => owner.active !== false);
+}
+
 function groupFolderMemberLabels(groupFolder) {
-  const labels = groupFolder.members.filter((m) => m.active !== false).map((m) => m.username);
+  const labels = groupFolder.members.map((m) => m.username);
   for (const gm of (groupFolder.groupMembers || [])) {
     labels.push(gm.name || groupNameById.value[gm.groupId] || gm.groupId);
   }
@@ -78,7 +86,18 @@ function groupFolderMemberLabels(groupFolder) {
 }
 
 function groupFolderActions(groupFolder) {
-  if (currentUserRole(groupFolder) !== ROLES.OWNER) return [];
+  const isOwner = currentUserRole(groupFolder) === ROLES.OWNER;
+  const canEdit = isOwner || (currentUserRole(groupFolder) && !hasActiveOwner(groupFolder));
+  if (!canEdit) return [];
+
+  if (!isOwner) {
+    return [{
+      label: 'Edit',
+      icon: 'fa-solid fa-pen',
+      action: () => onEditGroupFolder(groupFolder),
+      quickAction: true,
+    }];
+  }
 
   return [{
     label: 'Edit',

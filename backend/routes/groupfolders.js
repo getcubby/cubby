@@ -39,6 +39,34 @@ function validateGroupMembers(groupMembers) {
 }
 
 // after applying members/groupMembers, is the user still an owner (directly or via a group)?
+function hasActiveOwner(group) {
+    const owners = [
+        ...group.members.filter((member) => member.role === groupFolders.ROLES.OWNER),
+        ...group.groupMembers.filter((member) => member.role === groupFolders.ROLES.OWNER),
+    ];
+    return owners.some((owner) => owner.active !== false);
+}
+
+function keepsExistingMembers(current, next, idKey) {
+    const active = current.filter((member) => member.active !== false);
+    for (const member of active) {
+        const kept = next.find((candidate) => candidate[idKey] === member[idKey]);
+        if (!kept || kept.role !== member.role) return false;
+    }
+
+    for (const candidate of next) {
+        const member = current.find((currentMember) => currentMember[idKey] === candidate[idKey]);
+        if (!member || candidate.role !== member.role) return false;
+    }
+
+    return true;
+}
+
+function hasOwner(members, groupMembers) {
+    return members.some((member) => member.role === groupFolders.ROLES.OWNER)
+        || groupMembers.some((member) => member.role === groupFolders.ROLES.OWNER);
+}
+
 async function willRemainOwner(userId, members, groupMembers) {
     if (members.some((m) => m.userId === userId && m.role === groupFolders.ROLES.OWNER)) return true;
 
@@ -99,10 +127,22 @@ async function update(req, res, next) {
 
     const group = await groupFolders.get(id);
     if (!group) return next(new HttpError(404, 'no such groupfolder'));
-    if (!await groupFolders.isOwner(group, req.user.id)) return next(new HttpError(403, 'only owners can manage group folders'));
 
-    // an owner cannot change their own role (directly or via a group)
-    if (!await willRemainOwner(req.user.id, members, groupMembers)) return next(new HttpError(403, 'cannot change your own role'));
+    const callerIsOwner = await groupFolders.isOwner(group, req.user.id);
+    if (!callerIsOwner) {
+        const callerIsMember = await groupFolders.isPartOf(group, req.user.id);
+        const membersUnchanged = keepsExistingMembers(group.members, members, 'userId')
+            && keepsExistingMembers(group.groupMembers, groupMembers, 'groupId');
+        if (hasActiveOwner(group) || !callerIsMember || name !== group.name || !membersUnchanged) return next(new HttpError(403, 'only owners can manage group folders'));
+        if (!hasOwner(members, groupMembers)) {
+            const self = members.find((member) => member.userId === req.user.id);
+            if (self) self.role = groupFolders.ROLES.OWNER;
+            else members.push({ userId: req.user.id, role: groupFolders.ROLES.OWNER });
+        }
+    } else if (!await willRemainOwner(req.user.id, members, groupMembers)) {
+        // an owner cannot change their own role (directly or via a group)
+        return next(new HttpError(403, 'cannot change your own role'));
+    }
 
     const [error] = await safe(groupFolders.update(id, name, members, groupMembers));
     if (error) return next(MainError.toHttpError(error));

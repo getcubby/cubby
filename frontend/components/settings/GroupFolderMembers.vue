@@ -32,10 +32,9 @@ const groupNameById = computed(() => {
   return map;
 });
 
-// Inactive members stay in the form so a save does not drop their membership.
+// Inactive members stay visible. Removing one drops them from the save payload; leaving them keeps the membership.
 const visibleMembers = computed(() => props.form.members
-  .map((member, index) => ({ member, index }))
-  .filter(({ member }) => member.active !== false));
+  .map((member, index) => ({ member, index })));
 
 const memberOptions = computed(() => {
   const options = [];
@@ -104,6 +103,9 @@ function onRemoveGroupMember(index) {
         <div class="member-label-row">
           <span>{{ member.username }}</span>
           <span v-if="member.userId === profile?.id" class="member-self-role">{{ roleLabel(member.role) }} (you)</span>
+          <span v-else-if="member.active === false">
+            <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveMember(index)" />
+          </span>
           <span v-else class="member-role-controls">
             <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
             <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveMember(index)" />
@@ -118,7 +120,10 @@ function onRemoveGroupMember(index) {
       <template #label>
         <div class="member-label-row">
           <span>{{ member.name || groupNameById[member.groupId] || member.groupId }}</span>
-          <span class="member-role-controls">
+          <span v-if="member.active === false">
+            <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveGroupMember(index)" />
+          </span>
+          <span v-else class="member-role-controls">
             <SingleSelect v-model="member.role" :options="roleOptions" option-key="value" style="width: 120px;" />
             <Button icon="fa-solid fa-xmark" outline tool @click="onRemoveGroupMember(index)" />
           </span>

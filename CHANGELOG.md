@@ -691,3 +691,8 @@
 * Let a raw file read skip the recent list.
 * Add an active flag and stop deleting groups that leave SCIM.
 
+[2.27.0-1]
+* Update cubby to 6dde420
+* Let a raw file read skip the recent list.
+* Add an active flag and stop deleting groups that leave SCIM.
+

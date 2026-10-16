@@ -686,3 +686,8 @@
 * Update cubby to 6456fd5
 * Add option to open file without adding it to favorites
 
+[2.27.0]
+* Update cubby to 77c8935
+* Let a raw file read skip the recent list.
+* Add an active flag and stop deleting groups that leave SCIM.
+

@@ -65,13 +65,20 @@ async function get(id) {
     return postProcess(result.rows[0]);
 }
 
-async function getByUsername(username) {
+async function listByUsername(username) {
     assert.strictEqual(typeof username, 'string');
 
-    const result = await database.query('SELECT * FROM users WHERE username = ?', [ username ]);
-    if (result.rows.length === 0) return null;
+    const result = await database.query('SELECT * FROM users WHERE username = ? ORDER BY id', [ username ]);
+    result.rows.forEach(postProcess);
 
-    return postProcess(result.rows[0]);
+    return result.rows;
+}
+
+async function getByUsername(username) {
+    const rows = await listByUsername(username);
+    if (rows.length !== 1) return null;
+
+    return rows[0];
 }
 
 async function exists(id) {
@@ -131,25 +138,27 @@ async function ensureUser(data) {
         return await get(id);
     }
 
-    const byName = username ? await getByUsername(username) : null;
-    if (byName) {
-        if (id && byName.id !== id) await replaceId(byName.id, id);
-        const currentId = id || byName.id;
-        await update(currentId, contact);
-        await setActive(currentId, true);
-        return await get(currentId);
+    if (id) {
+        await add({ id, username, email, displayName });
+        return await get(id);
     }
 
-    const userId = id || `local-${username}`;
-    await add({ id: userId, username, email, displayName });
-    return await get(userId);
+    const matches = username ? await listByUsername(username) : [];
+    if (matches.length === 1) {
+        await update(matches[0].id, contact);
+        await setActive(matches[0].id, true);
+        return await get(matches[0].id);
+    }
+
+    await add({ id: `local-${username}`, username, email, displayName });
+    return await get(`local-${username}`);
 }
 
 /**
- * Create or update a directory user. The id is the Cloudron user id.
- * A row that already uses this username under a placeholder id is adopted.
+ * Create or update a directory user. The id is the SCIM user id.
+ * A different id with the same username is a new person and gets a new row.
  * @param {string} id
- * @param {{ username: string, displayName: string, email: string }} contact
+ * @param {{ username: string, displayName: string, email: string, active?: boolean }} contact
  * @returns {Promise<{ created: boolean, updated: boolean }>}
  */
 async function upsertFromScim(id, contact) {
@@ -164,20 +173,15 @@ async function upsertFromScim(id, contact) {
         ? String(contact.displayName).trim()
         : username.split('@')[0];
     const profile = { username, email, displayName };
+    const active = contact.active !== false;
 
     if (await exists(id)) {
         await update(id, profile);
-        await setActive(id, true);
+        await setActive(id, active);
         return { created: false, updated: true };
     }
 
-    const byName = await getByUsername(username);
-    if (byName) {
-        await replaceId(byName.id, id);
-        await update(id, profile);
-        await setActive(id, true);
-        return { created: false, updated: true };
-    }
+    if (!active) return { created: false, updated: false };
 
     const [error] = await safe(add({ id, username, email, displayName }));
     if (error && error.reason !== MainError.ALREADY_EXISTS) throw error;
@@ -205,47 +209,61 @@ async function syncFromOidc({ username, email, displayName }, { updateProfile = 
     let id = null;
     if (scim.isEnabled()) {
         const page = await scim.getUsers({ filter: scimUserNameFilter(username) });
-        const directoryUser = page.resources.find((entry) => entry.username === username) || page.resources[0];
+        const directoryUser = page.resources.find((entry) => entry.username === username);
         if (!directoryUser?.id) throw new MainError(MainError.NOT_FOUND, 'directory user not found');
         id = directoryUser.id;
     }
 
-    const existing = id ? await get(id) : null;
-    const byName = await getByUsername(username);
+    if (id) {
+        const existing = await get(id);
+        if (existing) {
+            if (updateProfile) await update(existing.id, profile);
+            if (!existing.active) await setActive(existing.id, true);
+            return await get(existing.id);
+        }
 
-    if (existing) {
-        if (updateProfile) await update(existing.id, profile);
-        if (!existing.active) await setActive(existing.id, true);
-        return await get(existing.id);
+        await add({ id, ...profile });
+        return await get(id);
     }
 
-    if (byName) {
-        if (id && byName.id !== id) await replaceId(byName.id, id);
-        const currentId = id || byName.id;
-        if (updateProfile) await update(currentId, profile);
-        if (!byName.active) await setActive(currentId, true);
-        return await get(currentId);
+    const matches = await listByUsername(username);
+    if (matches.length === 1) {
+        if (updateProfile) await update(matches[0].id, profile);
+        if (!matches[0].active) await setActive(matches[0].id, true);
+        return await get(matches[0].id);
     }
 
-    const userId = id || `local-${username}`;
-    await add({ id: userId, ...profile });
-    return await get(userId);
+    await add({ id: `local-${username}`, ...profile });
+    return await get(`local-${username}`);
 }
 
-// Replace placeholder ids with Cloudron ids when the directory is available.
-async function backfillIdsFromScim() {
-    if (!scim.isEnabled()) return;
+// Rewrite a pre-SCIM local- id onto the directory id. A uid- row is left alone,
+// so a later person with the same username does not inherit the home directory.
+async function stampDirectoryIds(directoryUsers) {
+    if (!Array.isArray(directoryUsers) || directoryUsers.length === 0) return;
+
+    const byUsername = new Map();
+    for (const directoryUser of directoryUsers) {
+        if (!directoryUser?.id || !directoryUser.username) continue;
+        if (byUsername.has(directoryUser.username)) byUsername.set(directoryUser.username, null);
+        else byUsername.set(directoryUser.username, directoryUser);
+    }
 
     for (const user of await list()) {
-        const page = await scim.getUsers({ filter: scimUserNameFilter(user.username) });
-        const match = page.resources.find((entry) => entry.username === user.username);
-        if (!match?.id || match.id === user.id) continue;
+        if (!String(user.id).startsWith('local-')) continue;
 
-        const taken = await get(match.id);
-        if (taken) continue;
+        const match = byUsername.get(user.username);
+        if (!match?.id || match.id === user.id) continue;
+        if (await get(match.id)) continue;
 
         await replaceId(user.id, match.id);
     }
+}
+
+async function backfillIdsFromScim() {
+    if (!scim.isEnabled()) return;
+
+    await stampDirectoryIds(await scim.getAllUsers());
 }
 
 export default {
@@ -261,5 +279,6 @@ export default {
     ensureUser,
     upsertFromScim,
     syncFromOidc,
+    stampDirectoryIds,
     backfillIdsFromScim
 };

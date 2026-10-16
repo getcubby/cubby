@@ -1,8 +1,11 @@
 import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import common from './common.js';
 import groupfolders from '../groupfolders.js';
 import groups from '../groups.js';
+import paths from '../paths.js';
 import { reconcileScimGroups, reconcileScimUsers } from '../scimSync.js';
 import users from '../users.js';
 
@@ -38,9 +41,29 @@ describe('scim user sync', function () {
         assert.equal((await users.get(alice.id)).active, true);
     });
 
-    it('reactivates a user who returns to the directory', async function () {
+    it('reactivates a user who returns with the same id', async function () {
         await users.add(user);
         await users.setActive(user.id, false);
+
+        const stats = await reconcileScimUsers([{
+            id: user.id,
+            username: user.username,
+            email: 'new@test.local',
+            displayName: 'Back',
+            active: true
+        }]);
+
+        assert.equal(stats.deactivated, 0);
+        assert.equal(stats.updated, 1);
+        const restored = await users.get(user.id);
+        assert.equal(restored.active, true);
+        assert.equal(restored.email, 'new@test.local');
+    });
+
+    it('inserts a reused username as a new id and leaves the old files in place', async function () {
+        await users.add(user);
+        const oldNote = path.join(paths.USER_DATA_ROOT, user.id, 'note.txt');
+        fs.writeFileSync(oldNote, 'old');
 
         const stats = await reconcileScimUsers([{
             id: 'u-1',
@@ -50,13 +73,37 @@ describe('scim user sync', function () {
             active: true
         }]);
 
-        assert.equal(stats.deactivated, 0);
-        assert.equal(stats.updated, 1);
-        const restored = await users.getByUsername(user.username);
-        assert.equal(restored.id, 'u-1');
-        assert.equal(restored.active, true);
-        assert.equal(restored.email, 'new@test.local');
-        assert.equal(stats.seenUserIds.has('u-1'), true);
+        assert.equal(stats.created, 1);
+        assert.equal(stats.deactivated, 1);
+        assert.equal((await users.get(user.id)).active, false);
+        assert.equal(fs.readFileSync(oldNote, 'utf8'), 'old');
+        const created = await users.get('u-1');
+        assert.equal(created.username, user.username);
+        assert.equal(created.active, true);
+        assert.equal(created.email, 'new@test.local');
+        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'u-1', 'note.txt')), false);
+    });
+
+    it('stamps a local id once and a later directory id does not take the files', async function () {
+        await users.add({ id: 'local-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice' });
+        const note = path.join(paths.USER_DATA_ROOT, 'local-alice', 'note.txt');
+        fs.writeFileSync(note, 'old');
+
+        await users.stampDirectoryIds([{ id: 'uid-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
+
+        assert.equal(await users.get('local-alice'), null);
+        assert.equal((await users.get('uid-alice')).username, 'alice');
+        assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
+
+        await users.stampDirectoryIds([{ id: 'uid-other', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
+        assert.equal(await users.get('uid-alice') !== null, true);
+        assert.equal(await users.get('uid-other'), null);
+
+        const stats = await reconcileScimUsers([{ id: 'uid-new', username: 'alice', email: 'new@b.c', displayName: 'New', active: true }]);
+        assert.equal(stats.created, 1);
+        assert.equal((await users.get('uid-alice')).active, false);
+        assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
+        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'uid-new', 'note.txt')), false);
     });
 });
 

@@ -20,12 +20,14 @@ const TIMESTAMP_DEFAULT = "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))";
 const FULL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS users(
     id TEXT PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL,
     email TEXT NOT NULL,
     display_name TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
     active INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE INDEX IF NOT EXISTS users_username_idx ON users(username);
 
 CREATE TABLE IF NOT EXISTS tokens(
     id TEXT PRIMARY KEY,
@@ -136,7 +138,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const MIGRATIONS = [
     {
@@ -361,6 +363,32 @@ const MIGRATIONS = [
                 if (!fs.existsSync(from) || fs.existsSync(to)) continue;
                 fs.renameSync(from, to);
             }
+        }
+    },
+    {
+        // A recreated directory user keeps the same username and gets a new id.
+        // Username is a display field, so more than one row may use it.
+        version: 6,
+        up(db) {
+            db.pragma('foreign_keys = OFF');
+            db.exec('BEGIN');
+            db.exec(`
+                CREATE TABLE users_new(
+                    id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    display_name TEXT DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1
+                );
+                INSERT INTO users_new (id, username, email, display_name, created_at, active)
+                    SELECT id, username, email, display_name, created_at, active FROM users;
+                DROP TABLE users;
+                ALTER TABLE users_new RENAME TO users;
+                CREATE INDEX IF NOT EXISTS users_username_idx ON users(username);
+            `);
+            db.exec('COMMIT');
+            db.pragma('foreign_keys = ON');
         }
     }
 ];

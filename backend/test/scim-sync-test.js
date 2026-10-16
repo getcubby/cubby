@@ -6,7 +6,7 @@ import common from './common.js';
 import groupfolders from '../groupfolders.js';
 import groups from '../groups.js';
 import paths from '../paths.js';
-import { reconcileScimGroups, reconcileScimUsers } from '../scimSync.js';
+import { deactivateDirectoryUsers, reconcileScimGroups, reconcileScimUsers, saveDirectoryUsers } from '../scimSync.js';
 import users from '../users.js';
 
 describe('scim user sync', function () {
@@ -104,6 +104,25 @@ describe('scim user sync', function () {
         assert.equal((await users.get('uid-alice')).active, false);
         assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
         assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'uid-new', 'note.txt')), false);
+    });
+
+    it('saves directory users by id and skips an inactive user with no local row', async function () {
+        await users.add(user);
+
+        await saveDirectoryUsers([
+            { id: user.id, username: user.username, email: 'new@test.local', displayName: 'Back', active: false },
+            { id: 'uid-new', username: 'new', email: 'new@test.local', displayName: 'New', active: true },
+            { id: 'uid-ghost', username: 'ghost', email: '', displayName: 'Ghost', active: false }
+        ]);
+
+        assert.equal((await users.get(user.id)).active, false);
+        assert.equal((await users.get(user.id)).email, 'new@test.local');
+        assert.equal((await users.get('uid-new')).active, true);
+        assert.equal(await users.get('uid-ghost'), null);
+
+        await users.add(alice);
+        await deactivateDirectoryUsers([ alice.id ]);
+        assert.equal((await users.get(alice.id)).active, false);
     });
 });
 

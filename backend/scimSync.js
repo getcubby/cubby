@@ -2,7 +2,6 @@ import users from './users.js';
 import groups from './groups.js';
 import recoll from './recoll.js';
 import { scim } from '@cloudron/tegel';
-import safe from '@cloudron/safetydance';
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -61,12 +60,26 @@ export async function reconcileScimUsers(scimUsers) {
     return { created, updated, deactivated, skipped, seenUserIds };
 }
 
-export async function syncScimUsers() {
-    if (!scim.isEnabled()) {
-        return { created: 0, updated: 0, deactivated: 0, skipped: 0, seenUserIds: new Set() };
-    }
+export async function saveDirectoryUsers(records) {
+    for (const record of records || []) {
+        if (!record?.id || !record.username) continue;
 
-    return reconcileScimUsers(await scim.getAllUsers());
+        await users.upsertFromScim(record.id, {
+            username: record.username,
+            email: record.email || '',
+            displayName: record.displayName || record.username,
+            active: record.active !== false
+        });
+    }
+}
+
+export async function deactivateDirectoryUsers(ids) {
+    for (const id of ids || []) {
+        const user = await users.get(id);
+        if (!user || !user.active) continue;
+
+        await users.setActive(id, false);
+    }
 }
 
 /**
@@ -121,38 +134,11 @@ export async function reconcileScimGroups(scimGroups, seenUserIds) {
     return { created, updated, deactivated, skipped };
 }
 
-export async function syncScimGroups(seenUserIds) {
-    if (!scim.isEnabled()) {
-        return { created: 0, updated: 0, deactivated: 0, skipped: 0 };
-    }
+export async function saveDirectoryGroups(upserts) {
+    const seenUserIds = new Set((await users.list()).filter((user) => user.active).map((user) => user.id));
+    const stats = await reconcileScimGroups(upserts, seenUserIds);
 
-    return reconcileScimGroups(await scim.getAllGroups(), seenUserIds);
-}
-
-export async function runScimSyncTick() {
-    if (!scim.isEnabled()) return;
-
-    const [usersError, userStats] = await safe(syncScimUsers());
-    if (usersError) {
-        console.error('SCIM sync failed:', usersError.message || usersError);
-        return;
-    }
-
-    if (userStats.created > 0 || userStats.updated > 0 || userStats.deactivated > 0) {
-        console.log(`SCIM sync: users created=${userStats.created} updated=${userStats.updated} deactivated=${userStats.deactivated} skipped=${userStats.skipped}`);
-    }
-
-    const [groupsError, groupStats] = await safe(syncScimGroups(userStats.seenUserIds));
-    if (groupsError) {
-        console.error('SCIM group sync failed:', groupsError.message || groupsError);
-        return;
-    }
-
-    if (groupStats.created > 0 || groupStats.updated > 0 || groupStats.deactivated > 0) {
-        console.log(`SCIM sync: groups created=${groupStats.created} updated=${groupStats.updated} deactivated=${groupStats.deactivated} skipped=${groupStats.skipped}`);
-    }
-
-    if (groupStats.created > 0 || groupStats.updated > 0) {
+    if (stats.created > 0 || stats.updated > 0) {
         // group membership affects which groupfolders a user can access and search
         recoll.index().catch((err) => console.error('SCIM sync reindex failed:', err));
     }

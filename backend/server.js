@@ -16,9 +16,10 @@ import tokens from './tokens.js';
 import uploads from './uploads.js';
 import filedrops from './routes/filedrops.js';
 import users from './routes/users.js';
+import groupsDb from './groups.js';
 import usersDb from './users.js';
 import webdav from './routes/webdav.js';
-import { isScimEnabled, runScimSyncTick, SYNC_INTERVAL_MS } from './scimSync.js';
+import { deactivateDirectoryUsers, isScimEnabled, saveDirectoryGroups, saveDirectoryUsers, SYNC_INTERVAL_MS } from './scimSync.js';
 import * as tegel from '@cloudron/tegel';
 import { fileURLToPath } from 'url';
 
@@ -31,7 +32,7 @@ const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const UPLOAD_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 let gHttpServer = null;
-let gScimInterval = null;
+let directorySync = null;
 let gTokenCleanupInterval = null;
 let gUploadCleanupInterval = null;
 
@@ -178,12 +179,17 @@ async function start() {
         usersDb.backfillIdsFromScim().catch((err) => {
             console.error('SCIM user id backfill failed:', err);
         });
-        runScimSyncTick().catch((err) => {
+        directorySync = tegel.userDirectory.startSync({
+            listUsers: () => usersDb.list(),
+            saveUsers: saveDirectoryUsers,
+            onDeactivated: deactivateDirectoryUsers,
+            listGroups: () => groupsDb.list(),
+            saveGroups: saveDirectoryGroups,
+            intervalMs: SYNC_INTERVAL_MS
+        });
+        directorySync.started.catch((err) => {
             console.error('Initial SCIM sync failed:', err);
         });
-        gScimInterval = setInterval(() => {
-            runScimSyncTick();
-        }, SYNC_INTERVAL_MS);
     }
 
     if (!constants.TEST) {
@@ -208,9 +214,9 @@ async function start() {
 }
 
 async function stop() {
-    if (gScimInterval) {
-        clearInterval(gScimInterval);
-        gScimInterval = null;
+    if (directorySync) {
+        directorySync.stop();
+        directorySync = null;
     }
 
     if (gTokenCleanupInterval) {

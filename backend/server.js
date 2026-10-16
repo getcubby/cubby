@@ -162,6 +162,23 @@ async function start() {
             }
         });
 
+    if (!constants.TEST && isScimEnabled()) {
+        directorySync = tegel.userDirectory.startSync({
+            listUsers: () => usersDb.list(),
+            saveUsers: saveDirectoryUsers,
+            onDeactivated: deactivateDirectoryUsers,
+            listGroups: () => groupsDb.list(),
+            saveGroups: saveDirectoryGroups,
+            intervalMs: SYNC_INTERVAL_MS
+        });
+        try {
+            await directorySync.started;
+        } catch (error) {
+            console.error('Initial SCIM sync failed:', error);
+        }
+        await usersDb.moveHomesToIds();
+    }
+
     const host = constants.TEST ? '127.0.0.1' : undefined;
 
     await new Promise((resolve, reject) => {
@@ -174,23 +191,6 @@ async function start() {
         });
         gHttpServer.once('error', reject);
     });
-
-    if (!constants.TEST && isScimEnabled()) {
-        usersDb.backfillIdsFromScim().catch((err) => {
-            console.error('SCIM user id backfill failed:', err);
-        });
-        directorySync = tegel.userDirectory.startSync({
-            listUsers: () => usersDb.list(),
-            saveUsers: saveDirectoryUsers,
-            onDeactivated: deactivateDirectoryUsers,
-            listGroups: () => groupsDb.list(),
-            saveGroups: saveDirectoryGroups,
-            intervalMs: SYNC_INTERVAL_MS
-        });
-        directorySync.started.catch((err) => {
-            console.error('Initial SCIM sync failed:', err);
-        });
-    }
 
     if (!constants.TEST) {
         tokens.cleanup(TOKEN_MAX_AGE_MS).catch((err) => {

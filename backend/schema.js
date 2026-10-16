@@ -1,7 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import paths from './paths.js';
-
 // Single source of truth for the Cubby SQLite schema.
 //
 // Times are stored as ISO-8601 UTC strings ("YYYY-MM-DDTHH:MM:SS.sssZ") so that
@@ -138,7 +134,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 5;
 
 const MIGRATIONS = [
     {
@@ -191,13 +187,12 @@ const MIGRATIONS = [
         }
     },
     {
-        // Users are keyed by the Cloudron id. Username stays unique and can change.
-        // Home directories move from the username to that id. A directory user SCIM
-        // cannot see yet keeps a stable local- id until login or a later sync.
+        // Users are keyed by id. Existing rows keep the username as that id until
+        // startup sync replaces it with the SCIM uid. Home directories stay put.
         version: 5,
         up(db) {
             const rows = db.prepare('SELECT username FROM users').all();
-            const idFor = new Map(rows.map((row) => [ row.username, `local-${row.username}` ]));
+            const idFor = new Map(rows.map((row) => [ row.username, row.username ]));
 
             db.pragma('foreign_keys = OFF');
             db.exec('BEGIN');
@@ -205,7 +200,7 @@ const MIGRATIONS = [
                 CREATE TABLE user_id_map (username TEXT PRIMARY KEY, id TEXT NOT NULL);
                 CREATE TABLE users_new(
                     id TEXT PRIMARY KEY,
-                    username TEXT NOT NULL UNIQUE,
+                    username TEXT NOT NULL,
                     email TEXT NOT NULL,
                     display_name TEXT DEFAULT '',
                     created_at TEXT NOT NULL,
@@ -222,6 +217,7 @@ const MIGRATIONS = [
                     FROM users u JOIN user_id_map m ON m.username = u.username;
                 DROP TABLE users;
                 ALTER TABLE users_new RENAME TO users;
+                CREATE INDEX IF NOT EXISTS users_username_idx ON users(username);
 
                 CREATE TABLE tokens_new(
                     id TEXT PRIMARY KEY,
@@ -353,39 +349,6 @@ const MIGRATIONS = [
                 ALTER TABLE filedrops_new RENAME TO filedrops;
 
                 DROP TABLE user_id_map;
-            `);
-            db.exec('COMMIT');
-            db.pragma('foreign_keys = ON');
-
-            for (const [ username, id ] of idFor) {
-                const from = path.join(paths.USER_DATA_ROOT, username);
-                const to = path.join(paths.USER_DATA_ROOT, id);
-                if (!fs.existsSync(from) || fs.existsSync(to)) continue;
-                fs.renameSync(from, to);
-            }
-        }
-    },
-    {
-        // A recreated directory user keeps the same username and gets a new id.
-        // Username is a display field, so more than one row may use it.
-        version: 6,
-        up(db) {
-            db.pragma('foreign_keys = OFF');
-            db.exec('BEGIN');
-            db.exec(`
-                CREATE TABLE users_new(
-                    id TEXT PRIMARY KEY,
-                    username TEXT NOT NULL,
-                    email TEXT NOT NULL,
-                    display_name TEXT DEFAULT '',
-                    created_at TEXT NOT NULL,
-                    active INTEGER NOT NULL DEFAULT 1
-                );
-                INSERT INTO users_new (id, username, email, display_name, created_at, active)
-                    SELECT id, username, email, display_name, created_at, active FROM users;
-                DROP TABLE users;
-                ALTER TABLE users_new RENAME TO users;
-                CREATE INDEX IF NOT EXISTS users_username_idx ON users(username);
             `);
             db.exec('COMMIT');
             db.pragma('foreign_keys = ON');

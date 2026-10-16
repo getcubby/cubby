@@ -24,7 +24,7 @@ try {
 
     // ensure at least users home dirs
     const userList = await users.list();
-    for (const user of userList) fs.mkdirSync(path.join(paths.USER_DATA_ROOT, user.username), { recursive: true });
+    for (const user of userList) fs.mkdirSync(path.join(paths.USER_DATA_ROOT, user.id), { recursive: true });
 
     // refresh data in background
     diskusage.calculate();

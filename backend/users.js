@@ -25,16 +25,6 @@ function homeDir(userId) {
     return path.join(paths.USER_DATA_ROOT, userId);
 }
 
-function renameHome(fromId, toId) {
-    if (fromId === toId) return;
-
-    const from = homeDir(fromId);
-    const to = homeDir(toId);
-    if (!fs.existsSync(from) || fs.existsSync(to)) return;
-
-    fs.renameSync(from, to);
-}
-
 function scimUserNameFilter(username) {
     const escaped = String(username).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     return `userName eq "${escaped}"`;
@@ -118,14 +108,34 @@ async function setActive(id, active) {
     await database.query('UPDATE users SET active = ? WHERE id = ?', [ active, id ]);
 }
 
-// Point an existing row at a Cloudron id and move its home directory with it.
+// A 2.26.0 row still uses the username as its id. Point that one row at the SCIM uid.
+async function adoptUsernameKey(username, id) {
+    const matches = await listByUsername(username);
+    if (matches.length !== 1 || matches[0].id !== username || matches[0].id === id) return false;
+
+    await replaceId(username, id);
+    return true;
+}
+
 async function replaceId(oldId, newId) {
     assert.strictEqual(typeof oldId, 'string');
     assert.strictEqual(typeof newId, 'string');
     if (oldId === newId) return;
 
     await database.query('UPDATE users SET id = ? WHERE id = ?', [ newId, oldId ]);
-    renameHome(oldId, newId);
+}
+
+// Home directories from 2.26.0 are still named by username. Sync has stored the uid.
+async function moveHomesToIds() {
+    for (const user of await list()) {
+        if (!user.username || user.id === user.username) continue;
+
+        const from = path.join(paths.USER_DATA_ROOT, user.username);
+        const to = homeDir(user.id);
+        if (!fs.existsSync(from) || fs.existsSync(to)) continue;
+
+        fs.renameSync(from, to);
+    }
 }
 
 async function ensureUser(data) {
@@ -150,8 +160,8 @@ async function ensureUser(data) {
         return await get(matches[0].id);
     }
 
-    await add({ id: `local-${username}`, username, email, displayName });
-    return await get(`local-${username}`);
+    await add({ id: username, username, email, displayName });
+    return await get(username);
 }
 
 /**
@@ -176,6 +186,12 @@ async function upsertFromScim(id, contact) {
     const active = contact.active !== false;
 
     if (await exists(id)) {
+        await update(id, profile);
+        await setActive(id, active);
+        return { created: false, updated: true };
+    }
+
+    if (await adoptUsernameKey(username, id)) {
         await update(id, profile);
         await setActive(id, active);
         return { created: false, updated: true };
@@ -222,6 +238,12 @@ async function syncFromOidc({ username, email, displayName }, { updateProfile = 
             return await get(existing.id);
         }
 
+        if (await adoptUsernameKey(username, id)) {
+            if (updateProfile) await update(id, profile);
+            await setActive(id, true);
+            return await get(id);
+        }
+
         await add({ id, ...profile });
         return await get(id);
     }
@@ -233,37 +255,8 @@ async function syncFromOidc({ username, email, displayName }, { updateProfile = 
         return await get(matches[0].id);
     }
 
-    await add({ id: `local-${username}`, ...profile });
-    return await get(`local-${username}`);
-}
-
-// Rewrite a pre-SCIM local- id onto the directory id. A uid- row is left alone,
-// so a later person with the same username does not inherit the home directory.
-async function stampDirectoryIds(directoryUsers) {
-    if (!Array.isArray(directoryUsers) || directoryUsers.length === 0) return;
-
-    const byUsername = new Map();
-    for (const directoryUser of directoryUsers) {
-        if (!directoryUser?.id || !directoryUser.username) continue;
-        if (byUsername.has(directoryUser.username)) byUsername.set(directoryUser.username, null);
-        else byUsername.set(directoryUser.username, directoryUser);
-    }
-
-    for (const user of await list()) {
-        if (!String(user.id).startsWith('local-')) continue;
-
-        const match = byUsername.get(user.username);
-        if (!match?.id || match.id === user.id) continue;
-        if (await get(match.id)) continue;
-
-        await replaceId(user.id, match.id);
-    }
-}
-
-async function backfillIdsFromScim() {
-    if (!scim.isEnabled()) return;
-
-    await stampDirectoryIds(await scim.getAllUsers());
+    await add({ id: username, ...profile });
+    return await get(username);
 }
 
 export default {
@@ -279,6 +272,5 @@ export default {
     ensureUser,
     upsertFromScim,
     syncFromOidc,
-    stampDirectoryIds,
-    backfillIdsFromScim
+    moveHomesToIds
 };

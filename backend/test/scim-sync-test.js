@@ -84,23 +84,22 @@ describe('scim user sync', function () {
         assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'u-1', 'note.txt')), false);
     });
 
-    it('stamps a local id once and a later directory id does not take the files', async function () {
-        await users.add({ id: 'local-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice' });
-        const note = path.join(paths.USER_DATA_ROOT, 'local-alice', 'note.txt');
-        fs.writeFileSync(note, 'old');
+    it('moves a username home to the directory id after sync', async function () {
+        await users.add({ id: 'alice', username: 'alice', email: 'a@b.c', displayName: 'Alice' });
+        fs.writeFileSync(path.join(paths.USER_DATA_ROOT, 'alice', 'note.txt'), 'old');
 
-        await users.stampDirectoryIds([{ id: 'uid-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
+        const stats = await reconcileScimUsers([{ id: 'uid-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
+        assert.equal(stats.updated, 1);
+        assert.equal(stats.created, 0);
+        assert.equal(await users.get('alice'), null);
+        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'alice', 'note.txt')), true);
 
-        assert.equal(await users.get('local-alice'), null);
-        assert.equal((await users.get('uid-alice')).username, 'alice');
+        await users.moveHomesToIds();
         assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
+        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'alice')), false);
 
-        await users.stampDirectoryIds([{ id: 'uid-other', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
-        assert.equal(await users.get('uid-alice') !== null, true);
-        assert.equal(await users.get('uid-other'), null);
-
-        const stats = await reconcileScimUsers([{ id: 'uid-new', username: 'alice', email: 'new@b.c', displayName: 'New', active: true }]);
-        assert.equal(stats.created, 1);
+        const again = await reconcileScimUsers([{ id: 'uid-new', username: 'alice', email: 'new@b.c', displayName: 'New', active: true }]);
+        assert.equal(again.created, 1);
         assert.equal((await users.get('uid-alice')).active, false);
         assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
         assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'uid-new', 'note.txt')), false);

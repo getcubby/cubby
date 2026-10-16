@@ -84,10 +84,9 @@ export async function deactivateDirectoryUsers(ids) {
 
 /**
  * @param {Array<{ id: string, name?: string, memberIds: string[] }>} scimGroups
- * @param {Set<string>} seenUserIds
  * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number }>}
  */
-export async function reconcileScimGroups(scimGroups, seenUserIds) {
+export async function reconcileScimGroups(scimGroups) {
     let created = 0;
     let updated = 0;
     let deactivated = 0;
@@ -98,6 +97,8 @@ export async function reconcileScimGroups(scimGroups, seenUserIds) {
     if (scimGroups.length === 0) {
         return { created, updated, deactivated, skipped };
     }
+
+    const localUserIds = new Set((await users.list()).map((user) => user.id));
 
     for (const group of scimGroups) {
         const id = group.id;
@@ -110,8 +111,8 @@ export async function reconcileScimGroups(scimGroups, seenUserIds) {
 
         const name = group.name || id;
         const memberUserIds = [];
-        for (const userId of group.memberIds) {
-            if (seenUserIds.has(userId)) memberUserIds.push(userId);
+        for (const userId of group.memberIds || []) {
+            if (localUserIds.has(userId)) memberUserIds.push(userId);
         }
 
         const result = await groups.upsertFromScim(id, name, memberUserIds);
@@ -135,8 +136,7 @@ export async function reconcileScimGroups(scimGroups, seenUserIds) {
 }
 
 export async function saveDirectoryGroups(upserts) {
-    const seenUserIds = new Set((await users.list()).filter((user) => user.active).map((user) => user.id));
-    const stats = await reconcileScimGroups(upserts, seenUserIds);
+    const stats = await reconcileScimGroups(upserts);
 
     if (stats.created > 0 || stats.updated > 0) {
         // group membership affects which groupfolders a user can access and search

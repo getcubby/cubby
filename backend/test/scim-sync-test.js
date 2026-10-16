@@ -136,7 +136,7 @@ describe('scim group sync', function () {
         await users.add(alice);
         await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
 
-        const stats = await reconcileScimGroups([], new Set());
+        const stats = await reconcileScimGroups([]);
 
         assert.equal(stats.deactivated, 0);
         assert.equal((await groups.get('gid-1')).active, true);
@@ -150,7 +150,7 @@ describe('scim group sync', function () {
             { groupId: 'gid-1', role: 'owner' }
         ]);
 
-        const stats = await reconcileScimGroups([{ id: 'gid-other', name: 'Other', memberIds: [] }], new Set());
+        const stats = await reconcileScimGroups([{ id: 'gid-other', name: 'Other', memberIds: [] }]);
         assert.equal(stats.deactivated, 1);
 
         const group = await groups.get('gid-1');
@@ -174,7 +174,7 @@ describe('scim group sync', function () {
             id: 'gid-1',
             name: 'Eng',
             memberIds: [ alice.id ]
-        }], new Set([ alice.id ]));
+        }]);
 
         assert.equal(stats.deactivated, 0);
         assert.equal(stats.updated, 1);
@@ -183,5 +183,21 @@ describe('scim group sync', function () {
         assert.equal(group.active, true);
         assert.equal(group.name, 'Eng');
         assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ alice.id ]);
+    });
+
+    it('keeps an inactive user who is still listed on the group', async function () {
+        await users.add(alice);
+        await users.add(user);
+        await users.setActive(user.id, false);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ user.id ]);
+
+        const stats = await reconcileScimGroups([{
+            id: 'gid-1',
+            name: 'Engineering',
+            memberIds: [ user.id, alice.id ]
+        }]);
+
+        assert.equal(stats.updated, 1);
+        assert.deepEqual((await groups.getMemberUserIds('gid-1')).sort(), [ alice.id, user.id ].sort());
     });
 });

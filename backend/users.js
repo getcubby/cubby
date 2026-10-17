@@ -3,7 +3,6 @@ import paths from './paths.js';
 import { cp } from 'node:fs/promises';
 import debug from 'debug';
 import database from './database.js';
-import fs from 'node:fs';
 import path from 'path';
 import tokens from './tokens.js';
 import MainError from './mainerror.js';
@@ -108,36 +107,6 @@ async function setActive(id, active) {
     await database.query('UPDATE users SET active = ? WHERE id = ?', [ active, id ]);
 }
 
-// A 2.26.0 row still uses the username as its id. Point that one row at the SCIM uid.
-async function adoptUsernameKey(username, id) {
-    const matches = await listByUsername(username);
-    if (matches.length !== 1 || matches[0].id !== username || matches[0].id === id) return false;
-
-    await replaceId(username, id);
-    return true;
-}
-
-async function replaceId(oldId, newId) {
-    assert.strictEqual(typeof oldId, 'string');
-    assert.strictEqual(typeof newId, 'string');
-    if (oldId === newId) return;
-
-    await database.query('UPDATE users SET id = ? WHERE id = ?', [ newId, oldId ]);
-}
-
-// Home directories from 2.26.0 are still named by username. Sync has stored the uid.
-async function moveHomesToIds() {
-    for (const user of await list()) {
-        if (!user.username || user.id === user.username) continue;
-
-        const from = path.join(paths.USER_DATA_ROOT, user.username);
-        const to = homeDir(user.id);
-        if (!fs.existsSync(from) || fs.existsSync(to)) continue;
-
-        fs.renameSync(from, to);
-    }
-}
-
 async function ensureUser(data) {
     const { id, username, email, displayName } = data;
     const contact = { username, email, displayName };
@@ -191,12 +160,6 @@ async function upsertFromScim(id, contact) {
         return { created: false, updated: true };
     }
 
-    if (await adoptUsernameKey(username, id)) {
-        await update(id, profile);
-        await setActive(id, active);
-        return { created: false, updated: true };
-    }
-
     if (!active) return { created: false, updated: false };
 
     const [error] = await safe(add({ id, username, email, displayName }));
@@ -238,12 +201,6 @@ async function syncFromOidc({ username, email, displayName }, { updateProfile = 
             return await get(existing.id);
         }
 
-        if (await adoptUsernameKey(username, id)) {
-            if (updateProfile) await update(id, profile);
-            await setActive(id, true);
-            return await get(id);
-        }
-
         await add({ id, ...profile });
         return await get(id);
     }
@@ -268,9 +225,7 @@ export default {
     list,
     update,
     setActive,
-    replaceId,
     ensureUser,
     upsertFromScim,
-    syncFromOidc,
-    moveHomesToIds
+    syncFromOidc
 };

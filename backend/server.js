@@ -176,7 +176,6 @@ async function start() {
         } catch (error) {
             console.error('Initial SCIM sync failed:', error);
         }
-        await usersDb.moveHomesToIds();
     }
 
     const host = constants.TEST ? '127.0.0.1' : undefined;

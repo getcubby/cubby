@@ -84,25 +84,18 @@ describe('scim user sync', function () {
         assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'u-1', 'note.txt')), false);
     });
 
-    it('moves a username home to the directory id after sync', async function () {
+    it('does not retarget a username row or its home', async function () {
         await users.add({ id: 'alice', username: 'alice', email: 'a@b.c', displayName: 'Alice' });
         fs.writeFileSync(path.join(paths.USER_DATA_ROOT, 'alice', 'note.txt'), 'old');
 
         const stats = await reconcileScimUsers([{ id: 'uid-alice', username: 'alice', email: 'a@b.c', displayName: 'Alice', active: true }]);
-        assert.equal(stats.updated, 1);
-        assert.equal(stats.created, 0);
-        assert.equal(await users.get('alice'), null);
-        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'alice', 'note.txt')), true);
-
-        await users.moveHomesToIds();
-        assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
-        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'alice')), false);
-
-        const again = await reconcileScimUsers([{ id: 'uid-new', username: 'alice', email: 'new@b.c', displayName: 'New', active: true }]);
-        assert.equal(again.created, 1);
-        assert.equal((await users.get('uid-alice')).active, false);
-        assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt'), 'utf8'), 'old');
-        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'uid-new', 'note.txt')), false);
+        assert.equal(stats.created, 1);
+        assert.equal(stats.updated, 0);
+        assert.equal((await users.get('alice')).active, false);
+        assert.equal((await users.get('uid-alice')).username, 'alice');
+        assert.equal((await users.get('uid-alice')).active, true);
+        assert.equal(fs.readFileSync(path.join(paths.USER_DATA_ROOT, 'alice', 'note.txt'), 'utf8'), 'old');
+        assert.equal(fs.existsSync(path.join(paths.USER_DATA_ROOT, 'uid-alice', 'note.txt')), false);
     });
 
     it('saves directory users by id and skips an inactive user with no local row', async function () {

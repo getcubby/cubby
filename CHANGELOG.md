@@ -700,3 +700,7 @@
 * Update cubby to 7251f8f
 * Drop the one-time rewrite from username keys to directory ids.
 
+[2.27.2]
+* Update cubby to d34ae57
+* Fix opening of PDF
+

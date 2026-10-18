@@ -696,3 +696,7 @@
 * Let a raw file read skip the recent list.
 * Add an active flag and stop deleting groups that leave SCIM.
 
+[2.27.1]
+* Update cubby to 7251f8f
+* Drop the one-time rewrite from username keys to directory ids.
+

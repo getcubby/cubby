@@ -56,10 +56,82 @@ describe('recoll', function () {
         assert.ok(config.includes('thrQSizes = -1 -1 -1'));
         assert.ok(config.includes('filtermaxmbytes = 512'));
         assert.ok(config.includes('filtermaxseconds = 300'));
-        assert.ok(config.includes('idxloglevel = 2'));
+        assert.ok(config.includes('helperlogfilename = /dev/null'));
+        assert.ok(config.includes('idxloglevel = 4'));
         assert.ok(config.includes('excludedmimetypes = application/zip application/x-zip-compressed application/x-7z-compressed application/x-rar application/x-rar-compressed application/x-tar'));
         assert.ok(config.includes('zipSkippedNames = __MACOSX/* */._*'));
         assert.ok(config.includes('skippedNames+ = ~$* .DS_Store Thumbs.db ._*'));
+    });
+
+    it('honors the skipped paths list', async function () {
+        const marker = `recoll-skip-marker-${Date.now()}`;
+        await users.add(alice);
+        await addUserFile(alice.username, '/dir with space/skipped.txt', marker);
+
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, alice.id);
+        fs.mkdirSync(configPath, { recursive: true });
+
+        const skippedFilePath = path.join(paths.USER_DATA_ROOT, alice.id, 'dir with space', 'skipped.txt');
+        fs.writeFileSync(path.join(configPath, 'skipped-paths.json'), JSON.stringify([ skippedFilePath ]));
+
+        await indexUser(alice.id);
+
+        assert.equal((await recoll.searchByUsername(alice.id, marker)).length, 0);
+        const config = fs.readFileSync(path.join(configPath, 'recoll.conf'), 'utf8');
+        assert.ok(config.includes(`skippedPaths = "${skippedFilePath}"`));
+    });
+
+    it('skips the current file and retries after SIGKILL', async function () {
+        await users.add(alice);
+        await addUserFile(alice.username, '/killed.txt', 'killed marker');
+
+        const killedFilePath = path.join(paths.USER_DATA_ROOT, alice.id, 'killed.txt');
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, alice.id);
+        fs.mkdirSync(paths.THUMBNAIL_ROOT, { recursive: true });
+        const fakeBin = fs.mkdtempSync(path.join(paths.THUMBNAIL_ROOT, 'fake-bin-'));
+        const fakeRecollIndex = path.join(fakeBin, 'recollindex');
+        const attemptsFile = path.join(fakeBin, 'attempts');
+        // recoll truncates idxstatus.txt paths at a fixed length
+        const truncatedPath = `${path.dirname(killedFilePath)}/killed \\`;
+
+        const script = [
+            '#!/bin/sh',
+            'config=""',
+            'while [ $# -gt 0 ]; do',
+            '    if [ "$1" = "-c" ]; then config="$2"; shift 2; else shift; fi',
+            'done',
+            `echo x >> "${attemptsFile}"`,
+            'if grep -q "skippedPaths" "$config/recoll.conf"; then exit 0; fi',
+            'cat > "$config/idxstatus.txt" <<\'EOF\'',
+            'phase = 1',
+            'docsdone = 1',
+            'filesdone = 0',
+            'fileerrors = 0',
+            'dbtotdocs = 0',
+            'totfiles = 0',
+            `fn = ${truncatedPath}`,
+            'hasmonitor = 0',
+            'EOF',
+            `echo ":4:../internfile/internfile.cpp:185::FileInterner::init fn [${killedFilePath}] mime [(null)] preview 0" >&2`,
+            'kill -9 $$'
+        ].join('\n');
+        fs.writeFileSync(fakeRecollIndex, script, { mode: 0o755 });
+
+        const oldPath = process.env.PATH;
+        process.env.PATH = `${fakeBin}:${oldPath}`;
+
+        let attempts;
+        try {
+            await recoll.indexByUsername(alice.id);
+            attempts = fs.readFileSync(attemptsFile, 'utf8').trim().split('\n').length;
+        } finally {
+            process.env.PATH = oldPath;
+            fs.rmSync(fakeBin, { recursive: true, force: true });
+        }
+
+        assert.equal(attempts, 2);
+        const skippedPaths = JSON.parse(fs.readFileSync(path.join(configPath, 'skipped-paths.json'), 'utf8'));
+        assert.deepEqual(skippedPaths, [ killedFilePath ]);
     });
 
     it('does not index archive contents', async function () {

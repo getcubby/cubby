@@ -77,7 +77,7 @@ const newMenu = [{
   action: () => fileBrowser.value?.openUploadFolder()
 }, {
   separator: true,
-  label: 'Create new',
+  label: 'Create',
 }, {
   label: 'New file',
   icon: 'fa-solid fa-file-circle-plus',

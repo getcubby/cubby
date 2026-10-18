@@ -28,7 +28,8 @@ const RECOLL_CONFIG_OPTIONS = [
     `idxloglevel = ${INDEX_LOG_LEVEL}`,
     'excludedmimetypes = application/zip application/x-zip-compressed application/x-7z-compressed application/x-rar application/x-rar-compressed application/x-tar',
     'zipSkippedNames = __MACOSX/* */._*',
-    'skippedNames+ = ~$* .DS_Store Thumbs.db ._*'
+    'skippedNames+ = ~$* .DS_Store Thumbs.db ._*',
+    'noContentSuffixes+ = .dmg .iso .img .vmdk .vdi .qcow2'
 ].join('\n');
 
 const INDEX_STATUS_FILE = 'idxstatus.txt';

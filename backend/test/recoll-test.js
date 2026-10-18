@@ -61,6 +61,7 @@ describe('recoll', function () {
         assert.ok(config.includes('excludedmimetypes = application/zip application/x-zip-compressed application/x-7z-compressed application/x-rar application/x-rar-compressed application/x-tar'));
         assert.ok(config.includes('zipSkippedNames = __MACOSX/* */._*'));
         assert.ok(config.includes('skippedNames+ = ~$* .DS_Store Thumbs.db ._*'));
+        assert.ok(config.includes('noContentSuffixes+ = .dmg .iso .img .vmdk .vdi .qcow2'));
     });
 
     it('honors the skipped paths list', async function () {
@@ -157,6 +158,31 @@ describe('recoll', function () {
 
         const results = await recoll.searchByUsername(alice.id, 'archive.zip');
         assert.ok(results.some((result) => result.fileName === 'archive.zip'), 'archive file name was not indexed');
+    });
+
+    it('does not index disk image contents', async function () {
+        if (!hasCommand('python3')) this.skip();
+
+        const marker = `recoll-dmg-marker-${Date.now()}`;
+        await users.add(alice);
+
+        const userHome = path.join(paths.USER_DATA_ROOT, alice.id);
+        fs.mkdirSync(userHome, { recursive: true });
+
+        const dmgPath = path.join(userHome, 'disk.dmg');
+        const script = [
+            'import bz2, sys',
+            'with open(sys.argv[1], "wb") as image:',
+            '    image.write(bz2.compress(sys.argv[2].encode()))'
+        ].join('\n');
+        await exec('python3', [ '-c', script, dmgPath, marker ]);
+
+        await indexUser(alice.id);
+
+        assert.equal((await recoll.searchByUsername(alice.id, marker)).length, 0, 'disk image contents were indexed');
+
+        const results = await recoll.searchByUsername(alice.id, 'disk.dmg');
+        assert.ok(results.some((result) => result.fileName === 'disk.dmg'), 'disk image file name was not indexed');
     });
 
     it('can index and search user files', async function () {

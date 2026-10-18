@@ -168,7 +168,7 @@ onMounted(loadGroups);
           </div>
           <div class="detail" v-show="selectedEntries.length <= 1 && displayPath">
             <p>Path</p>
-            <span class="detail-value detail-path">{{ displayPath }}</span>
+            <span class="detail-value">{{ displayPath }}</span>
           </div>
           <div class="detail" v-show="selectedEntries.length <= 1 && showOwner">
             <p>Owner</p>
@@ -287,11 +287,6 @@ onMounted(loadGroups);
 .detail-value {
     display: block;
     word-break: break-word;
-}
-
-.detail-path {
-    font-family: var(--font-family-monospace, monospace);
-    font-size: 13px;
 }
 
 .detail-actions {

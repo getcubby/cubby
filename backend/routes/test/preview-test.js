@@ -109,7 +109,7 @@ describe('preview API', function () {
 
     it('returns thumbnail for group folder file', async function () {
         await withToken(superagent.post(`${serverUrl}/api/v1/settings/groupfolders`), alice.token)
-            .send({ slug: 'team', name: 'Team', members: [ alice.username ] });
+            .send({ slug: 'team', name: 'Team' });
 
         await files.addOrOverwriteFileContents('groupfolder-team', '/preview-group.png', MINIMAL_PNG, null, true);
 

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import child_process from 'node:child_process';
 import common from './common.js';
 import paths from '../paths.js';
-import exec from '../exec.js';
 import fs from 'node:fs';
 import groupfolders from '../groupfolders.js';
 import path from 'node:path';
@@ -35,22 +34,8 @@ describe('recoll', function () {
         return path.join(paths.SEARCH_INDEX_PATH, username, 'xapiandb');
     }
 
-    async function buildRecollConfig(username) {
-        const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
-        fs.mkdirSync(configPath, { recursive: true });
-
-        const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
-        for (const groupFolder of await groupfolders.list(username)) {
-            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
-        }
-
-        fs.writeFileSync(path.join(configPath, 'recoll.conf'), `topdirs = ${pathsToIndex.join(' ')}`);
-        return configPath;
-    }
-
     async function indexUser(username) {
-        const configPath = await buildRecollConfig(username);
-        await exec('recollindex', [ '-c', configPath ], { stdio: [ 'ignore', 'ignore', 'pipe' ] });
+        await recoll.indexByUsername(username);
         assert.ok(fs.existsSync(indexDbPath(username)), 'recoll index was not created');
     }
 
@@ -59,6 +44,20 @@ describe('recoll', function () {
         await addUserFile(username, filePath, content);
         await indexUser(`uid-${username}`);
     }
+
+    it('writes a memory-bounded recoll config', async function () {
+        await users.add(alice);
+
+        await recoll.indexByUsername(alice.id);
+
+        const config = fs.readFileSync(path.join(paths.SEARCH_INDEX_PATH, alice.id, 'recoll.conf'), 'utf8');
+        assert.ok(config.includes('idxflushmb = 10'));
+        assert.ok(config.includes('thrQSizes = -1 -1 -1'));
+        assert.ok(config.includes('filtermaxmbytes = 512'));
+        assert.ok(config.includes('filtermaxseconds = 300'));
+        assert.ok(config.includes('idxloglevel = 2'));
+        assert.ok(config.includes('skippedNames+ = ~$* .DS_Store Thumbs.db ._*'));
+    });
 
     it('can index and search user files', async function () {
         const marker = `recoll-user-marker-${Date.now()}`;

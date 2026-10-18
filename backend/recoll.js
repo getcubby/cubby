@@ -12,6 +12,20 @@ import safe from '@cloudron/safetydance';
 
 const debugLog = debug('cubby:search');
 
+// Keep the indexer suitable for a small app container. Without these, recoll
+// auto-configures multiple indexing threads and allows external filters to use
+// several gigabytes of memory. It also logs every indexed document at level 3,
+// which ends up as a huge stderr buffer in Node.
+const RECOLL_CONFIG_OPTIONS = [
+    'testmodifusemtime = 1',
+    'idxflushmb = 10',
+    'thrQSizes = -1 -1 -1',
+    'filtermaxmbytes = 512',
+    'filtermaxseconds = 300',
+    'idxloglevel = 2',
+    'skippedNames+ = ~$* .DS_Store Thumbs.db ._*'
+].join('\n');
+
 // username -> in-flight indexing Promise, to coalesce concurrent indexing of
 // the same user into a single recollindex run (recollindex takes an exclusive
 // flock per user config dir and fails if two run concurrently).
@@ -83,7 +97,7 @@ async function indexByUsername(username, schedule = false) {
         for (const groupFolder of await groupFolders.list(username)) {
             pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
         }
-        fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\ntestmodifusemtime = 1`);
+        fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\n${RECOLL_CONFIG_OPTIONS}\n`);
 
         const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
         if (indexError) {

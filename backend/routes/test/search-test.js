@@ -3,10 +3,9 @@ import assert from 'node:assert/strict';
 import child_process from 'node:child_process';
 import common from './common.js';
 import paths from '../../paths.js';
-import exec from '../../exec.js';
 import fs from 'node:fs';
-import groupfolders from '../../groupfolders.js';
 import path from 'node:path';
+import recoll from '../../recoll.js';
 import superagent from '@cloudron/superagent';
 
 function hasCommand(command) {
@@ -35,16 +34,7 @@ describe('search API', function () {
     }
 
     async function indexUser(username) {
-        const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
-        fs.mkdirSync(configPath, { recursive: true });
-
-        const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
-        for (const groupFolder of await groupfolders.list(username)) {
-            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
-        }
-
-        fs.writeFileSync(path.join(configPath, 'recoll.conf'), `topdirs = ${pathsToIndex.join(' ')}`);
-        await exec('recollindex', [ '-c', configPath ], { stdio: [ 'ignore', 'ignore', 'pipe' ] });
+        await recoll.indexByUsername(username);
         assert.ok(fs.existsSync(indexDbPath(username)), 'recoll index was not created');
     }
 

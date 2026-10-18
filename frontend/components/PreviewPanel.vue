@@ -39,6 +39,7 @@ const entry = computed(() =>{
 });
 const displayName = computed(() => entry.value.name || entry.value.fileName || '');
 const displayPath = computed(() => entry.value.filePath || entry.value.resource?.path || '');
+const showOwner = computed(() => entry.value.resource?.type !== 'home');
 const combinedSize = computed(() => {
   return props.selectedEntries.length ? props.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : props.parentEntry.size;
 });
@@ -165,7 +166,7 @@ onMounted(loadGroups);
             <p>Path</p>
             <span class="detail-value detail-path">{{ displayPath }}</span>
           </div>
-          <div class="detail" v-show="selectedEntries.length <= 1">
+          <div class="detail" v-show="selectedEntries.length <= 1 && showOwner">
             <p>Owner</p>
             <span class="detail-value">{{ entry.owner }}</span>
           </div>

@@ -39,6 +39,10 @@ const entry = computed(() =>{
 });
 const displayName = computed(() => entry.value.name || entry.value.fileName || '');
 const displayPath = computed(() => entry.value.filePath || entry.value.resource?.path || '');
+const showName = computed(() => {
+  if (!displayName.value) return false;
+  return !(entry.value.resource?.type === 'home' && entry.value.filePath === '/');
+});
 const showOwner = computed(() => entry.value.resource?.type !== 'home');
 const combinedSize = computed(() => {
   return props.selectedEntries.length ? props.selectedEntries.reduce(function (acc, val) { return acc + val.size; }, 0) : props.parentEntry.size;
@@ -158,7 +162,7 @@ onMounted(loadGroups);
 
       <TabView :key="tabViewKey" :tabs="{ details: 'Details', activity: 'Activity' }" :default-active="activeTab" @changed="onTabChanged" class="preview-tabs">
         <template #details>
-          <div class="detail" v-show="selectedEntries.length <= 1 && displayName">
+          <div class="detail" v-show="selectedEntries.length <= 1 && showName">
             <p>Name</p>
             <span class="detail-value">{{ displayName }}</span>
           </div>

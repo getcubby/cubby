@@ -5,7 +5,7 @@ WORKDIR /app/code
 
 # CUBBY_COMMIT is a reference for renovate when building from main. The pipeline always builds from the branch it is run on
 # renovate: datasource=git-refs packageName=https://git.cloudron.io/s42/cubby branch=main
-ARG CUBBY_COMMIT=6dde420347fc46f0c90fd593088cc78c2d8cb7ed
+ARG CUBBY_COMMIT=7251f8fdd7541eb6cc8f4e13a757e984079c898b
 
 RUN export LANG=en_US.UTF-8
 RUN locale-gen en_US.UTF-8

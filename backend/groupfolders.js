@@ -118,7 +118,7 @@ async function add(idOrSlug, name, ownerUserId, members = [], groupMembers = [])
 
     // kick off indexer in background
     if (!constants.TEST) {
-        recoll.indexByUsername(ownerUserId);
+        recoll.indexByUsername(ownerUserId).catch((error) => console.error('Search index update failed:', error));
     }
 }
 
@@ -202,7 +202,7 @@ async function update(id, name, members, groupMembers = []) {
     if (error) throw error;
 
     // FIXME reindex for all for the moment until we know who got removed!
-    recoll.index();
+    recoll.index().catch((error) => console.error('Search index update failed:', error));
 }
 
 async function remove(id) {
@@ -239,7 +239,7 @@ async function remove(id) {
     if (rmError) console.error(`remove: failed to remove files of group folder ${id} at ${trashPath}`, rmError);
 
     // FIXME reindex for all for the moment until we know who got removed!
-    recoll.index();
+    recoll.index().catch((error) => console.error('Search index update failed:', error));
 }
 
 async function getRole(groupFolder, userId) {

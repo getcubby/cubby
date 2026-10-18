@@ -27,8 +27,8 @@ try {
     for (const user of userList) fs.mkdirSync(path.join(paths.USER_DATA_ROOT, user.id), { recursive: true });
 
     // refresh data in background
-    diskusage.calculate();
-    recoll.index();
+    diskusage.calculate().catch((error) => console.error('Disk usage calculation failed:', error));
+    recoll.index().catch((error) => console.error('Search index update failed:', error));
 } catch (error) {
     console.error(error);
     process.exit(1);

@@ -26,10 +26,23 @@ const RECOLL_CONFIG_OPTIONS = [
     'skippedNames+ = ~$* .DS_Store Thumbs.db ._*'
 ].join('\n');
 
-// username -> in-flight indexing Promise, to coalesce concurrent indexing of
+const SCHEDULE_DELAY_MS = 10 * 1000;
+
+// user id -> in-flight indexing Promise, to coalesce concurrent indexing of
 // the same user into a single recollindex run (recollindex takes an exclusive
 // flock per user config dir and fails if two run concurrently).
 const inflight = {};
+
+// recollindex is memory hungry even with conservative settings. Run only one
+// at a time across all users so a group folder change does not start one
+// process per member concurrently.
+let indexQueue = Promise.resolve();
+
+function enqueueIndex(task) {
+    const run = indexQueue.then(task, task);
+    indexQueue = run.catch(() => {});
+    return run;
+}
 
 function isLockContention(error) {
     return typeof error?.stderr === 'string'
@@ -69,11 +82,21 @@ function scheduleIndexByUsername(username) {
 
     if (scheduled[username]) clearTimeout(scheduled[username]);
 
-    scheduled[username] = setTimeout(async () => {
+    const timer = setTimeout(async () => {
+        // do not delete a newer timer that was scheduled while this run was
+        // waiting or indexing
+        if (scheduled[username] === timer) delete scheduled[username];
+
         debugLog(`scheduledIndex for ${username}`);
-        await indexByUsername(username);
-        delete scheduled[username];
-    }, 10000);
+
+        try {
+            await indexByUsername(username);
+        } catch (error) {
+            console.error(`Search index update failed for user ${username}.`, error);
+        }
+    }, SCHEDULE_DELAY_MS);
+
+    scheduled[username] = timer;
 }
 
 async function indexByUsername(username, schedule = false) {
@@ -84,39 +107,42 @@ async function indexByUsername(username, schedule = false) {
 
     if (inflight[username]) return inflight[username];
 
-    const run = (async () => {
-        debugLog(`indexByUsername: ${username} ...`);
+    const run = enqueueIndex(async () => {
+        try {
+            debugLog(`indexByUsername: ${username} ...`);
 
-        const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
-        const configFilePath = path.join(configPath, 'recoll.conf');
+            const configPath = path.join(paths.SEARCH_INDEX_PATH, username);
+            const configFilePath = path.join(configPath, 'recoll.conf');
 
-        fs.mkdirSync(configPath, { recursive: true });
+            fs.mkdirSync(configPath, { recursive: true });
 
-        // collect all paths we want to index and write config file
-        const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
-        for (const groupFolder of await groupFolders.list(username)) {
-            pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
-        }
-        fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\n${RECOLL_CONFIG_OPTIONS}\n`);
-
-        const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
-        if (indexError) {
-            if (isLockContention(indexError)) {
-                debugLog(`Skipped indexing ${username}: another recollindex is already running`);
-            } else {
-                debugLog('Failed to create or update recoll index for user.', indexError);
-                if (!constants.TEST) console.error('Failed to create or update recoll index for user.', indexError);
+            // collect all paths we want to index and write config file
+            const pathsToIndex = [ path.join(paths.USER_DATA_ROOT, username) ];
+            for (const groupFolder of await groupFolders.list(username)) {
+                pathsToIndex.push(path.join(paths.GROUPS_DATA_ROOT, groupFolder.id));
             }
+            fs.writeFileSync(configFilePath, `topdirs = ${pathsToIndex.join(' ')}\n${RECOLL_CONFIG_OPTIONS}\n`);
+
+            const [indexError] = await safe(exec('recollindex', [ '-c', configPath ], { stdio: ['ignore', 'ignore', 'pipe'] }));
+            if (indexError) {
+                if (isLockContention(indexError)) {
+                    debugLog(`Skipped indexing ${username}: another recollindex is already running`);
+                } else {
+                    console.error(`Failed to create or update recoll index for user ${username}.`, indexError);
+                }
+            }
+        } catch (error) {
+            console.error(`Failed to create or update recoll index for user ${username}.`, error);
         }
 
         debugLog(`indexByUsername: ${username} done`);
-    })();
+    });
 
     inflight[username] = run;
     try {
         await run;
     } finally {
-        delete inflight[username];
+        if (inflight[username] === run) delete inflight[username];
     }
 }
 

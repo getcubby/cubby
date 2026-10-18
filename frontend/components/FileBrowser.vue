@@ -89,6 +89,11 @@ changes.onChange(function (resourcePaths) {
 });
 
 const isGroupFoldersRoot = computed(() => activeResourceType.value === 'groupfolders' && breadCrumbs.value.length === 0);
+const isSharesRoot = computed(() => activeResourceType.value === 'shares' && breadCrumbs.value.length === 0);
+const showListingChrome = computed(() => {
+  if (directoryBusy.value || entries.value.length) return true;
+  return !isGroupFoldersRoot.value && !isSharesRoot.value;
+});
 
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
@@ -767,7 +772,7 @@ defineExpose({
           <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           <div style="flex-grow: 1"></div>
           <Button v-if="isGroupFoldersRoot && entries.length" icon="fa-solid fa-gear" href="#/settings" plain @click="followLink($event, '/settings')">Manage group folders</Button>
-          <ButtonGroup style="margin-right: 40px">
+          <ButtonGroup v-if="showListingChrome" style="margin-right: 40px">
             <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
             <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
           </ButtonGroup>
@@ -834,6 +839,7 @@ defineExpose({
         </div>
       </div>
       <PreviewPanel
+        v-if="showListingChrome"
         :parent-entry="entry"
         :selected-entries="selectedEntries"
         :show-download="currentResourcePath !== '/groupfolders/'"

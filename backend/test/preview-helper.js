@@ -10,10 +10,7 @@ export async function waitForPreview(hash, timeoutMs = 30000) {
 
     while (Date.now() < deadline) {
         const localPath = preview.getLocalPath(hash);
-        if (localPath) {
-            assert.ok(fs.statSync(localPath).size > 0);
-            return localPath;
-        }
+        if (localPath && fs.statSync(localPath).size > 0) return localPath;
         await new Promise((resolve) => setTimeout(resolve, 200));
     }
 

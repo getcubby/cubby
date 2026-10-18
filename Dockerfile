@@ -12,8 +12,9 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 # maybe check https://www.recoll.org/pages/features.html#doctypes.pdf also
+# libjson-perl is required by recoll's rclimg image filter
 RUN apt-get update && \
-    apt-get install -y recollcmd recoll libwpd-tools poppler-utils unrtf untex wv pdftk antiword fonts-nanum libwpd-tools djvulibre-bin \
+    apt-get install -y recollcmd recoll libjson-perl libimage-exiftool-perl libwpd-tools poppler-utils unrtf untex wv pdftk antiword fonts-nanum libwpd-tools djvulibre-bin \
     python3-chardet python3-py7zr python3-chm python3-icalendar python3-lxml python3-mido python3-mutagen python3-rarfile && \
     rm -r /var/cache/apt /var/lib/apt/lists
 

@@ -61,6 +61,22 @@ describe('files API', function () {
         assert.equal(paths.includes('/recent-skipped.txt'), false);
     });
 
+    it('lets the app frame a raw file', async function () {
+        await addUserFile(alice.username, '/frame.txt', 'frame me');
+
+        const raw = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/frame.txt', type: 'raw' });
+        assert.equal(raw.status, 200);
+        assert.equal(raw.headers['content-security-policy'], "frame-ancestors 'self'");
+        assert.equal(raw.headers['x-frame-options'], 'SAMEORIGIN');
+
+        const download = await withToken(superagent.get(`${serverUrl}/api/v1/files`), alice.token)
+            .query({ path: '/home/frame.txt', type: 'download' });
+        assert.equal(download.status, 200);
+        assert.equal(download.headers['content-security-policy'], "frame-ancestors 'none'");
+        assert.equal(download.headers['x-frame-options'], 'DENY');
+    });
+
     it('can upload and get a file', async function () {
         const response = await withToken(superagent.post(`${serverUrl}/api/v1/files`), alice.token)
             .query({ path: '/home/upload.txt', overwrite: true })

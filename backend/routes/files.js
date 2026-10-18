@@ -100,10 +100,13 @@ async function head(req, res, next) {
     next(new HttpSuccess(200, result));
 }
 
-// wrapper to handle json content type
+// raw bytes are embedded by the PDF viewer, so this app may frame them
 function sendFile(res, file) {
+    const headers = {
+        'Content-Security-Policy': "frame-ancestors 'self'",
+        'X-Frame-Options': 'SAMEORIGIN'
+    };
     // special treatment for json, so the clients do not parse it as json api response!
-    const headers = {};
     if (file.mimeType === 'application/json') headers['content-type'] = 'text/plain';
 
     res.sendFile(file._fullFilePath, { headers, dotfiles: 'allow' });

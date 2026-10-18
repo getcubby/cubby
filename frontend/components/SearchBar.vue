@@ -4,6 +4,7 @@ import { ref, watch, onUnmounted, useTemplateRef } from 'vue';
 import { Spinner, TextInput, Button } from '@cloudron/pankow';
 import MainModel from '../models/MainModel.js';
 import { getFilesViewHashHref, getResultLocationLabel, getResultFolderPath } from '../utils.js';
+import { followLink, go } from '../router.js';
 
 const SEARCH_DEBOUNCE_MS = 500;
 
@@ -82,8 +83,13 @@ function onOpenResults() {
   const q = searchQuery.value.trim();
   if (!q) return;
 
-  window.location.hash = 'search/' + encodeURIComponent(q);
+  go('/search/' + encodeURIComponent(q));
   onDismiss();
+}
+
+function onResultLink(event, href) {
+  followLink(event, href);
+  if (event.defaultPrevented) onDismiss();
 }
 
 watch(searchQuery, () => {
@@ -149,7 +155,7 @@ function getDirectoryHref(entry) {
         <div v-show="searchResults.length === 0" class="no-search-results">
           Nothing found
         </div>
-        <a v-for="result in searchResults" :key="result.entry.id" class="search-result-entry" :href="getEntryHref(result.entry)" @click.stop="onDismiss()">
+        <a v-for="result in searchResults" :key="result.entry.id" class="search-result-entry" :href="getEntryHref(result.entry)" @click.stop="onResultLink($event, getEntryHref(result.entry))">
           <img :src="result.entry.previewUrl"/>
           <div class="search-result-body">
             <div class="search-result-title"><b>{{ result.fileName }}</b></div>
@@ -159,7 +165,7 @@ function getDirectoryHref(entry) {
             </div>
           </div>
           <div class="search-result-entry-actions">
-            <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onDismiss()">Open folder</Button>
+            <Button plain :href="getDirectoryHref(result.entry)" @click.stop="onResultLink($event, getDirectoryHref(result.entry))">Open folder</Button>
           </div>
         </a>
       </div>

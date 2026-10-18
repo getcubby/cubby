@@ -167,7 +167,7 @@ async function get(req, res, next) {
             if (error) return next(MainError.toHttpError(error));
 
             if (type === 'raw') {
-                if (file.isDirectory) return res.redirect(301, `/#files/shares/${shareId}/`);
+                if (file.isDirectory) return res.redirect(301, `/#/files/shares/${shareId}/`);
 
                 if (req.user && recordRecent(req.query)) await recent.add(req.user.id, req.query.path);
 
@@ -251,7 +251,7 @@ async function get(req, res, next) {
             if (file.group) file.group.myRole = await groupFolders.getRole(group, req.user.id);
 
             if (type === 'raw') {
-                if (file.isDirectory) return res.redirect(301, `/#files/groupfolders/${groupFolderId}/`);
+                if (file.isDirectory) return res.redirect(301, `/#/files/groupfolders/${groupFolderId}/`);
 
                 if (req.user && recordRecent(req.query)) await recent.add(req.user.id, req.query.path);
 

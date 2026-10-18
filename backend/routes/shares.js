@@ -89,7 +89,7 @@ async function getShareLink(req, res, next) {
     if (error) return next(MainError.toHttpError(error));
 
     if (type === 'raw') {
-        if (file.isDirectory) return res.redirect(301, `/#files/shares/${req.share.id}/`);
+        if (file.isDirectory) return res.redirect(301, `/#/files/shares/${req.share.id}/`);
         res.set('Content-Disposition', `inline; filename="${file.fileName}"`);
         res.sendFile(file._fullFilePath, { dotfiles: 'allow' });
         return;

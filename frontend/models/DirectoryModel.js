@@ -51,7 +51,7 @@ async function get(resource) {
   entry.modified = new Date(entry.mtime);
   entry.icon = entry.previewUrl;
   entry.resourcePath = resource.resourcePath;
-  entry.href = `#files${entry.resourcePath}`;
+  entry.href = `#/files${entry.resourcePath}`;
   entry.resource = parseResourcePath(entry.resourcePath);
   entry.fullFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=raw`;
   entry.downloadFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(entry.resourcePath)}&type=download`;
@@ -75,7 +75,7 @@ async function get(resource) {
     // shares need to add the share id if we are on meta toplevel
     if (entry.resourcePath === '/shares/') child.resourcePath = sanitize(`${resource.resourcePath}/${child.share.id}`);
     else child.resourcePath = sanitize(`${resource.resourcePath}/${child.fileName}`);
-    child.href = `#files${child.resourcePath}`;
+    child.href = `#/files${child.resourcePath}`;
 
     child.resource = parseResourcePath(child.resourcePath);
     child.fullFileUrl = `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(child.resourcePath)}&type=raw`;

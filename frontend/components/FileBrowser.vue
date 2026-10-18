@@ -1,7 +1,9 @@
 <script setup>
 
 import { ref, useTemplateRef, computed, inject, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { BASE_URL, parseResourcePath, sanitize } from '../utils.js';
+import { followLink, go, toRoutePath } from '../router.js';
 import {
   Breadcrumb,
   Button,
@@ -44,6 +46,15 @@ const props = defineProps({
 });
 
 const profile = inject('profile');
+const route = useRoute();
+
+function crumb(label, path, extra) {
+  return Object.assign({
+    label,
+    route: `#${toRoutePath(path)}`,
+    action: function (item, event) { followLink(event, path); }
+  }, extra || {});
+}
 
 const beforeUnloadListener = (event) => {
   event.preventDefault();
@@ -61,11 +72,7 @@ const currentResourcePath = ref('');
 const currentShare = ref(null);
 const currentGroup = ref(null);
 const breadCrumbs = ref([]);
-const breadCrumbHome = ref({
-  label: 'My files',
-  icon: 'fa-solid fa-house',
-  route: '#files'
-});
+const breadCrumbHome = ref(crumb('My files', '/files/home/', { icon: 'fa-solid fa-house' }));
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 const pendingViewer = ref(null);
 
@@ -288,7 +295,7 @@ function reset() {
   entries.value = [];
   clearSelection();
   breadCrumbs.value = [];
-  breadCrumbHome.value = { label: 'My files', icon: 'fa-solid fa-house', route: '#files' };
+  breadCrumbHome.value = crumb('My files', '/files/home/', { icon: 'fa-solid fa-house' });
   activeResourceType.value = '';
   currentResourcePath.value = '';
   currentShare.value = null;
@@ -574,53 +581,26 @@ async function loadMainDirectory(path, item, forceLoad = false) {
 
   if (resource.type === 'home') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
+      return crumb(decodeURIComponent(e), '/files/home' + sanitize('/' + a.slice(0, i).join('/') + '/' + e));
     });
-    breadCrumbHome.value = {
-      label: 'My files',
-      icon: 'fa-solid fa-house',
-      route: '#files/home/'
-    };
+    breadCrumbHome.value = crumb('My files', '/files/home/', { icon: 'fa-solid fa-house' });
   } else if (resource.type === 'shares') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/shares/' + resource.shareId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
+      return crumb(decodeURIComponent(e), '/files/shares/' + resource.shareId + sanitize('/' + a.slice(0, i).join('/') + '/' + e));
     });
-    breadCrumbHome.value = {
-      label: 'Shared with you',
-      icon: 'fa-solid fa-share-nodes',
-      route: '#files/shares/'
-    };
+    breadCrumbHome.value = crumb('Shared with you', '/files/shares/', { icon: 'fa-solid fa-share-nodes' });
 
     if (item.share) {
-      breadCrumbs.value.unshift({
-        label: item.share.filePath.slice(1),
-        route: '#files/shares/' + resource.shareId + '/'
-      });
+      breadCrumbs.value.unshift(crumb(item.share.filePath.slice(1), '/files/shares/' + resource.shareId + '/'));
     }
   } else if (resource.type === 'groupfolders') {
     breadCrumbs.value = sanitize(resource.path).split('/').filter(function (i) { return !!i; }).map(function (e, i, a) {
-      return {
-        label: decodeURIComponent(e),
-        route: '#files/groupfolders/' + resource.groupId  + sanitize('/' + a.slice(0, i).join('/') + '/' + e)
-      };
+      return crumb(decodeURIComponent(e), '/files/groupfolders/' + resource.groupId + sanitize('/' + a.slice(0, i).join('/') + '/' + e));
     });
-    breadCrumbHome.value = {
-      label: 'Group folders',
-      icon: 'fa-solid fa-user-group',
-      route: '#files/groupfolders/'
-    };
+    breadCrumbHome.value = crumb('Group folders', '/files/groupfolders/', { icon: 'fa-solid fa-user-group' });
 
     if (item.group) {
-      breadCrumbs.value.unshift({
-        label: item.group.name,
-        route: '#files/groupfolders/' + item.group.id + '/'
-      });
+      breadCrumbs.value.unshift(crumb(item.group.name, '/files/groupfolders/' + item.group.id + '/'));
     }
   } else {
     console.error('FIXME breadcrumbs for resource type', resource.type);
@@ -673,8 +653,6 @@ async function loadPath(path, forceLoad = false) {
     }
   }
 
-  window.location.hash = `files${resource.resourcePath}`;
-
   if (item.isDirectory) await loadMainDirectory(resource.resourcePath, item, forceLoad);
   else await loadMainDirectory(resource.parentResourcePath, null, forceLoad);
 
@@ -693,9 +671,9 @@ async function loadPath(path, forceLoad = false) {
 }
 
 function onOpen(item) {
-  if (item.share && item.share.id) window.location.hash = `files/shares/${item.share.id}${item.filePath}`;
-  else if (item.group && item.group.id) window.location.hash = `files/groupfolders/${item.group.id}${item.filePath}`;
-  else window.location.hash = `files/home${item.filePath}`;
+  if (item.share && item.share.id) go(`/files/shares/${item.share.id}${item.filePath}`);
+  else if (item.group && item.group.id) go(`/files/groupfolders/${item.group.id}${item.filePath}`);
+  else go(`/files/home${item.filePath}`);
 }
 
 function openWith(item, viewerId) {
@@ -710,15 +688,17 @@ function onUp() {
     return;
   }
 
-  if (window.location.hash.indexOf('#shares/') === 0) {
-    const hash = window.location.hash.slice('#shares/'.length);
-
-    if (!hash.split('/')[1]) window.location.hash = 'shares/';
-    else window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
+  const path = route.path.replace(/^\//, '');
+  let next;
+  if (path.indexOf('shares/') === 0) {
+    const hash = path.slice('shares/'.length);
+    if (!hash.split('/')[1]) next = '/shares/';
+    else next = '/' + hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
   } else {
-    const hash = window.location.hash.slice(1);
-    window.location.hash = hash.split('/')[0] + sanitize(hash.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
+    next = '/' + path.split('/')[0] + sanitize(path.split('/').filter(function (p) { return !!p; }).slice(1, -1).join('/'));
   }
+  if (!next.endsWith('/')) next += '/';
+  go(next);
 }
 
 onMounted(() => {
@@ -786,7 +766,7 @@ defineExpose({
           <Button icon="fa-solid fa-chevron-left" :disabled="breadCrumbs.length === 0" @click="onUp" plain tool></Button>
           <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           <div style="flex-grow: 1"></div>
-          <Button v-if="isGroupFoldersRoot && entries.length" icon="fa-solid fa-gear" href="#settings" plain>Manage group folders</Button>
+          <Button v-if="isGroupFoldersRoot && entries.length" icon="fa-solid fa-gear" href="#/settings" plain @click="followLink($event, '/settings')">Manage group folders</Button>
           <ButtonGroup style="margin-right: 40px">
             <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
             <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
@@ -846,7 +826,7 @@ defineExpose({
                 icon="fa-solid fa-user-group"
                 title="No group folders"
               >
-                <Button icon="fa-solid fa-gear" href="#settings">Manage group folders</Button>
+                <Button icon="fa-solid fa-gear" href="#/settings" @click="followLink($event, '/settings')">Manage group folders</Button>
               </EmptyState>
               <EmptyState v-else-if="activeResourceType === 'shares' && !breadCrumbs.length" icon="fa-solid fa-share-nodes" title="Nothing shared with you" description="Files and folders others shared with you will show up here" />
             </template>

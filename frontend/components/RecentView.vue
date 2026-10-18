@@ -4,6 +4,7 @@ import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
 import { getResultFolderPath, getResultLocationLabel } from '../utils.js';
+import { followLink, go } from '../router.js';
 import EmptyState from './EmptyState.vue';
 import { Button, ButtonGroup, ProgressBar } from '@cloudron/pankow';
 import { prettyFileSize } from '@cloudron/pankow/utils';
@@ -58,7 +59,7 @@ function entryMenu(entry) {
   return [{
     label: 'Open folder',
     icon: 'fa-regular fa-folder-open',
-    action: () => { window.location.href = entry.parentFolderUrl; },
+    action: () => { go(entry.parentFolderUrl); },
   }];
 }
 
@@ -107,7 +108,7 @@ function iconError(event, entry) {
             <div v-if="viewMode === 'list' && entry.parentFolderUrl" class="entry-actions" @click.stop>
               <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
             </div>
-            <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @click.stop class="open-folder">Open folder</Button>
+            <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @click.stop="followLink($event, entry.parentFolderUrl)" class="open-folder">Open folder</Button>
           </div>
         </div>
       </div>

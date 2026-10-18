@@ -4,6 +4,7 @@ import { ref, nextTick, useTemplateRef } from 'vue';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
+import { replace, replaceQuiet } from '../router.js';
 import MarkdownViewer from './MarkdownViewer.vue';
 import OfficeViewer from './OfficeViewer.vue';
 
@@ -60,7 +61,7 @@ function onViewerClose() {
 }
 
 function onImageViewerNavigate(entry) {
-  history.replaceState(null, '', `#files${entry.resourcePath}`);
+  replaceQuiet(`/files${entry.resourcePath}`);
 }
 
 async function openOffice(item, generation) {
@@ -146,7 +147,7 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
   } else if (item.isBinary) {
     if (props.downloadHandler) await props.downloadHandler([item]);
     else window.location.href = item.downloadFileUrl;
-    history.replaceState(null, '', `#files${resource.parentResourcePath}`);
+    replace(`/files${resource.parentResourcePath}`);
   } else if (textViewer.value.canHandle(item)) {
     await openText(item, resource);
   } else {

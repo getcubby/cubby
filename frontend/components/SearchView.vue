@@ -99,7 +99,7 @@ function toDirectoryItem(entry) {
     star: !!entry.favorite,
     resourcePath,
     resource,
-    href: `#files${resourcePath}`,
+    href: `#/files${resourcePath}`,
     fullFileUrl: `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(resourcePath)}&type=raw`,
     downloadFileUrl: `${API_ORIGIN}/api/v1/files?path=${encodeURIComponent(resourcePath)}&type=download`,
     isSharedWith: !!entry.sharedWith?.length,

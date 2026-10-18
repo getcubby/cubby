@@ -110,15 +110,15 @@ async function recent() {
     entry.atime = new Date(recentRow.accessedAt);
     entry.recent = recentRow;
     entry.previewUrl = `${API_ORIGIN}${entry.previewUrl}`;
-    entry.href = `#files${entry.resourcePath}`;
+    entry.href = `#/files${entry.resourcePath}`;
 
     if (entry.share) {
       if (entry.filePath === '/') entry.parentFolderUrl = null;
-      else entry.parentFolderUrl = `#files/shares/${entry.share.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
+      else entry.parentFolderUrl = `#/files/shares/${entry.share.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
     } else if (entry.group) {
-      entry.parentFolderUrl = `#files/groupfolders/${entry.group.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
+      entry.parentFolderUrl = `#/files/groupfolders/${entry.group.id}${entry.filePath.slice(0, -entry.fileName.length)}`;
     } else {
-      entry.parentFolderUrl = `#files/home${entry.filePath.slice(0, -entry.fileName.length)}`;
+      entry.parentFolderUrl = `#/files/home${entry.filePath.slice(0, -entry.fileName.length)}`;
     }
 
     entries.push(entry);

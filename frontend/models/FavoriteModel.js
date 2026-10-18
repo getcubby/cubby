@@ -27,7 +27,7 @@ async function list() {
 
     entry.favorite = favorite;
     entry.star = true;
-    entry.href = `#files${entry.resourcePath}`;
+    entry.href = `#/files${entry.resourcePath}`;
     entries.push(entry);
   }
 

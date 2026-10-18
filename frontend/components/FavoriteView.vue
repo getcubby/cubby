@@ -3,6 +3,7 @@
 import { ref, onMounted } from 'vue';
 import FavoriteModel from '../models/FavoriteModel.js';
 import { getFilesViewHashHref, getResultFolderPath, getResultLocationLabel } from '../utils.js';
+import { followLink, go } from '../router.js';
 import EmptyState from './EmptyState.vue';
 import { Button, Icon, ProgressBar } from '@cloudron/pankow';
 import { prettyFileSize } from '@cloudron/pankow/utils';
@@ -38,7 +39,7 @@ function entryMenu(entry) {
   return [{
     label: 'Open folder',
     icon: 'fa-regular fa-folder-open',
-    action: () => { window.location.href = url; },
+    action: () => { go(url); },
   }];
 }
 
@@ -64,7 +65,7 @@ onMounted(refresh);
     <div class="favorite-body" v-else>
       <div v-if="favorites.length" class="favorite-container">
         <div v-for="entry in favorites" :key="entry.id" class="favorite-item">
-          <a class="favorite-main" :href="entry.href">
+          <a class="favorite-main" :href="entry.href" @click="followLink($event, entry.href)">
             <img :src="entry.previewUrl || entry.icon" @error="iconError($event, entry)"/>
             <div class="favorite-text">
               <span class="favorite-name">{{ entry.fileName }}</span>

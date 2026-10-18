@@ -1,7 +1,9 @@
 <script setup>
 
-import { ref, reactive, onMounted, onBeforeUnmount, useTemplateRef, computed, provide } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, useTemplateRef, computed, provide, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { parseResourcePath, API_ORIGIN } from './utils.js';
+import { consumeIgnore, go, goBack, replace, toRoutePath } from './router.js';
 import { Button, SideBar, TopBar, LoginView } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
 import SharesView from './components/SharesView.vue';
@@ -42,7 +44,7 @@ const fileClipboard = reactive({
   action: '',
   files: [],
 });
-const currentHash = ref('');
+const route = useRoute();
 const loginProviderName = ref('Cloudron');
 const fileOpenedFromList = ref(false);
 let openedFileHash = '';
@@ -53,7 +55,7 @@ const profileMenu = computed(() => {
   const items = [{
     label: 'Settings',
     icon: 'fa-solid fa-cog',
-    action: () => { window.location.href = '#settings'; },
+    action: () => { go('/settings'); },
   }];
   items.push({ separator: true });
   items.push({
@@ -117,7 +119,7 @@ async function onLogout() {
 }
 
 function onInvalidSession() {
-  localStorage.returnTo = window.location.hash.slice(1);
+  localStorage.returnTo = route.fullPath;
   profile.value = {};
   onLogin();
 }
@@ -176,13 +178,13 @@ function onFileViewerClose() {
 
   const folderPath = fileBrowser.value?.currentResourcePath || '/home/';
   const resource = parseResourcePath(folderPath);
-  window.location.hash = `files${resource.resourcePath}`;
+  go(`/files${resource.resourcePath}`);
 }
 
 function onOriginBack() {
   fileOpenedFromList.value = false;
   openedFileHash = '';
-  history.back();
+  goBack();
 }
 
 function clearFileListReturn(hash) {
@@ -226,79 +228,91 @@ function resetNonFileViewState() {
 
 function onOpen(item) {
   const fromList = !item.isDirectory && (view.value === VIEWS.SEARCH || view.value === VIEWS.RECENT);
-  let nextHash;
-  if (item.share && item.share.id) nextHash = `files/shares/${item.share.id}${item.filePath}`;
-  else if (item.group && item.group.id) nextHash = `files/groupfolders/${item.group.id}${item.filePath}`;
-  else nextHash = `files/home${item.filePath}`;
+  let nextPath;
+  if (item.share && item.share.id) nextPath = `/files/shares/${item.share.id}${item.filePath}`;
+  else if (item.group && item.group.id) nextPath = `/files/groupfolders/${item.group.id}${item.filePath}`;
+  else nextPath = `/files/home${item.filePath}`;
 
   fileOpenedFromList.value = fromList;
-  openedFileHash = fromList ? nextHash : '';
-  window.location.hash = nextHash;
+  openedFileHash = fromList ? nextPath.replace(/^\//, '') : '';
+  go(nextPath);
+}
+
+function onSidebar(path, event) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+  event.preventDefault();
+  onCloseSidebar();
+  go(path);
 }
 
 function onGroupFoldersChanged() {
   fileBrowser.value?.reload();
 }
 
-onMounted(async () => {
-  async function handleHash(hash) {
-    hash = decodeURIComponent(hash);
-    clearFileListReturn(hash);
+async function handleLocation() {
+  const hash = route.path.replace(/^\//, '');
+  clearFileListReturn(hash);
 
-    if (hash.indexOf('files/home/') === 0) {
-      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
-      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/home/';
-    } else if (hash.indexOf('files/shares/') === 0) {
-      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_SHARES;
-      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/shares/';
-    } else if (hash.indexOf('files/groupfolders/') === 0) {
-      if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_GROUPFOLDERS;
-      else if (view.value !== VIEWS.LOGIN) window.location.hash = 'files/groupfolders/';
-    } else if (hash === 'recent') {
-      if (!profile.value?.username) {
-        view.value = VIEWS.LOGIN;
-        return;
-      }
-      resetNonFileViewState();
-      view.value = VIEWS.RECENT;
-    } else if (hash === 'favorites') {
-      if (!profile.value?.username) {
-        view.value = VIEWS.LOGIN;
-        return;
-      }
-      resetNonFileViewState();
-      view.value = VIEWS.FAVORITES;
-    } else if (hash.indexOf('search/') === 0) {
-      if (!profile.value?.username) {
-        view.value = VIEWS.LOGIN;
-        return;
-      }
-      const query = hash.slice('search/'.length);
-      if (!query) {
-        window.location.hash = 'files/home/';
-        return;
-      }
-      resetNonFileViewState();
-      searchQuery.value = query;
-      view.value = VIEWS.SEARCH;
-    } else if (hash.indexOf('settings') === 0 && profile.value?.username) {
-      resetNonFileViewState();
-      view.value = VIEWS.SETTINGS;
-      onCloseSidebar();
-    } else if (hash === 'shares') {
-      if (!profile.value?.username) {
-        view.value = VIEWS.LOGIN;
-        return;
-      }
-      resetNonFileViewState();
-      view.value = VIEWS.SHARES;
-      onCloseSidebar();
-    } else {
-      if (profile.value?.username) window.location.hash = 'files/home/';
-      else view.value = VIEWS.LOGIN;
-    }
+  if (hash === 'files/home' || hash === 'files/shares' || hash === 'files/groupfolders') {
+    replace(`/${hash}/`);
+    return;
   }
 
+  if (hash.indexOf('files/home/') === 0) {
+    if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_HOME;
+    else if (view.value !== VIEWS.LOGIN) replace('/files/home/');
+  } else if (hash.indexOf('files/shares/') === 0) {
+    if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_SHARES;
+    else if (view.value !== VIEWS.LOGIN) replace('/files/shares/');
+  } else if (hash.indexOf('files/groupfolders/') === 0) {
+    if (await fileBrowser.value?.loadPath(hash.slice('files'.length), true)) view.value = VIEWS.FILES_GROUPFOLDERS;
+    else if (view.value !== VIEWS.LOGIN) replace('/files/groupfolders/');
+  } else if (hash === 'recent') {
+    if (!profile.value?.username) {
+      view.value = VIEWS.LOGIN;
+      return;
+    }
+    resetNonFileViewState();
+    view.value = VIEWS.RECENT;
+  } else if (hash === 'favorites') {
+    if (!profile.value?.username) {
+      view.value = VIEWS.LOGIN;
+      return;
+    }
+    resetNonFileViewState();
+    view.value = VIEWS.FAVORITES;
+  } else if (hash.indexOf('search/') === 0) {
+    if (!profile.value?.username) {
+      view.value = VIEWS.LOGIN;
+      return;
+    }
+    const query = hash.slice('search/'.length);
+    if (!query) {
+      replace('/files/home/');
+      return;
+    }
+    resetNonFileViewState();
+    searchQuery.value = query;
+    view.value = VIEWS.SEARCH;
+  } else if (hash.indexOf('settings') === 0 && profile.value?.username) {
+    resetNonFileViewState();
+    view.value = VIEWS.SETTINGS;
+    onCloseSidebar();
+  } else if (hash === 'shares' || hash === 'shares/') {
+    if (!profile.value?.username) {
+      view.value = VIEWS.LOGIN;
+      return;
+    }
+    resetNonFileViewState();
+    view.value = VIEWS.SHARES;
+    onCloseSidebar();
+  } else {
+    if (profile.value?.username) replace('/files/home/');
+    else view.value = VIEWS.LOGIN;
+  }
+}
+
+onMounted(async () => {
   try {
     profile.value = await MainModel.getProfile() || {};
   } catch (e) {
@@ -307,23 +321,24 @@ onMounted(async () => {
 
   await refreshConfig();
 
-  const urlHash = window.location.hash.slice(1);
+  const urlPath = route.fullPath;
   const storedReturnTo = localStorage.returnTo || '';
-  const preferUrlForShare = storedReturnTo && urlHash && storedReturnTo !== urlHash
-    && urlHash.indexOf('files/shares/') === 0;
-  const hash = preferUrlForShare ? urlHash : (storedReturnTo || urlHash);
+  const storedPath = storedReturnTo ? toRoutePath(storedReturnTo) : '';
+  const preferUrlForShare = storedPath && urlPath && storedPath !== urlPath
+    && urlPath.indexOf('/files/shares/') === 0;
+  const target = preferUrlForShare ? urlPath : (storedPath || urlPath);
   localStorage.returnTo = '';
 
-  await handleHash(hash);
+  if (target !== urlPath) await replace(target);
+
+  await handleLocation();
+
+  watch(() => route.fullPath, () => {
+    if (consumeIgnore()) return;
+    handleLocation();
+  });
 
   if (!profile.value.username && view.value === '') view.value = VIEWS.LOGIN;
-
-  window.addEventListener('hashchange', () => {
-    if (currentHash.value === decodeURIComponent(window.location.hash)) return;
-    currentHash.value = window.location.hash;
-
-    handleHash(window.location.hash.slice(1));
-  }, false);
 
   ready.value = true;
 
@@ -357,20 +372,20 @@ onBeforeUnmount(() => {
     <div class="container" v-else>
       <SideBar class="side-bar" ref="sideBar">
         <div class="sidebar-title">
-          <a href="#files/home/" class="sidebar-title-link" @click="onCloseSidebar">
+          <a href="#/files/home/" class="sidebar-title-link" @click="onSidebar('/files/home/', $event)">
             <img src="/logo-transparent.svg" alt="" class="sidebar-icon" />
             <span class="sidebar-app-name">Cubby</span>
           </a>
         </div>
 
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#files/home/" @click="onCloseSidebar"><i class="fa-solid fa-house"></i> My files</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#files/groupfolders/" @click="onCloseSidebar"><i class="fa-solid fa-user-group"></i> Group folders</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#favorites" @click="onCloseSidebar"><i class="fa-solid fa-star"></i> Favorites</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#recent" @click="onCloseSidebar"><i class="fa-regular fa-clock"></i> Recent files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_HOME }" href="#/files/home/" @click="onSidebar('/files/home/', $event)"><i class="fa-solid fa-house"></i> My files</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_GROUPFOLDERS }" href="#/files/groupfolders/" @click="onSidebar('/files/groupfolders/', $event)"><i class="fa-solid fa-user-group"></i> Group folders</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FAVORITES }" href="#/favorites" @click="onSidebar('/favorites', $event)"><i class="fa-solid fa-star"></i> Favorites</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.RECENT }" href="#/recent" @click="onSidebar('/recent', $event)"><i class="fa-regular fa-clock"></i> Recent files</a>
 
         <div v-show="profile.username" class="side-bar-section-heading">Shares</div>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#files/shares/" @click="onCloseSidebar"><i class="fa-solid fa-share-nodes"></i> Shared with you</a>
-        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.SHARES }" href="#shares" @click="onCloseSidebar"><i class="fa-solid fa-share-from-square"></i> Shared by you</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.FILES_SHARES }" href="#/files/shares/" @click="onSidebar('/files/shares/', $event)"><i class="fa-solid fa-share-nodes"></i> Shared with you</a>
+        <a class="side-bar-entry" v-show="profile.username" :class="{'active': view === VIEWS.SHARES }" href="#/shares" @click="onSidebar('/shares', $event)"><i class="fa-solid fa-share-from-square"></i> Shared by you</a>
 
         <div style="flex-grow: 1">&nbsp;</div>
       </SideBar>
@@ -379,7 +394,7 @@ onBeforeUnmount(() => {
           <template #left>
             <div class="topbar-left-cluster">
               <Button v-if="showTopBarNew" icon="fa-solid fa-plus" :menu="newMenu" :disabled="isReadonly" tool><span class="pankow-no-mobile">New</span></Button>
-              <Button v-else-if="showTopBarBack" plain tool icon="fa-solid fa-chevron-left" href="#files/home/">Back</Button>
+              <Button v-else-if="showTopBarBack" plain tool icon="fa-solid fa-chevron-left" @click="goBack()">Back</Button>
               <SearchBar />
             </div>
           </template>

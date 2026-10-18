@@ -47,7 +47,7 @@ async function newShare(emailAddress, shareId) {
     const emailTemplateHtml = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.html'), 'utf8'));
     const emailTemplateText = handlebars.compile(fs.readFileSync(path.resolve(__dirname, 'templates/new-share-email.text'), 'utf8'));
 
-    const emailTemplateData = { sharedWith: share.receiverUsername, sharedBy: share.ownerUsername || share.ownerGroupfolder, sharedPath: share.filePath.slice(1) /* remove slash */, appDomain: new URL(APP_ORIGIN).hostname, actionLink: `${APP_ORIGIN}#files/shares/${shareId}/` };
+    const emailTemplateData = { sharedWith: share.receiverUsername, sharedBy: share.ownerUsername || share.ownerGroupfolder, sharedPath: share.filePath.slice(1) /* remove slash */, appDomain: new URL(APP_ORIGIN).hostname, actionLink: `${APP_ORIGIN}#/files/shares/${shareId}/` };
 
     const emailBodyText = emailTemplateText(emailTemplateData);
     const emailBodyHtml = emailTemplateHtml(emailTemplateData);

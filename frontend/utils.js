@@ -20,11 +20,11 @@ function getDirectLink(entry) {
     }
 }
 
-/** SPA hash route for the files view (#files/home|shares|groupfolders/...). */
+/** SPA hash route for the files view (#/files/home|shares|groupfolders/...). */
 function getFilesViewHashHref(entry, internalPath) {
-    if (entry.share) return `/#files/shares/${entry.share.id}${internalPath}`;
-    if (entry.group) return `/#files/groupfolders/${entry.group.id}${internalPath}`;
-    return `/#files/home${internalPath}`;
+    if (entry.share) return `/#/files/shares/${entry.share.id}${internalPath}`;
+    if (entry.group) return `/#/files/groupfolders/${entry.group.id}${internalPath}`;
+    return `/#/files/home${internalPath}`;
 }
 
 // TODO the url might actually return a 412 in which case we have to keep reloading

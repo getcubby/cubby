@@ -23,6 +23,8 @@ const RECOLL_CONFIG_OPTIONS = [
     'filtermaxmbytes = 512',
     'filtermaxseconds = 300',
     'idxloglevel = 2',
+    'excludedmimetypes = application/zip application/x-zip-compressed application/x-7z-compressed application/x-rar application/x-rar-compressed application/x-tar',
+    'zipSkippedNames = __MACOSX/* */._*',
     'skippedNames+ = ~$* .DS_Store Thumbs.db ._*'
 ].join('\n');
 

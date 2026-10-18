@@ -2,6 +2,7 @@ import { describe, it, before, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
 import child_process from 'node:child_process';
 import common from './common.js';
+import exec from '../exec.js';
 import paths from '../paths.js';
 import fs from 'node:fs';
 import groupfolders from '../groupfolders.js';
@@ -56,7 +57,34 @@ describe('recoll', function () {
         assert.ok(config.includes('filtermaxmbytes = 512'));
         assert.ok(config.includes('filtermaxseconds = 300'));
         assert.ok(config.includes('idxloglevel = 2'));
+        assert.ok(config.includes('excludedmimetypes = application/zip application/x-zip-compressed application/x-7z-compressed application/x-rar application/x-rar-compressed application/x-tar'));
+        assert.ok(config.includes('zipSkippedNames = __MACOSX/* */._*'));
         assert.ok(config.includes('skippedNames+ = ~$* .DS_Store Thumbs.db ._*'));
+    });
+
+    it('does not index archive contents', async function () {
+        if (!hasCommand('python3')) this.skip();
+
+        const marker = `recoll-archive-marker-${Date.now()}`;
+        await users.add(alice);
+
+        const userHome = path.join(paths.USER_DATA_ROOT, alice.id);
+        fs.mkdirSync(userHome, { recursive: true });
+
+        const zipPath = path.join(userHome, 'archive.zip');
+        const script = [
+            'import sys, zipfile',
+            'with zipfile.ZipFile(sys.argv[1], "w") as archive:',
+            '    archive.writestr("inside.txt", sys.argv[2])'
+        ].join('\n');
+        await exec('python3', [ '-c', script, zipPath, marker ]);
+
+        await indexUser(alice.id);
+
+        assert.equal((await recoll.searchByUsername(alice.id, marker)).length, 0, 'archive member was indexed');
+
+        const results = await recoll.searchByUsername(alice.id, 'archive.zip');
+        assert.ok(results.some((result) => result.fileName === 'archive.zip'), 'archive file name was not indexed');
     });
 
     it('can index and search user files', async function () {

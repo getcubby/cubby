@@ -1,6 +1,8 @@
 import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
+import Database from 'better-sqlite3';
 import common from './common.js';
+import { initSchema } from '../schema.js';
 import files from '../files.js';
 import groupfolders from '../groupfolders.js';
 import groups from '../groups.js';
@@ -52,12 +54,56 @@ describe('shares', function () {
         const shareId = await shares.create({
             ownerUserId: alice.id,
             filePath: '/shared.txt',
-            readonly: false
+            readonly: false,
+            name: 'Shared notes'
         });
 
         const share = await shares.get(shareId);
         assert.equal(share.receiverUsername, null);
         assert.equal(share.receiverEmail, null);
+        assert.equal(share.name, 'Shared notes');
+    });
+
+    it('requires a name for a public link', async function () {
+        await createUsersWithFile();
+
+        const [error] = await safe(shares.create({
+            ownerUserId: alice.id,
+            filePath: '/shared.txt'
+        }));
+        assert.ok(error);
+        assert.equal(error.reason, MainError.BAD_FIELD);
+    });
+
+    it('names existing link shares with their created time', function () {
+        const db = new Database(':memory:');
+        db.exec(`
+            CREATE TABLE shares(
+                id TEXT PRIMARY KEY,
+                owner_user_id TEXT,
+                owner_groupfolder TEXT,
+                file_path TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+                readonly INTEGER NOT NULL DEFAULT 0,
+                receiver_user_id TEXT,
+                receiver_email TEXT,
+                receiver_group TEXT,
+                password_hash TEXT
+            );
+        `);
+        db.prepare(`INSERT INTO shares (id, file_path, created_at, receiver_user_id) VALUES ('user-share', '/a.txt', '2020-01-02T03:04:05.000Z', 'uid-bob')`).run();
+        db.prepare(`INSERT INTO shares (id, file_path, created_at, receiver_email) VALUES ('email-share', '/b.txt', '2021-06-07T08:09:10.000Z', 'guest@test.local')`).run();
+        db.prepare(`INSERT INTO shares (id, file_path, created_at) VALUES ('link-share', '/c.txt', '2022-03-04T05:06:07.000Z')`).run();
+        db.pragma('user_version = 5');
+
+        initSchema(db);
+
+        assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'user-share'`).get().name, '');
+        assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'email-share'`).get().name, '2021-06-07T08:09:10.000Z');
+        assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'link-share'`).get().name, '2022-03-04T05:06:07.000Z');
+        assert.equal(db.pragma('user_version', { simple: true }), 6);
+        db.close();
     });
 
     it('rejects path traversal', async function () {

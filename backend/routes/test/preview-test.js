@@ -80,7 +80,8 @@ describe('preview API', function () {
             .send({
                 ownerUserId: alice.id,
                 path: '/preview-share.png',
-                readonly: true
+                readonly: true,
+                name: 'Preview'
             });
         const shareId = createResponse.body.shareId;
 
@@ -130,7 +131,7 @@ describe('preview API', function () {
         await addUserFile(alice.username, '/private/secret.png', MINIMAL_PNG);
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUserId: alice.id, path: '/public', readonly: true });
+            .send({ ownerUserId: alice.id, path: '/public', readonly: true, name: 'Public' });
         const shareId = createResponse.body.shareId;
 
         const visibleHash = preview.getHash('image/png', files.getAbsolutePath(alice.id, '/public/visible.png'));
@@ -167,7 +168,7 @@ describe('preview API', function () {
         await addUserFile(alice.username, '/listed/pic.png', MINIMAL_PNG);
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUserId: alice.id, path: '/listed', readonly: true });
+            .send({ ownerUserId: alice.id, path: '/listed', readonly: true, name: 'Listed' });
         const shareId = createResponse.body.shareId;
 
         const listing = await superagent.get(`${serverUrl}/api/v1/files`).query({ path: `/shares/${shareId}/` });

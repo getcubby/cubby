@@ -140,6 +140,15 @@ async function createShare(req, res, next) {
         password = null;
     }
 
+    const isPublicLink = !receiverUserId && !receiverEmail && !receiverGroup;
+    let name = null;
+    if (req.body.name !== undefined && req.body.name !== null) {
+        if (typeof req.body.name !== 'string') return next(new HttpError(400, 'name must be a non-empty string'));
+        name = req.body.name.trim();
+        if (!name) return next(new HttpError(400, 'name must be a non-empty string'));
+    }
+    if (isPublicLink && !name) return next(new HttpError(400, 'name must be a non-empty string'));
+
     debugLog(`createShare: ${filePath} receiver:${receiverUserId || receiverEmail || receiverGroup || 'link'}`);
 
     if (receiverEmail || receiverUserId || receiverGroup) {
@@ -152,7 +161,7 @@ async function createShare(req, res, next) {
         }
     }
 
-    const [error, shareId] = await safe(shares.create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup, readonly, expiresAt, password }));
+    const [error, shareId] = await safe(shares.create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup, readonly, expiresAt, password, name }));
     if (error) return next(MainError.toHttpError(error));
 
     const owner = ownerUserId || `groupfolder-${ownerGroupfolder}`;

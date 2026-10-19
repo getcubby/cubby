@@ -133,7 +133,7 @@ describe('groupfolders API', function () {
         assert.equal(upload.status, 200);
 
         const share = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerGroupfolder: 'busy', path: '/doc.txt', readonly: true });
+            .send({ ownerGroupfolder: 'busy', path: '/doc.txt', readonly: true, name: 'Doc' });
         assert.equal(share.status, 200);
         const shareId = share.body.shareId;
 

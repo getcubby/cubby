@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS shares(
     receiver_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
     receiver_email TEXT,
     receiver_group TEXT REFERENCES groups(id) ON DELETE CASCADE,
-    password_hash TEXT
+    password_hash TEXT,
+    name TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS favorites(
@@ -134,7 +135,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const MIGRATIONS = [
     {
@@ -352,6 +353,17 @@ const MIGRATIONS = [
             `);
             db.exec('COMMIT');
             db.pragma('foreign_keys = ON');
+        }
+    },
+    {
+        // Public links and email shares have a name. Existing ones take their created time.
+        version: 6,
+        up(db) {
+            db.exec(`
+                ALTER TABLE shares ADD COLUMN name TEXT NOT NULL DEFAULT '';
+                UPDATE shares SET name = created_at
+                    WHERE receiver_user_id IS NULL AND receiver_group IS NULL;
+            `);
         }
     }
 ];

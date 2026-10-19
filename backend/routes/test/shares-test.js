@@ -33,7 +33,8 @@ describe('shares API', function () {
             .send({
                 ownerUserId: alice.id,
                 path: '/public.txt',
-                readonly: true
+                readonly: true,
+                name: 'Public'
             });
         const shareId = createResponse.body.shareId;
 
@@ -41,6 +42,19 @@ describe('shares API', function () {
             .query({ path: '' });
         assert.equal(shareResponse.status, 200);
         assert.equal(shareResponse.body.fileName, 'public.txt');
+
+        const listResponse = await withToken(superagent.get(`${serverUrl}/api/v1/shares`), alice.token);
+        const share = listResponse.body.shares.find((s) => s.id === shareId);
+        assert.equal(share.name, 'Public');
+    });
+
+    it('rejects a public link without a name', async function () {
+        await addUserFile(alice.username, '/unnamed.txt', 'unnamed');
+
+        const response = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUserId: alice.id, path: '/unnamed.txt' })
+            .ok(() => true);
+        assert.equal(response.status, 400);
     });
 
     it('can remove a share', async function () {
@@ -89,7 +103,8 @@ describe('shares API', function () {
                 ownerUserId: alice.id,
                 path: '/secret.txt',
                 readonly: true,
-                password: 'hunter2'
+                password: 'hunter2',
+                name: 'Secret'
             });
         assert.equal(createResponse.status, 200);
         const shareId = createResponse.body.shareId;
@@ -134,7 +149,8 @@ describe('shares API', function () {
                 ownerUserId: alice.id,
                 path: '/secret-raw.txt',
                 readonly: true,
-                password: 'hunter2'
+                password: 'hunter2',
+                name: 'Secret'
             });
         const shareId = createResponse.body.shareId;
 
@@ -156,7 +172,7 @@ describe('shares API', function () {
         await addUserFile(alice.username, '/secret-zip.txt', 'password protected zip');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUserId: alice.id, path: '/secret-zip.txt', readonly: true, password: 'hunter2' });
+            .send({ ownerUserId: alice.id, path: '/secret-zip.txt', readonly: true, password: 'hunter2', name: 'Secret' });
         const shareId = createResponse.body.shareId;
 
         const lockedResponse = await withToken(superagent.get(`${serverUrl}/api/v1/download`), user.token)
@@ -179,7 +195,7 @@ describe('shares API', function () {
         await addUserFile(alice.username, '/secret-activity.txt', 'password protected activity');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUserId: alice.id, path: '/secret-activity.txt', readonly: true, password: 'hunter2' });
+            .send({ ownerUserId: alice.id, path: '/secret-activity.txt', readonly: true, password: 'hunter2', name: 'Secret' });
         const shareId = createResponse.body.shareId;
 
         const response = await withToken(superagent.get(`${serverUrl}/api/v1/activity`), user.token)
@@ -213,7 +229,7 @@ describe('shares API', function () {
         await addUserFile(alice.username, '/keep-share.txt', 'keep share');
 
         const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerUserId: alice.id, path: '/keep-share.txt' });
+            .send({ ownerUserId: alice.id, path: '/keep-share.txt', name: 'Keep' });
 
         const removeResponse = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), user.token)
             .query({ shareId: createResponse.body.shareId })
@@ -241,7 +257,7 @@ describe('shares API', function () {
         assert.equal(unknownCreate.status, 403);
 
         const ownerCreate = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
-            .send({ ownerGroupfolder: 'share-team', path: '/' });
+            .send({ ownerGroupfolder: 'share-team', path: '/', name: 'Team' });
         assert.equal(ownerCreate.status, 200);
 
         const viewerRemove = await withToken(superagent.del(`${serverUrl}/api/v1/shares`), user.token)

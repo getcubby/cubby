@@ -13,6 +13,7 @@ import {
   Radiobutton,
   SingleSelect,
   TabView,
+  TextInput,
   useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
@@ -34,6 +35,7 @@ const sharedLinks = ref([]);
 const entry = ref({});
 const linkAccess = ref('read');
 const shareLink = ref({
+  name: '',
   expiresDate: '',
   password: '',
 });
@@ -133,8 +135,12 @@ async function onCreateShareLink() {
   }
   const { ownerUserId, ownerGroupfolder } = entryOwner();
 
-  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: linkAccess.value === 'read', expiresAt, password: shareLink.value.password || null });
+  const name = shareLink.value.name.trim();
+  if (!name) return;
 
+  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: linkAccess.value === 'read', expiresAt, password: shareLink.value.password || null, name });
+
+  shareLink.value.name = '';
   await refresh();
 }
 
@@ -143,6 +149,7 @@ defineExpose({
     receiver.value = '';
     access.value = 'write';
     linkAccess.value = 'read';
+    shareLink.value.name = '';
     shareLink.value.expiresDate = '';
     shareLink.value.password = '';
 
@@ -165,7 +172,7 @@ defineExpose({
     title="Share"
     reject-label="Close"
     reject-style="secondary"
-    :style="{ width: '480px' }"
+    :style="{ width: '560px' }"
   >
     <p v-show="entry.fileName">
       Sharing "{{ entry.fileName }}" with other users or via a link.
@@ -210,6 +217,10 @@ defineExpose({
         <template #link>
           <form class="share-form" @submit.prevent="onCreateShareLink">
             <FormGroup>
+              <label for="linkName">Name</label>
+              <TextInput id="linkName" v-model="shareLink.name" placeholder="For Jane" />
+            </FormGroup>
+            <FormGroup>
               <label>Access</label>
               <Radiobutton v-model="linkAccess" name="linkAccess" value="read" label="Read only" />
               <Radiobutton v-model="linkAccess" name="linkAccess" value="write" label="Read & write" />
@@ -222,7 +233,7 @@ defineExpose({
               <label for="linkExpires">Expires (optional)</label>
               <DateTimeInput id="linkExpires" date-only v-model="shareLink.expiresDate" :min="todayDateStr()" />
             </FormGroup>
-            <Button @click="onCreateShareLink">Create</Button>
+            <Button @click="onCreateShareLink" :disabled="!shareLink.name.trim()">Create</Button>
           </form>
 
           <div class="people-shared">
@@ -231,7 +242,7 @@ defineExpose({
               <ListItem
                 v-for="link in sharedLinks"
                 :key="link.id"
-                :label="'Created ' + prettyDate(link.createdAt)"
+                :label="link.name"
                 :actions="[{
                   label: 'Copy to clipboard',
                   icon: 'fa-regular fa-copy',
@@ -245,7 +256,8 @@ defineExpose({
                 }]"
               >
                 <template #subtext>
-                  {{ link.readonly ? 'Read only' : 'Read & write' }}
+                  Created {{ prettyDate(link.createdAt) }}
+                  - {{ link.readonly ? 'Read only' : 'Read & write' }}
                   <span v-if="link.passwordProtected"> - <i class="fa-solid fa-lock"/> Password protected</span>
                   <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
                 </template>

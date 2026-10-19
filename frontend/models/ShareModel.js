@@ -32,6 +32,7 @@ async function create(data) {
   if (data.receiverUserId) tmp.receiverUserId = data.receiverUserId;
   if (data.receiverGroup) tmp.receiverGroup = data.receiverGroup;
   if (data.password) tmp.password = data.password;
+  if (data.name) tmp.name = data.name;
 
   let error, result;
   try {

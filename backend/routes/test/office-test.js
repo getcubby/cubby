@@ -126,7 +126,7 @@ describe('office API', function () {
 
         const createResponse = await superagent.post(`${serverUrl}/api/v1/shares`)
             .set('x-test-user', alice.username)
-            .send({ ownerUserId: alice.id, path: '/office-secret.odt', password: 'hunter2' });
+            .send({ ownerUserId: alice.id, path: '/office-secret.odt', password: 'hunter2', name: 'Office' });
         const shareId = createResponse.body.shareId;
 
         const response = await superagent.get(`${serverUrl}/api/v1/office/handle`)

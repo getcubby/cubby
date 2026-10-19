@@ -67,6 +67,8 @@ function postProcess(data) {
     data.passwordProtected = !!data.password_hash;
     delete data.password_hash;
 
+    data.name = data.name || '';
+
     data.readonly = !!data.readonly;
 
     return data;
@@ -110,7 +112,7 @@ async function list(userId) {
     return result.rows;
 }
 
-async function create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup = null, readonly, expiresAt = null, password = null }) {
+async function create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId, receiverEmail, receiverGroup = null, readonly, expiresAt = null, password = null, name = null }) {
     assert(typeof ownerUserId === 'string' || !ownerUserId);
     assert(typeof ownerGroupfolder === 'string' || !ownerGroupfolder);
     assert(filePath && typeof filePath === 'string');
@@ -120,6 +122,7 @@ async function create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId,
     assert(typeof readonly === 'undefined' || typeof readonly === 'boolean');
     assert(expiresAt === null || (typeof expiresAt === 'number' && Number.isFinite(expiresAt)));
     assert(password === null || typeof password === 'string');
+    assert(name === null || typeof name === 'string');
 
     // ensure we have a bool with false as fallback
     readonly = !!readonly;
@@ -133,12 +136,15 @@ async function create({ ownerUserId, ownerGroupfolder, filePath, receiverUserId,
 
     const shareId = 'sid-' + crypto.randomBytes(32).toString('hex');
 
-    // passwords only apply to public link shares (no receiver)
-    const isLinkShare = !receiverUserId && !receiverEmail && !receiverGroup;
-    const passwordHash = isLinkShare && password ? await passwords.hashPassword(password) : null;
+    // passwords and names apply to public links (no receiver). Email shares may carry a name; user and group shares do not.
+    const isPublicLink = !receiverUserId && !receiverEmail && !receiverGroup;
+    const showsAsLink = !receiverUserId && !receiverGroup;
+    const passwordHash = isPublicLink && password ? await passwords.hashPassword(password) : null;
+    const shareName = showsAsLink ? (name || '').trim() : '';
+    if (isPublicLink && !shareName) throw new MainError(MainError.BAD_FIELD, 'name must be a non-empty string');
 
-    await database.query('INSERT INTO shares (id, owner_user_id, owner_groupfolder, file_path, receiver_email, receiver_user_id, receiver_group, readonly, expires_at, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
-        shareId, ownerUserId || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUserId || null, receiverGroup || null, readonly, expiresAtDb, passwordHash
+    await database.query('INSERT INTO shares (id, owner_user_id, owner_groupfolder, file_path, receiver_email, receiver_user_id, receiver_group, readonly, expires_at, password_hash, name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+        shareId, ownerUserId || null, ownerGroupfolder || null, filePath, receiverEmail || null, receiverUserId || null, receiverGroup || null, readonly, expiresAtDb, passwordHash, shareName
     ]);
 
     // group shares just show up for members, no per-member email

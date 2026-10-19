@@ -4,10 +4,12 @@ import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
 import MainModel from '../models/MainModel.js';
 import EmptyState from './EmptyState.vue';
-import { copyToClipboard } from '../utils.js';
+import { copyToClipboard, getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import { Button, Icon, InputDialog, ProgressBar, TableView, useNotify } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
+
+const emit = defineEmits(['item-activated']);
 
 const { notify } = useNotify();
 
@@ -56,16 +58,15 @@ async function refresh() {
   const groupNameById = {};
   groups.forEach((g) => { groupNameById[g.id] = g.name; });
 
-  tableModel.value = shares;
-
-  // set properties for sorting the table
-  tableModel.value.forEach((s) => {
-    s.target = s.file.filePath.toLowerCase();
-    if (s.receiverGroup) s.receiver = groupNameById[s.receiverGroup] || s.receiverGroup;
-    else if (s.receiverUsername) s.receiver = s.receiverUsername;
-    else s.receiver = s.name || s.receiverEmail || '';
+  shares.forEach((share) => {
+    share.file.href = `#/files/home${share.file.filePath}`;
+    share.target = share.file.filePath.toLowerCase();
+    if (share.receiverGroup) share.receiver = groupNameById[share.receiverGroup] || share.receiverGroup;
+    else if (share.receiverUsername) share.receiver = share.receiverUsername;
+    else share.receiver = share.name || share.receiverEmail || '';
   });
 
+  tableModel.value = shares;
   busy.value = false;
 }
 
@@ -78,11 +79,15 @@ function onCopyLink(share) {
   notify('Share link copied to clipboard');
 }
 
-async function onDelete(share) {
+function onOpenName(share) {
+  emit('item-activated', share.file);
+}
+
+async function onUnshare(share) {
   const yes = await sharesInputDialog.value.confirm({
-    message: `Delete share "${share.file.fileName}"?`,
+    message: `Unshare "${share.file.fileName}"?`,
     confirmStyle: 'danger',
-    confirmLabel: 'Delete',
+    confirmLabel: 'Unshare',
     rejectLabel: 'Cancel',
     rejectStyle: 'secondary'
   });
@@ -92,7 +97,7 @@ async function onDelete(share) {
   try {
     await ShareModel.remove(share.id);
   } catch (e) {
-    return console.error('Failed to delete share.', e);
+    return console.error('Failed to unshare.', e);
   }
 
   await refresh();
@@ -113,7 +118,13 @@ onMounted(refresh);
         <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
           <template #icon="{ item:slotProps }"><img :src="slotProps.file.previewUrl" width="32" height="32" style="object-fit: cover;" /></template>
           <template #target="{ item:slotProps }">
-            {{ slotProps.file.filePath.slice(1) }}
+            <div class="share-file">
+              <a class="share-file-name" :href="slotProps.file.href" @click.prevent="onOpenName(slotProps)">{{ slotProps.file.fileName }}</a>
+              <div class="share-file-path">
+                <span class="share-file-location">{{ getResultLocationLabel(slotProps.file) }}</span>
+                <span>{{ getResultFolderPath(slotProps.file) }}</span>
+              </div>
+            </div>
           </template>
           <template #receiver="{ item:slotProps }">
             <span class="share-with">
@@ -130,7 +141,7 @@ onMounted(refresh);
           </template>
           <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
           <template #action="{ item:slotProps }">
-            <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
+            <Button danger outline small @click="onUnshare(slotProps)">Unshare</Button>
           </template>
         </TableView>
       </template>
@@ -160,6 +171,34 @@ onMounted(refresh);
 
 .shares-body.has-shares {
   justify-content: flex-start;
+}
+
+.share-file {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.share-file-name {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-file-name:hover {
+  text-decoration: underline;
+}
+
+.share-file-path {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.share-file-location {
+  flex-shrink: 0;
+  color: var(--pankow-color-text-secondary);
 }
 
 .share-with {

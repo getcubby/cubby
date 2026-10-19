@@ -719,3 +719,7 @@
 * Update cubby to 9179397
 * Better shares UI
 
+[2.30.1]
+* Update cubby to f324359
+* Show the file name and folder path in Shared by you, and label removal as Unshare.
+

@@ -1,12 +1,14 @@
 <script setup>
 
-import { ref, useTemplateRef, inject } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 import { prettyDate } from '@cloudron/pankow/utils';
 import { copyToClipboard } from '../utils.js';
 import {
   Button,
+  DateTimeInput,
   Dialog,
-  Checkbox,
+  FormGroup,
+  ListItem,
   PasswordInput,
   useNotify
 } from '@cloudron/pankow';
@@ -14,24 +16,19 @@ import FileDropModel from '../models/FileDropModel.js';
 
 const { notify } = useNotify();
 
-const profile = inject('profile');
-
 const dialog = useTemplateRef('dialog');
 
 const entry = ref({});
 const filedrops = ref([]);
-const error = ref('');
 
 const filedropLink = ref({
-  expires: false,
   expiresDate: '',
   password: '',
 });
 
-function defaultExpiresDateStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+function todayDateStr() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function endOfLocalDayMs(ymd) {
@@ -44,7 +41,9 @@ function endOfLocalDayMs(ymd) {
 async function refresh() {
   try {
     const all = await FileDropModel.list();
-    filedrops.value = all.filter((fd) => fd.filePath === entry.value.filePath);
+    filedrops.value = all
+      .filter((fd) => fd.filePath === entry.value.filePath)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     entry.value.fileDrops = filedrops.value;
     entry.value.isFileDrop = !!filedrops.value.length;
   } catch (e) {
@@ -55,7 +54,7 @@ async function refresh() {
 
 async function onCreate() {
   let expiresAt = 0;
-  if (filedropLink.value.expires) {
+  if (filedropLink.value.expiresDate) {
     expiresAt = endOfLocalDayMs(filedropLink.value.expiresDate);
     if (!expiresAt) {
       notify('Invalid expiration date', { type: 'error' });
@@ -65,10 +64,7 @@ async function onCreate() {
   const ownerUserId = entry.value.group ? null : entry.value.owner;
   const ownerGroupfolder = entry.value.group ? entry.value.group.id : null;
 
-  const filedropId = await FileDropModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, expiresAt, password: filedropLink.value.password || null });
-
-  copyToClipboard(FileDropModel.getLink(filedropId));
-  notify('File drop link copied to clipboard');
+  await FileDropModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, expiresAt, password: filedropLink.value.password || null });
 
   await refresh();
 }
@@ -86,9 +82,7 @@ function copyLink(filedropId) {
 defineExpose({
   async open(item) {
     entry.value = item;
-    error.value = '';
-    filedropLink.value.expires = false;
-    filedropLink.value.expiresDate = defaultExpiresDateStr();
+    filedropLink.value.expiresDate = '';
     filedropLink.value.password = '';
 
     await refresh();
@@ -102,40 +96,50 @@ defineExpose({
 <template>
   <Dialog
     ref="dialog"
-    :title="'File drop for ' + entry.fileName"
+    title="File drop"
     reject-label="Close"
     reject-style="secondary"
+    :style="{ width: '560px' }"
   >
-    <div>
-      <div style="margin-bottom: 10px;">
-        <div v-for="filedrop in filedrops" class="filedrop-link" :key="filedrop.id">
-          <div>
-            <div>Created {{ prettyDate(filedrop.createdAt) }}</div>
-            <small style="color: var(--pankow-color-text-secondary)">
-              <span v-if="filedrop.passwordProtected"><i class="fa-solid fa-lock"/> Password protected</span>
-              <span v-if="filedrop.expiresAt"> · Expires {{ prettyDate(filedrop.expiresAt) }}</span>
-              <span v-else-if="!filedrop.passwordProtected">Never expires</span>
-            </small>
-          </div>
-          <div style="display: flex; gap: 5px">
-            <Button outline tool icon="fa-regular fa-copy" title="Copy to clipboard" @click="copyLink(filedrop.id)"/>
-            <Button danger outline tool icon="fa-solid fa-trash" title="Delete" @click="onDelete(filedrop)"/>
-          </div>
-        </div>
-        <div v-show="filedrops.length === 0" class="filedrop-link-empty">
-          No file drops yet
-        </div>
-      </div>
-      <div class="filedrop-form">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <label for="filedropPassword" style="white-space: nowrap;">Password</label>
-          <PasswordInput id="filedropPassword" v-model="filedropLink.password" placeholder="Optional password" style="flex: 1;" />
-        </div>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <Checkbox id="expireFileDropAt" label="Expire at" v-model="filedropLink.expires" />
-          <input type="date" v-model="filedropLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!filedropLink.expires"/>
-          <Button icon="fa-solid fa-cloud-arrow-up" @click="onCreate">Create file drop</Button>
-        </div>
+    <p v-show="entry.fileName">
+      Anyone with the link can upload files to "{{ entry.fileName }}". Uploaded files are not visible to others. A file whose name is already taken is renamed.
+    </p>
+    <form class="filedrop-form" @submit.prevent="onCreate">
+      <FormGroup>
+        <label for="filedropPassword">Password (optional)</label>
+        <PasswordInput id="filedropPassword" v-model="filedropLink.password" />
+      </FormGroup>
+      <FormGroup>
+        <label for="filedropExpires">Expires (optional)</label>
+        <DateTimeInput id="filedropExpires" date-only v-model="filedropLink.expiresDate" :min="todayDateStr()" />
+      </FormGroup>
+      <Button @click="onCreate">Create</Button>
+    </form>
+
+    <div v-if="filedrops.length" class="filedrop-existing">
+      <div class="filedrop-heading">Existing file drops</div>
+      <div class="filedrop-list">
+        <ListItem
+          v-for="filedrop in filedrops"
+          :key="filedrop.id"
+          :label="'Created ' + prettyDate(filedrop.createdAt)"
+          :actions="[{
+            label: 'Copy to clipboard',
+            icon: 'fa-regular fa-copy',
+            action: () => copyLink(filedrop.id),
+            quickAction: true,
+          }, {
+            label: 'Delete',
+            icon: 'fa-solid fa-trash',
+            action: () => onDelete(filedrop),
+            quickAction: true,
+          }]"
+        >
+          <template v-if="filedrop.passwordProtected || filedrop.expiresAt" #subtext>
+            <span v-if="filedrop.passwordProtected"><i class="fa-solid fa-lock"/> Password protected</span>
+            <span v-if="filedrop.expiresAt">{{ filedrop.passwordProtected ? ' - ' : '' }}Expires {{ prettyDate(filedrop.expiresAt) }}</span>
+          </template>
+        </ListItem>
       </div>
     </div>
   </Dialog>
@@ -143,25 +147,35 @@ defineExpose({
 
 <style scoped>
 
-.filedrop-link, .filedrop-link-empty {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px;
-  align-items: center;
+.filedrop-existing {
+  margin-top: 32px;
 }
 
-.filedrop-link:hover {
-  background-color: var(--pankow-color-background-hover);
+.filedrop-form :deep(.pankow-form-group:first-child) {
+  margin-top: 0;
 }
 
-.filedrop-form {
+.filedrop-form :deep(.pankow-form-group:first-child label) {
+  margin-top: 0;
+}
+
+.filedrop-form :deep(.pankow-form-group:last-of-type) {
+  margin-bottom: 0;
+}
+
+.filedrop-form :deep(.pankow-button) {
+  margin-top: 12px;
+}
+
+.filedrop-heading {
+  margin-bottom: 6px;
+  font-weight: var(--pankow-font-weight-bold);
+}
+
+.filedrop-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  padding-bottom: 4px;
-  border-top: 1px solid var(--pankow-color-border);
+  gap: 6px;
 }
 
 </style>

@@ -193,7 +193,7 @@ defineExpose({
             <Button @click="onCreateShare" :disabled="!receiver">Create</Button>
           </form>
 
-          <div class="people-shared">
+          <div v-if="sharedWith.length" class="people-shared">
             <div class="people-shared-heading">Shared with</div>
             <div class="people-list">
             <ListItem
@@ -208,9 +208,6 @@ defineExpose({
                 quickAction: true,
               }]"
             />
-            <div v-show="sharedWith.length === 0" class="shared-link-empty">
-              Not shared with anyone
-            </div>
             </div>
           </div>
         </template>
@@ -236,7 +233,7 @@ defineExpose({
             <Button @click="onCreateShareLink" :disabled="!shareLink.name.trim()">Create</Button>
           </form>
 
-          <div class="people-shared">
+          <div v-if="sharedLinks.length" class="people-shared">
             <div class="people-shared-heading">Existing links</div>
             <div class="people-list">
               <ListItem
@@ -262,9 +259,6 @@ defineExpose({
                   <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
                 </template>
               </ListItem>
-              <div v-show="sharedLinks.length === 0" class="shared-link-empty">
-                No shared links
-              </div>
             </div>
           </div>
         </template>
@@ -275,8 +269,8 @@ defineExpose({
 
 <style scoped>
 
-.share-form {
-  margin-bottom: 16px;
+.people-shared {
+  margin-top: 32px;
 }
 
 .share-form :deep(.pankow-form-group:first-child) {
@@ -297,22 +291,13 @@ defineExpose({
 
 .people-shared-heading {
   margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--pankow-color-text-secondary, #888);
+  font-weight: var(--pankow-font-weight-bold);
 }
 
 .people-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.shared-link-empty {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px;
-  align-items: center;
 }
 
 </style>

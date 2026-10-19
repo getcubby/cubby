@@ -4,7 +4,7 @@
   "author": "Cloudron Team",
   "tagline": "All the file sharing you need, none of the bloat",
   "version": "2.28.0",
-  "upstreamVersion": "2.28.0",
+  "upstreamVersion": "ed0a7cd",
   "minBoxVersion": "10.1.5",
   "healthCheckPath": "/api/healthcheck",
   "icon": "file://logo.png",

@@ -715,3 +715,7 @@
 * Update cubby to ed0a7cd
 * Fix activity log
 
+[2.30.0]
+* Update cubby to 9179397
+* Better shares UI
+

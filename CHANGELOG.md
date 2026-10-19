@@ -704,3 +704,10 @@
 * Update cubby to d34ae57
 * Fix opening of PDF
 
+[2.28.0]
+* Update cubby to 33101f7
+* Exclude indexing of contents inside archives
+* Identify and skip files that kill recollindex
+* Skip disk image contents in the index
+* Various UI fixes
+

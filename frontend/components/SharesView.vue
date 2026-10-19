@@ -50,7 +50,8 @@ async function refresh() {
   tableModel.value.forEach((s) => {
     s.target = s.file.filePath.toLowerCase();
     if (s.receiverGroup) s.receiver = groupNameById[s.receiverGroup] || s.receiverGroup;
-    else s.receiver = s.receiverUsername || 'zzzzzzzzz'; // poor mans sorting fallback for empty string
+    else if (s.receiverUsername) s.receiver = s.receiverUsername;
+    else s.receiver = s.name || s.receiverEmail || '';
   });
 
   busy.value = false;

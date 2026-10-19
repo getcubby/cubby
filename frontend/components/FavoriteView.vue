@@ -80,6 +80,8 @@ onMounted(refresh);
       v-if="!busy && favorites.length"
       :parent-entry="{}"
       :selected-entries="selectedEntries"
+      empty-icon="fa-solid fa-star"
+      empty-message="Select a file to see details"
       :show-download="false"
       :show-delete="false"
       :show-share="false"

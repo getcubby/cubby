@@ -103,6 +103,8 @@ function entryMenu(entry) {
       v-if="!busy && buckets.length"
       :parent-entry="{}"
       :selected-entries="selectedEntries"
+      empty-icon="fa-regular fa-clock"
+      empty-message="Select a file to see details"
       :show-download="false"
       :show-delete="false"
       :show-share="false"

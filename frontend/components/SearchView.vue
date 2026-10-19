@@ -450,6 +450,8 @@ function cancelLoad() {
       <PreviewPanel
         :parent-entry="{}"
         :selected-entries="selectedEntries"
+        empty-icon="fa-solid fa-magnifying-glass"
+        empty-message="Select a file to see details"
         :show-download="true"
         :show-delete="true"
         :show-share="true"

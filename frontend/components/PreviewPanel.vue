@@ -5,6 +5,7 @@ import { Button, TabView } from '@cloudron/pankow';
 import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize, prettyDate } from '@cloudron/pankow/utils';
 import MainModel from '../models/MainModel.js';
+import EmptyState from './EmptyState.vue';
 
 const props = defineProps({
   parentEntry: {
@@ -26,6 +27,14 @@ const props = defineProps({
   showShare: {
     type: Boolean,
     default: false,
+  },
+  emptyIcon: {
+    type: String,
+    default: '',
+  },
+  emptyMessage: {
+    type: String,
+    default: '',
   },
 });
 
@@ -154,7 +163,10 @@ onMounted(loadGroups);
   <div class="preview-container" :class="{ 'visible': visible }">
     <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide preview' : 'Show preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
 
-    <div v-if="hasContent" class="preview-body">
+    <div v-if="!hasContent && emptyMessage" class="preview-empty">
+      <EmptyState :icon="emptyIcon" :title="emptyMessage" />
+    </div>
+    <div v-else-if="hasContent" class="preview-body">
       <div class="preview-icon-container">
         <div class="preview-icon" v-for="selectedEntry in selectedEntries.slice(0, 15)" :key="selectedEntry.id" :style="{ backgroundImage: selectedEntry && getPreviewUrl(selectedEntry) ? 'url(' + getPreviewUrl(selectedEntry) + ')' : 'none' }"></div>
         <div class="preview-icon" v-show="!selectedEntries.length" :style="{ backgroundImage: parentEntry && getPreviewUrl(parentEntry) ? 'url(' + getPreviewUrl(parentEntry) + ')' : 'none' }"></div>
@@ -237,6 +249,15 @@ onMounted(loadGroups);
     flex: 1;
     min-height: 0;
     overflow: hidden;
+}
+
+.preview-empty {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    overflow: auto;
 }
 
 .preview-icon-container {

@@ -1,7 +1,8 @@
 <script setup>
 
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Button, TabView } from '@cloudron/pankow';
+import ResizeHandle from '@cloudron/pankow/components/ResizeHandle.vue';
 import { getPreviewUrl } from '../utils.js';
 import { prettyLongDate, prettyFileSize, prettyDate } from '@cloudron/pankow/utils';
 import MainModel from '../models/MainModel.js';
@@ -40,7 +41,54 @@ const props = defineProps({
 
 const emit = defineEmits(['download', 'delete', 'share']);
 
+const PREVIEW_MIN_WIDTH = 260;
+const PREVIEW_MAX_WIDTH = 720;
+const PREVIEW_WIDTH_KEY = 'cubby-preview-width';
+
 const visible = ref(localStorage.previewPanelVisible === 'true');
+const previewWidth = ref(350);
+const resizing = ref(false);
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+
+function clampPreviewWidth(width) {
+  return Math.max(PREVIEW_MIN_WIDTH, Math.min(PREVIEW_MAX_WIDTH, width));
+}
+
+function restorePreviewWidth() {
+  try {
+    const stored = parseInt(localStorage.getItem(PREVIEW_WIDTH_KEY), 10);
+    if (!stored) return;
+    previewWidth.value = clampPreviewWidth(stored);
+  } catch (e) {}
+}
+
+function resizeStart(event) {
+  if (!visible.value) return;
+  resizing.value = true;
+  resizeStartX = event.clientX ?? event.touches?.[0]?.clientX ?? 0;
+  resizeStartWidth = previewWidth.value;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  event.preventDefault();
+}
+
+function resizeMove(event) {
+  if (!resizing.value) return;
+  if (event.cancelable) event.preventDefault();
+  const x = event.clientX ?? event.touches?.[0]?.clientX ?? 0;
+  previewWidth.value = clampPreviewWidth(resizeStartWidth + (resizeStartX - x));
+}
+
+function resizeEnd() {
+  if (!resizing.value) return;
+  resizing.value = false;
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  try {
+    localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth.value));
+  } catch (e) {}
+}
 const activeTab = ref('details');
 const hasContent = computed(() => props.selectedEntries.length > 0 || Object.keys(props.parentEntry).length !== 0);
 const entry = computed(() =>{
@@ -155,13 +203,31 @@ async function loadGroups() {
   }
 }
 
-onMounted(loadGroups);
+onMounted(function () {
+  loadGroups();
+  restorePreviewWidth();
+  document.addEventListener('mousemove', resizeMove);
+  document.addEventListener('mouseup', resizeEnd);
+  document.addEventListener('touchmove', resizeMove, { passive: false });
+  document.addEventListener('touchend', resizeEnd);
+});
+
+onUnmounted(function () {
+  document.removeEventListener('mousemove', resizeMove);
+  document.removeEventListener('mouseup', resizeEnd);
+  document.removeEventListener('touchmove', resizeMove);
+  document.removeEventListener('touchend', resizeEnd);
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
 
 </script>
 
 <template>
-  <div class="preview-container" :class="{ 'visible': visible }">
+  <div class="preview-container" :class="{ 'visible': visible, 'resizing': resizing }" :style="visible ? { width: previewWidth + 'px', '--preview-width': previewWidth + 'px' } : null">
     <div class="toggle-button" @click="onToggle" :title="visible ? 'Hide preview' : 'Show preview'"><i :class="'fa-solid ' + (visible ? 'fa-chevron-right' : 'fa-chevron-left')"></i></div>
+    <div class="preview-frame">
+    <ResizeHandle v-if="visible" class="preview-resize-handle" orientation="horizontal" :dragging="resizing" @mousedown="resizeStart" @touchstart.prevent="resizeStart" />
 
     <div v-if="!hasContent && emptyMessage" class="preview-empty">
       <EmptyState :icon="emptyIcon" :title="emptyMessage" />
@@ -225,6 +291,7 @@ onMounted(loadGroups);
         </template>
       </TabView>
     </div>
+    </div>
   </div>
 </template>
 
@@ -234,13 +301,33 @@ onMounted(loadGroups);
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
     width: 0;
     transition: width ease-in 300ms;
 }
 
+.preview-frame {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.preview-container.resizing {
+    transition: none;
+}
+
 .preview-container.visible {
-    width: min(33%, 350px);
+    flex-shrink: 0;
+}
+
+.preview-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
 }
 
 .preview-body {
@@ -263,8 +350,10 @@ onMounted(loadGroups);
 .preview-icon-container {
     display: flex;
     width: 100%;
-    height: 250px;
-    flex-shrink: 0;
+    height: var(--preview-width, 350px);
+    max-height: 50vh;
+    min-height: 120px;
+    flex-shrink: 1;
     flex-direction: row;
     flex-wrap: wrap-reverse;
 }
@@ -313,6 +402,7 @@ onMounted(loadGroups);
 .detail-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
 }
 

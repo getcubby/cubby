@@ -370,7 +370,7 @@ onBeforeUnmount(() => {
       />
     </div>
     <div class="container" v-else>
-      <SideBar class="side-bar" ref="sideBar">
+      <SideBar class="side-bar" ref="sideBar" resizable storage-key="cubby-sidebar-width">
         <div class="sidebar-title">
           <a href="#/files/home/" class="sidebar-title-link" @click="onSidebar('/files/home/', $event)">
             <img src="/logo-transparent.svg" alt="" class="sidebar-icon" />

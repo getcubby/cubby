@@ -2,13 +2,17 @@
 
 import { ref, onMounted } from 'vue';
 import FavoriteModel from '../models/FavoriteModel.js';
-import { getFilesViewHashHref, getResultFolderPath, getResultLocationLabel } from '../utils.js';
+import { API_ORIGIN, getFilesViewHashHref, getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import { followLink, go } from '../router.js';
 import EmptyState from './EmptyState.vue';
+import PreviewPanel from './PreviewPanel.vue';
 import { Button, Icon, ProgressBar } from '@cloudron/pankow';
 import { prettyFileSize } from '@cloudron/pankow/utils';
 
+const emit = defineEmits(['item-activated']);
+
 const favorites = ref([]);
+const selectedEntries = ref([]);
 const busy = ref(true);
 
 async function refresh() {
@@ -26,6 +30,18 @@ async function refresh() {
 async function onUnFavorite(entry) {
   await FavoriteModel.remove(entry.favorite.id);
   favorites.value = favorites.value.filter(item => item.favorite?.id !== entry.favorite.id);
+  if (selectedEntries.value[0]?.id === entry.id) selectedEntries.value = [];
+}
+
+function onSelect(event, entry) {
+  if (event.button !== 0) return;
+  selectedEntries.value = [entry];
+}
+
+function onOpenName(event, entry) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+  event.preventDefault();
+  emit('item-activated', entry);
 }
 
 function parentFolderUrl(entry) {
@@ -61,29 +77,37 @@ onMounted(refresh);
 
 <template>
   <div class="favorites">
-    <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
-    <div class="favorite-body" v-else>
-      <div v-if="favorites.length" class="favorite-container">
-        <div v-for="entry in favorites" :key="entry.id" class="favorite-item">
-          <a class="favorite-main" :href="entry.href" @click="followLink($event, entry.href)">
+    <div class="favorites-main">
+      <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
+      <div class="favorite-body" v-else>
+        <div v-if="favorites.length" class="favorite-container">
+          <div v-for="entry in favorites" :key="entry.id" class="favorite-item" :class="{ selected: selectedEntries[0]?.id === entry.id }" @mouseup="onSelect($event, entry)">
             <img :src="entry.previewUrl || entry.icon" @error="iconError($event, entry)"/>
             <div class="favorite-text">
-              <span class="favorite-name">{{ entry.fileName }}</span>
+              <a class="favorite-name" :href="entry.href" @mouseup.stop @click.stop="onOpenName($event, entry)">{{ entry.fileName }}</a>
               <div class="favorite-path-row">
                 <span class="favorite-location">{{ getResultLocationLabel(entry) }}</span>
                 <span class="favorite-folder-path">{{ getResultFolderPath(entry) }}</span>
               </div>
             </div>
             <span v-if="typeof entry.size === 'number'" class="favorite-size">{{ prettyFileSize(entry.size) }}</span>
-          </a>
-          <Icon icon="fa-solid fa-star" class="star-icon" @click.stop.prevent="onUnFavorite(entry)" />
-          <div v-if="parentFolderUrl(entry)" class="favorite-actions" @click.stop>
-            <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
+            <Icon icon="fa-solid fa-star" class="star-icon" @mouseup.stop @click.stop.prevent="onUnFavorite(entry)" />
+            <div v-if="parentFolderUrl(entry)" class="favorite-actions" @mouseup.stop @click.stop>
+              <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
+            </div>
           </div>
         </div>
+        <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
       </div>
-      <EmptyState v-else icon="fa-solid fa-star" title="No favorites" description="Files and folders you mark as favorite will show up here" />
     </div>
+    <PreviewPanel
+      v-if="!busy && favorites.length"
+      :parent-entry="{}"
+      :selected-entries="selectedEntries"
+      :show-download="false"
+      :show-delete="false"
+      :show-share="false"
+    />
   </div>
 </template>
 
@@ -91,10 +115,19 @@ onMounted(refresh);
 
 .favorites {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
   height: 100%;
   flex-grow: 1;
+  min-height: 0;
+}
+
+.favorites-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-grow: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -122,23 +155,25 @@ onMounted(refresh);
   width: 100%;
   padding: 6px 10px;
   border-radius: var(--pankow-border-radius);
-  cursor: pointer;
 }
 
 .favorite-item:hover {
   background-color: var(--pankow-color-background-hover);
 }
 
-.favorite-main {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
+.favorite-item.selected,
+.favorite-item.selected:hover {
+  background-color: #dbedfb;
 }
 
-.favorite-main > img {
+@media (prefers-color-scheme: dark) {
+  .favorite-item.selected,
+  .favorite-item.selected:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.favorite-item > img {
   width: 35px;
   height: 35px;
   object-fit: cover;
@@ -154,10 +189,19 @@ onMounted(refresh);
 }
 
 .favorite-name {
+  align-self: flex-start;
+  max-width: 100%;
+  width: fit-content;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  width: 100%;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.favorite-name:hover {
+  text-decoration: underline;
 }
 
 .favorite-path-row {
@@ -202,6 +246,7 @@ onMounted(refresh);
   width: 36px;
   color: #ffcb00;
   padding: 8px;
+  cursor: pointer;
 }
 
 .star-icon:hover {

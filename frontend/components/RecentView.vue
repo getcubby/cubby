@@ -3,15 +3,17 @@
 import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
-import { getResultFolderPath, getResultLocationLabel } from '../utils.js';
+import { API_ORIGIN, getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import { followLink, go } from '../router.js';
 import EmptyState from './EmptyState.vue';
+import PreviewPanel from './PreviewPanel.vue';
 import { Button, ButtonGroup, ProgressBar } from '@cloudron/pankow';
 import { prettyFileSize } from '@cloudron/pankow/utils';
 
 const emit = defineEmits(['item-activated']);
 
 const buckets = ref([]);
+const selectedEntries = ref([]);
 const busy = ref(true);
 const viewMode = ref(localStorage.viewMode === 'grid' ? 'grid' : 'list');
 
@@ -50,7 +52,14 @@ onMounted(async () => {
   busy.value = false;
 });
 
-function onActivateItem(entry) {
+function onSelect(event, entry) {
+  if (event.button !== 0) return;
+  selectedEntries.value = [entry];
+}
+
+function onOpenName(event, entry) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+  event.preventDefault();
   emit('item-activated', entry);
 }
 
@@ -79,6 +88,7 @@ function iconError(event, entry) {
 
 <template>
   <div class="recent">
+    <div class="recent-main">
     <div class="recent-toolbar">
       <div class="recent-toolbar-spacer"></div>
       <ButtonGroup>
@@ -95,24 +105,33 @@ function iconError(event, entry) {
         <h2>{{ bucket.label }}</h2>
         <div class="hr"></div>
         <div :class="viewMode === 'list' ? 'list' : 'grid'">
-          <div v-for="entry in bucket.entries" :key="entry.id" class="entry" @click="onActivateItem(entry)">
+          <div v-for="entry in bucket.entries" :key="entry.id" class="entry" :class="{ selected: selectedEntries[0]?.id === entry.id }" @mouseup="onSelect($event, entry)">
             <img class="entry-icon" :src="entry.previewUrl" @error="iconError($event, entry)"/>
             <div class="entry-body">
-              <span class="entry-name">{{ entry.fileName }}</span>
+              <a class="entry-name" :href="entry.href" @mouseup.stop @click.stop="onOpenName($event, entry)">{{ entry.fileName }}</a>
               <div v-if="viewMode === 'list'" class="entry-path-row">
                 <span class="entry-location">{{ getResultLocationLabel(entry) }}</span>
                 <span class="entry-folder-path">{{ getResultFolderPath(entry) }}</span>
               </div>
             </div>
             <span v-if="viewMode === 'list'" class="entry-size">{{ prettyFileSize(entry.size) }}</span>
-            <div v-if="viewMode === 'list' && entry.parentFolderUrl" class="entry-actions" @click.stop>
+            <div v-if="viewMode === 'list' && entry.parentFolderUrl" class="entry-actions" @mouseup.stop @click.stop>
               <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
             </div>
-            <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @click.stop="followLink($event, entry.parentFolderUrl)" class="open-folder">Open folder</Button>
+            <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @mouseup.stop @click.stop="followLink($event, entry.parentFolderUrl)" class="open-folder">Open folder</Button>
           </div>
         </div>
       </div>
     </div>
+    </div>
+    <PreviewPanel
+      v-if="!busy && buckets.length"
+      :parent-entry="{}"
+      :selected-entries="selectedEntries"
+      :show-download="false"
+      :show-delete="false"
+      :show-share="false"
+    />
   </div>
 </template>
 
@@ -120,10 +139,19 @@ function iconError(event, entry) {
 
 .recent {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
   height: 100%;
   flex-grow: 1;
+  min-height: 0;
+}
+
+.recent-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-grow: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -192,7 +220,6 @@ function iconError(event, entry) {
   align-items: center;
   width: 120px;
   border-radius: var(--pankow-border-radius);
-  cursor: pointer;
   padding: 10px;
   transition: width 200ms ease-in-out;
 }
@@ -213,14 +240,36 @@ function iconError(event, entry) {
   align-items: center;
 }
 
+.entry.selected,
+.entry.selected:hover {
+  background-color: #dbedfb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .entry.selected,
+  .entry.selected:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
 .entry-name {
+  align-self: flex-start;
+  max-width: 100%;
+  width: fit-content;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  width: 100%;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.entry-name:hover {
+  text-decoration: underline;
 }
 
 .grid .entry-name {
+  align-self: center;
   margin: 10px;
   text-align: center;
 }

@@ -227,7 +227,7 @@ function resetNonFileViewState() {
 }
 
 function onOpen(item) {
-  const fromList = !item.isDirectory && (view.value === VIEWS.SEARCH || view.value === VIEWS.RECENT);
+  const fromList = !item.isDirectory && (view.value === VIEWS.SEARCH || view.value === VIEWS.RECENT || view.value === VIEWS.FAVORITES);
   let nextPath;
   if (item.share && item.share.id) nextPath = `/files/shares/${item.share.id}${item.filePath}`;
   else if (item.group && item.group.id) nextPath = `/files/groupfolders/${item.group.id}${item.filePath}`;
@@ -407,7 +407,7 @@ onBeforeUnmount(() => {
         <SharesView v-if="view === VIEWS.SHARES" />
         <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged" />
         <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
-        <FavoriteView v-else-if="view === VIEWS.FAVORITES" />
+        <FavoriteView v-else-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
         <SearchView
           v-else-if="view === VIEWS.SEARCH"
           :query="searchQuery"

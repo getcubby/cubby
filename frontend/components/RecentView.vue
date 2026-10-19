@@ -3,12 +3,11 @@
 import { ref, onMounted } from 'vue';
 import moment from 'moment';
 import MainModel from '../models/MainModel.js';
-import { API_ORIGIN, getResultFolderPath, getResultLocationLabel } from '../utils.js';
 import { followLink, go } from '../router.js';
 import EmptyState from './EmptyState.vue';
+import FileResultRow from './FileResultRow.vue';
 import PreviewPanel from './PreviewPanel.vue';
 import { Button, ButtonGroup, ProgressBar } from '@cloudron/pankow';
-import { prettyFileSize } from '@cloudron/pankow/utils';
 
 const emit = defineEmits(['item-activated']);
 
@@ -52,14 +51,11 @@ onMounted(async () => {
   busy.value = false;
 });
 
-function onSelect(event, entry) {
-  if (event.button !== 0) return;
+function onSelect(entry) {
   selectedEntries.value = [entry];
 }
 
-function onOpenName(event, entry) {
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-  event.preventDefault();
+function onOpenName(entry) {
   emit('item-activated', entry);
 }
 
@@ -70,18 +66,6 @@ function entryMenu(entry) {
     icon: 'fa-regular fa-folder-open',
     action: () => { go(entry.parentFolderUrl); },
   }];
-}
-
-function iconError(event, entry) {
-  event.target.src = `${API_ORIGIN}/mime-types/application-x-generic.svg`;
-
-  setTimeout(() => {
-    if (typeof entry._previewRetries === 'undefined') entry._previewRetries = 0;
-    if (entry._previewRetries > 10) return;
-    ++entry._previewRetries
-
-    event.target.src = entry.previewUrl;
-  }, 1000);
 }
 
 </script>
@@ -105,21 +89,12 @@ function iconError(event, entry) {
         <h2>{{ bucket.label }}</h2>
         <div class="hr"></div>
         <div :class="viewMode === 'list' ? 'list' : 'grid'">
-          <div v-for="entry in bucket.entries" :key="entry.id" class="entry" :class="{ selected: selectedEntries[0]?.id === entry.id }" @mouseup="onSelect($event, entry)">
-            <img class="entry-icon" :src="entry.previewUrl" @error="iconError($event, entry)"/>
-            <div class="entry-body">
-              <a class="entry-name" :href="entry.href" @mouseup.stop @click.stop="onOpenName($event, entry)">{{ entry.fileName }}</a>
-              <div v-if="viewMode === 'list'" class="entry-path-row">
-                <span class="entry-location">{{ getResultLocationLabel(entry) }}</span>
-                <span class="entry-folder-path">{{ getResultFolderPath(entry) }}</span>
-              </div>
-            </div>
-            <span v-if="viewMode === 'list'" class="entry-size">{{ prettyFileSize(entry.size) }}</span>
+          <FileResultRow v-for="entry in bucket.entries" :key="entry.id" :entry="entry" :layout="viewMode" :selected="selectedEntries[0]?.id === entry.id" @select="onSelect" @open="onOpenName">
             <div v-if="viewMode === 'list' && entry.parentFolderUrl" class="entry-actions" @mouseup.stop @click.stop>
               <Button icon="fa-solid fa-ellipsis-vertical" plain tool :show-dropdown="false" :menu="entryMenu(entry)" />
             </div>
             <Button v-else-if="entry.parentFolderUrl" small outline :href="entry.parentFolderUrl" @mouseup.stop @click.stop="followLink($event, entry.parentFolderUrl)" class="open-folder">Open folder</Button>
-          </div>
+          </FileResultRow>
         </div>
       </div>
     </div>
@@ -214,143 +189,8 @@ function iconError(event, entry) {
   position: relative;
 }
 
-.entry {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 120px;
-  border-radius: var(--pankow-border-radius);
-  padding: 10px;
-  transition: width 200ms ease-in-out;
-}
-
-.entry:hover {
-  position: relative;
-  background-color: var(--pankow-color-background-hover);
-}
-
-.entry-body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.grid .entry-body {
-  width: 100%;
-  align-items: center;
-}
-
-.entry.selected,
-.entry.selected:hover {
-  background-color: #dbedfb;
-}
-
-@media (prefers-color-scheme: dark) {
-  .entry.selected,
-  .entry.selected:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.entry-name {
-  align-self: flex-start;
-  max-width: 100%;
-  width: fit-content;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.entry-name:hover {
-  text-decoration: underline;
-}
-
-.grid .entry-name {
-  align-self: center;
-  margin: 10px;
-  text-align: center;
-}
-
-.entry-icon {
-  object-fit: cover;
-}
-
-.grid .entry-icon {
-  width: 48px;
-  height: 48px;
-}
-
-.grid .entry:hover .entry-name {
-  overflow: visible;
-  width: auto;
-  margin: 5px;
-  padding: 5px;
-  border-radius: var(--pankow-border-radius);
-  background-color: var(--pankow-color-background-hover);
-}
-
-.list .entry {
-  flex-direction: row;
-  align-items: center;
-  width: 100%;
-  padding: 6px 10px;
-}
-
-.list .entry-icon {
-  width: 35px;
-  height: 35px;
-  flex-shrink: 0;
-}
-
-.list .entry-body {
-  flex-grow: 1;
-  margin: 0 10px;
-}
-
-.entry-path-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 12px;
-  min-width: 0;
-}
-
-.entry-location {
-  flex-shrink: 0;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--pankow-color-text-secondary);
-}
-
-.entry-folder-path {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.entry-size {
-  flex-shrink: 0;
-  margin-right: 8px;
-  color: var(--pankow-color-text-secondary);
-  font-size: 13px;
-}
-
 .entry-actions {
   flex-shrink: 0;
-}
-
-.grid .open-folder {
-  visibility: hidden;
-}
-
-.grid .entry:hover > .open-folder {
-  visibility: visible;
 }
 
 </style>

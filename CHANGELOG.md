@@ -711,3 +711,7 @@
 * Skip disk image contents in the index
 * Various UI fixes
 
+[2.29.1]
+* Update cubby to ed0a7cd
+* Fix activity log
+

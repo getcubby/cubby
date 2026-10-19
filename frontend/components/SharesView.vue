@@ -85,7 +85,7 @@ onMounted(refresh);
     <InputDialog ref="sharesInputDialog" />
 
     <ProgressBar v-if="busy" mode="indeterminate" :show-label="false" :slim="true" :show-track="false"/>
-    <div class="shares-body" v-else>
+    <div class="shares-body" :class="{ 'has-shares': tableModel.length }" v-else>
       <EmptyState v-if="tableModel.length === 0" icon="fa-solid fa-share-from-square" title="Nothing shared by you" description="Files and folders you share will show up here" />
       <template v-else>
         <TableView :columns="tableColumns" :model="tableModel" default-sort-by="target">
@@ -105,7 +105,6 @@ onMounted(refresh);
             <Button danger outline tool @click="onDelete(slotProps)" style="float: right" icon="fa-solid fa-trash"/>
           </template>
         </TableView>
-        <div class="share-count">{{ tableModel.length }} shares</div>
       </template>
     </div>
   </div>
@@ -131,12 +130,8 @@ onMounted(refresh);
   justify-content: center;
 }
 
-.shares-body:has(.share-count) {
+.shares-body.has-shares {
   justify-content: flex-start;
-}
-
-.share-count {
-  margin-top: 10px;
 }
 
 </style>

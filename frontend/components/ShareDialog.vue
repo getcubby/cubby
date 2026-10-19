@@ -5,13 +5,14 @@ import { prettyDate } from '@cloudron/pankow/utils';
 import { copyToClipboard } from '../utils.js';
 import {
   Button,
+  DateTimeInput,
   Dialog,
-  Checkbox,
+  FormGroup,
   ListItem,
   PasswordInput,
+  Radiobutton,
   SingleSelect,
   TabView,
-  InputGroup,
   useNotify
 } from '@cloudron/pankow';
 import DirectoryModel from '../models/DirectoryModel.js';
@@ -25,15 +26,14 @@ const profile = inject('profile');
 const dialog = useTemplateRef('dialog');
 
 const receiver = ref('');
-const readonly = ref(false);
+const access = ref('write');
 const users = ref([]);
 const groups = ref([]);
 const sharedWith = ref([]);
 const sharedLinks = ref([]);
 const entry = ref({});
-const shareLinkReadonly = ref(true);
+const linkAccess = ref('read');
 const shareLink = ref({
-  expires: false,
   expiresDate: '',
   password: '',
 });
@@ -60,10 +60,9 @@ const groupNameById = computed(() => {
   return map;
 });
 
-function defaultExpiresDateStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+function todayDateStr() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 /** End of selected calendar day in local time, as Unix ms (for API). */
@@ -90,7 +89,9 @@ async function refresh(item = null) {
   entry.value = await DirectoryModel.get(item || entry.value);
 
   sharedWith.value = entry.value.sharedWith.filter((s) => s.receiverUsername || s.receiverGroup);
-  sharedLinks.value = entry.value.sharedWith.filter((s) => !s.receiverUsername && !s.receiverGroup);
+  sharedLinks.value = entry.value.sharedWith
+    .filter((s) => !s.receiverUsername && !s.receiverGroup)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 async function onCreateShare() {
@@ -101,11 +102,10 @@ async function onCreateShare() {
   const receiverGroup = selected.type === 'group' ? selected.groupId : null;
   const { ownerUserId, ownerGroupfolder } = entryOwner();
 
-  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: readonly.value, receiverUserId, receiverGroup });
+  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: access.value === 'read', receiverUserId, receiverGroup });
 
-  // reset the form
   receiver.value = '';
-  readonly.value = false;
+  access.value = 'write';
 
   // refresh the entry
   entry.value = await DirectoryModel.get(entry.value);
@@ -124,7 +124,7 @@ function copyShareIdLinkToClipboard(shareId) {
 
 async function onCreateShareLink() {
   let expiresAt = 0;
-  if (shareLink.value.expires) {
+  if (shareLink.value.expiresDate) {
     expiresAt = endOfLocalDayMs(shareLink.value.expiresDate);
     if (!expiresAt) {
       notify('Invalid expiration date', { type: 'error' });
@@ -133,9 +133,7 @@ async function onCreateShareLink() {
   }
   const { ownerUserId, ownerGroupfolder } = entryOwner();
 
-  const shareId = await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: shareLinkReadonly.value, expiresAt, password: shareLink.value.password || null });
-
-  copyShareIdLinkToClipboard(shareId);
+  await ShareModel.create({ ownerUserId, ownerGroupfolder, path: entry.value.filePath, readonly: linkAccess.value === 'read', expiresAt, password: shareLink.value.password || null });
 
   await refresh();
 }
@@ -143,10 +141,9 @@ async function onCreateShareLink() {
 defineExpose({
   async open(item) {
     receiver.value = '';
-    readonly.value = false;
-    shareLinkReadonly.value = true;
-    shareLink.value.expires = false;
-    shareLink.value.expiresDate = defaultExpiresDateStr();
+    access.value = 'write';
+    linkAccess.value = 'read';
+    shareLink.value.expiresDate = '';
     shareLink.value.password = '';
 
     // prepare available users and groups for sharing
@@ -166,16 +163,32 @@ defineExpose({
   <Dialog
     ref="dialog"
     title="Share"
-    reject-label="Done"
+    reject-label="Close"
     reject-style="secondary"
+    :style="{ width: '480px' }"
   >
     <p v-show="entry.fileName">
       Sharing "{{ entry.fileName }}" with other users or via a link.
     </p>
     <div>
-      <TabView :tabs="{ user: 'With a user or group', link: 'Via link' }" default-active="user">
+      <TabView :tabs="{ user: 'People', link: 'Link' }" default-active="user">
         <template #user>
-          <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+          <form class="share-form" @submit.prevent="onCreateShare">
+            <FormGroup>
+              <label for="shareReceiver">Share with</label>
+              <SingleSelect id="shareReceiver" v-model="receiver" :options="receiverOptions" option-key="id" option-label="label" placeholder="User or group" />
+            </FormGroup>
+            <FormGroup>
+              <label>Access</label>
+              <Radiobutton v-model="access" name="shareAccess" value="read" label="Read only" />
+              <Radiobutton v-model="access" name="shareAccess" value="write" label="Read & write" />
+            </FormGroup>
+            <Button @click="onCreateShare" :disabled="!receiver">Create</Button>
+          </form>
+
+          <div class="people-shared">
+            <div class="people-shared-heading">Shared with</div>
+            <div class="people-list">
             <ListItem
               v-for="link in sharedWith"
               :key="link.id"
@@ -189,60 +202,57 @@ defineExpose({
               }]"
             />
             <div v-show="sharedWith.length === 0" class="shared-link-empty">
-              Not shared with anyone yet
+              Not shared with anyone
+            </div>
             </div>
           </div>
-
-          <form @submit="onCreateShare" @submit.prevent>
-            <InputGroup>
-              <SingleSelect v-model="receiver" :options="receiverOptions" option-key="id" option-label="label" placeholder="Select a user or group"/>
-              <Button icon="fa-solid fa-check" @click="onCreateShare" :disabled="!receiver">Create share</Button>
-            </InputGroup>
-            <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
-              <Checkbox id="shareReadonly" label="Read only" v-model="readonly" />
-            </div>
-          </form>
         </template>
         <template #link>
-          <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
-            <ListItem
-              v-for="link in sharedLinks"
-              :key="link.id"
-              :label="'Created ' + prettyDate(link.createdAt)"
-              :actions="[{
-                label: 'Copy to clipboard',
-                icon: 'fa-regular fa-copy',
-                action: () => copyShareIdLinkToClipboard(link.id),
-                quickAction: true,
-              }, {
-                label: 'Delete',
-                icon: 'fa-solid fa-trash',
-                action: () => onDeleteShare(link),
-                quickAction: true,
-              }]"
-            >
-              <template #subtext>
-                {{ link.readonly ? 'Read only' : 'Read & write' }}
-                <span v-if="link.passwordProtected"> - <i class="fa-solid fa-lock"/> Password protected</span>
-                <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
-              </template>
-            </ListItem>
-            <div v-show="sharedLinks.length === 0" class="shared-link-empty">
-              No shared links yet
-            </div>
-          </div>
-          <div class="share-link-form">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <Checkbox id="shareLinkReadonly" label="Read only" v-model="shareLinkReadonly" />
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <label for="shareLinkPassword" style="white-space: nowrap;">Password</label>
-              <PasswordInput id="shareLinkPassword" v-model="shareLink.password" placeholder="Optional password" style="flex: 1;" />
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <Checkbox id="expireShareLinkAt" label="Expire at" v-model="shareLink.expires" />
-              <input type="date" v-model="shareLink.expiresDate" :min="new Date().toISOString().split('T')[0]" :disabled="!shareLink.expires"/>
-              <Button icon="fa-solid fa-link" @click="onCreateShareLink">Create and copy link</Button>
+          <form class="share-form" @submit.prevent="onCreateShareLink">
+            <FormGroup>
+              <label>Access</label>
+              <Radiobutton v-model="linkAccess" name="linkAccess" value="read" label="Read only" />
+              <Radiobutton v-model="linkAccess" name="linkAccess" value="write" label="Read & write" />
+            </FormGroup>
+            <FormGroup>
+              <label for="linkPassword">Password (optional)</label>
+              <PasswordInput id="linkPassword" v-model="shareLink.password" />
+            </FormGroup>
+            <FormGroup>
+              <label for="linkExpires">Expires (optional)</label>
+              <DateTimeInput id="linkExpires" date-only v-model="shareLink.expiresDate" :min="todayDateStr()" />
+            </FormGroup>
+            <Button @click="onCreateShareLink">Create</Button>
+          </form>
+
+          <div class="people-shared">
+            <div class="people-shared-heading">Existing links</div>
+            <div class="people-list">
+              <ListItem
+                v-for="link in sharedLinks"
+                :key="link.id"
+                :label="'Created ' + prettyDate(link.createdAt)"
+                :actions="[{
+                  label: 'Copy to clipboard',
+                  icon: 'fa-regular fa-copy',
+                  action: () => copyShareIdLinkToClipboard(link.id),
+                  quickAction: true,
+                }, {
+                  label: 'Delete',
+                  icon: 'fa-solid fa-trash',
+                  action: () => onDeleteShare(link),
+                  quickAction: true,
+                }]"
+              >
+                <template #subtext>
+                  {{ link.readonly ? 'Read only' : 'Read & write' }}
+                  <span v-if="link.passwordProtected"> - <i class="fa-solid fa-lock"/> Password protected</span>
+                  <span v-if="link.expiresAt"> - Expires {{ prettyDate(link.expiresAt) }}</span>
+                </template>
+              </ListItem>
+              <div v-show="sharedLinks.length === 0" class="shared-link-empty">
+                No shared links
+              </div>
             </div>
           </div>
         </template>
@@ -253,21 +263,44 @@ defineExpose({
 
 <style scoped>
 
+.share-form {
+  margin-bottom: 16px;
+}
+
+.share-form :deep(.pankow-form-group:first-child) {
+  margin-top: 0;
+}
+
+.share-form :deep(.pankow-form-group:first-child label) {
+  margin-top: 0;
+}
+
+.share-form :deep(.pankow-form-group:last-of-type) {
+  margin-bottom: 0;
+}
+
+.share-form :deep(.pankow-button) {
+  margin-top: 12px;
+}
+
+.people-shared-heading {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--pankow-color-text-secondary, #888);
+}
+
+.people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .shared-link-empty {
   display: flex;
   justify-content: space-between;
   padding: 6px;
   align-items: center;
-}
-
-.share-link-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  padding-bottom: 4px;
-  border-top: 1px solid var(--pankow-color-border);
 }
 
 </style>

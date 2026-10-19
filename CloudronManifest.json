@@ -44,7 +44,11 @@
     "scim": {}
   },
   "mediaLinks": [
-    "https://screenshots.cloudron.io/io.cloudron.cubby/cubby_02.png"
+    "https://screenshots.cloudron.io/io.cloudron.cubby/files.png",
+    "https://screenshots.cloudron.io/io.cloudron.cubby/groupfolder.png",
+    "https://screenshots.cloudron.io/io.cloudron.cubby/search.png",
+    "https://screenshots.cloudron.io/io.cloudron.cubby/share.png",
+    "https://screenshots.cloudron.io/io.cloudron.cubby/webdav.png"
   ],
   "manifestVersion": 2
 }

@@ -2,6 +2,7 @@ import { describe, it, beforeEach, after } from 'mocha';
 import assert from 'node:assert/strict';
 import common from './common.js';
 import activity from '../activity.js';
+import database from '../database.js';
 import relocate from '../relocate.js';
 import files from '../files.js';
 import groupfolders from '../groupfolders.js';
@@ -32,6 +33,41 @@ describe('activity', function () {
         assert.equal(listed.length, 1);
         assert.equal(listed[0].actor, alice.id);
         assert.equal(listed[0].action, 'created');
+        assert.match(listed[0].createdAt, /^\d{4}-\d{2}-\d{2}T/);
+    });
+
+    it('sets created_at when the column has no default', async function () {
+        await createUsers();
+
+        await database.query('BEGIN');
+        try {
+            await database.query(`CREATE TABLE file_activity_nodefault(
+                id TEXT PRIMARY KEY,
+                actor TEXT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                owner_groupfolder TEXT REFERENCES groupfolders(id),
+                file_path TEXT NOT NULL,
+                action TEXT NOT NULL,
+                details TEXT,
+                created_at TEXT NOT NULL
+            )`);
+            await database.query('DROP TABLE file_activity');
+            await database.query('ALTER TABLE file_activity_nodefault RENAME TO file_activity');
+
+            await activity.log({
+                actor: alice.id,
+                owner: alice.id,
+                filePath: '/docs/report.txt',
+                action: 'updated'
+            });
+
+            const listed = await activity.listByPath(alice.id, '/docs/report.txt');
+            assert.equal(listed.length, 1);
+            assert.equal(listed[0].action, 'updated');
+            assert.match(listed[0].createdAt, /^\d{4}-\d{2}-\d{2}T/);
+        } finally {
+            await database.query('ROLLBACK');
+        }
     });
 
     it('can log updated and folder created actions', async function () {

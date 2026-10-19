@@ -49,7 +49,7 @@ async function log({ actor, owner, filePath, action, details = null }) {
 
     const id = 'act-' + crypto.randomBytes(16).toString('hex');
 
-    await database.query('INSERT INTO file_activity (id, actor, owner_user_id, owner_groupfolder, file_path, action, details) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+    await database.query(`INSERT INTO file_activity (id, actor, owner_user_id, owner_groupfolder, file_path, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`, [
         id, actor, ownerUserId, ownerGroupfolder, filePath, action, details ? JSON.stringify(details) : null
     ]);
 

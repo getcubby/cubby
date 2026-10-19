@@ -10,6 +10,7 @@ const SEARCH_DEBOUNCE_MS = 500;
 
 const searchResultsPanel = useTemplateRef('searchResultsPanel');
 const searchBar = useTemplateRef('searchBar');
+const searchInput = useTemplateRef('searchInput');
 
 const searchPending = ref(0);
 const dismissed = ref(false);
@@ -74,9 +75,8 @@ function scheduleDebouncedSearch() {
   }, SEARCH_DEBOUNCE_MS);
 }
 
-function onSearch() {
-  clearDebounceTimer();
-  runSearch();
+function onMagnifierClick() {
+  searchInput.value?.focus();
 }
 
 function onOpenResults() {
@@ -146,9 +146,9 @@ function getDirectoryHref(entry) {
       <div class="pankow-dialog-backdrop" @click="onDismiss" v-show="open"></div>
     </Transition>
     <div class="search-bar" ref="searchBar" :class="{'open': open,'results-open': resultsOpen}">
-      <i class="fa-solid fa-magnifying-glass" v-show="searchPending === 0" style="cursor: pointer;" @click="onSearch"></i>
+      <i class="fa-solid fa-magnifying-glass" v-show="searchPending === 0" @click="onMagnifierClick"></i>
       <Spinner v-show="searchPending > 0" />
-      <TextInput v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter.prevent="onOpenResults" class="search-input"/>
+      <TextInput ref="searchInput" v-model="searchQuery" placeholder="Search ..." @focus="onFocus" @click="onFocus" @keydown.enter.prevent="onOpenResults" class="search-input"/>
     </div>
     <Transition name="pankow-roll-down">
       <div v-show="resultsOpen" ref="searchResultsPanel" class="search-result-panel">

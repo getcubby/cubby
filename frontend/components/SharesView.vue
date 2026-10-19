@@ -4,9 +4,12 @@ import { ref, useTemplateRef, onMounted } from 'vue';
 import ShareModel from '../models/ShareModel.js';
 import MainModel from '../models/MainModel.js';
 import EmptyState from './EmptyState.vue';
-import { Button, Icon, InputDialog, ProgressBar, TableView } from '@cloudron/pankow';
+import { copyToClipboard } from '../utils.js';
+import { Button, Icon, InputDialog, ProgressBar, TableView, useNotify } from '@cloudron/pankow';
 import { prettyDate, prettyLongDate } from '@cloudron/pankow/utils';
 import moment from 'moment';
+
+const { notify } = useNotify();
 
 const tableColumns = {
   icon: {
@@ -21,6 +24,15 @@ const tableColumns = {
   receiver: {
     label: 'With',
     sort: true
+  },
+  expiresAt: {
+    label: 'Expires at',
+    sort: (a, b) => {
+      if (!a && !b) return 0;
+      if (!a) return 1;
+      if (!b) return -1;
+      return moment(a).isBefore(moment(b)) ? -1 : 1;
+    },
   },
   createdAt: {
     label: 'Created at',
@@ -55,6 +67,15 @@ async function refresh() {
   });
 
   busy.value = false;
+}
+
+function isLinkShare(share) {
+  return !share.receiverUsername && !share.receiverGroup;
+}
+
+function onCopyLink(share) {
+  copyToClipboard(ShareModel.getLink(share.id));
+  notify('Share link copied to clipboard');
 }
 
 async function onDelete(share) {
@@ -95,11 +116,17 @@ onMounted(refresh);
             {{ slotProps.file.filePath.slice(1) }}
           </template>
           <template #receiver="{ item:slotProps }">
-            <Icon icon="fa-solid fa-link" v-show="!slotProps.receiverUsername && !slotProps.receiverGroup"/>
-            <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
-            <Icon icon="fa-solid fa-user-group" v-show="slotProps.receiverGroup"/>
-            {{ slotProps.receiver }}
-            <Icon icon="fa-solid fa-lock" v-show="slotProps.passwordProtected" v-tooltip.top="'Password protected'"/>
+            <span class="share-with">
+              <Icon icon="fa-regular fa-user" v-show="slotProps.receiverUsername"/>
+              <Icon icon="fa-solid fa-user-group" v-show="slotProps.receiverGroup"/>
+              {{ slotProps.receiver }}
+              <Button v-if="isLinkShare(slotProps)" plain tool icon="fa-regular fa-copy" title="Copy link" class="share-copy" @click="onCopyLink(slotProps)"/>
+              <Icon icon="fa-solid fa-lock" v-show="slotProps.passwordProtected" v-tooltip.top="'Password protected'"/>
+            </span>
+          </template>
+          <template #expiresAt="{ item:slotProps }">
+            <span v-if="slotProps.expiresAt" v-tooltip.top="prettyLongDate(slotProps.expiresAt)">{{ prettyDate(slotProps.expiresAt) }}</span>
+            <span v-else>Never</span>
           </template>
           <template #createdAt="{ item:slotProps }"><span v-tooltip.top="prettyLongDate(slotProps.createdAt)">{{ prettyDate(slotProps.createdAt) }}</span></template>
           <template #action="{ item:slotProps }">
@@ -133,6 +160,21 @@ onMounted(refresh);
 
 .shares-body.has-shares {
   justify-content: flex-start;
+}
+
+.share-with {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.share-copy {
+  padding: 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  line-height: 1;
 }
 
 </style>

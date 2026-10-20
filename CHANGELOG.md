@@ -723,3 +723,7 @@
 * Update cubby to f324359
 * Show the file name and folder path in Shared by you, and label removal as Unshare.
 
+[2.30.2]
+* Update cubby to 302bae3
+* Update screenshots
+

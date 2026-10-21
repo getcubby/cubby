@@ -94,6 +94,7 @@ const showListingChrome = computed(() => {
   if (directoryBusy.value || entries.value.length) return true;
   return !isGroupFoldersRoot.value && !isSharesRoot.value;
 });
+const showDownload = computed(() => showListingChrome.value && entries.value.length > 0 && currentResourcePath.value !== '/groupfolders/');
 
 const isReadonly = computed(() => {
   if (currentResourcePath.value === '/shares/') return true;
@@ -325,6 +326,7 @@ async function downloadHandler(items) {
   if (items && !Array.isArray(items)) items = [ items ];
   if (!items) items = selectedEntries.value;
   if (items.length === 0) items = entries.value;
+  if (items.length === 0) return;
 
   const resource = parseResourcePath(currentResourcePath.value);
   await DirectoryModel.download(resource, items);
@@ -772,10 +774,13 @@ defineExpose({
           <Breadcrumb :home="breadCrumbHome" :items="breadCrumbs" />
           <div style="flex-grow: 1"></div>
           <Button v-if="isGroupFoldersRoot && entries.length" icon="fa-solid fa-gear" href="#/settings" plain @click="followLink($event, '/settings')">Manage group folders</Button>
-          <ButtonGroup v-if="showListingChrome" style="margin-right: 40px">
-            <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
-            <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
-          </ButtonGroup>
+          <div v-if="showListingChrome" class="listing-controls">
+            <Button v-if="showDownload" icon="fa-solid fa-download" outline @click="downloadHandler()">Download</Button>
+            <ButtonGroup>
+              <Button icon="fa-solid fa-list" secondary :outline="viewMode !== 'list' ? true : null" tool @click="setViewMode('list')" />
+              <Button icon="fa-solid fa-grip" secondary :outline="viewMode !== 'grid' ? true : null" tool @click="setViewMode('grid')" />
+            </ButtonGroup>
+          </div>
         </div>
         <div class="directory-pane">
           <DirectoryView
@@ -961,6 +966,13 @@ defineExpose({
   margin: auto 0px;
   padding: 4px;
   align-items: center;
+}
+
+.listing-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-right: 40px;
 }
 
 .directory-pane {

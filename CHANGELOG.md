@@ -727,3 +727,7 @@
 * Update cubby to 302bae3
 * Update screenshots
 
+[2.31.0]
+* Update cubby to 1308fdb
+* security: fix eMudhra cert compromise
+

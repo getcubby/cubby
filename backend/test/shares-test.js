@@ -78,6 +78,19 @@ describe('shares', function () {
     it('names existing link shares with their created time', function () {
         const db = new Database(':memory:');
         db.exec(`
+            CREATE TABLE users(
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL,
+                display_name TEXT DEFAULT '',
+                created_at TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1
+            );
+            CREATE TABLE tokens(
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             CREATE TABLE shares(
                 id TEXT PRIMARY KEY,
                 owner_user_id TEXT,
@@ -91,6 +104,42 @@ describe('shares', function () {
                 receiver_group TEXT,
                 password_hash TEXT
             );
+            CREATE TABLE favorites(
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                share_id TEXT,
+                owner_user_id TEXT,
+                owner_groupfolder TEXT,
+                file_path TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE recents(
+                opener TEXT NOT NULL,
+                share_id TEXT,
+                owner_user_id TEXT,
+                owner_groupfolder TEXT,
+                file_path TEXT NOT NULL,
+                accessed_at TEXT NOT NULL
+            );
+            CREATE TABLE file_activity(
+                id TEXT PRIMARY KEY,
+                actor TEXT,
+                owner_user_id TEXT,
+                owner_groupfolder TEXT,
+                file_path TEXT NOT NULL,
+                action TEXT NOT NULL,
+                details TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE filedrops(
+                id TEXT PRIMARY KEY,
+                owner_user_id TEXT,
+                owner_groupfolder TEXT,
+                file_path TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+                password_hash TEXT
+            );
         `);
         db.prepare(`INSERT INTO shares (id, file_path, created_at, receiver_user_id) VALUES ('user-share', '/a.txt', '2020-01-02T03:04:05.000Z', 'uid-bob')`).run();
         db.prepare(`INSERT INTO shares (id, file_path, created_at, receiver_email) VALUES ('email-share', '/b.txt', '2021-06-07T08:09:10.000Z', 'guest@test.local')`).run();
@@ -102,7 +151,8 @@ describe('shares', function () {
         assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'user-share'`).get().name, '');
         assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'email-share'`).get().name, '2021-06-07T08:09:10.000Z');
         assert.equal(db.prepare(`SELECT name FROM shares WHERE id = 'link-share'`).get().name, '2022-03-04T05:06:07.000Z');
-        assert.equal(db.pragma('user_version', { simple: true }), 6);
+        assert.equal(db.pragma('user_version', { simple: true }), 7);
+        assert.equal(db.pragma('table_info(shares)').find((column) => column.name === 'created_at').dflt_value, "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
         db.close();
     });
 

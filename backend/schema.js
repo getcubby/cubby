@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS filedrops(
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
 // version so fresh installs are created directly at SCHEMA_VERSION.
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 const MIGRATIONS = [
     {
@@ -364,6 +364,124 @@ const MIGRATIONS = [
                 UPDATE shares SET name = created_at
                     WHERE receiver_user_id IS NULL AND receiver_group IS NULL;
             `);
+        }
+    },
+    {
+        // Migration 5 rebuilt these tables without their timestamp defaults.
+        // Put the defaults back so an upgraded database matches a fresh install.
+        version: 7,
+        up(db) {
+            db.pragma('foreign_keys = OFF');
+            db.exec('BEGIN');
+            db.exec(`
+                CREATE TABLE users_new(
+                    id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    display_name TEXT DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
+                    active INTEGER NOT NULL DEFAULT 1
+                );
+                INSERT INTO users_new (id, username, email, display_name, created_at, active)
+                    SELECT id, username, email, display_name, created_at, active FROM users ORDER BY rowid;
+                DROP TABLE users;
+                ALTER TABLE users_new RENAME TO users;
+                CREATE INDEX IF NOT EXISTS users_username_idx ON users(username);
+
+                CREATE TABLE tokens_new(
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON UPDATE CASCADE
+                );
+                INSERT INTO tokens_new (id, user_id, created_at)
+                    SELECT id, user_id, created_at FROM tokens ORDER BY rowid;
+                DROP TABLE tokens;
+                ALTER TABLE tokens_new RENAME TO tokens;
+
+                CREATE TABLE shares_new(
+                    id TEXT PRIMARY KEY,
+                    owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
+                    expires_at TEXT,
+                    readonly INTEGER NOT NULL DEFAULT 0,
+                    receiver_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    receiver_email TEXT,
+                    receiver_group TEXT REFERENCES groups(id) ON DELETE CASCADE,
+                    password_hash TEXT,
+                    name TEXT NOT NULL DEFAULT ''
+                );
+                INSERT INTO shares_new (id, owner_user_id, owner_groupfolder, file_path, created_at, expires_at, readonly, receiver_user_id, receiver_email, receiver_group, password_hash, name)
+                    SELECT id, owner_user_id, owner_groupfolder, file_path, created_at, expires_at, readonly, receiver_user_id, receiver_email, receiver_group, password_hash, name FROM shares ORDER BY rowid;
+                DROP TABLE shares;
+                ALTER TABLE shares_new RENAME TO shares;
+
+                CREATE TABLE favorites_new(
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    share_id TEXT REFERENCES shares(id) ON DELETE CASCADE,
+                    owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT}
+                );
+                INSERT INTO favorites_new (id, user_id, share_id, owner_user_id, owner_groupfolder, file_path, created_at)
+                    SELECT id, user_id, share_id, owner_user_id, owner_groupfolder, file_path, created_at FROM favorites ORDER BY rowid;
+                DROP TABLE favorites;
+                ALTER TABLE favorites_new RENAME TO favorites;
+                CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_share_path ON favorites (user_id, share_id, file_path) WHERE share_id IS NOT NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_owner_path ON favorites (user_id, owner_user_id, owner_groupfolder, file_path) WHERE share_id IS NULL;
+
+                CREATE TABLE recents_new(
+                    opener TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    share_id TEXT REFERENCES shares(id) ON DELETE CASCADE,
+                    owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    accessed_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT}
+                );
+                INSERT INTO recents_new (opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at)
+                    SELECT opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at FROM recents ORDER BY rowid;
+                DROP TABLE recents;
+                ALTER TABLE recents_new RENAME TO recents;
+                CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_share_path ON recents (opener, share_id, file_path) WHERE share_id IS NOT NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS recents_opener_owner_path ON recents (opener, owner_user_id, owner_groupfolder, file_path) WHERE share_id IS NULL;
+
+                CREATE TABLE file_activity_new(
+                    id TEXT PRIMARY KEY,
+                    actor TEXT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT}
+                );
+                INSERT INTO file_activity_new (id, actor, owner_user_id, owner_groupfolder, file_path, action, details, created_at)
+                    SELECT id, actor, owner_user_id, owner_groupfolder, file_path, action, details, created_at FROM file_activity ORDER BY rowid;
+                DROP TABLE file_activity;
+                ALTER TABLE file_activity_new RENAME TO file_activity;
+                CREATE INDEX IF NOT EXISTS file_activity_owner_path_idx ON file_activity (owner_user_id, owner_groupfolder, file_path, created_at DESC);
+                CREATE INDEX IF NOT EXISTS file_activity_actor_idx ON file_activity (actor, created_at DESC);
+
+                CREATE TABLE filedrops_new(
+                    id TEXT PRIMARY KEY,
+                    owner_user_id TEXT REFERENCES users(id) ON UPDATE CASCADE,
+                    owner_groupfolder TEXT REFERENCES groupfolders(id),
+                    file_path TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT ${TIMESTAMP_DEFAULT},
+                    expires_at TEXT,
+                    password_hash TEXT
+                );
+                INSERT INTO filedrops_new (id, owner_user_id, owner_groupfolder, file_path, created_at, expires_at, password_hash)
+                    SELECT id, owner_user_id, owner_groupfolder, file_path, created_at, expires_at, password_hash FROM filedrops ORDER BY rowid;
+                DROP TABLE filedrops;
+                ALTER TABLE filedrops_new RENAME TO filedrops;
+            `);
+            db.exec('COMMIT');
+            db.pragma('foreign_keys = ON');
         }
     }
 ];

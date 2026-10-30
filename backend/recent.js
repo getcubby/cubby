@@ -101,7 +101,7 @@ async function touch(opener, ref) {
             query: 'DELETE FROM recents WHERE opener = ? AND share_id = ? AND file_path = ?',
             args: [ opener, ref.shareId, ref.filePath ]
         }, {
-            query: `INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at) VALUES (?, ?, NULL, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+            query: 'INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path) VALUES (?, ?, NULL, NULL, ?)',
             args: [ opener, ref.shareId, ref.filePath ]
         }]);
         return;
@@ -111,7 +111,7 @@ async function touch(opener, ref) {
         query: 'DELETE FROM recents WHERE opener = ? AND share_id IS NULL AND owner_user_id IS ? AND owner_groupfolder IS ? AND file_path = ?',
         args: [ opener, ref.ownerUserId, ref.ownerGroupfolder, ref.filePath ]
     }, {
-        query: `INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path, accessed_at) VALUES (?, NULL, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+        query: 'INSERT INTO recents (opener, share_id, owner_user_id, owner_groupfolder, file_path) VALUES (?, NULL, ?, ?, ?)',
         args: [ opener, ref.ownerUserId, ref.ownerGroupfolder, ref.filePath ]
     }]);
 }

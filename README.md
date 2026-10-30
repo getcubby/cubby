@@ -97,6 +97,14 @@ rclone config
 
 During local development (`CLOUDRON` unset), any username works as long as it matches the path, and the password is `password`.
 
+### GNOME
+
+GNOME 46 and newer can use one WebDAV Online Account for Files, Calendar and
+Contacts. The [Cloudron Desktop](https://git.cloudron.io/s42/cloudron-desktop)
+helper signs in with OpenID, creates a revocable app password for the three
+apps and adds the account to GNOME. Without the helper, add a WebDAV account
+per app, each with its own app password from the Cloudron dashboard.
+
 ### Windows
 
 To enable Windows to accept WebDAV with basic authentication, the following registry key needs to be set:

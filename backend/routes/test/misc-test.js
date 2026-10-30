@@ -21,6 +21,7 @@ describe('misc API', function () {
         assert.equal(response.status, 200);
         assert.ok(response.body.viewers);
         assert.equal(typeof response.body.appPasswordsUrl, 'string');
+        assert.equal(typeof response.body.oidcIssuer, 'string');
     });
 
     it('requires entries to download', async function () {

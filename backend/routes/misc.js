@@ -23,6 +23,10 @@ async function getConfig(req, res, next) {
     const tmp = {
         viewers: {},
         oidcProviderName: process.env.CLOUDRON_OIDC_PROVIDER_NAME || 'Cloudron',
+        // Where desktop clients should start the OpenID device flow. The
+        // dashboard URL below is enough on Cloudron, but exposing the issuer
+        // also makes local development and custom deployments work.
+        oidcIssuer: process.env.CLOUDRON_OIDC_ISSUER || process.env.OIDC_ISSUER_BASE_URL || '',
         // Cloudron dashboard profile (App passwords live at /#/profile)
         appPasswordsUrl: webadminOrigin ? `${webadminOrigin}/#/profile` : ''
     };

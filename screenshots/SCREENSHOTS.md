@@ -19,16 +19,42 @@ Leave out Favorites, Recent, the file-drop dialog, the 3D viewer, the PDF viewer
 
 Follow the screenshot rules in `../../docs/docs/WRITING-GUIDE.md`. The app views include the Cubby sidebar (My files, Group folders, Favorites, Recent files, Shared with you, Shared by you). They do not include the browser chrome or the Cloudron dashboard.
 
+### Window
+
+Use a separate Google Chrome window. The Cursor browser tab cannot be dragged out, and its page stays narrower than the monitor because of the side panel. `Browser.setWindowBounds` is denied on that target, and `window.resizeTo` does not change its `innerWidth`.
+
+Launch Chrome as its own app window, with a fresh profile and a remote debugging port:
+
+```bash
+google-chrome \
+  --remote-debugging-port=9223 \
+  --user-data-dir=/tmp/cubby-chrome-profile \
+  --no-first-run \
+  --no-default-browser-check \
+  --disable-extensions \
+  --disable-translate \
+  --ozone-platform=wayland \
+  --window-position=40,40 \
+  --window-size=1400,980 \
+  --app='https://cubby-demo.smartserver.io/#/files/home/'
+```
+
+That command opens on the 1920×1080 output at `devicePixelRatio` 1. Move that Chrome window onto the HiDPI panel. On this laptop the panel is 1440×900 CSS pixels (2880×1800 at 2×). Measure again after the move. Do not pass `--force-device-scale-factor`, and do not call `Emulation.setDeviceMetricsOverride`.
+
+The Cursor browser is already signed in. Copy its `connect.sid` for the host in `--app` into this Chrome with `Network.setCookie` (`httpOnly`, `secure`, `path: /`), then reload. The cookie is plaintext in one of `~/.config/Cursor/Partitions/*/Cookies` (`encrypted_value` is empty). Find the file that has that host and name. Do not print the value.
+
+Connect to `http://127.0.0.1:9223/json` and use the page target's debugger socket. Call `Browser.getWindowForTarget`, then `Browser.setWindowBounds` with `windowState: 'normal'`. These shots stay 1280×800 CSS. Do not maximize or fullscreen: fullscreen on this panel is 1440×900. Start from the outer size above and add the gap between the measured inner size and 1280×800 until `innerWidth` is 1280 and `innerHeight` is 800.
+
 Before every clip, evaluate in the page:
 
 ```js
-JSON.stringify({ dpr: devicePixelRatio, innerWidth, innerHeight })
+JSON.stringify({ dpr: devicePixelRatio, innerWidth, innerHeight, screenW: screen.width, screenH: screen.height })
 ```
 
 Proceed only when all of these are true:
 
-- `devicePixelRatio === 2`. If it is `1`, move the Cursor window onto the HiDPI display and check again. A wider window on a 1080p monitor is not 2×.
-- `innerWidth` is 1280 CSS pixels and `innerHeight` is 800. Resize the browser window to that. Do not maximize it.
+- `devicePixelRatio === 2`, `screen.width === 1440`, and `screen.height === 900`. If `devicePixelRatio` is `1`, the Chrome window is still on the 1080p output. Move it and check again. A wider window on that output is not 2×.
+- `innerWidth` is 1280 CSS pixels and `innerHeight` is 800. Do not maximize the window.
 
 Capture with `Page.captureScreenshot`, `fromSurface: true`, and `clip.scale: 1`. The PNG must be exactly 2× the CSS clip. Blur focus first (`document.activeElement.blur()`). If a section is taller than the viewport, scroll until the fields named below are in frame. Do not use `captureBeyondViewport` on a page with a sticky header; it paints that header twice.
 
@@ -255,7 +281,7 @@ The Share dialog puts users and links on separate tabs. `share.png` is the user 
 
 ## Take the shots
 
-1. Confirm `devicePixelRatio` and 1280×800. List view. Preview panel visible. The sidebar starts at My files.
+1. Confirm `devicePixelRatio` is 2 and the Chrome window is 1280×800. List view. Preview panel visible. The sidebar starts at My files.
 2. Files: `#files/home/`. Brand, Clients, Photos, Notes.md, Roadmap.md. Select Notes.md. The Details tab shows the name and Shared with (the second username, and `link`).
 3. Markdown: open `Roadmap.md`. Hover `.document-outline` so the outline lists Goals, November, December, and Owners. The title is in frame.
 4. Search: from My files, focus the top bar, type `Brightpath`, and wait until the dropdown lists Brightpath.txt under My files and Homepage.md under Design. Do not click the backdrop. Clip `.container` while the panel is open.

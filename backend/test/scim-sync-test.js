@@ -124,14 +124,15 @@ describe('scim group sync', function () {
     beforeEach(databaseSetup);
     after(cleanup);
 
-    it('leaves groups active when the SCIM group list is empty', async function () {
+    it('deactivates every group when the SCIM group list is empty', async function () {
         await users.add(alice);
         await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
 
         const stats = await reconcileScimGroups([]);
 
-        assert.equal(stats.deactivated, 0);
-        assert.equal((await groups.get('gid-1')).active, true);
+        assert.equal(stats.deactivated, 1);
+        assert.equal((await groups.get('gid-1')).active, false);
+        assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ alice.id ]);
     });
 
     it('marks a missing group inactive and keeps its team folder membership', async function () {

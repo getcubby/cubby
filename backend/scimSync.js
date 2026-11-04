@@ -93,37 +93,35 @@ export async function reconcileScimGroups(scimGroups) {
     let skipped = 0;
     const seenIds = new Set();
 
-    // an empty fetch is not a directory listing; leave every active flag alone
-    if (scimGroups.length === 0) {
-        return { created, updated, deactivated, skipped };
-    }
+    if (scimGroups.length > 0) {
+        const localUserIds = new Set((await users.list()).map((user) => user.id));
 
-    const localUserIds = new Set((await users.list()).map((user) => user.id));
+        for (const group of scimGroups) {
+            const id = group.id;
+            if (!id) {
+                skipped += 1;
+                continue;
+            }
 
-    for (const group of scimGroups) {
-        const id = group.id;
-        if (!id) {
-            skipped += 1;
-            continue;
-        }
+            seenIds.add(id);
 
-        seenIds.add(id);
+            const name = group.name || id;
+            const memberUserIds = [];
+            for (const userId of group.memberIds || []) {
+                if (localUserIds.has(userId)) memberUserIds.push(userId);
+            }
 
-        const name = group.name || id;
-        const memberUserIds = [];
-        for (const userId of group.memberIds || []) {
-            if (localUserIds.has(userId)) memberUserIds.push(userId);
-        }
-
-        const result = await groups.upsertFromScim(id, name, memberUserIds);
-        if (result.created) {
-            created += 1;
-        } else if (result.updated) {
-            updated += 1;
+            const result = await groups.upsertFromScim(id, name, memberUserIds);
+            if (result.created) {
+                created += 1;
+            } else if (result.updated) {
+                updated += 1;
+            }
         }
     }
 
-    // keep the row and its memberships; hide the group from assign lists
+    // an empty group list is authoritative: keep the rows and memberships but hide
+    // every group from assign lists
     for (const group of await groups.list()) {
         if (seenIds.has(group.id)) continue;
         if (!group.active) continue;
@@ -138,8 +136,8 @@ export async function reconcileScimGroups(scimGroups) {
 export async function saveDirectoryGroups(upserts) {
     const stats = await reconcileScimGroups(upserts);
 
-    if (stats.created > 0 || stats.updated > 0) {
-        // group membership affects which groupfolders a user can access and search
+    if (stats.created > 0 || stats.updated > 0 || stats.deactivated > 0) {
+        // group membership and active flags affect which groupfolders a user can access and search
         recoll.index().catch((err) => console.error('SCIM sync reindex failed:', err));
     }
 }

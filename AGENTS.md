@@ -43,7 +43,7 @@ npm test
 
 ## API docs
 
-When changing the HTTP API, update the OpenAPI spec at `../website/openapi/cubby.yaml`. Calendar and Contacts specs now live in the docs repo at `../../docs/docs/apps-api/`.
+When changing the HTTP API, update the OpenAPI spec in the docs repo at `../../docs/docs/apps-api/cubby.yaml`.
 
 ## Code style
 

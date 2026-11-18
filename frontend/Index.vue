@@ -250,7 +250,8 @@ function onGroupFoldersChanged() {
 }
 
 async function handleLocation() {
-  const hash = route.path.replace(/^\//, '');
+  // Browser back restores the hash with spaces still encoded (%20). Decode before using it as a file path.
+  const hash = toRoutePath(route.path).replace(/^\//, '');
   clearFileListReturn(hash);
 
   if (hash === 'files/home' || hash === 'files/shares' || hash === 'files/groupfolders') {

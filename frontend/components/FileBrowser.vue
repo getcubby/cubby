@@ -695,7 +695,8 @@ function onUp() {
     return;
   }
 
-  const path = route.path.replace(/^\//, '');
+  // route.path can still contain %20 after a history navigation
+  const path = toRoutePath(route.path).replace(/^\//, '');
   let next;
   if (path.indexOf('shares/') === 0) {
     const hash = path.slice('shares/'.length);

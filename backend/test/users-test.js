@@ -70,6 +70,10 @@ describe('users', function () {
         assert.equal(result.email, 'scim-new@test.local');
         assert.equal(result.displayName, 'Scim Updated');
         assert.equal(result.active, true);
+
+        const unchanged = await users.upsertFromScim('uid-scimuser', { username: 'scimuser', email: 'scim-new@test.local', displayName: 'Scim Updated' });
+        assert.equal(unchanged.created, false);
+        assert.equal(unchanged.updated, false);
     });
 
     it('can mark a user inactive and restore them on login', async function () {

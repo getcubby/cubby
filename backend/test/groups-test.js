@@ -37,12 +37,45 @@ describe('groups', function () {
     it('can update a group and its members', async function () {
         await createUsers();
 
-        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        const created = await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        assert.deepEqual(created.changedUserIds, [ alice.id ]);
+
         const result = await groups.upsertFromScim('gid-1', 'Eng', [ user.id ]);
         assert.equal(result.created, false);
         assert.equal(result.updated, true);
+        assert.deepEqual(result.changedUserIds.sort(), [ alice.id, user.id ].sort());
 
         assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ user.id ]);
+        assert.equal((await groups.get('gid-1')).active, true);
+    });
+
+    it('does not report an update when nothing changed', async function () {
+        await createUsers();
+
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id, user.id ]);
+        const result = await groups.upsertFromScim('gid-1', 'Engineering', [ user.id, alice.id ]);
+        assert.equal(result.created, false);
+        assert.equal(result.updated, false);
+        assert.deepEqual(result.changedUserIds, []);
+    });
+
+    it('reports no membership change on a rename', async function () {
+        await createUsers();
+
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        const result = await groups.upsertFromScim('gid-1', 'Eng', [ alice.id ]);
+        assert.equal(result.updated, true);
+        assert.deepEqual(result.changedUserIds, []);
+    });
+
+    it('reports an update when an inactive group returns unchanged', async function () {
+        await createUsers();
+
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        await groups.setActive('gid-1', false);
+
+        const result = await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        assert.equal(result.updated, true);
         assert.equal((await groups.get('gid-1')).active, true);
     });
 

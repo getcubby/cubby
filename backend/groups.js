@@ -126,12 +126,21 @@ async function remove(id) {
     await database.transaction(queries);
 }
 
+// values that are in only one of the two lists
+function symmetricDifference(a, b) {
+    const setA = new Set(a);
+    const setB = new Set(b);
+
+    return [ ...[...setA].filter((value) => !setB.has(value)), ...[...setB].filter((value) => !setA.has(value)) ];
+}
+
 /**
  * Create or update a group synced from Cloudron SCIM.
+ * changedUserIds are the users who joined or left the group.
  * @param {string} id
  * @param {string} name
  * @param {string[]} memberUserIds
- * @returns {Promise<{ created: boolean, updated: boolean }>}
+ * @returns {Promise<{ created: boolean, updated: boolean, changedUserIds: string[] }>}
  */
 async function upsertFromScim(id, name, memberUserIds) {
     assert.strictEqual(typeof id, 'string');
@@ -140,11 +149,16 @@ async function upsertFromScim(id, name, memberUserIds) {
 
     debugLog(`upsertFromScim: ${id} ${name} members:${memberUserIds.length}`);
 
-    if (await get(id)) {
-        await update(id, name);
-        await setActive(id, true);
-        await setMembers(id, memberUserIds);
-        return { created: false, updated: true };
+    const existing = await get(id);
+    if (existing) {
+        const nameChanged = existing.name !== name;
+        const changedUserIds = symmetricDifference(await getMemberUserIds(id), memberUserIds);
+
+        if (nameChanged) await update(id, name);
+        if (!existing.active) await setActive(id, true);
+        if (changedUserIds.length) await setMembers(id, memberUserIds);
+
+        return { created: false, updated: nameChanged || !existing.active || changedUserIds.length > 0, changedUserIds };
     }
 
     const [error] = await safe(add({ id, name }));
@@ -156,7 +170,7 @@ async function upsertFromScim(id, name, memberUserIds) {
 
     await setMembers(id, memberUserIds);
 
-    return { created: true, updated: false };
+    return { created: true, updated: false, changedUserIds: [ ...new Set(memberUserIds) ] };
 }
 
 export default {

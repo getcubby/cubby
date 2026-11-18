@@ -59,6 +59,20 @@ async function getGroupMembers(id) {
     return result.rows.map((m) => ({ groupId: m.group_id, role: m.role, name: m.name || m.group_id, active: !!m.active }));
 }
 
+// ids of groups that are a member of at least one groupfolder
+async function listLinkedGroupIds() {
+    const result = await database.query('SELECT DISTINCT group_id FROM groupfolders_group_members ORDER BY group_id');
+    return result.rows.map((m) => m.group_id);
+}
+
+// values that are in only one of the two lists
+function symmetricDifference(a, b) {
+    const setA = new Set(a);
+    const setB = new Set(b);
+
+    return [ ...[...setA].filter((value) => !setB.has(value)), ...[...setB].filter((value) => !setA.has(value)) ];
+}
+
 // all user ids that are members (directly or via a group)
 async function getMemberUserIds(id) {
     assert.strictEqual(typeof id, 'string');
@@ -167,6 +181,8 @@ async function update(id, name, members, groupMembers = []) {
 
     debugLog(`update: ${id} by name ${name} with members ${JSON.stringify(members)} groupMembers ${JSON.stringify(groupMembers)}`);
 
+    const memberUserIdsBefore = await getMemberUserIds(id);
+
     const queries = [{
         query: 'UPDATE groupfolders set name=? WHERE id=?',
         args: [ name, id ]
@@ -201,8 +217,10 @@ async function update(id, name, members, groupMembers = []) {
     if (error?.nestedError?.code && [ 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY' ].includes(error.nestedError.code)) throw new MainError(MainError.ALREADY_EXISTS, 'groupFolder already exists');
     if (error) throw error;
 
-    // FIXME reindex for all for the moment until we know who got removed!
-    recoll.index().catch((error) => console.error('Search index update failed:', error));
+    // only users who gained or lost access have a different set of folders in their search index
+    for (const userId of symmetricDifference(memberUserIdsBefore, await getMemberUserIds(id))) {
+        await recoll.indexByUsername(userId, true);
+    }
 }
 
 async function remove(id) {
@@ -211,6 +229,8 @@ async function remove(id) {
     const groupFolderPath = path.join(paths.GROUPS_DATA_ROOT, id);
 
     debugLog(`remove: ${id} and folder at ${groupFolderPath}`);
+
+    const memberUserIds = await getMemberUserIds(id);
 
     // move the files aside first so that a failure leaves both the files and the database untouched
     const trashPath = path.join(paths.GROUPS_DATA_ROOT, `.deleted-${id}-${crypto.randomBytes(4).toString('hex')}`);
@@ -238,8 +258,8 @@ async function remove(id) {
     const [rmError] = await safe(fsPromises.rm(trashPath, { recursive: true, force: true }));
     if (rmError) console.error(`remove: failed to remove files of group folder ${id} at ${trashPath}`, rmError);
 
-    // FIXME reindex for all for the moment until we know who got removed!
-    recoll.index().catch((error) => console.error('Search index update failed:', error));
+    // the folder must be purged from the search index of everyone who had access
+    for (const userId of memberUserIds) await recoll.indexByUsername(userId, true);
 }
 
 async function getRole(groupFolder, userId) {
@@ -281,6 +301,7 @@ export default {
     getMembers,
     getGroupMembers,
     getMemberUserIds,
+    listLinkedGroupIds,
     getRole,
     isPartOf,
     isOwner

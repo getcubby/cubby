@@ -154,10 +154,15 @@ async function upsertFromScim(id, contact) {
     const profile = { username, email, displayName };
     const active = contact.active !== false;
 
-    if (await exists(id)) {
-        await update(id, profile);
-        await setActive(id, active);
-        return { created: false, updated: true };
+    const existing = await get(id);
+    if (existing) {
+        const profileChanged = existing.username !== username || existing.email !== email || existing.displayName !== displayName;
+        const activeChanged = existing.active !== active;
+
+        if (profileChanged) await update(id, profile);
+        if (activeChanged) await setActive(id, active);
+
+        return { created: false, updated: profileChanged || activeChanged };
     }
 
     if (!active) return { created: false, updated: false };

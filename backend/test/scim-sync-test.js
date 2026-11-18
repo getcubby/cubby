@@ -6,7 +6,7 @@ import common from './common.js';
 import groupfolders from '../groupfolders.js';
 import groups from '../groups.js';
 import paths from '../paths.js';
-import { deactivateDirectoryUsers, reconcileScimGroups, reconcileScimUsers, saveDirectoryUsers } from '../scimSync.js';
+import { deactivateDirectoryUsers, getUsersToReindex, reconcileScimGroups, reconcileScimUsers, saveDirectoryUsers } from '../scimSync.js';
 import users from '../users.js';
 
 describe('scim user sync', function () {
@@ -176,6 +176,47 @@ describe('scim group sync', function () {
         assert.equal(group.active, true);
         assert.equal(group.name, 'Eng');
         assert.deepEqual(await groups.getMemberUserIds('gid-1'), [ alice.id ]);
+    });
+
+    it('reports no updates when a sync repeats unchanged groups', async function () {
+        await users.add(alice);
+        await users.add(user);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id, user.id ]);
+
+        const stats = await reconcileScimGroups([{ id: 'gid-1', name: 'Engineering', memberIds: [ user.id, alice.id ] }]);
+
+        assert.equal(stats.created, 0);
+        assert.equal(stats.updated, 0);
+        assert.equal(stats.deactivated, 0);
+        assert.equal(stats.membershipChanges.size, 0);
+    });
+
+    it('reindexes only users who joined or left a group linked to a groupfolder', async function () {
+        await users.add(alice);
+        await users.add(user);
+        await groups.upsertFromScim('gid-linked', 'Linked', [ alice.id ]);
+        await groups.upsertFromScim('gid-unlinked', 'Unlinked', [ alice.id ]);
+        await groupfolders.add('team', 'Team', alice.id, [], [ { groupId: 'gid-linked', role: 'viewer' } ]);
+
+        const stats = await reconcileScimGroups([
+            { id: 'gid-linked', name: 'Linked renamed', memberIds: [ alice.id, user.id ] },
+            { id: 'gid-unlinked', name: 'Unlinked', memberIds: [ user.id ] }
+        ]);
+
+        assert.deepEqual(stats.membershipChanges.get('gid-linked'), [ user.id ]);
+        assert.deepEqual(stats.membershipChanges.get('gid-unlinked').sort(), [ alice.id, user.id ].sort());
+        assert.deepEqual(await getUsersToReindex(stats.membershipChanges), [ user.id ]);
+    });
+
+    it('does not reindex anyone when groups only become inactive', async function () {
+        await users.add(alice);
+        await groups.upsertFromScim('gid-1', 'Engineering', [ alice.id ]);
+        await groupfolders.add('team', 'Team', alice.id, [], [ { groupId: 'gid-1', role: 'viewer' } ]);
+
+        const stats = await reconcileScimGroups([{ id: 'gid-other', name: 'Other', memberIds: [] }]);
+
+        assert.equal(stats.deactivated, 1);
+        assert.deepEqual(await getUsersToReindex(stats.membershipChanges), []);
     });
 
     it('keeps an inactive user who is still listed on the group', async function () {

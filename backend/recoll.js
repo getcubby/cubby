@@ -36,7 +36,8 @@ const INDEX_STATUS_FILE = 'idxstatus.txt';
 const SKIPPED_PATHS_FILE = 'skipped-paths.json';
 const MAX_INDEX_ATTEMPTS = 2;
 const MAX_SKIPPED_PATHS = 100;
-const MAX_LOGGED_STDERR_BYTES = 16 * 1024;
+// console.error() (util.inspect) cuts strings after 10000 chars, which would hide the final error lines
+const MAX_LOGGED_STDERR_BYTES = 8 * 1024;
 
 const SCHEDULE_DELAY_MS = 10 * 1000;
 

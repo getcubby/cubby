@@ -1,4 +1,5 @@
 import users from './users.js';
+import groupfolders from './groupfolders.js';
 import groups from './groups.js';
 import recoll from './recoll.js';
 import { scim } from '@cloudron/tegel';
@@ -83,8 +84,9 @@ export async function deactivateDirectoryUsers(ids) {
 }
 
 /**
+ * membershipChanges maps a group id to the users who joined or left it
  * @param {Array<{ id: string, name?: string, memberIds: string[] }>} scimGroups
- * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number }>}
+ * @returns {Promise<{ created: number, updated: number, deactivated: number, skipped: number, membershipChanges: Map<string, string[]> }>}
  */
 export async function reconcileScimGroups(scimGroups) {
     let created = 0;
@@ -92,6 +94,7 @@ export async function reconcileScimGroups(scimGroups) {
     let deactivated = 0;
     let skipped = 0;
     const seenIds = new Set();
+    const membershipChanges = new Map();
 
     if (scimGroups.length > 0) {
         const localUserIds = new Set((await users.list()).map((user) => user.id));
@@ -117,6 +120,7 @@ export async function reconcileScimGroups(scimGroups) {
             } else if (result.updated) {
                 updated += 1;
             }
+            if (result.changedUserIds.length) membershipChanges.set(id, result.changedUserIds);
         }
     }
 
@@ -130,16 +134,26 @@ export async function reconcileScimGroups(scimGroups) {
         deactivated += 1;
     }
 
-    return { created, updated, deactivated, skipped };
+    return { created, updated, deactivated, skipped, membershipChanges };
+}
+
+// returns the users whose groupfolder access may have changed. group names and active flags do not affect access
+export async function getUsersToReindex(membershipChanges) {
+    const linkedGroupIds = new Set(await groupfolders.listLinkedGroupIds());
+
+    const userIds = new Set();
+    for (const [groupId, changedUserIds] of membershipChanges) {
+        if (!linkedGroupIds.has(groupId)) continue;
+        for (const userId of changedUserIds) userIds.add(userId);
+    }
+
+    return [...userIds];
 }
 
 export async function saveDirectoryGroups(upserts) {
-    const stats = await reconcileScimGroups(upserts);
+    const { membershipChanges } = await reconcileScimGroups(upserts);
 
-    if (stats.created > 0 || stats.updated > 0 || stats.deactivated > 0) {
-        // group membership and active flags affect which groupfolders a user can access and search
-        recoll.index().catch((err) => console.error('SCIM sync reindex failed:', err));
-    }
+    for (const userId of await getUsersToReindex(membershipChanges)) await recoll.indexByUsername(userId, true);
 }
 
 export { isScimEnabled, SYNC_INTERVAL_MS };

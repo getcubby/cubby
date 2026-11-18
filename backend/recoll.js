@@ -34,6 +34,8 @@ const RECOLL_CONFIG_OPTIONS = [
 
 const INDEX_STATUS_FILE = 'idxstatus.txt';
 const SKIPPED_PATHS_FILE = 'skipped-paths.json';
+const LAST_RESET_FILE = 'last-reset';
+const MIN_RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const MAX_INDEX_ATTEMPTS = 2;
 const MAX_SKIPPED_PATHS = 100;
 // console.error() (util.inspect) cuts strings after 10000 chars, which would hide the final error lines
@@ -250,6 +252,25 @@ function buildRecollConfig(pathsToIndex, skippedPaths) {
     return `${lines.join('\n')}\n`;
 }
 
+// Xapian errors surface through recoll's log, without the exception class name
+function isIndexCorrupt(error) {
+    if (typeof error?.stderr !== 'string') return false;
+    if (/No space left/i.test(error.stderr)) return false; // a full disk is not corruption, rebuilding would fail too
+
+    return /DatabaseCorrupt|Expected block \d+ to be level|Db::doFlush: flush\(\) failed|Db::open: exception/.test(error.stderr);
+}
+
+// a rebuild is expensive. rate limit it, in case the error is not corruption and recurs on every run
+function resetCorruptIndex(configPath) {
+    const lastResetFile = path.join(configPath, LAST_RESET_FILE);
+    const lastResetMs = safe.fs.statSync(lastResetFile)?.mtimeMs || 0;
+    if (Date.now() - lastResetMs < MIN_RESET_INTERVAL_MS) return false;
+
+    fs.rmSync(path.join(configPath, 'xapiandb'), { recursive: true, force: true });
+    fs.writeFileSync(lastResetFile, `${new Date().toISOString()}\n`);
+    return true;
+}
+
 async function runRecollIndex(configPath, configFilePath, pathsToIndex) {
     let result = null;
 
@@ -269,6 +290,13 @@ async function runRecollIndex(configPath, configFilePath, pathsToIndex) {
         const lastPath = lastIndexPathFromStderr(indexError.stderr);
         const currentFile = currentIndexFilePathFromStderr(indexError.stderr) || currentIndexFilePath(status);
         result = { indexError, status, lastPath, currentFile };
+
+        if (isIndexCorrupt(indexError)) {
+            if (!resetCorruptIndex(configPath)) break;
+
+            console.error(`recoll index at ${configPath} is corrupt. Removed it and rebuilding from scratch.`);
+            continue;
+        }
 
         if (indexError.signal !== 'SIGKILL' || !currentFile) break;
         if (!addSkippedPath(configPath, currentFile)) break;

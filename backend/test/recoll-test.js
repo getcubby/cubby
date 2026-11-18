@@ -135,6 +135,61 @@ describe('recoll', function () {
         assert.deepEqual(skippedPaths, [ killedFilePath ]);
     });
 
+    // runs fn with a fake recollindex in PATH that fails with a Xapian corruption error on the first `failures` runs
+    async function withCorruptRecollIndex(failures, fn) {
+        fs.mkdirSync(paths.THUMBNAIL_ROOT, { recursive: true });
+        const fakeBin = fs.mkdtempSync(path.join(paths.THUMBNAIL_ROOT, 'fake-bin-'));
+        const attemptsFile = path.join(fakeBin, 'attempts');
+
+        const script = [
+            '#!/bin/sh',
+            `echo x >> "${attemptsFile}"`,
+            `if [ "$(wc -l < "${attemptsFile}")" -gt ${failures} ]; then exit 0; fi`,
+            'echo ":2:../rcldb/rcldb.cpp:788::Db::doFlush: flush() failed: Expected block 15875 to be level 1, not 0" >&2',
+            'exit 1'
+        ].join('\n');
+        fs.writeFileSync(path.join(fakeBin, 'recollindex'), script, { mode: 0o755 });
+
+        const oldPath = process.env.PATH;
+        process.env.PATH = `${fakeBin}:${oldPath}`;
+
+        try {
+            await fn();
+            return fs.readFileSync(attemptsFile, 'utf8').trim().split('\n').length;
+        } finally {
+            process.env.PATH = oldPath;
+            fs.rmSync(fakeBin, { recursive: true, force: true });
+        }
+    }
+
+    it('removes a corrupt index and rebuilds it', async function () {
+        await users.add(alice);
+
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, alice.id);
+        fs.mkdirSync(indexDbPath(alice.id), { recursive: true });
+        fs.writeFileSync(path.join(indexDbPath(alice.id), 'marker'), 'corrupt');
+
+        const attempts = await withCorruptRecollIndex(1, async () => await recoll.indexByUsername(alice.id));
+
+        assert.equal(attempts, 2);
+        assert.equal(fs.existsSync(path.join(indexDbPath(alice.id), 'marker')), false, 'corrupt index was not removed');
+        assert.ok(fs.existsSync(path.join(configPath, 'last-reset')));
+    });
+
+    it('does not rebuild a corrupt index more than once a day', async function () {
+        await users.add(alice);
+
+        const configPath = path.join(paths.SEARCH_INDEX_PATH, alice.id);
+        fs.mkdirSync(indexDbPath(alice.id), { recursive: true });
+        fs.writeFileSync(path.join(indexDbPath(alice.id), 'marker'), 'corrupt');
+        fs.writeFileSync(path.join(configPath, 'last-reset'), 'recently');
+
+        const attempts = await withCorruptRecollIndex(1000, async () => await recoll.indexByUsername(alice.id));
+
+        assert.equal(attempts, 1);
+        assert.ok(fs.existsSync(path.join(indexDbPath(alice.id), 'marker')), 'index was removed despite a recent reset');
+    });
+
     it('does not index archive contents', async function () {
         if (!hasCommand('python3')) this.skip();
 

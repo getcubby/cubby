@@ -735,3 +735,9 @@
 * Update cubby to 369fbb1
 * Restore timestamp defaults on upgraded databases so new shares can be created.
 
+[2.31.2]
+* Update cubby to 090a713
+* Recreate the recol index when corrupt
+* Do not keep reindexing on every scim sync
+* Fix issue when navigating back to a folder with space in it
+

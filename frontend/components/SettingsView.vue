@@ -54,8 +54,8 @@ onMounted(() => {
         <Section title="WebDAV">
           <p class="webdav-intro">
             Use this URL in a file manager, tablet, or backup app. Authenticate with your username and an
-            <a v-if="appPasswordsUrl" :href="appPasswordsUrl" target="_blank" rel="noopener">App password</a>
-            <template v-else>App password</template>
+            <a v-if="appPasswordsUrl" :href="appPasswordsUrl" target="_blank" rel="noopener">App token</a>
+            <template v-else>App token</template>
             from the Cloudron dashboard.
           </p>
 

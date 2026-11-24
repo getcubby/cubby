@@ -741,3 +741,8 @@
 * Do not keep reindexing on every scim sync
 * Fix issue when navigating back to a folder with space in it
 
+[2.31.3]
+* Update cubby to 2.31.3
+* Fix downloading of shared folders
+* Update dependencies
+

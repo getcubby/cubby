@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import { initSchema, SCHEMA_VERSION } from '../schema.js';
 
-const TABLES = [ 'users', 'tokens', 'shares', 'favorites', 'recents', 'file_activity', 'filedrops' ];
+const TABLES = [ 'users', 'tokens', 'shares', 'favorites', 'recents', 'file_activity', 'filedrops', 'settings' ];
 
 // Shape left by migration 5, plus the name column added in migration 6.
 // Timestamp columns have no default.
@@ -185,6 +185,9 @@ describe('schema', function () {
             const created = upgraded.prepare(`SELECT name, readonly FROM shares WHERE id = 'sid-new'`).get();
             assert.equal(created.name, '');
             assert.equal(created.readonly, 0);
+
+            assert.equal(fresh.prepare(`SELECT value FROM settings WHERE key = 'documentViewer'`).get().value, '1');
+            assert.equal(upgraded.prepare(`SELECT value FROM settings WHERE key = 'documentViewer'`).get().value, '1');
         } finally {
             fresh.close();
             upgraded.close();

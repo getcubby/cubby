@@ -83,6 +83,7 @@ async function start() {
         router.get('/api/v1/settings/groupfolders', users.isAuthenticated, groupFolders.list);
         router.put('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.update);
         router.del('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.remove);
+        router.put('/api/v1/settings/document-viewer', users.isAuthenticated, misc.setDocumentViewer);
 
         router.get('/api/v1/users', users.isAuthenticated, users.list);
 
@@ -136,7 +137,11 @@ async function start() {
 
         router.get('/api/v1/mobile/config', mobile.getConfig);
 
-        app.use('/', express.static(path.resolve(__dirname, '../frontend-dist')));
+        app.use('/', express.static(path.resolve(__dirname, '../frontend-dist'), {
+            setHeaders: function (res, filePath) {
+                if (filePath.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm');
+            }
+        }));
         app.use(lastMile());
 
         const mainApp = express();

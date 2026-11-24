@@ -32,6 +32,25 @@ if [[ "${fresh}" == "true" ]]; then
     rm -rf frontend-dist
 fi
 
+fetch_craft() {
+    local app="$1"
+    local version="$2"
+    if [[ ! -f "frontend/public/${app}/index.html" ]]; then
+        echo "=> Fetch ${app} web build"
+        local tmp
+        tmp="$(mktemp -d)"
+        wget -O "${tmp}/${app}-web-${version}.zip" "https://github.com/storytold/${app}/releases/download/v${version}/${app}-web-${version}.zip"
+        unzip -q "${tmp}/${app}-web-${version}.zip" -d "${tmp}"
+        mkdir -p "frontend/public/${app}"
+        mv "${tmp}/${app}-web-${version}"/* "frontend/public/${app}/"
+        rm -rf "${tmp}"
+    fi
+}
+
+fetch_craft gridcraft 0.19.1
+fetch_craft wordcraft 0.18.1
+fetch_craft deckcraft 0.18.1
+
 echo "=> Ensure frontend build"
 if [[ ! -d "frontend-dist" ]]; then
     cd frontend

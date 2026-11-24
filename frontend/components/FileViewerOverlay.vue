@@ -1,12 +1,13 @@
 <script setup>
 
-import { ref, nextTick, useTemplateRef } from 'vue';
+import { ref, nextTick, inject, useTemplateRef } from 'vue';
 import { GenericViewer, ImageViewer, PdfViewer, TextViewer, ThreeDViewer } from '@cloudron/pankow/viewers';
 import DirectoryModel from '../models/DirectoryModel.js';
 import MainModel from '../models/MainModel.js';
 import { replace, replaceQuiet } from '../router.js';
 import MarkdownViewer from './MarkdownViewer.vue';
 import OfficeViewer from './OfficeViewer.vue';
+import CraftHostViewer from './CraftHostViewer.vue';
 
 const props = defineProps({
   readonly: {
@@ -25,6 +26,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
+const profile = inject('profile', ref({}));
+
 const viewer = ref('');
 const returnViewer = ref('');
 const animateViewer = ref(true);
@@ -37,6 +40,9 @@ const imageViewer = useTemplateRef('imageViewer');
 const pdfViewer = useTemplateRef('pdfViewer');
 const markdownViewer = useTemplateRef('markdownViewer');
 const officeViewer = useTemplateRef('officeViewer');
+const gridcraftViewer = useTemplateRef('gridcraftViewer');
+const wordcraftViewer = useTemplateRef('wordcraftViewer');
+const deckcraftViewer = useTemplateRef('deckcraftViewer');
 const textViewer = useTemplateRef('textViewer');
 const threeDViewer = useTemplateRef('threeDViewer');
 const genericViewer = useTemplateRef('genericViewer');
@@ -48,6 +54,26 @@ function close() {
   viewer.value = '';
 }
 
+const CRAFT_EDITORS = {
+  gridcraft: [ '.xlsx', '.xlsm', '.xlsb', '.xls', '.ods' ],
+  wordcraft: [ '.docx', '.docm', '.dotx', '.odt', '.dot', '.doc' ],
+  deckcraft: [ '.pptx', '.potx', '.ppsx' ],
+};
+
+function hasExtension(name, ext) {
+  if (!name.endsWith(ext)) return false;
+  const before = name.length - ext.length;
+  return before === 0 || !/[a-z0-9]/i.test(name[before]);
+}
+
+function craftEditorFor(item) {
+  const name = (item?.fileName || '').toLowerCase();
+  for (const id of Object.keys(CRAFT_EDITORS)) {
+    if (CRAFT_EDITORS[id].some(function (ext) { return hasExtension(name, ext); })) return id;
+  }
+  return '';
+}
+
 function onViewerClose() {
   if (returnViewer.value && viewer.value !== returnViewer.value) {
     const previous = returnViewer.value;
@@ -56,12 +82,28 @@ function onViewerClose() {
     return;
   }
 
+  const craftViewer = viewer.value === 'gridcraft' ? gridcraftViewer.value
+    : viewer.value === 'wordcraft' ? wordcraftViewer.value
+    : viewer.value === 'deckcraft' ? deckcraftViewer.value
+    : null;
+  if (craftViewer && !craftViewer.allowClose()) return;
+
   close();
   emit('close');
 }
 
 function onImageViewerNavigate(entry) {
   replaceQuiet(`/files${entry.resourcePath}`);
+}
+
+async function openCraft(id, item, generation) {
+  if (generation !== undefined && generation !== openGeneration) return;
+  viewer.value = id;
+  await nextTick();
+  if (generation !== undefined && generation !== openGeneration) return;
+  const author = profile.value?.displayName || profile.value?.username || '';
+  const target = id === 'wordcraft' ? wordcraftViewer : id === 'deckcraft' ? deckcraftViewer : gridcraftViewer;
+  await target.value.open(item, author);
 }
 
 async function openOffice(item, generation) {
@@ -130,7 +172,11 @@ async function openFile(item, resource, siblingEntries, preferredViewer) {
     return;
   }
 
-  if (imageViewer.value.canHandle(item)) {
+  const craftEditor = MainModel.craftViewerEnabled() ? craftEditorFor(item) : '';
+  if (craftEditor) {
+    await openCraft(craftEditor, item);
+    return;
+  } else if (imageViewer.value.canHandle(item)) {
     const otherSupportedEntries = (siblingEntries || []).filter((e) => imageViewer.value.canHandle(e));
     imageViewer.value.open(item, otherSupportedEntries);
     viewer.value = 'image';
@@ -187,6 +233,21 @@ defineExpose({ openFile, close, openWith });
   <Transition name="viewer-slide" :css="animateViewer">
     <div class="viewer-container" v-show="viewer === 'markdown'">
       <MarkdownViewer ref="markdownViewer" @close="onViewerClose" :open-with-handler="() => openWith('text')" />
+    </div>
+  </Transition>
+  <Transition name="viewer-slide" :css="animateViewer">
+    <div class="viewer-container" v-show="viewer === 'gridcraft'">
+      <CraftHostViewer ref="gridcraftViewer" app="gridcraft" label="GridCraft" noun="spreadsheet" :save-extensions="['.xlsx', '.xlsm']" :legacy-extensions="['.xls', '.xlsb', '.ods']" legacy-save-as=".xlsx" :readonly="readonly" @close="onViewerClose" />
+    </div>
+  </Transition>
+  <Transition name="viewer-slide" :css="animateViewer">
+    <div class="viewer-container" v-show="viewer === 'wordcraft'">
+      <CraftHostViewer ref="wordcraftViewer" app="wordcraft" label="WordCraft" noun="document" :save-extensions="['.docx', '.docm', '.dotx', '.odt']" :legacy-extensions="['.doc', '.dot']" legacy-save-as=".docx" :show-save="false" :readonly="readonly" @close="onViewerClose" />
+    </div>
+  </Transition>
+  <Transition name="viewer-slide" :css="animateViewer">
+    <div class="viewer-container" v-show="viewer === 'deckcraft'">
+      <CraftHostViewer ref="deckcraftViewer" app="deckcraft" label="DeckCraft" noun="presentation" :save-extensions="['.pptx', '.potx', '.ppsx']" :show-save="false" :readonly="readonly" @close="onViewerClose" />
     </div>
   </Transition>
   <Transition name="viewer-slide" :css="animateViewer">

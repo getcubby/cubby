@@ -11,6 +11,7 @@ import preview from '../preview.js';
 import recoll from '../recoll.js';
 import recent from '../recent.js';
 import safe from '@cloudron/safetydance';
+import settings from '../settings.js';
 import shares from '../shares.js';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 
@@ -28,8 +29,14 @@ async function getConfig(req, res, next) {
         // also makes local development and custom deployments work.
         oidcIssuer: process.env.CLOUDRON_OIDC_ISSUER || process.env.OIDC_ISSUER_BASE_URL || '',
         // Cloudron dashboard profile (App passwords live at /#/profile)
-        appPasswordsUrl: webadminOrigin ? `${webadminOrigin}/#/profile` : ''
+        appPasswordsUrl: webadminOrigin ? `${webadminOrigin}/#/profile` : '',
+        // Missing or unreadable means the Craft editors stay on.
+        documentViewer: true
     };
+
+    const [settingsError, documentViewer] = await safe(settings.getDocumentViewer());
+    if (settingsError) console.error('Failed to read document viewer setting. Leaving it enabled.', settingsError);
+    else tmp.documentViewer = documentViewer;
 
     const collaboraHost = await office.getWopiHost();
     if (collaboraHost) {
@@ -39,6 +46,17 @@ async function getConfig(req, res, next) {
     }
 
     next(new HttpSuccess(200, tmp));
+}
+
+async function setDocumentViewer(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    if (typeof req.body?.enabled !== 'boolean') return next(new HttpError(400, 'enabled must be a boolean'));
+
+    const [error, documentViewer] = await safe(settings.setDocumentViewer(req.body.enabled));
+    if (error) return next(MainError.toHttpError(error));
+
+    next(new HttpSuccess(200, { documentViewer }));
 }
 
 async function getPreview(req, res, next) {
@@ -212,6 +230,7 @@ async function search(req, res, next) {
 
 export default {
     getConfig,
+    setDocumentViewer,
     getPreview,
     download,
     getRecent,

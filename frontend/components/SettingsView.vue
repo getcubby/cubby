@@ -1,7 +1,7 @@
 <script setup>
 
-import { computed, inject, ref, onMounted } from 'vue';
-import { ClipboardButton, InputGroup, TextInput } from '@cloudron/pankow';
+import { computed, inject, ref, onMounted, useTemplateRef } from 'vue';
+import { ClipboardButton, InputGroup, SaveIndicator, SettingsItem, Switch, TextInput } from '@cloudron/pankow';
 import GroupFoldersSettings from './settings/GroupFoldersSettings.vue';
 import Section from './Section.vue';
 import MainModel from '../models/MainModel.js';
@@ -11,6 +11,9 @@ const emit = defineEmits(['groupfolders-changed']);
 const profile = inject('profile');
 const users = ref([]);
 const appPasswordsUrl = ref('');
+const documentViewer = ref(true);
+const documentViewerBusy = ref(false);
+const documentViewerSaveIndicator = useTemplateRef('documentViewerSaveIndicator');
 
 const webdavUrl = computed(() => {
   const username = profile.value?.username;
@@ -30,10 +33,24 @@ async function loadConfig() {
   try {
     const config = await MainModel.getConfig();
     appPasswordsUrl.value = config.appPasswordsUrl || '';
+    documentViewer.value = config.documentViewer !== false;
   } catch (error) {
     console.error('Failed to get config.', error);
     appPasswordsUrl.value = '';
   }
+}
+
+async function onDocumentViewerChange(enabled) {
+  documentViewerBusy.value = true;
+  try {
+    documentViewer.value = await MainModel.setDocumentViewer(enabled);
+    documentViewerSaveIndicator.value.success();
+  } catch (error) {
+    documentViewer.value = !enabled;
+    documentViewerSaveIndicator.value.error();
+    console.error('Failed to save document viewer.', error);
+  }
+  documentViewerBusy.value = false;
 }
 
 onMounted(() => {
@@ -50,6 +67,17 @@ onMounted(() => {
         <h1 class="settings-page-header">Settings</h1>
 
         <GroupFoldersSettings :users="users" @groupfolders-changed="emit('groupfolders-changed')" />
+
+        <Section title="Document viewer">
+          <SettingsItem>
+            <div class="document-viewer-label">
+              Open spreadsheets in <a href="https://github.com/storytold/gridcraft" target="_blank" rel="noopener">GridCraft</a>, documents in <a href="https://github.com/storytold/wordcraft" target="_blank" rel="noopener">WordCraft</a> and presentations in <a href="https://github.com/storytold/deckcraft" target="_blank" rel="noopener">DeckCraft</a>.
+            </div>
+            <SaveIndicator ref="documentViewerSaveIndicator">
+              <Switch :model-value="documentViewer" :disabled="documentViewerBusy" @update:model-value="onDocumentViewerChange" />
+            </SaveIndicator>
+          </SettingsItem>
+        </Section>
 
         <Section title="WebDAV">
           <p class="webdav-intro">
@@ -112,6 +140,11 @@ onMounted(() => {
 }
 
 .webdav-intro a {
+  color: var(--pankow-color-primary);
+  text-decoration: underline;
+}
+
+.document-viewer-label a {
   color: var(--pankow-color-primary);
   text-decoration: underline;
 }

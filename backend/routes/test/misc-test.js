@@ -22,6 +22,31 @@ describe('misc API', function () {
         assert.ok(response.body.viewers);
         assert.equal(typeof response.body.appPasswordsUrl, 'string');
         assert.equal(typeof response.body.oidcIssuer, 'string');
+        assert.equal(response.body.documentViewer, true);
+    });
+
+    it('updates the document viewer setting', async function () {
+        const denied = await superagent.put(`${serverUrl}/api/v1/settings/document-viewer`)
+            .send({ enabled: false })
+            .ok(() => true);
+        assert.equal(denied.status, 401);
+
+        const invalid = await withToken(superagent.put(`${serverUrl}/api/v1/settings/document-viewer`), alice.token)
+            .send({ enabled: 'no' })
+            .ok(() => true);
+        assert.equal(invalid.status, 400);
+
+        const updated = await withToken(superagent.put(`${serverUrl}/api/v1/settings/document-viewer`), alice.token)
+            .send({ enabled: false });
+        assert.equal(updated.status, 200);
+        assert.equal(updated.body.documentViewer, false);
+
+        const config = await superagent.get(`${serverUrl}/api/v1/config`);
+        assert.equal(config.body.documentViewer, false);
+
+        const restored = await withToken(superagent.put(`${serverUrl}/api/v1/settings/document-viewer`), alice.token)
+            .send({ enabled: true });
+        assert.equal(restored.body.documentViewer, true);
     });
 
     it('requires entries to download', async function () {

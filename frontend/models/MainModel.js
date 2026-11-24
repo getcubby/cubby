@@ -31,7 +31,8 @@ async function getConfig() {
       collabora: result.body.viewers?.collabora || {}
     },
     oidcProviderName: result.body.oidcProviderName || 'Cloudron',
-    appPasswordsUrl: result.body.appPasswordsUrl || ''
+    appPasswordsUrl: result.body.appPasswordsUrl || '',
+    documentViewer: result.body.documentViewer !== false
   };
 
   return configCache;
@@ -61,6 +62,24 @@ async function getGroups() {
   if (error || result.status !== 200) throw new Error('Failed to get groups', { cause: error || result })
 
   return result.body.groups;
+}
+
+function craftViewerEnabled() {
+  return configCache.documentViewer !== false;
+}
+
+async function setDocumentViewer(enabled) {
+  let error, result;
+  try {
+    result = await fetcher.put(`${API_ORIGIN}/api/v1/settings/document-viewer`, { enabled });
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to save document viewer', { cause: error || result });
+
+  configCache.documentViewer = result.body.documentViewer !== false;
+  return configCache.documentViewer;
 }
 
 function canHandleWithOffice(entry) {
@@ -170,6 +189,8 @@ export default {
   getConfig,
   getUsers,
   getGroups,
+  craftViewerEnabled,
+  setDocumentViewer,
   canHandleWithOffice,
   getOfficeHandle,
   recent,

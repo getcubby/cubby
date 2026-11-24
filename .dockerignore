@@ -10,3 +10,6 @@ test/
 node_modules/
 frontend-dist/
 frontend/node_modules/
+frontend/public/gridcraft/
+frontend/public/wordcraft/
+frontend/public/deckcraft/

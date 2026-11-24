@@ -48,6 +48,27 @@ describe('shares API', function () {
         assert.equal(share.name, 'Public');
     });
 
+    it('can zip download a public share link folder anonymously', async function () {
+        await addUserFile(alice.username, '/public-folder/one.txt', 'one');
+        await addUserFile(alice.username, '/public-folder/two.txt', 'two');
+
+        const createResponse = await withToken(superagent.post(`${serverUrl}/api/v1/shares`), alice.token)
+            .send({ ownerUserId: alice.id, path: '/public-folder', readonly: true, name: 'Public folder' });
+        const shareId = createResponse.body.shareId;
+
+        const response = await superagent.get(`${serverUrl}/api/v1/download`)
+            .query({ entries: `/shares/${shareId}/`, name: 'public-folder' });
+        assert.equal(response.status, 200);
+        assert.match(response.headers['content-type'], /zip/);
+    });
+
+    it('does not allow anonymous zip downloads outside of shares', async function () {
+        const response = await superagent.get(`${serverUrl}/api/v1/download`)
+            .query({ entries: '/home/not-signed-in.txt' })
+            .ok(() => true);
+        assert.equal(response.status, 401);
+    });
+
     it('rejects a public link without a name', async function () {
         await addUserFile(alice.username, '/unnamed.txt', 'unnamed');
 
@@ -175,7 +196,7 @@ describe('shares API', function () {
             .send({ ownerUserId: alice.id, path: '/secret-zip.txt', readonly: true, password: 'hunter2', name: 'Secret' });
         const shareId = createResponse.body.shareId;
 
-        const lockedResponse = await withToken(superagent.get(`${serverUrl}/api/v1/download`), user.token)
+        const lockedResponse = await superagent.get(`${serverUrl}/api/v1/download`)
             .query({ entries: `/shares/${shareId}/` })
             .ok(() => true);
         assert.equal(lockedResponse.status, 423);
@@ -184,7 +205,7 @@ describe('shares API', function () {
             .send({ password: 'hunter2' });
         const cookie = (unlockResponse.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
 
-        const unlockedResponse = await withToken(superagent.get(`${serverUrl}/api/v1/download`), user.token)
+        const unlockedResponse = await superagent.get(`${serverUrl}/api/v1/download`)
             .query({ entries: `/shares/${shareId}/` })
             .set('cookie', cookie);
         assert.equal(unlockedResponse.status, 200);

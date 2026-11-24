@@ -125,7 +125,7 @@ async function start() {
 
         router.get('/api/v1/recent', users.isAuthenticated, misc.getRecent);
         router.get('/api/v1/activity', users.isAuthenticated, activity.list);
-        router.get('/api/v1/download', users.isAuthenticated, misc.download);
+        router.get('/api/v1/download', users.optionalAuth, misc.download);
         router.get('/api/v1/search', users.isAuthenticated, misc.search);
 
         router.get('/api/v1/office/handle', users.optionalAuth, office.getHandle);

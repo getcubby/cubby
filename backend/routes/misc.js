@@ -124,6 +124,8 @@ async function download(req, res, next) {
         let getArgs;
 
         if (resource === 'home') {
+            if (!req.user) return next(new HttpError(401, 'Unauthorized'));
+
             getArgs = [ req.user.id, filePath ];
         } else if (resource === 'shares') {
             const shareId = filePath.split('/')[1];
@@ -134,13 +136,15 @@ async function download(req, res, next) {
 
             if (shares.isExpired(share)) return next(new HttpError(404, 'no such share'));
 
-            if (!await shares.isReceiverAllowed(share, req.user.id)) return next(new HttpError(403, 'not allowed'));
+            if (!await shares.isReceiverAllowed(share, req.user?.id)) return next(new HttpError(403, 'not allowed'));
 
             if (share.passwordProtected && !shares.isUnlocked(req, share.id)) return next(new HttpError(423, 'password required'));
 
             const actualFilePath = '/' + filePath.split('/').slice(2).join('/');
             getArgs = [ share.ownerUserId || `groupfolder-${share.ownerGroupfolder}`, path.join(share.filePath, actualFilePath) ];
         } else if (resource === 'groupfolders') {
+            if (!req.user) return next(new HttpError(401, 'Unauthorized'));
+
             const groupFolderSlug = filePath.split('/')[1];
             if (!groupFolderSlug)  return next(new HttpError(404, 'missing groupFolderSlug'));
 

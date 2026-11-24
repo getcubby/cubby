@@ -5,6 +5,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function dataRoot() {
     if (process.env.CUBBY_ENV === 'test') return '/tmp/cubby_test';
+    if (process.env.APP_DATA_DIR) return process.env.APP_DATA_DIR; // set when several apps share one container (s42 hub)
     if (process.env.CLOUDRON) return '/app/data';
     return path.resolve(__dirname, '../.data');
 }

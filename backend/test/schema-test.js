@@ -187,7 +187,7 @@ describe('schema', function () {
             assert.equal(created.readonly, 0);
 
             assert.equal(fresh.prepare(`SELECT value FROM settings WHERE key = 'documentViewer'`).get().value, '1');
-            assert.equal(upgraded.prepare(`SELECT value FROM settings WHERE key = 'documentViewer'`).get().value, '1');
+            assert.equal(upgraded.prepare(`SELECT value FROM settings WHERE key = 'documentViewer'`).get().value, '0');
         } finally {
             fresh.close();
             upgraded.close();

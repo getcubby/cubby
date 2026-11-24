@@ -13,14 +13,16 @@
 
 const TIMESTAMP_DEFAULT = "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))";
 
-// App-wide preferences. documentViewer defaults on so office files open in the Craft editors.
-const SETTINGS_SQL = `
+// App-wide preferences. A new database starts with the Craft editors on.
+// An upgrade inserts the same row as off, so an existing install keeps the office app.
+const SETTINGS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS settings(
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-INSERT OR IGNORE INTO settings (key, value) VALUES ('documentViewer', '1');
 `;
+const DOCUMENT_VIEWER_ON = `INSERT OR IGNORE INTO settings (key, value) VALUES ('documentViewer', '1');`;
+const DOCUMENT_VIEWER_OFF = `INSERT OR IGNORE INTO settings (key, value) VALUES ('documentViewer', '0');`;
 
 const FULL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS users(
@@ -140,7 +142,8 @@ CREATE TABLE IF NOT EXISTS filedrops(
     password_hash TEXT
 );
 
-${SETTINGS_SQL}`;
+${SETTINGS_TABLE_SQL}
+${DOCUMENT_VIEWER_ON}`;
 
 // Bump this whenever the schema changes and append a migration to MIGRATIONS
 // below for existing databases. FULL_SCHEMA must always reflect the latest
@@ -495,10 +498,11 @@ const MIGRATIONS = [
         }
     },
     {
-        // documentViewer chooses the Craft editors or the office app. Missing means on.
+        // Existing installs keep the office app. A new install opts in through FULL_SCHEMA.
         version: 8,
         up(db) {
-            db.exec(SETTINGS_SQL);
+            db.exec(SETTINGS_TABLE_SQL);
+            db.exec(DOCUMENT_VIEWER_OFF);
         }
     }
 ];

@@ -746,3 +746,7 @@
 * Fix downloading of shared folders
 * Update dependencies
 
+[2.32.0]
+* Update cubby to b627d04
+* Use ArtCraft viewers for ppt, odt and xls
+

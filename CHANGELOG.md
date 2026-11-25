@@ -750,3 +750,6 @@
 * Update cubby to b627d04
 * Use ArtCraft viewers for ppt, odt and xls
 
+[2.33.0]
+* Allow uploads over 100MB by streaming the request body
+

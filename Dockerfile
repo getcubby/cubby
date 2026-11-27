@@ -30,9 +30,9 @@ FROM base AS frontend
 # renovate: datasource=github-releases depName=storytold/gridcraft
 ARG GRIDCRAFT_VERSION=0.19.1
 # renovate: datasource=github-releases depName=storytold/wordcraft
-ARG WORDCRAFT_VERSION=0.18.1
+ARG WORDCRAFT_VERSION=0.19.1
 # renovate: datasource=github-releases depName=storytold/deckcraft
-ARG DECKCRAFT_VERSION=0.18.1
+ARG DECKCRAFT_VERSION=0.19.1
 
 COPY frontend /app/code/frontend
 

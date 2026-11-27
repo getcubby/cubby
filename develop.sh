@@ -48,8 +48,8 @@ fetch_craft() {
 }
 
 fetch_craft gridcraft 0.19.1
-fetch_craft wordcraft 0.18.1
-fetch_craft deckcraft 0.18.1
+fetch_craft wordcraft 0.19.1
+fetch_craft deckcraft 0.19.1
 
 echo "=> Ensure frontend build"
 if [[ ! -d "frontend-dist" ]]; then

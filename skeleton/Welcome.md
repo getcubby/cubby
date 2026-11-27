@@ -25,6 +25,9 @@ Open a file to view or edit it in place:
 | **Welcome.md** (this file) | Markdown viewer with a document outline |
 | **Documents/Sample document.pdf** | PDF viewer — try searching for *slartibartfast* |
 | **Documents/sample-document.txt** | Text editor — edit and save plain text files |
+| **Documents/Sample document.docx** | Word processor — edit the note and save |
+| **Documents/Sample spreadsheet.xlsx** | Spreadsheet — change a quantity and watch the total |
+| **Documents/Sample presentation.pptx** | Presentation — step through the three slides |
 | **Videos/Sample video.mp4** | Video playback — rotating Earth visualization |
 | **Documents/Sample elephant.stl** | 3D viewer — rotate and inspect a low-poly elephant |
 | **Pictures/** | Image viewer — open any photo, then use **Previous** / **Next** to browse all images in that folder without closing the viewer |
@@ -33,7 +36,7 @@ Cubby also opens plain text and source code files in a built-in editor, where yo
 
 When you open an image, the viewer loads every other image in the same folder so you can step through them like a gallery.
 
-If your administrator has connected an office server, Word, Excel, PowerPoint, and other office documents open directly in the browser for editing.
+Documents, spreadsheets, and presentations open in the browser. An administrator can connect an office server, and those files open there instead.
 
 ## Share files and folders
 
@@ -50,7 +53,7 @@ This file is a Markdown document. Open it to see the built-in Markdown viewer, w
 
 ## Find files quickly
 
-- **Search** — use the search bar at the top to find files by name or content across your storage. Try *slartibartfast* or *breeblebrox* to see full-text search find words inside the sample PDF
+- **Search** — use the search bar at the top to find files by name or content across your storage. Try *slartibartfast* or *breeblebrox* to see full-text search find words inside the sample PDF. Search for *magrathea*, *jynnan*, or *vogon* to find the office samples
 - **Recent files** — revisit files you opened recently
 - **Favorites** — star any file or folder to pin it in the Favorites view
 

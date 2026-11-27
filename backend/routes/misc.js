@@ -13,6 +13,7 @@ import recent from '../recent.js';
 import safe from '@cloudron/safetydance';
 import settings from '../settings.js';
 import shares from '../shares.js';
+import { appBridge } from '@cloudron/tegel';
 import { HttpError, HttpSuccess } from '@cloudron/connect-lastmile';
 
 const debugLog = debug('cubby:routes:misc');
@@ -46,6 +47,56 @@ async function getConfig(req, res, next) {
     }
 
     next(new HttpSuccess(200, tmp));
+}
+
+async function installedApps() {
+    try {
+        return await appBridge.listInstalledApps();
+    } catch (error) {
+        console.error('Failed to list installed apps:', error);
+        return [];
+    }
+}
+
+function originFor(app) {
+    return app?.fqdn ? `https://${app.fqdn}` : '';
+}
+
+async function getOffice(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    const locked = office.envOfficeOrigin();
+    if (locked) return next(new HttpSuccess(200, { configurable: false, origin: locked, apps: [] }));
+
+    const [viewerError, documentViewer] = await safe(settings.getDocumentViewer());
+    if (viewerError) return next(MainError.toHttpError(viewerError));
+
+    const [storedError, stored] = await safe(settings.getOfficeOrigin());
+    if (storedError) return next(MainError.toHttpError(storedError));
+
+    next(new HttpSuccess(200, { configurable: true, origin: documentViewer ? '' : (stored || ''), apps: await installedApps() }));
+}
+
+async function setOffice(req, res, next) {
+    assert.strictEqual(typeof req.user, 'object');
+
+    if (office.envOfficeOrigin()) return next(new HttpError(409, 'Office origin is set by the environment'));
+    if (typeof req.body?.origin !== 'string') return next(new HttpError(400, 'origin must be a string'));
+
+    const origin = req.body.origin.replace(/\/$/, '');
+    if (origin) {
+        const apps = await installedApps();
+        const allowed = apps.some((app) => office.OFFICE_MANIFEST_IDS.has(app.manifestId) && originFor(app) === origin);
+        if (!allowed) return next(new HttpError(400, 'origin is not an installed office app'));
+    }
+
+    const [error] = await safe(settings.setOfficeOrigin(origin));
+    if (error) return next(MainError.toHttpError(error));
+
+    const [viewerError] = await safe(settings.setDocumentViewer(!origin));
+    if (viewerError) return next(MainError.toHttpError(viewerError));
+
+    next(new HttpSuccess(200, { origin }));
 }
 
 async function setDocumentViewer(req, res, next) {
@@ -230,6 +281,8 @@ async function search(req, res, next) {
 
 export default {
     getConfig,
+    getOffice,
+    setOffice,
     setDocumentViewer,
     getPreview,
     download,

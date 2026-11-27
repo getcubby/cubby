@@ -8,6 +8,7 @@ import { Button, SideBar, TopBar, LoginView } from '@cloudron/pankow';
 import MainModel from './models/MainModel.js';
 import SharesView from './components/SharesView.vue';
 import SettingsView from './components/SettingsView.vue';
+import AdminSettingsView from './components/AdminSettingsView.vue';
 import FileBrowser from './components/FileBrowser.vue';
 import FileViewerOverlay from './components/FileViewerOverlay.vue';
 import RecentView from './components/RecentView.vue';
@@ -27,6 +28,7 @@ const VIEWS = {
   RECENT: 'recent',
   SEARCH: 'search',
   SETTINGS: 'settings',
+  ADMIN: 'admin',
   SHARES: 'shares'
 };
 
@@ -37,6 +39,7 @@ const fileViewerOverlay = useTemplateRef('fileViewerOverlay');
 const sideBar = useTemplateRef('sideBar');
 
 const ready = ref(false);
+const showAdminSettings = ref(false);
 const view = ref('');
 const profile = ref({});
 const searchQuery = ref('');
@@ -57,6 +60,13 @@ const profileMenu = computed(() => {
     icon: 'fa-solid fa-cog',
     action: () => { go('/settings'); },
   }];
+  if (showAdminSettings.value) {
+    items.push({
+      label: 'Admin settings',
+      icon: 'fa-solid fa-shield-halved',
+      action: () => { go('/admin'); },
+    });
+  }
   items.push({ separator: true });
   items.push({
     label: 'Log out',
@@ -99,7 +109,7 @@ const isFileBrowserView = computed(() =>
 );
 
 const showTopBarNew = computed(() => isFileBrowserView.value);
-const showTopBarBack = computed(() => view.value === VIEWS.SETTINGS);
+const showTopBarBack = computed(() => view.value === VIEWS.SETTINGS || view.value === VIEWS.ADMIN);
 
 function onCloseSidebar() {
   sideBar.value.close();
@@ -295,6 +305,10 @@ async function handleLocation() {
     resetNonFileViewState();
     searchQuery.value = query;
     view.value = VIEWS.SEARCH;
+  } else if (hash === 'admin' && profile.value?.username) {
+    resetNonFileViewState();
+    view.value = VIEWS.ADMIN;
+    onCloseSidebar();
   } else if (hash.indexOf('settings') === 0 && profile.value?.username) {
     resetNonFileViewState();
     view.value = VIEWS.SETTINGS;
@@ -313,6 +327,16 @@ async function handleLocation() {
   }
 }
 
+async function loadAdminMenu() {
+  try {
+    const office = await MainModel.getOffice();
+    const apps = (office.apps || []).filter((app) => MainModel.OFFICE_MANIFEST_IDS.has(app.manifestId) && app.fqdn);
+    showAdminSettings.value = office.configurable === true && apps.length > 0;
+  } catch (error) {
+    showAdminSettings.value = false;
+  }
+}
+
 onMounted(async () => {
   try {
     profile.value = await MainModel.getProfile() || {};
@@ -320,6 +344,7 @@ onMounted(async () => {
     return console.error('mounted: getProfile() error', e);
   }
 
+  if (profile.value?.username) await loadAdminMenu();
   await refreshConfig();
 
   const urlPath = route.fullPath;
@@ -407,6 +432,7 @@ onBeforeUnmount(() => {
 
         <SharesView v-if="view === VIEWS.SHARES" @item-activated="onOpen" />
         <SettingsView v-else-if="view === VIEWS.SETTINGS" @groupfolders-changed="onGroupFoldersChanged" />
+        <AdminSettingsView v-else-if="view === VIEWS.ADMIN" />
         <RecentView v-else-if="view === VIEWS.RECENT" @item-activated="onOpen" />
         <FavoriteView v-else-if="view === VIEWS.FAVORITES" @item-activated="onOpen" />
         <SearchView

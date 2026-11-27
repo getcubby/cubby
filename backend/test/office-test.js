@@ -1,29 +1,19 @@
-import { describe, it, beforeEach, after } from 'mocha';
+import { describe, it, afterEach } from 'mocha';
 import assert from 'node:assert/strict';
-import nock from 'nock';
 import office from '../office.js';
 
 describe('office', function () {
-    beforeEach(function () {
-        nock.cleanAll();
-    });
-    after(function () {
-        nock.cleanAll();
+    afterEach(function () {
+        delete process.env.OFFICE_ORIGIN;
     });
 
-    it('returns empty string when no default office app is set', async function () {
-        nock('http://172.18.0.1:3006')
-            .get('/default-app/office')
-            .reply(200, { domain: '' });
-
-        assert.equal(await office.getWopiHost(), '');
+    it('returns empty string when OFFICE_ORIGIN is unset', function () {
+        delete process.env.OFFICE_ORIGIN;
+        assert.equal(office.envOfficeOrigin(), '');
     });
 
-    it('returns the office origin of the default office app', async function () {
-        nock('http://172.18.0.1:3006')
-            .get('/default-app/office')
-            .reply(200, { domain: 'office.example.com' });
-
+    it('returns OFFICE_ORIGIN when it is set', async function () {
+        process.env.OFFICE_ORIGIN = 'https://office.example.com/';
         assert.equal(await office.getWopiHost(), 'https://office.example.com');
     });
 });

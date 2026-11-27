@@ -1,6 +1,7 @@
 import constants from './constants.js';
 import cors from './cors.js';
 import activity from './routes/activity.js';
+import appadmin from './appadmin.js';
 import favorites from './routes/favorites.js';
 import files from './routes/files.js';
 import groupFolders from './routes/groupfolders.js';
@@ -83,7 +84,9 @@ async function start() {
         router.get('/api/v1/settings/groupfolders', users.isAuthenticated, groupFolders.list);
         router.put('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.update);
         router.del('/api/v1/settings/groupfolders/:id', users.isAuthenticated, groupFolders.remove);
-        router.put('/api/v1/settings/document-viewer', users.isAuthenticated, misc.setDocumentViewer);
+        router.put('/api/v1/settings/document-viewer', users.isAuthenticated, appadmin.requireAdmin, misc.setDocumentViewer);
+        router.get('/api/v1/settings/office', users.isAuthenticated, appadmin.requireAdmin, misc.getOffice);
+        router.put('/api/v1/settings/office', users.isAuthenticated, appadmin.requireAdmin, misc.setOffice);
 
         router.get('/api/v1/users', users.isAuthenticated, users.list);
 

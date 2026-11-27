@@ -1,16 +1,28 @@
 import { DOMParser as Dom } from 'xmldom';
 import xpath from 'xpath';
-import { appBridge } from '@cloudron/tegel';
+import settings from './settings.js';
 
 const FETCH_TIMEOUT_MS = 5000;
 
+const OFFICE_MANIFEST_IDS = new Set([
+    'com.collaboraoffice.coudronapp',
+    'com.onlyoffice.coudronapp',
+    'com.onlyoffice_ee.coudronapp',
+    'com.eurooffice.cloudronapp'
+]);
+
+function envOfficeOrigin() {
+    return (process.env.OFFICE_ORIGIN || '').replace(/\/$/, '');
+}
+
 async function getWopiHost() {
+    const fromEnv = envOfficeOrigin();
+    if (fromEnv) return fromEnv;
+
     try {
-        const { domain } = await appBridge.getDefaultApp('office');
-        return domain ? `https://${domain}` : '';
+        return await settings.getOfficeOrigin();
     } catch (error) {
-        if (error.status === 404) return '';
-        console.error('Failed to fetch default office app:', error);
+        console.error('Failed to read office origin.', error);
         return '';
     }
 }
@@ -36,6 +48,8 @@ async function getSupportedExtensions(wopiHost) {
 }
 
 export default {
+    OFFICE_MANIFEST_IDS,
+    envOfficeOrigin,
     getWopiHost,
     getSupportedExtensions
 };

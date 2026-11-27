@@ -4,6 +4,7 @@ import http from 'node:http';
 import common from './common.js';
 import files from '../../files.js';
 import nock from 'nock';
+import settings from '../../settings.js';
 import superagent from '@cloudron/superagent';
 
 const DISCOVERY_XML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -41,11 +42,8 @@ describe('office API', function () {
     before(setup);
     after(cleanup);
 
-    function mockOffice() {
-        nock('http://172.18.0.1:3006')
-            .get('/default-app/office')
-            .reply(200, { domain: 'office.example.com' })
-            .persist();
+    async function mockOffice() {
+        await settings.setOfficeOrigin('https://office.example.com');
 
         nock('https://office.example.com')
             .get('/hosting/discovery')
@@ -54,7 +52,7 @@ describe('office API', function () {
     }
 
     it('saves an edited document via the wopi put file flow', async function () {
-        mockOffice();
+        await mockOffice();
         await addUserFile(alice.username, '/office-save.odt', 'original');
 
         const handleRes = await superagent.get(`${serverUrl}/api/v1/office/handle`)
@@ -86,7 +84,7 @@ describe('office API', function () {
     });
 
     it('reuses the handle for a live session and issues a fresh one after unlock', async function () {
-        mockOffice();
+        await mockOffice();
         await addUserFile(alice.username, '/office-session.odt', 'original');
 
         const getHandle = () => superagent.get(`${serverUrl}/api/v1/office/handle`)
@@ -121,7 +119,7 @@ describe('office API', function () {
     });
 
     it('requires the password to open a document of a protected share', async function () {
-        mockOffice();
+        await mockOffice();
         await addUserFile(alice.username, '/office-secret.odt', 'original');
 
         const createResponse = await superagent.post(`${serverUrl}/api/v1/shares`)

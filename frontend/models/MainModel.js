@@ -68,6 +68,37 @@ function craftViewerEnabled() {
   return configCache.documentViewer !== false;
 }
 
+const OFFICE_MANIFEST_IDS = new Set([
+  'com.collaboraoffice.coudronapp',
+  'com.onlyoffice.coudronapp',
+  'com.onlyoffice_ee.coudronapp',
+  'com.eurooffice.cloudronapp'
+]);
+
+async function getOffice() {
+  let error, result;
+  try {
+    result = await fetcher.get(`${API_ORIGIN}/api/v1/settings/office`);
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to get office settings', { cause: error || result });
+  return result.body;
+}
+
+async function setOffice(origin) {
+  let error, result;
+  try {
+    result = await fetcher.put(`${API_ORIGIN}/api/v1/settings/office`, { origin });
+  } catch (e) {
+    error = e;
+  }
+
+  if (error || result.status !== 200) throw new Error('Failed to save office settings', { cause: error || result });
+  return result.body.origin || '';
+}
+
 async function setDocumentViewer(enabled) {
   let error, result;
   try {
@@ -189,7 +220,10 @@ export default {
   getConfig,
   getUsers,
   getGroups,
+  OFFICE_MANIFEST_IDS,
   craftViewerEnabled,
+  getOffice,
+  setOffice,
   setDocumentViewer,
   canHandleWithOffice,
   getOfficeHandle,

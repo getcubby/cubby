@@ -5,7 +5,7 @@
   "tagline": "All the file sharing you need, none of the bloat",
   "version": "2.33.0",
   "upstreamVersion": "2.33.0",
-  "minBoxVersion": "10.2.0",
+  "minBoxVersion": "10.2.1",
   "streamRequestBody": true,
   "healthCheckPath": "/api/healthcheck",
   "icon": "file://logo.png",
